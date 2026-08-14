@@ -51,9 +51,9 @@ tests/StructureConventionTests/     # US3 solution-level structure check
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Implement `AddServiceDefaults()` extension wiring OpenTelemetry traces/metrics/logs to the Elastic stack in `shared/ServiceDefaults/ServiceDefaultsExtensions.cs` (constitution Principle VII — "not configured per service by hand")
-- [ ] T006 Implement correlation-ID propagation middleware, registered by `AddServiceDefaults()`, in `shared/ServiceDefaults/CorrelationIdMiddleware.cs` (depends on T005)
-- [ ] T007 [P] Create `docker-compose.deps.yml` at repository root defining one isolated SQL Server container per service: `parties-db`, `products-db`, `baskets-db`, `orders-db`
+- [X] T005 Implement `AddServiceDefaults()` extension wiring OpenTelemetry traces/metrics/logs to the Elastic stack in `shared/ServiceDefaults/ServiceDefaultsExtensions.cs` (constitution Principle VII — "not configured per service by hand")
+- [X] T006 Implement correlation-ID propagation middleware, registered by `AddServiceDefaults()`, in `shared/ServiceDefaults/CorrelationIdMiddleware.cs` (depends on T005)
+- [X] T007 [P] Create `docker-compose.deps.yml` at repository root defining one isolated SQL Server container per service: `parties-db`, `products-db`, `baskets-db`, `orders-db`
 
 **Checkpoint**: `ServiceDefaults` and per-service database containers exist — user story implementation can now begin.
 

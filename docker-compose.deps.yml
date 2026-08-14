@@ -1,0 +1,54 @@
+# Local-development-only dependency containers: one isolated SQL Server instance per service.
+# Not a "single command run all four services" tool — that's a separate, later story (SCRUM-15).
+# This just gives each of the four service shells (T016-T019) something real to connect to,
+# per spec.md FR-004/FR-005 (each service owns its own, unreachable-by-others data store).
+#
+# Usage: copy .env.example to .env, set a local SA password, then `docker compose -f docker-compose.deps.yml up -d <service>-db`
+# to start only the one database a given service needs — never all four at once, to keep proving independence (US1).
+
+services:
+  parties-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "14330:1433"
+    volumes:
+      - parties-db-data:/var/opt/mssql
+
+  products-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "14331:1433"
+    volumes:
+      - products-db-data:/var/opt/mssql
+
+  baskets-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "14332:1433"
+    volumes:
+      - baskets-db-data:/var/opt/mssql
+
+  orders-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "14333:1433"
+    volumes:
+      - orders-db-data:/var/opt/mssql
+
+volumes:
+  parties-db-data:
+  products-db-data:
+  baskets-db-data:
+  orders-db-data:
