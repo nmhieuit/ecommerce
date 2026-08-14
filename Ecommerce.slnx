@@ -1,4 +1,37 @@
 <Solution>
+  <Folder Name="/services/" />
+  <Folder Name="/services/baskets/" />
+  <Folder Name="/services/baskets/src/">
+    <Project Path="services/baskets/src/Baskets.Api/Baskets.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/baskets/tests/">
+    <Project Path="services/baskets/tests/Baskets.Api.IntegrationTests/Baskets.Api.IntegrationTests.csproj" />
+    <Project Path="services/baskets/tests/Baskets.Api.UnitTests/Baskets.Api.UnitTests.csproj" />    
+  </Folder>
+  <Folder Name="/services/orders/" />
+  <Folder Name="/services/orders/src/">
+    <Project Path="services/orders/src/Orders.Api/Orders.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/orders/tests/">
+    <Project Path="services/orders/tests/Orders.Api.IntegrationTests/Orders.Api.IntegrationTests.csproj" />
+    <Project Path="services/orders/tests/Orders.Api.UnitTests/Orders.Api.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/services/parties/" />
+  <Folder Name="/services/parties/src/">
+    <Project Path="services/parties/src/Parties.Api/Parties.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/parties/tests/">
+    <Project Path="services/parties/tests/Parties.Api.IntegrationTests/Parties.Api.IntegrationTests.csproj" />
+    <Project Path="services/parties/tests/Parties.Api.UnitTests/Parties.Api.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/services/products/" />
+  <Folder Name="/services/products/src/">
+    <Project Path="services/products/src/Products.Api/Products.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/products/tests/">
+    <Project Path="services/products/tests/Products.Api.IntegrationTests/Products.Api.IntegrationTests.csproj" />
+    <Project Path="services/products/tests/Products.Api.UnitTests/Products.Api.UnitTests.csproj" />
+  </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/ServiceDefaults/ServiceDefaults.csproj" />
   </Folder>

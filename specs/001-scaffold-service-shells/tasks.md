@@ -69,14 +69,14 @@ tests/StructureConventionTests/     # US3 solution-level structure check
 
 > Write these tests FIRST, and confirm they FAIL before implementation (Principle III, non-negotiable)
 
-- [ ] T008 [P] [US1] Write failing unit test asserting `/health/live` returns 200 in `services/parties/tests/Parties.Api.UnitTests/HealthCheckTests.cs`
-- [ ] T009 [P] [US1] Write failing unit test asserting `/health/live` returns 200 in `services/products/tests/Products.Api.UnitTests/HealthCheckTests.cs`
-- [ ] T010 [P] [US1] Write failing unit test asserting `/health/live` returns 200 in `services/baskets/tests/Baskets.Api.UnitTests/HealthCheckTests.cs`
-- [ ] T011 [P] [US1] Write failing unit test asserting `/health/live` returns 200 in `services/orders/tests/Orders.Api.UnitTests/HealthCheckTests.cs`
-- [ ] T012 [P] [US1] Write failing Testcontainers integration test asserting `/health/ready` is 200 when the database is reachable and 503 when it is not, in `services/parties/tests/Parties.Api.IntegrationTests/ReadinessTests.cs`
-- [ ] T013 [P] [US1] Same readiness test shape in `services/products/tests/Products.Api.IntegrationTests/ReadinessTests.cs`
-- [ ] T014 [P] [US1] Same readiness test shape in `services/baskets/tests/Baskets.Api.IntegrationTests/ReadinessTests.cs`
-- [ ] T015 [P] [US1] Same readiness test shape in `services/orders/tests/Orders.Api.IntegrationTests/ReadinessTests.cs`
+- [X] T008 [P] [US1] Write failing unit test asserting `/health/live` returns 200 in `services/parties/tests/Parties.Api.UnitTests/HealthCheckTests.cs`
+- [X] T009 [P] [US1] Write failing unit test asserting `/health/live` returns 200 in `services/products/tests/Products.Api.UnitTests/HealthCheckTests.cs`
+- [X] T010 [P] [US1] Write failing unit test asserting `/health/live` returns 200 in `services/baskets/tests/Baskets.Api.UnitTests/HealthCheckTests.cs`
+- [X] T011 [P] [US1] Write failing unit test asserting `/health/live` returns 200 in `services/orders/tests/Orders.Api.UnitTests/HealthCheckTests.cs`
+- [X] T012 [P] [US1] Write failing Testcontainers integration test asserting `/health/ready` is 200 when the database is reachable and 503 when it is not, in `services/parties/tests/Parties.Api.IntegrationTests/ReadinessTests.cs`
+- [X] T013 [P] [US1] Same readiness test shape in `services/products/tests/Products.Api.IntegrationTests/ReadinessTests.cs`
+- [X] T014 [P] [US1] Same readiness test shape in `services/baskets/tests/Baskets.Api.IntegrationTests/ReadinessTests.cs` (code identical to T012/T013, proven on Parties/Products with a real Testcontainers SQL instance; not independently re-run after the timeout misdiagnosis below)
+- [X] T015 [P] [US1] Same readiness test shape in `services/orders/tests/Orders.Api.IntegrationTests/ReadinessTests.cs` (same note as T014)
 
 ### Implementation for User Story 1
 

@@ -11,4 +11,10 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
+  <!-- CA1707 (no underscores in identifiers) is deliberately relaxed for test projects — the
+       Should_Do_X_When_Y naming convention is the norm for test method names, not a violation. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
 </Project>

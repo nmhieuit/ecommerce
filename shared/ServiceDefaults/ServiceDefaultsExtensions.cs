@@ -48,7 +48,10 @@ public static class ServiceDefaultsExtensions
             logging.AddOtlpExporter();
         });
 
-        builder.Services.AddTransient<CorrelationIdMiddleware>();
+        // No DI registration for CorrelationIdMiddleware: UseMiddleware<T>() constructs
+        // conventional middleware itself via ActivatorUtilities, injecting RequestDelegate
+        // specially — registering it in the container as well breaks DI validation, since
+        // RequestDelegate isn't (and shouldn't be) a resolvable service.
 
         return builder;
     }
