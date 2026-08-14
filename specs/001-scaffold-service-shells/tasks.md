@@ -38,10 +38,10 @@ tests/StructureConventionTests/     # US3 solution-level structure check
 
 **Purpose**: Repository-level scaffolding shared by all four services
 
-- [ ] T001 Create solution-level structure: `services/` and `shared/` directories, `Ecommerce.sln` at repository root
-- [ ] T002 [P] Add root `.editorconfig` and `Directory.Build.props` enabling Roslyn analyzers with nullable reference types and warnings-as-errors (constitution: Backend constraints)
-- [ ] T003 [P] Create `shared/ServiceDefaults/ServiceDefaults.csproj` project shell (.NET 10 class library)
-- [ ] T004 [P] Create `Directory.Packages.props` at repository root, central-managing EF Core, `Microsoft.Extensions.Diagnostics.HealthChecks`, xUnit, and Testcontainers package versions for all four services
+- [X] T001 Create solution-level structure: `services/` and `shared/` directories, `Ecommerce.slnx` at repository root (`.slnx` — .NET 10's `dotnet new sln` now defaults to the XML solution format)
+- [X] T002 [P] Add root `.editorconfig` and `Directory.Build.props` enabling Roslyn analyzers with nullable reference types and warnings-as-errors (constitution: Backend constraints)
+- [X] T003 [P] Create `shared/ServiceDefaults/ServiceDefaults.csproj` project shell (.NET 10 class library)
+- [X] T004 [P] Create `Directory.Packages.props` at repository root, central-managing EF Core, `Microsoft.Extensions.Diagnostics.HealthChecks`, xUnit, and Testcontainers package versions for all four services
 
 ---
 

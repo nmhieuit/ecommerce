@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/shared/">
+    <Project Path="shared/ServiceDefaults/ServiceDefaults.csproj" />
+  </Folder>
+</Solution>

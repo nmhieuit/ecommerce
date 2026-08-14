@@ -1,0 +1,40 @@
+# .NET / C#
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+packages/
+*.nupkg
+
+# Rider / VS / VS Code
+.vs/
+.vscode/
+.idea/
+*.iml
+
+# Test / coverage output
+[Tt]est[Rr]esult*/
+*.trx
+coverage/
+*.coverage
+*.coveragexml
+
+# Node (frontend, when it lands)
+node_modules/
+dist/
+build/
+
+# Environment / secrets
+.env
+.env.*
+
+# OS cruft
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# Local override configs
+appsettings.*.local.json
