@@ -60,19 +60,62 @@ public static class BffTestHost
     public static WebApplicationFactory<Program> CreateBff<TClient>(
         string serviceConfigurationName,
         WebApplicationFactory<TClient> downstream)
-        where TClient : class
+        where TClient : class =>
+        CreateBff(serviceConfigurationName, UnusedDownstreamBaseUrl, downstream.Server.CreateHandler);
+
+    /// <summary>
+    /// Starts the BFF with a downstream that is configured but has nothing listening — the
+    /// "service is down" case (US3). No handler is replaced: the real socket connect fails, which
+    /// is what production failure actually looks like.
+    /// </summary>
+    public static WebApplicationFactory<Program> CreateBffWithUnreachableService(
+        string serviceConfigurationName,
+        string unreachableBaseUrl) =>
+        CreateBff(serviceConfigurationName, unreachableBaseUrl, handlerFactory: null);
+
+    /// <summary>
+    /// Starts the BFF with a downstream that accepts the request and then never answers — the
+    /// "responds slowly rather than being fully down" case the spec's Edge Cases call out, which
+    /// must produce a timeout rather than an unbounded wait.
+    /// </summary>
+    public static WebApplicationFactory<Program> CreateBffWithUnresponsiveService(
+        string serviceConfigurationName) =>
+        CreateBff(serviceConfigurationName, UnusedDownstreamBaseUrl, () => new NeverRespondingHandler());
+
+    private static WebApplicationFactory<Program> CreateBff(
+        string serviceConfigurationName,
+        string baseUrl,
+        Func<HttpMessageHandler>? handlerFactory)
     {
         return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
-                    [$"Services:{serviceConfigurationName}:BaseUrl"] = UnusedDownstreamBaseUrl,
+                    [$"Services:{serviceConfigurationName}:BaseUrl"] = baseUrl,
                 }));
 
-            builder.ConfigureServices(services =>
-                services.AddHttpClient(serviceConfigurationName)
-                    .ConfigurePrimaryHttpMessageHandler(downstream.Server.CreateHandler));
+            if (handlerFactory is not null)
+            {
+                builder.ConfigureServices(services =>
+                    services.AddHttpClient(serviceConfigurationName)
+                        .ConfigurePrimaryHttpMessageHandler(handlerFactory));
+            }
         });
+    }
+
+    /// <summary>
+    /// Accepts the request and waits until cancelled, so the resilience pipeline's timeout is what
+    /// ends the call rather than the downstream answering.
+    /// </summary>
+    private sealed class NeverRespondingHandler : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            throw new InvalidOperationException("Unreachable: the delay above only ends by cancellation.");
+        }
     }
 }

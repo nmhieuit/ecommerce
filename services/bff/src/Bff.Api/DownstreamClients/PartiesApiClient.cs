@@ -16,19 +16,20 @@ public sealed class PartiesApiClient(HttpClient httpClient)
     /// Returns the party, or <see langword="null"/> if the service reports it does not exist.
     /// A 404 is a correct answer, not a downstream failure — see <see cref="BasketsApiClient"/>.
     /// </summary>
-    public async Task<PartyResource?> GetPartyAsync(Guid partyId, CancellationToken cancellationToken)
-    {
-        using var response = await httpClient.GetAsync($"/parties/{partyId}", cancellationToken);
-
-        if (response.StatusCode == HttpStatusCode.NotFound)
+    public Task<PartyResource?> GetPartyAsync(Guid partyId, CancellationToken cancellationToken) =>
+        DownstreamCall.ExecuteAsync(ServiceName, async () =>
         {
-            return null;
-        }
+            using var response = await httpClient.GetAsync($"/parties/{partyId}", cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
 
-        return await response.Content.ReadFromJsonAsync<PartyResource>(cancellationToken);
-    }
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<PartyResource>(cancellationToken);
+        });
 }
 
 /// <summary>A party exactly as the parties service returns it.</summary>

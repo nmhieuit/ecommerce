@@ -1,4 +1,5 @@
 using Bff.Api.DownstreamClients;
+using Bff.Api.ErrorHandling;
 using Bff.Api.Features.Baskets;
 using Bff.Api.Features.HealthCheck;
 using Bff.Api.Features.Orders;
@@ -15,6 +16,12 @@ builder.AddServiceDefaults();
 // explicit timeout and resilience pipeline, so no unbounded wait exists (Principle VIII).
 builder.Services.AddDownstreamClients(builder.Configuration);
 
+// A downstream outage must reach the caller as a structured, bounded error rather than an
+// unhandled exception (spec FR-006; research.md Decision 4). Registered before the routes so no
+// route can be added that is not covered by it.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<DownstreamExceptionHandler>();
+
 // Native OpenAPI document generation (research.md Decision 6 / ADR-0003), deliberately not
 // Swashbuckle. The document this publishes at /openapi/v1.json is the contract the frontend's
 // Orval codegen consumes (ADR-0004) and the contract-first source of truth for the SPA in
@@ -24,7 +31,12 @@ builder.Services.AddOpenApi();
 builder.Services.AddHealthCheckFeature();
 
 var app = builder.Build();
+
+// Outermost of the app's own middleware, so it catches from everything after it. It sits inside
+// UseServiceDefaults' correlation-ID middleware deliberately: the handler reads the correlation ID
+// that middleware resolves, so that must run first.
 app.UseServiceDefaults();
+app.UseExceptionHandler();
 
 // Exposed in Development only. The document describes the BFF's whole client-facing surface, and
 // there is no authorization in front of it yet (plan.md Complexity Tracking, Principle VI

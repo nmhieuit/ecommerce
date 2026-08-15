@@ -16,19 +16,20 @@ public sealed class OrdersApiClient(HttpClient httpClient)
     /// Returns the order, or <see langword="null"/> if the service reports it does not exist.
     /// A 404 is a correct answer, not a downstream failure — see <see cref="BasketsApiClient"/>.
     /// </summary>
-    public async Task<OrderResource?> GetOrderAsync(Guid orderId, CancellationToken cancellationToken)
-    {
-        using var response = await httpClient.GetAsync($"/orders/{orderId}", cancellationToken);
-
-        if (response.StatusCode == HttpStatusCode.NotFound)
+    public Task<OrderResource?> GetOrderAsync(Guid orderId, CancellationToken cancellationToken) =>
+        DownstreamCall.ExecuteAsync(ServiceName, async () =>
         {
-            return null;
-        }
+            using var response = await httpClient.GetAsync($"/orders/{orderId}", cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
 
-        return await response.Content.ReadFromJsonAsync<OrderResource>(cancellationToken);
-    }
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<OrderResource>(cancellationToken);
+        });
 }
 
 /// <summary>An order exactly as the orders service returns it.</summary>

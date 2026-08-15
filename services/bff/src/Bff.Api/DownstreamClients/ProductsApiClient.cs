@@ -20,14 +20,15 @@ public sealed class ProductsApiClient(HttpClient httpClient)
     /// Lists the catalog. An empty catalog is a legitimate answer, so this returns an empty list
     /// rather than treating "no products" as a failure.
     /// </summary>
-    public async Task<IReadOnlyList<ProductResource>> GetProductsAsync(CancellationToken cancellationToken)
-    {
-        var products = await httpClient.GetFromJsonAsync<IReadOnlyList<ProductResource>>(
-            "/products",
-            cancellationToken);
+    public Task<IReadOnlyList<ProductResource>> GetProductsAsync(CancellationToken cancellationToken) =>
+        DownstreamCall.ExecuteAsync(ServiceName, async () =>
+        {
+            var products = await httpClient.GetFromJsonAsync<IReadOnlyList<ProductResource>>(
+                "/products",
+                cancellationToken);
 
-        return products ?? [];
-    }
+            return products ?? (IReadOnlyList<ProductResource>)[];
+        });
 }
 
 /// <summary>A product exactly as the products service returns it.</summary>

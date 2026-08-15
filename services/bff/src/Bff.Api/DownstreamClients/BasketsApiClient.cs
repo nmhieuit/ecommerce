@@ -20,19 +20,20 @@ public sealed class BasketsApiClient(HttpClient httpClient)
     /// rather than left to <c>EnsureSuccessStatusCode</c>. Letting it throw would send it down the
     /// same path as a genuine outage and turn "no such basket" into a 502 (US3, FR-006).
     /// </remarks>
-    public async Task<BasketResource?> GetBasketAsync(Guid basketId, CancellationToken cancellationToken)
-    {
-        using var response = await httpClient.GetAsync($"/baskets/{basketId}", cancellationToken);
-
-        if (response.StatusCode == HttpStatusCode.NotFound)
+    public Task<BasketResource?> GetBasketAsync(Guid basketId, CancellationToken cancellationToken) =>
+        DownstreamCall.ExecuteAsync(ServiceName, async () =>
         {
-            return null;
-        }
+            using var response = await httpClient.GetAsync($"/baskets/{basketId}", cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
 
-        return await response.Content.ReadFromJsonAsync<BasketResource>(cancellationToken);
-    }
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadFromJsonAsync<BasketResource>(cancellationToken);
+        });
 }
 
 /// <summary>A basket exactly as the baskets service returns it.</summary>

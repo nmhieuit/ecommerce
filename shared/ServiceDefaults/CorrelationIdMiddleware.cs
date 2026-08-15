@@ -28,6 +28,13 @@ public sealed class CorrelationIdMiddleware
     {
         var correlationId = ResolveCorrelationId(context);
 
+        // Written back onto the *request* so anything that forwards this request carries the ID
+        // onward — the gateway's reverse proxy copies inbound request headers, so without this a
+        // generated ID would reach only this service's own response and the next hop would mint a
+        // second, unrelated one. Principle VII requires the ID generated at the edge to propagate
+        // across every synchronous call, not merely to be reported by the edge.
+        context.Request.Headers[HeaderName] = correlationId;
+
         context.Items[HeaderName] = correlationId;
         context.Response.OnStarting(() =>
         {

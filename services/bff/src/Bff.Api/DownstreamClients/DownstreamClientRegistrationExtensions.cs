@@ -13,8 +13,25 @@ public static class DownstreamClientRegistrationExtensions
     /// total time one BFF request may spend on one downstream, retries included, is capped at 3 s.
     /// </summary>
     private static readonly TimeSpan AttemptTimeout = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Changing this requires checking the gateway's forwarding timeout, which must stay ≥ it
+    /// (data-model.md, Route Mapping). That relationship is enforced by
+    /// <c>Gateway.Api.UnitTests/ForwardingTimeoutBudgetTests</c>, which mirrors this value.
+    /// </summary>
     private static readonly TimeSpan TotalRequestTimeout = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan CircuitBreakerSamplingDuration = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// The standard handler's default retry backoff starts at 2 s, which does not fit inside a 3 s
+    /// total budget: the first retry's delay alone would exhaust it, so a downstream that refuses a
+    /// connection instantly would still be reported as a timeout (504) rather than as unavailable
+    /// (502), collapsing a distinction the error contract draws deliberately. At 200 ms all three
+    /// attempts complete well inside the budget, so a fast failure stays a fast failure and only a
+    /// genuinely slow downstream produces a timeout.
+    /// </summary>
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(200);
+    private const int MaxRetryAttempts = 2;
 
     /// <summary>
     /// Adds all four typed clients with validated configuration and a standard resilience
@@ -54,6 +71,9 @@ public static class DownstreamClientRegistrationExtensions
             {
                 resilience.AttemptTimeout.Timeout = AttemptTimeout;
                 resilience.TotalRequestTimeout.Timeout = TotalRequestTimeout;
+
+                resilience.Retry.MaxRetryAttempts = MaxRetryAttempts;
+                resilience.Retry.Delay = RetryDelay;
 
                 // The breaker's sampling window must span at least two attempt timeouts, or it
                 // could trip on a single slow call rather than on a genuine failure rate.
