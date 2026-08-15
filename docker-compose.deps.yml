@@ -1,51 +1,110 @@
 # Local-development-only dependency containers: one isolated SQL Server instance per service.
 # Not a "single command run all four services" tool — that's a separate, later story (SCRUM-15).
-# This just gives each of the four service shells (T016-T019) something real to connect to,
-# per spec.md FR-004/FR-005 (each service owns its own, unreachable-by-others data store).
+# This just gives each of the four service shells something real to connect to, per spec.md
+# FR-004/FR-005 (each service owns its own, unreachable-by-others data store).
 #
-# Usage: copy .env.example to .env, set a local SA password, then `docker compose -f docker-compose.deps.yml up -d <service>-db`
-# to start only the one database a given service needs — never all four at once, to keep proving independence (US1).
+# Usage: copy .env.example to .env, set a local SA password, then start only the one service's
+# dependency you need — never all four at once, to keep proving independence (US1):
+#
+#   docker compose -f docker-compose.deps.yml up --wait parties-db-init
+#
+# Naming the *-db-init service starts its database as a dependency, waits for the server to accept
+# connections, and creates the service's (empty) database. A fresh SQL Server container ships with
+# only master/tempdb/model/msdb, so without this step the service connects, authenticates, and then
+# fails readiness with error 4060 "Cannot open database". Schema inside the database is EF Core
+# migrations' job once entities exist; creating the empty database is infrastructure's.
+
+x-mssql: &mssql
+  image: mcr.microsoft.com/mssql/server:2022-latest
+  environment:
+    ACCEPT_EULA: "Y"
+    MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+
+# $$ escapes to a literal $ so the password is expanded by the shell inside the container rather
+# than by Compose, keeping it out of `docker inspect` output for the healthcheck command.
+x-mssql-healthcheck: &mssql-healthcheck
+  test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+  interval: 5s
+  timeout: 5s
+  retries: 30
+  start_period: 15s
 
 services:
   parties-db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    <<: *mssql
     ports:
       - "14330:1433"
     volumes:
       - parties-db-data:/var/opt/mssql
+    healthcheck: *mssql-healthcheck
+
+  parties-db-init:
+    <<: *mssql
+    depends_on:
+      parties-db:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - /bin/bash
+      - -c
+      - /opt/mssql-tools18/bin/sqlcmd -S parties-db -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID('parties') IS NULL CREATE DATABASE [parties];"
 
   products-db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    <<: *mssql
     ports:
       - "14331:1433"
     volumes:
       - products-db-data:/var/opt/mssql
+    healthcheck: *mssql-healthcheck
+
+  products-db-init:
+    <<: *mssql
+    depends_on:
+      products-db:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - /bin/bash
+      - -c
+      - /opt/mssql-tools18/bin/sqlcmd -S products-db -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID('products') IS NULL CREATE DATABASE [products];"
 
   baskets-db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    <<: *mssql
     ports:
       - "14332:1433"
     volumes:
       - baskets-db-data:/var/opt/mssql
+    healthcheck: *mssql-healthcheck
+
+  baskets-db-init:
+    <<: *mssql
+    depends_on:
+      baskets-db:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - /bin/bash
+      - -c
+      - /opt/mssql-tools18/bin/sqlcmd -S baskets-db -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID('baskets') IS NULL CREATE DATABASE [baskets];"
 
   orders-db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    <<: *mssql
     ports:
       - "14333:1433"
     volumes:
       - orders-db-data:/var/opt/mssql
+    healthcheck: *mssql-healthcheck
+
+  orders-db-init:
+    <<: *mssql
+    depends_on:
+      orders-db:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - /bin/bash
+      - -c
+      - /opt/mssql-tools18/bin/sqlcmd -S orders-db -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID('orders') IS NULL CREATE DATABASE [orders];"
 
 volumes:
   parties-db-data:

@@ -12,11 +12,25 @@ Validates spec.md's success criteria (SC-001 through SC-004) end-to-end, without
 
 Repeat for each of the four services (`parties`, `products`, `baskets`, `orders`) — run **one at a time**, with the others stopped, to prove independence:
 
-1. From `services/<service-name>/src/<ServiceName>.Api`, start the service's own database dependency (container) and the service itself using the service's local-run command.
+0. Once per clone: `cp .env.example .env` (it already contains a local-development-only SA password).
+1. Start the service's own database dependency and create its empty database:
+
+   ```bash
+   docker compose -f docker-compose.deps.yml up --wait <service-name>-db-init
+   ```
+
+   Naming the `-db-init` service pulls in its database as a dependency, waits for the server to accept connections, then creates the service's database. A fresh SQL Server container ships with only `master`/`tempdb`/`model`/`msdb`, so skipping this leaves the service authenticating successfully and then failing readiness with error 4060, "Cannot open database". Then start the service itself:
+
+   ```bash
+   dotnet run --project services/<service-name>/src/<ServiceName>.Api
+   ```
+
 2. Confirm the process reports ready within the timing target: `curl http://localhost:<port>/health/live` → `200 OK`.
 3. Confirm the readiness probe passes once the database is reachable: `curl http://localhost:<port>/health/ready` → `200 OK` with `"self-database": "Healthy"`.
-4. Stop the service's database dependency only (leave the service process running) and re-check `/health/ready` → expect `503` with `"self-database": "Unhealthy"` — proves readiness reflects real connectivity, not just process liveness (spec FR-003, Edge Cases).
+4. Stop the service's database dependency only (`docker stop ecomerce-<service-name>-db-1`, leaving the service process running) and re-check `/health/ready` → expect `503` with `"self-database": "Unhealthy"`, while `/health/live` stays `200` — proves readiness reflects real connectivity rather than process liveness, and that a database outage will not cause Kubernetes to restart an otherwise-healthy pod (spec FR-003, Edge Cases).
 5. Time steps 1–3 from a stopwatch started at `git clone` — expect under 5 minutes (SC-001).
+
+Service ports: parties `5204`, products `5088`, baskets `5188`, orders `5041`.
 
 Expected result: all four services pass steps 1–4 independently, with no service requiring another to be running (SC-002).
 

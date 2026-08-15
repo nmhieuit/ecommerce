@@ -1,0 +1,55 @@
+# Service manifest — orders
+#
+# Constitution Principle VIII: "Every service MUST declare its SLOs — latency, error rate, and
+# availability — in its service manifest, and those SLOs MUST be measured continuously from the
+# telemetry required by Principle VII." Declared at scaffold time so the budget is measured from
+# day one rather than bolted on after the first regression.
+#
+# Scope note: the health endpoints are the only surface this service exposes today. Domain
+# endpoints declare their own budgets here as they are added.
+
+service:
+  name: orders
+  description: Owns order records. Scaffold only — no domain endpoints yet.
+  classification: internal-service-api
+  stateless: true
+
+data:
+  store: sql-server
+  database: orders
+  connection-string-key: ConnectionStrings:OrdersDb
+  # FR-004 / FR-005 — owned exclusively; enforced by tests/CrossServiceIsolation.Tests.
+  owned-exclusively: true
+  # Principle IV's transactional outbox table lives in this database once this service publishes
+  # its first integration event; it is not created by this scaffold.
+
+slos:
+  # Platform defaults for an internal service API (constitution Principle VIII). No justified
+  # alternative is claimed, so the defaults apply verbatim.
+  availability: 99.9%          # monthly
+  error-rate:
+    max-5xx-ratio: 0.1%
+  latency:
+    p95: 150ms
+    p99: 500ms
+
+endpoints:
+  - route: GET /health/live
+    purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
+    authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check
+    latency:
+      p95: 150ms
+      p99: 500ms
+  - route: GET /health/ready
+    purpose: Readiness probe. Gates traffic on this service's own database being reachable.
+    authentication: anonymous
+    latency:
+      p95: 150ms
+      p99: 500ms
+
+observability:
+  # Principle VII — emitted via shared/ServiceDefaults, never configured per service by hand.
+  traces: otlp
+  metrics: otlp
+  logs: otlp
+  correlation-id-header: X-Correlation-Id

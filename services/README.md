@@ -173,12 +173,18 @@ for the full walkthrough. In short — start only the one database the service n
 independence:
 
 ```bash
-cp .env.example .env          # set a local SA password
-docker compose -f docker-compose.deps.yml up -d parties-db
+cp .env.example .env          # local-development-only SA password
+docker compose -f docker-compose.deps.yml up --wait parties-db-init
 dotnet run --project services/parties/src/Parties.Api
-curl http://localhost:5204/health/live    # 200
-curl http://localhost:5204/health/ready   # 200 once the database is reachable
+curl http://localhost:5204/health/live    # 200 {"status":"Healthy"}
+curl http://localhost:5204/health/ready   # 200 with "self-database":"Healthy"
 ```
+
+Name the `-db-init` service, not `parties-db`: it starts the database as a dependency, waits for
+it to accept connections, and creates the service's empty database. A fresh SQL Server container
+has only `master`/`tempdb`/`model`/`msdb`, so without it the service authenticates fine and then
+fails readiness with error 4060, "Cannot open database". Creating the empty database is
+infrastructure's job; schema inside it belongs to EF Core migrations once entities exist.
 
 Health-endpoint response shapes are specified in
 [`contracts/health-check.md`](../specs/001-scaffold-service-shells/contracts/health-check.md).

@@ -206,12 +206,47 @@ tests/StructureConventionTests/     # US3 solution-level structure check
 
 **Purpose**: Improvements that apply across all four services and final validation against spec.md
 
-- [ ] T046 [P] Add `service-manifest.yaml` declaring the health-endpoint SLO (constitution Principle VIII) for parties in `services/parties/src/Parties.Api/service-manifest.yaml`
-- [ ] T047 [P] Same for products in `services/products/src/Products.Api/service-manifest.yaml`
-- [ ] T048 [P] Same for baskets in `services/baskets/src/Baskets.Api/service-manifest.yaml`
-- [ ] T049 [P] Same for orders in `services/orders/src/Orders.Api/service-manifest.yaml`
-- [ ] T050 Run the `quickstart.md` validation walkthrough end-to-end for all four services and record the outcome
-- [ ] T051 Re-verify spec.md Success Criteria (SC-001 through SC-004) are all met and update `specs/001-scaffold-service-shells/checklists/requirements.md` if anything changed during implementation
+- [X] T046 [P] Add `service-manifest.yaml` declaring the health-endpoint SLO (constitution Principle VIII) for parties in `services/parties/src/Parties.Api/service-manifest.yaml`
+- [X] T047 [P] Same for products in `services/products/src/Products.Api/service-manifest.yaml`
+- [X] T048 [P] Same for baskets in `services/baskets/src/Baskets.Api/service-manifest.yaml`
+- [X] T049 [P] Same for orders in `services/orders/src/Orders.Api/service-manifest.yaml`
+- [X] T050 Run the `quickstart.md` validation walkthrough end-to-end for all four services and record the outcome
+- [X] T051 Re-verify spec.md Success Criteria (SC-001 through SC-004) are all met and update `specs/001-scaffold-service-shells/checklists/requirements.md` if anything changed during implementation
+
+**Implementation notes (Polish)**
+
+T050 outcome — all four services PASS every quickstart step, each exercised with **only its own**
+database container running:
+
+| Service | `/health/live` | `/health/ready` (DB up) | Bring-up to healthy | `/health/ready` (DB stopped) | `/health/live` (DB stopped) |
+|---|---|---|---|---|---|
+| parties | 200 | 200 `self-database: Healthy` | 30.8s | 503 in 3.1s | 200 |
+| products | 200 | 200 | 41.0s | 503 in 3.3s | 200 |
+| baskets | 200 | 200 | 140.9s | 503 in 3.2s | 200 |
+| orders | 200 | 200 | 41.7s | 503 in 3.2s | 200 |
+
+Running the walkthrough for real exposed two defects that no unit or integration test had caught,
+because both live in the gap between the service and its local infrastructure:
+
+- **No service database was ever created.** A fresh SQL Server container has only
+  `master`/`tempdb`/`model`/`msdb`, so each service authenticated and then failed readiness with
+  error 4060. SC-001/SC-002 were genuinely unmet until fixed. `docker-compose.deps.yml` now defines
+  a `<service>-db-init` companion per database that waits on a healthcheck and creates the empty
+  database; `quickstart.md` step 1 names it. Schema inside the database stays EF Core migrations'
+  job — infrastructure only creates the empty database.
+- **Readiness took 11s to fail**, from SqlClient's `ConnectRetryCount=1`/`ConnectRetryInterval=10`
+  idle-connection resiliency — redundant behind a Kubernetes probe with its own retry schedule.
+  Development connection strings now carry `Connect Timeout=3;ConnectRetryCount=0`; the failure
+  path completes in ~3.2s.
+
+T051 outcome — SC-001 through SC-004 all **MET**; full re-verification table and evidence recorded
+in `checklists/requirements.md`. No specification defect was found; spec.md needed no change.
+
+**Not verified, and deliberately not claimed:** the p95 ≤ 150 ms health-endpoint SLO is *declared*
+by T046–T049 but not measured. Warm medians were 46–139 ms, yet every 15-sample run contained one
+outlier between 684 ms and 3.6 s, and with n=15 the "p95" statistic collapses to the maximum.
+Principle VIII specifies continuous measurement from production telemetry; a laptop Docker Desktop
+loop is not that instrument.
 
 ---
 
