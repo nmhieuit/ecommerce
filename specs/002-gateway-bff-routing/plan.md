@@ -97,16 +97,20 @@ services/
 │       ├── Bff.Api.IntegrationTests/      # hosts real Products/Baskets/Orders/Parties Program in-process
 │       └── Bff.Api.UnitTests/
 │
-├── products/   # existing — unchanged by this feature
-├── baskets/    # existing — unchanged by this feature
-├── orders/     # existing — unchanged by this feature
-└── parties/    # existing — unchanged by this feature; now in scope as a fourth BFF-fronted service
+├── products/   # existing — "unchanged" claim RETRACTED, see note below
+├── baskets/    # existing — "unchanged" claim RETRACTED, see note below
+├── orders/     # existing — "unchanged" claim RETRACTED, see note below
+└── parties/    # existing — "unchanged" claim RETRACTED, see note below
 
 shared/
 └── ServiceDefaults/   # existing — reused as-is by gateway and bff
 ```
 
 **Structure Decision**: Extends the existing `services/<name>/{src,tests}` convention (already used by parties/products/baskets/orders) with two new peer service shells, `gateway` and `bff`. Both reference `shared/ServiceDefaults` exactly as the domain services do. No frontend directory exists yet in this repo (SCRUM-14 adds the SPA in a later feature), so only Option "backend service" applies — there is no `frontend/` tree to extend here.
+
+> **Retraction (2026-08-15, during Phase 3 implementation)**: the four "unchanged by this feature" annotations above rested on spec.md's assumption that products/baskets/orders/parties already expose the HTTP APIs the BFF needs. Verified against the repo, that assumption is false — each of the four maps only `/health/live` and `/health/ready`, and each `*DbContext` declares no `DbSet` at all (`ProductsDbContext`'s own remarks: "Deliberately has no entity sets… Product plus its catalog/pricing records arrive with the first domain story"). US1 therefore has nothing to proxy: there is no products listing behind `GET /bff/products`, and no basket, order, or party record behind the other three routes.
+>
+> Whether this feature adds data-bearing endpoints to those services — to all four, to products alone, or to none, deferring US1 to a later story — is an **open scope decision**, not something this plan settled. It must be resolved and reflected here before Phase 3 (T014–T027) is regenerated and implemented. Phases 1 and 2 are unaffected and already built and verified; US2/Phase 4 (gateway → BFF forwarding) is also unaffected, since it needs only that the BFF respond, not that it return domain data.
 
 ## Complexity Tracking
 
