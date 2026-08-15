@@ -171,12 +171,32 @@ tests/StructureConventionTests/     # US3 solution-level structure check
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T043 [US3] Write failing structure test asserting no top-level `Controllers/`, `Services/`, or `Repositories/` folder exists under any of the four services' `src/*.Api/` directories, in `tests/StructureConventionTests/VerticalSliceStructureTests.cs`
+- [X] T043 [US3] Write failing structure test asserting no top-level `Controllers/`, `Services/`, or `Repositories/` folder exists under any of the four services' `src/*.Api/` directories, in `tests/StructureConventionTests/VerticalSliceStructureTests.cs` (observed RED: 9/9 failed against the not-yet-implemented scanner)
 
 ### Implementation for User Story 3
 
-- [ ] T044 [US3] Implement the structure check making T043 pass, scanning `services/*/src/*.Api/` (depends on T016-T019, T024-T027, T043)
-- [ ] T045 [P] [US3] Document the vertical-slice convention (each `Features/<Capability>/` folder holds its handler and registration together) and the constitution's escalation-to-layered-architecture exception, in `services/README.md`
+- [X] T044 [US3] Implement the structure check making T043 pass, scanning `services/*/src/*.Api/` (depends on T016-T019, T024-T027, T043) — in `tests/StructureConventionTests/VerticalSliceStructureScanner.cs`
+- [X] T045 [P] [US3] Document the vertical-slice convention (each `Features/<Capability>/` folder holds its handler and registration together) and the constitution's escalation-to-layered-architecture exception, in `services/README.md`
+
+**Implementation notes (US3)**
+
+- New solution-level project `tests/StructureConventionTests`, registered in `Ecommerce.slnx`. Like
+  the US2 isolation suite it references no service project, so the check cannot come to depend on
+  the code it polices.
+- Only **direct children** of `services/*/src/*.Api/` are judged. A `Services/` folder beside
+  `Features/` splits a capability across the tree, which is what SC-004 forbids; the same name
+  nested inside one capability (`Features/Checkout/Services/`) keeps code next to the feature it
+  serves and is explicitly allowed — there is a test for each case.
+- Vacuity guards, as in US2: the result reports what was scanned (all four API projects asserted),
+  and a separate test requires every service to have at least one capability under `Features/` —
+  a service with no `Features/` folder has nothing organised by capability and would otherwise pass
+  a check that only looks for what must not exist.
+- Mutation-verified against the real repository: creating an actual
+  `services/parties/src/Parties.Api/Controllers/` folder turned the suite red (1 failed), and
+  removing it restored green.
+- Deliberately **no per-service opt-out flag**. FR-006's documented exception and the constitution's
+  escalation clause are meant to be argued in `plan.md` and reviewed, so taking the exception
+  requires a visible edit to the check itself rather than flipping a config switch.
 
 **Checkpoint**: All three user stories are independently implemented and independently verifiable.
 

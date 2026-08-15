@@ -51,6 +51,7 @@ fallback would be a cross-tenant, cross-service data leak that looks like a heal
 |---|---|---|
 | Connection-string isolation scan | [`tests/CrossServiceIsolation.Tests/ConnectionStringScanner.cs`](../tests/CrossServiceIsolation.Tests/ConnectionStringScanner.cs) | Any service's configuration naming another service's database, host, or connection-string key |
 | No-fallback readiness test | `services/*/tests/*.Api.IntegrationTests/ReadinessTests.cs` | A service becoming ready by reaching a database that isn't its own |
+| Vertical-slice structure check | [`tests/StructureConventionTests/VerticalSliceStructureScanner.cs`](../tests/StructureConventionTests/VerticalSliceStructureScanner.cs) | A technical-layer folder replacing capability-based organisation (see [below](#code-is-organised-by-capability-not-by-technical-layer)) |
 
 ### The connection-string scanner
 
@@ -89,6 +90,70 @@ in-memory substitutes) and then does something deliberately adversarial: it hand
 **perfectly reachable** one under every *other* service's key. The service must still return
 `503` with `self-database` unhealthy. Passing means the service ignored a working database that
 wasn't its own, which is spec US2's second acceptance scenario stated as an executable assertion.
+
+## Code is organised by capability, not by technical layer
+
+Constitution Principle I makes vertical-slice organisation the platform default, and spec
+requirement FR-006 / success criterion SC-004 turn it into something checkable: a developer must be
+able to find everything for one capability in one place.
+
+Each service's project looks like this:
+
+```text
+services/<service>/src/<Service>.Api/
+├── Features/
+│   └── HealthCheck/          # one capability: its endpoint mapping, its check registration,
+│       └── HealthCheckEndpoints.cs   # and its response shape — together
+├── Data/                     # the service's DbContext
+├── Properties/
+└── Program.cs
+```
+
+Everything a capability needs lives under `Features/<Capability>/`. The health-check slice is the
+worked example: route mapping, the readiness check registration, and the response writer are all in
+one file in one folder, rather than a route in `Controllers/`, a check in `Services/`, and a probe
+in `Repositories/`.
+
+`Data/` is not an exception to this. It holds the `DbContext` — the service's data-ownership
+boundary, which belongs to the service as a whole rather than to any one capability. Entity
+configuration for a capability's own tables belongs with that capability once domain entities
+arrive.
+
+### What the check enforces
+
+[`tests/StructureConventionTests/VerticalSliceStructureScanner.cs`](../tests/StructureConventionTests/VerticalSliceStructureScanner.cs)
+fails the build if `Controllers/`, `Services/`, or `Repositories/` appears as a **direct child** of
+any `services/*/src/*.Api/` project.
+
+Only direct children are judged, and that boundary is deliberate. A `Services/` folder sitting
+beside `Features/` splits one capability across the tree, which is exactly what SC-004 forbids. The
+same name *nested inside* a single capability — `Features/Checkout/Services/` — keeps that code next
+to the feature it serves and is nobody else's business.
+
+As with the isolation scan, the check reports what it examined, not only what it objected to: the
+suite asserts all four API projects were actually scanned and that each one has at least one
+capability under `Features/`. A service with no `Features/` folder has nothing organised by
+capability either, and would otherwise sail through a check that only looked for what must not
+exist.
+
+```bash
+dotnet test tests/StructureConventionTests
+```
+
+### The documented exception
+
+FR-006 permits a different structure "unless a documented exception justifies otherwise", and the
+constitution allows escalation to layered Clean Architecture with DDD aggregates and CQRS — but
+**only** for a service that owns genuine business invariants, and only with the added complexity
+justified in that feature's `plan.md`. Unjustified architectural ceremony is itself a violation.
+
+None of these four shells qualifies today; none owns a business invariant yet.
+
+There is deliberately **no per-service opt-out flag** in the scanner. Escalation is meant to be
+argued and reviewed, not toggled, so taking the exception requires editing the check itself — a
+visible, reviewable change — alongside the justification in `plan.md`. A configuration switch would
+let the platform default erode one quiet commit at a time, which is the failure mode this check
+exists to prevent.
 
 ## Known local-development caveat
 
