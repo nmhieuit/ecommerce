@@ -26,6 +26,15 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
 
+    <!-- Edge routing (ADR-0002: YARP is the API gateway). Only Gateway.Api references this; the
+         BFF proxies via typed HttpClients, not a reverse proxy. -->
+    <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
+
+    <!-- Resilience (constitution Principle VIII; 002-gateway-bff-routing research.md Decision 3).
+         Supplies AddStandardResilienceHandler() — the timeout/retry/circuit-breaker pipeline every
+         outbound BFF call must be wrapped in, so no unbounded wait can exist. -->
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
+
     <!-- Testing (research.md Decision 2: xUnit; constitution Principle III: Testcontainers, no fakes).
          Versions match what `dotnet new xunit` on the installed .NET 10 SDK resolves as current. -->
     <PackageVersion Include="xunit" Version="2.9.3" />

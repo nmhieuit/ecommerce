@@ -31,14 +31,20 @@ This feature adds two new peer service shells to the existing `services/<name>/{
 
 **Purpose**: Scaffold the two new service shells and their test projects, matching the existing products/baskets/orders/parties convention.
 
-- [ ] T001 Create the Gateway.Api project shell at `services/gateway/src/Gateway.Api/Gateway.Api.csproj` (`Microsoft.NET.Sdk.Web`, `net10.0`, `Nullable`/`ImplicitUsings` enabled — matches `services/products/src/Products.Api/Products.Api.csproj`)
-- [ ] T002 [P] Create the Bff.Api project shell at `services/bff/src/Bff.Api/Bff.Api.csproj` (same convention as T001)
-- [ ] T003 [P] Create `Gateway.Api.IntegrationTests` and `Gateway.Api.UnitTests` project shells under `services/gateway/tests/` (xUnit, `Microsoft.AspNetCore.Mvc.Testing`, referencing Gateway.Api — matches `services/baskets/tests/Baskets.Api.IntegrationTests`)
-- [ ] T004 [P] Create `Bff.Api.IntegrationTests` and `Bff.Api.UnitTests` project shells under `services/bff/tests/` (same convention as T003, referencing Bff.Api)
-- [ ] T005 Add the gateway and bff src/test projects to `Ecommerce.slnx` under new `/services/gateway/` and `/services/bff/` folders (depends on T001-T004)
-- [ ] T006 [P] Add `Yarp.ReverseProxy` and `Microsoft.Extensions.Http.Resilience` package versions to `Directory.Packages.props` (ADR-0002; constitution Principle VIII)
+- [X] T001 Create the Gateway.Api project shell at `services/gateway/src/Gateway.Api/Gateway.Api.csproj` (`Microsoft.NET.Sdk.Web`, `net10.0`, `Nullable`/`ImplicitUsings` enabled — matches `services/products/src/Products.Api/Products.Api.csproj`)
+- [X] T002 [P] Create the Bff.Api project shell at `services/bff/src/Bff.Api/Bff.Api.csproj` (same convention as T001)
+- [X] T003 [P] Create `Gateway.Api.IntegrationTests` and `Gateway.Api.UnitTests` project shells under `services/gateway/tests/` (xUnit, `Microsoft.AspNetCore.Mvc.Testing`, referencing Gateway.Api — matches `services/baskets/tests/Baskets.Api.IntegrationTests`)
+- [X] T004 [P] Create `Bff.Api.IntegrationTests` and `Bff.Api.UnitTests` project shells under `services/bff/tests/` (same convention as T003, referencing Bff.Api)
+- [X] T005 Add the gateway and bff src/test projects to `Ecommerce.slnx` under new `/services/gateway/` and `/services/bff/` folders (depends on T001-T004)
+- [X] T006 [P] Add `Yarp.ReverseProxy` and `Microsoft.Extensions.Http.Resilience` package versions to `Directory.Packages.props` (ADR-0002; constitution Principle VIII)
 
 **Checkpoint**: Both service shells and their test projects exist and are part of the solution.
+
+> **Phase 1 implementation notes**
+>
+> - T001/T002 each include a minimal placeholder `Program.cs` (`CreateBuilder`/`Build`/`Run` plus `public partial class Program;`). A `Microsoft.NET.Sdk.Web` project with no entry point fails to compile (CS5001), which would have left the solution unbuildable at this checkpoint and blocked the T003/T004 test projects that reference it. T007/T008 replace these bodies with the ServiceDefaults wiring.
+> - T003/T004 deliberately omit `Testcontainers.MsSql` (present in the domain services' integration tests): the gateway and BFF own no database (plan.md Technical Context: Storage N/A).
+> - **Known failing test until T037**: `StructureConventionTests.VerticalSliceStructureTests.Scan_ActuallyExaminesEveryServicesApiProject` asserts against a hardcoded `ExpectedServices = ["baskets", "orders", "parties", "products"]` and now sees `bff`/`gateway` too. It cannot be fixed by simply adding the two names — `EveryService_OrganisesAtLeastOneCapabilityUnderFeatures` would then fail as well, since neither new shell has a `Features/<Capability>/` folder until Phase 2 (T007/T008 health checks). T037 owns reconciling the scanner with the two new shells.
 
 ---
 

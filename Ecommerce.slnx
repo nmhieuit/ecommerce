@@ -8,6 +8,22 @@
     <Project Path="services/baskets/tests/Baskets.Api.IntegrationTests/Baskets.Api.IntegrationTests.csproj" />
     <Project Path="services/baskets/tests/Baskets.Api.UnitTests/Baskets.Api.UnitTests.csproj" />    
   </Folder>
+  <Folder Name="/services/bff/" />
+  <Folder Name="/services/bff/src/">
+    <Project Path="services/bff/src/Bff.Api/Bff.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/bff/tests/">
+    <Project Path="services/bff/tests/Bff.Api.IntegrationTests/Bff.Api.IntegrationTests.csproj" />
+    <Project Path="services/bff/tests/Bff.Api.UnitTests/Bff.Api.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/services/gateway/" />
+  <Folder Name="/services/gateway/src/">
+    <Project Path="services/gateway/src/Gateway.Api/Gateway.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/gateway/tests/">
+    <Project Path="services/gateway/tests/Gateway.Api.IntegrationTests/Gateway.Api.IntegrationTests.csproj" />
+    <Project Path="services/gateway/tests/Gateway.Api.UnitTests/Gateway.Api.UnitTests.csproj" />
+  </Folder>
   <Folder Name="/services/orders/" />
   <Folder Name="/services/orders/src/">
     <Project Path="services/orders/src/Orders.Api/Orders.Api.csproj" />

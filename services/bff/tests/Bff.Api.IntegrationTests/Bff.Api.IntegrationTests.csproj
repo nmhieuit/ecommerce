@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- No Testcontainers.MsSql here, unlike the domain services' integration tests: the BFF is a
+       stateless proxy/aggregation layer and owns no database (plan.md Technical Context: Storage
+       N/A). Its downstream dependencies are the real domain services, hosted in-process via
+       WebApplicationFactory (research.md Decision 5), which US1's tests reference directly. -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Bff.Api\Bff.Api.csproj" />
+  </ItemGroup>
+
+</Project>
