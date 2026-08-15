@@ -1,0 +1,162 @@
+# BFF contract surface — Phase 1 scope (this feature)
+#
+# This is the hand-authored contract skeleton the implementation must satisfy. Per ADR-0004 /
+# constitution Principle II, the checked-in, authoritative OpenAPI document is the one generated
+# from the BFF's Minimal API route definitions at build time — this file is the design-time
+# reference used to drive that implementation and review the shape before code exists.
+#
+# Scope note: FR-004 requires the product-listing route as the minimum proven proxy path (spec
+# Test Scenario 1). Basket, order, and party routes follow the identical proxy-and-shape pattern
+# once the products route is proven; they are stubbed here to show the shared error contract, not
+# as a claim that their full field shape is finalized.
+
+openapi: 3.0.3
+info:
+  title: Commerce BFF
+  version: "0.1.0"
+  description: >
+    Backend-for-frontend aggregation surface. Aggregates/shapes responses from the products,
+    baskets, orders, and parties services. Contains no business logic beyond aggregation and
+    shaping (constitution Technology Constraints; spec FR-005).
+
+paths:
+  /bff/products:
+    get:
+      operationId: listProducts
+      summary: Proxies the products service's listing and returns shaped data (spec FR-004, Test Scenario 1).
+      responses:
+        "200":
+          description: Product listing, shaped for client consumption.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+        "502":
+          $ref: "#/components/responses/DownstreamUnavailable"
+        "504":
+          $ref: "#/components/responses/DownstreamTimeout"
+
+  /bff/baskets/{basketId}:
+    get:
+      operationId: getBasket
+      summary: Proxies the baskets service for a single basket, shaped for the client.
+      parameters:
+        - name: basketId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Basket contents, shaped for client consumption.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Shape to be finalized when basket aggregation is implemented; not required for this feature's minimum scope.
+        "502":
+          $ref: "#/components/responses/DownstreamUnavailable"
+        "504":
+          $ref: "#/components/responses/DownstreamTimeout"
+
+  /bff/orders/{orderId}:
+    get:
+      operationId: getOrder
+      summary: Proxies the orders service for a single order, shaped for the client.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order details, shaped for client consumption.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Shape to be finalized when order aggregation is implemented; not required for this feature's minimum scope.
+        "502":
+          $ref: "#/components/responses/DownstreamUnavailable"
+        "504":
+          $ref: "#/components/responses/DownstreamTimeout"
+
+  /bff/parties/{partyId}:
+    get:
+      operationId: getParty
+      summary: Proxies the parties service for a single party (customer), shaped for the client.
+      parameters:
+        - name: partyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Party (customer) details, shaped for client consumption.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Shape to be finalized when party aggregation is implemented; not required for this feature's minimum scope.
+        "502":
+          $ref: "#/components/responses/DownstreamUnavailable"
+        "504":
+          $ref: "#/components/responses/DownstreamTimeout"
+
+components:
+  schemas:
+    ProductListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSummary"
+
+    ProductSummary:
+      type: object
+      required: [id, name, price]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+          format: decimal
+
+    ProblemDetails:
+      type: object
+      description: RFC 7807 problem details, extended with correlationId (data-model.md — Error response).
+      required: [type, title, status, correlationId]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+          description: Names the failing downstream service by its logical name only — never its internal address (spec FR-001).
+        correlationId:
+          type: string
+
+  responses:
+    DownstreamUnavailable:
+      description: A downstream service (products, baskets, orders, or parties) returned an error or was unreachable (spec FR-006).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+
+    DownstreamTimeout:
+      description: A downstream service did not respond within its budgeted timeout (spec FR-006, SC-003 — under 5 s).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
