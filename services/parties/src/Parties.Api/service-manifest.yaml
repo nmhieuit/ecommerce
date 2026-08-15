@@ -5,12 +5,16 @@
 # telemetry required by Principle VII." Declared at scaffold time so the budget is measured from
 # day one rather than bolted on after the first regression.
 #
-# Scope note: the health endpoints are the only surface this service exposes today. Domain
-# endpoints declare their own budgets here as they are added.
+# Scope note: beyond the health probes, this service exposes the minimal party read endpoint
+# added by 002-gateway-bff-routing. Further domain endpoints declare their own budgets here as
+# they are added.
 
 service:
   name: parties
-  description: Owns party and identity records. Scaffold only — no domain endpoints yet.
+  description: >-
+    Owns party (customer) records. Exposes the minimal party read surface the BFF's party route
+    proxies (002-gateway-bff-routing); contact details and identity linkage arrive with this
+    service's first domain story.
   classification: internal-service-api
   stateless: true
 
@@ -32,6 +36,14 @@ slos:
     p99: 500ms
 
 endpoints:
+  - route: GET /parties/{partyId}
+    purpose: >-
+      Returns a single party. The downstream surface the BFF's party route proxies
+      (contracts/downstream-openapi.yaml). Unknown id returns 404.
+    authentication: anonymous   # no identity server yet — see plan.md Constitution Check (VI)
+    latency:
+      p95: 150ms
+      p99: 500ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check

@@ -1,0 +1,179 @@
+# Downstream domain-service read contracts — Phase 3 scope
+#
+# Constitution Principle II: "API and event contracts MUST be written and reviewed before
+# implementation." This file is that review artifact for the four domain services' read surface.
+#
+# Why this file exists: the BFF (contracts/bff-openapi.yaml) proxies these four services, but at
+# the time this feature was planned none of them exposed any data-bearing endpoint — each mapped
+# only its two health probes and declared no entity sets at all. See tasks.md "Regeneration Note".
+# These are the minimum read endpoints the BFF's routes proxy to; they are NOT each service's
+# first domain story, and deliberately carry no business rules and no write operations.
+#
+# Each service is a separate host with its own base URL (Services:*Api:BaseUrl on the BFF); the
+# paths below are grouped in one document for review convenience, not to imply a shared surface.
+
+openapi: 3.0.3
+info:
+  title: Domain service read surface (products, baskets, orders, parties)
+  version: "0.1.0"
+  description: >
+    The minimal read endpoints the BFF proxies. Each path belongs to the separate service named in
+    its tag. Shapes here are the source the BFF shapes *from* — the client-facing shapes are in
+    bff-openapi.yaml and are allowed to differ.
+
+tags:
+  - name: products
+    description: Products service — owns product catalog and pricing records.
+  - name: baskets
+    description: Baskets service — owns shopping-basket records.
+  - name: orders
+    description: Orders service — owns order records.
+  - name: parties
+    description: Parties service — owns party (customer) records.
+
+paths:
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: >
+        Lists the product catalog. This is the one downstream shape fully specified by this
+        feature, because spec FR-004 / SC-002 name the product-listing route as the proxy path
+        that must be proven end-to-end (spec Test Scenario 1).
+      responses:
+        "200":
+          description: All products. An empty catalog returns an empty array, not 404.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /baskets/{basketId}:
+    get:
+      operationId: getBasket
+      tags: [baskets]
+      summary: Returns a single basket by id.
+      parameters:
+        - $ref: "#/components/parameters/BasketId"
+      responses:
+        "200":
+          description: The basket.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Basket"
+        "404":
+          description: No basket with that id.
+
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Returns a single order by id.
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: The order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: No order with that id.
+
+  /parties/{partyId}:
+    get:
+      operationId: getParty
+      tags: [parties]
+      summary: Returns a single party (customer) by id.
+      parameters:
+        - $ref: "#/components/parameters/PartyId"
+      responses:
+        "200":
+          description: The party.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Party"
+        "404":
+          description: No party with that id.
+
+components:
+  parameters:
+    BasketId:
+      name: basketId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PartyId:
+      name: partyId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Product:
+      type: object
+      description: >
+        Field-for-field the source of ProductSummary in bff-openapi.yaml (id/name/price), so the
+        BFF's product-listing route is a genuine proxy-and-shape rather than an invention.
+      required: [id, name, price]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price:
+          type: number
+          format: decimal
+
+    Basket:
+      type: object
+      required: [id, customerId]
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+          description: The party this basket belongs to. An identifier only — the baskets service holds no party record and performs no lookup across services (constitution Principle I).
+
+    Order:
+      type: object
+      required: [id, placedAtUtc, total]
+      properties:
+        id:
+          type: string
+          format: uuid
+        placedAtUtc:
+          type: string
+          format: date-time
+        total:
+          type: number
+          format: decimal
+
+    Party:
+      type: object
+      required: [id, displayName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string

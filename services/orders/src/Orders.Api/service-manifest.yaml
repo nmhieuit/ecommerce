@@ -5,12 +5,16 @@
 # telemetry required by Principle VII." Declared at scaffold time so the budget is measured from
 # day one rather than bolted on after the first regression.
 #
-# Scope note: the health endpoints are the only surface this service exposes today. Domain
-# endpoints declare their own budgets here as they are added.
+# Scope note: beyond the health probes, this service exposes the minimal order read endpoint
+# added by 002-gateway-bff-routing. Further domain endpoints declare their own budgets here as
+# they are added.
 
 service:
   name: orders
-  description: Owns order records. Scaffold only — no domain endpoints yet.
+  description: >-
+    Owns order records. Exposes the minimal order read surface the BFF's order route proxies
+    (002-gateway-bff-routing); line items, status transitions, and the outbox arrive with this
+    service's first domain story.
   classification: internal-service-api
   stateless: true
 
@@ -34,6 +38,14 @@ slos:
     p99: 500ms
 
 endpoints:
+  - route: GET /orders/{orderId}
+    purpose: >-
+      Returns a single order. The downstream surface the BFF's order route proxies
+      (contracts/downstream-openapi.yaml). Unknown id returns 404.
+    authentication: anonymous   # no identity server yet — see plan.md Constitution Check (VI)
+    latency:
+      p95: 150ms
+      p99: 500ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Parties.Api.Data;
+using Parties.Api.Features.Parties;
 using Parties.Api.Features.HealthCheck;
 using ServiceDefaults;
 
@@ -17,6 +18,7 @@ builder.Services.AddHealthCheckFeature();
 var app = builder.Build();
 app.UseServiceDefaults();
 app.MapHealthCheckEndpoints();
+app.MapPartyEndpoints();
 
 app.Run();
 

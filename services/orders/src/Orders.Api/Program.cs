@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Orders.Api.Data;
+using Orders.Api.Features.Orders;
 using Orders.Api.Features.HealthCheck;
 using ServiceDefaults;
 
@@ -17,6 +18,7 @@ builder.Services.AddHealthCheckFeature();
 var app = builder.Build();
 app.UseServiceDefaults();
 app.MapHealthCheckEndpoints();
+app.MapOrderEndpoints();
 
 app.Run();
 

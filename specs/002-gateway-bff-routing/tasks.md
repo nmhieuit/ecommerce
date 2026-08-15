@@ -100,46 +100,55 @@ The alternative — real data for products only, with the basket/order/party rou
 
 > Constitution Principle II: "API and event contracts MUST be written and reviewed before implementation."
 
-- [ ] T014 Author the four downstream read contracts (products listing; single basket, order, party by id) in `specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml`, with the products listing's `id`/`name`/`price` shape matching what `ProductSummary` in `contracts/bff-openapi.yaml` requires the BFF to be able to produce
+- [X] T014 Author the four downstream read contracts (products listing; single basket, order, party by id) in `specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml`, with the products listing's `id`/`name`/`price` shape matching what `ProductSummary` in `contracts/bff-openapi.yaml` requires the BFF to be able to produce
 
 ### Tests for the downstream surface ⚠️
 
 > Write these FIRST; confirm they FAIL before the entity/endpoint tasks. Each uses the service's existing `SqlServerFixture` (Testcontainers — constitution Principle III forbids in-memory providers and hand-rolled fakes) and applies migrations via `dbContext.Database.MigrateAsync()` before seeding.
 
-- [ ] T015 [P] Integration test: seed two products, `GET /products` returns `200` and both, shaped `id`/`name`/`price`, in `services/products/tests/Products.Api.IntegrationTests/CatalogEndpointsTests.cs`
-- [ ] T016 [P] Integration test: seed one basket, `GET /baskets/{basketId}` returns `200` and it, plus `404` for an unknown id, in `services/baskets/tests/Baskets.Api.IntegrationTests/BasketEndpointsTests.cs`
-- [ ] T017 [P] Integration test: seed one order, `GET /orders/{orderId}` returns `200` and it, plus `404` for an unknown id, in `services/orders/tests/Orders.Api.IntegrationTests/OrderEndpointsTests.cs`
-- [ ] T018 [P] Integration test: seed one party, `GET /parties/{partyId}` returns `200` and it, plus `404` for an unknown id, in `services/parties/tests/Parties.Api.IntegrationTests/PartyEndpointsTests.cs`
+- [X] T015 [P] Integration test: seed two products, `GET /products` returns `200` and both, shaped `id`/`name`/`price`, in `services/products/tests/Products.Api.IntegrationTests/CatalogEndpointsTests.cs`
+- [X] T016 [P] Integration test: seed one basket, `GET /baskets/{basketId}` returns `200` and it, plus `404` for an unknown id, in `services/baskets/tests/Baskets.Api.IntegrationTests/BasketEndpointsTests.cs`
+- [X] T017 [P] Integration test: seed one order, `GET /orders/{orderId}` returns `200` and it, plus `404` for an unknown id, in `services/orders/tests/Orders.Api.IntegrationTests/OrderEndpointsTests.cs`
+- [X] T018 [P] Integration test: seed one party, `GET /parties/{partyId}` returns `200` and it, plus `404` for an unknown id, in `services/parties/tests/Parties.Api.IntegrationTests/PartyEndpointsTests.cs`
 
 ### Entities
 
-- [ ] T019 [P] Add `Product` (Id, Name, Price) in `services/products/src/Products.Api/Data/Product.cs` and a `DbSet<Product>` plus its `decimal` precision configuration on `services/products/src/Products.Api/Data/ProductsDbContext.cs` (replaces that file's "deliberately has no entity sets" remark)
-- [ ] T020 [P] Add `Basket` (Id, CustomerId) in `services/baskets/src/Baskets.Api/Data/Basket.cs` and a `DbSet<Basket>` on `services/baskets/src/Baskets.Api/Data/BasketsDbContext.cs`
-- [ ] T021 [P] Add `Order` (Id, PlacedAtUtc, Total) in `services/orders/src/Orders.Api/Data/Order.cs` and a `DbSet<Order>` plus `decimal` precision configuration on `services/orders/src/Orders.Api/Data/OrdersDbContext.cs`
-- [ ] T022 [P] Add `Party` (Id, DisplayName) in `services/parties/src/Parties.Api/Data/Party.cs` and a `DbSet<Party>` on `services/parties/src/Parties.Api/Data/PartiesDbContext.cs`
+- [X] T019 [P] Add `Product` (Id, Name, Price) in `services/products/src/Products.Api/Data/Product.cs` and a `DbSet<Product>` plus its `decimal` precision configuration on `services/products/src/Products.Api/Data/ProductsDbContext.cs` (replaces that file's "deliberately has no entity sets" remark)
+- [X] T020 [P] Add `Basket` (Id, CustomerId) in `services/baskets/src/Baskets.Api/Data/Basket.cs` and a `DbSet<Basket>` on `services/baskets/src/Baskets.Api/Data/BasketsDbContext.cs`
+- [X] T021 [P] Add `Order` (Id, PlacedAtUtc, Total) in `services/orders/src/Orders.Api/Data/Order.cs` and a `DbSet<Order>` plus `decimal` precision configuration on `services/orders/src/Orders.Api/Data/OrdersDbContext.cs`
+- [X] T022 [P] Add `Party` (Id, DisplayName) in `services/parties/src/Parties.Api/Data/Party.cs` and a `DbSet<Party>` on `services/parties/src/Parties.Api/Data/PartiesDbContext.cs`
 
 ### Migrations
 
 > `docker-compose.deps.yml` states the rule this implements: "Schema inside the database is EF Core migrations' job once entities exist; creating the empty database is infrastructure's." No migration exists anywhere in the repo yet, so each of these is that service's *initial* migration.
 
-- [ ] T023 [P] Add `Microsoft.EntityFrameworkCore.Design` to each of the four `*.Api.csproj` files (already versioned in `Directory.Packages.props`; required for `dotnet ef`)
-- [ ] T024 [P] Generate the initial EF migration into `services/products/src/Products.Api/Migrations/` (`dotnet ef migrations add InitialCatalog --project services/products/src/Products.Api`) (depends on T019, T023)
-- [ ] T025 [P] Generate the initial EF migration into `services/baskets/src/Baskets.Api/Migrations/` (depends on T020, T023)
-- [ ] T026 [P] Generate the initial EF migration into `services/orders/src/Orders.Api/Migrations/` (depends on T021, T023)
-- [ ] T027 [P] Generate the initial EF migration into `services/parties/src/Parties.Api/Migrations/` (depends on T022, T023)
+- [X] T023 [P] Add `Microsoft.EntityFrameworkCore.Design` to each of the four `*.Api.csproj` files (already versioned in `Directory.Packages.props`; required for `dotnet ef`)
+- [X] T024 [P] Generate the initial EF migration into `services/products/src/Products.Api/Migrations/` (`dotnet ef migrations add InitialCatalog --project services/products/src/Products.Api`) (depends on T019, T023)
+- [X] T025 [P] Generate the initial EF migration into `services/baskets/src/Baskets.Api/Migrations/` (depends on T020, T023)
+- [X] T026 [P] Generate the initial EF migration into `services/orders/src/Orders.Api/Migrations/` (depends on T021, T023)
+- [X] T027 [P] Generate the initial EF migration into `services/parties/src/Parties.Api/Migrations/` (depends on T022, T023)
 
 ### Read endpoints
 
-- [ ] T028 [P] Implement `GET /products` (list) in `services/products/src/Products.Api/Features/Catalog/CatalogEndpoints.cs` and map it from `services/products/src/Products.Api/Program.cs` — vertical-slice convention, capability folder beside `Features/HealthCheck/` (makes T015 pass)
-- [ ] T029 [P] Implement `GET /baskets/{basketId}` in `services/baskets/src/Baskets.Api/Features/Baskets/BasketEndpoints.cs` and map it from that service's `Program.cs` (makes T016 pass)
-- [ ] T030 [P] Implement `GET /orders/{orderId}` in `services/orders/src/Orders.Api/Features/Orders/OrderEndpoints.cs` and map it from that service's `Program.cs` (makes T017 pass)
-- [ ] T031 [P] Implement `GET /parties/{partyId}` in `services/parties/src/Parties.Api/Features/Parties/PartyEndpoints.cs` and map it from that service's `Program.cs` (makes T018 pass)
+- [X] T028 [P] Implement `GET /products` (list) in `services/products/src/Products.Api/Features/Catalog/CatalogEndpoints.cs` and map it from `services/products/src/Products.Api/Program.cs` — vertical-slice convention, capability folder beside `Features/HealthCheck/` (makes T015 pass)
+- [X] T029 [P] Implement `GET /baskets/{basketId}` in `services/baskets/src/Baskets.Api/Features/Baskets/BasketEndpoints.cs` and map it from that service's `Program.cs` (makes T016 pass)
+- [X] T030 [P] Implement `GET /orders/{orderId}` in `services/orders/src/Orders.Api/Features/Orders/OrderEndpoints.cs` and map it from that service's `Program.cs` (makes T017 pass)
+- [X] T031 [P] Implement `GET /parties/{partyId}` in `services/parties/src/Parties.Api/Features/Parties/PartyEndpoints.cs` and map it from that service's `Program.cs` (makes T018 pass)
 
 ### Declare the new surface
 
-- [ ] T032 Update the `endpoints:` and `data:` sections of all four `services/*/src/*.Api/service-manifest.yaml` files to list the new read route and drop the "Scaffold only — no domain endpoints yet" description (constitution Principle VIII)
+- [X] T032 Update the `endpoints:` and `data:` sections of all four `services/*/src/*.Api/service-manifest.yaml` files to list the new read route and drop the "Scaffold only — no domain endpoints yet" description (constitution Principle VIII)
 
-**Checkpoint**: Each domain service serves real data over HTTP from its own database, with a contract and a passing Testcontainers-backed test. US1 now has something to proxy.
+**Checkpoint**: ✅ Each domain service serves real data over HTTP from its own database, with a contract and a passing Testcontainers-backed test. US1 now has something to proxy. Verified: **20/20 integration tests pass** across the four services (2 new + 3 pre-existing readiness tests each); full solution builds with 0 warnings, 0 errors.
+
+> **Phase 3 implementation notes**
+>
+> - **Red-green was staged, and the red was real.** The four test files were written first and failed to compile (no `Product`/`Basket`/`Order`/`Party` type) — a compile error is a weak red, so after the entities and migrations landed the suites were re-run to get a *meaningful* failure: `Expected: OK / Actual: NotFound` against a real containerised SQL Server with rows already seeded. Only then were the endpoints written.
+> - **The repo's first EF migrations.** `dotnet ef` needs the `Design` package and a version-matched tool. The globally-installed `dotnet-ef` (10.0.11) could not load `Microsoft.CodeAnalysis.Workspaces` against the repo's EF Core 10.0.0 pins, so tooling is now pinned repo-side in `.config/dotnet-tools.json` at 10.0.0 (`dotnet tool restore` before `dotnet dotnet-ef`). This keeps `Directory.Packages.props` untouched at 10.0.0 across every EF package, rather than bumping the runtime graph to satisfy a design-time tool.
+> - `Microsoft.EntityFrameworkCore.Design` is referenced with `PrivateAssets="all"` so migration tooling never reaches the published image.
+> - **Wire shapes are separate records from entities** in all four services (`ProductResponse`, `BasketResponse`, …). The stored model can grow with each service's real domain story without silently widening what the BFF — and the SPA behind it — receives. This matters most for `Party`, the type most likely to gain personal data.
+> - `GET /products` returns an empty array for an empty catalog; the three by-id routes return `404` for an unknown id, so the BFF can distinguish "no such record" from "a record that is empty". Both behaviours are asserted.
+> - **Correction to the Phase 2 report**: `CrossServiceIsolation.Tests` also has a stale hardcoded `ExpectedServices` list and has been red since T001, for the same reason as the structure test. Earlier phases ran only `StructureConventionTests`, so the claim that it was "the only red test in the suite" was based on an incomplete run. T059 now covers both files. The substantive isolation assertion (`NoServiceConfiguration_NamesAnotherServicesDatabase`) passes — no service names another's database, and Phase 3 added no connection string.
 
 ---
 
@@ -225,7 +234,7 @@ The alternative — real data for products only, with the basket/order/party rou
 
 **Purpose**: Repo-wide consistency and final validation across all three stories.
 
-- [ ] T059 [P] Add `"bff"` and `"gateway"` to `ExpectedServices` in `tests/StructureConventionTests/VerticalSliceStructureTests.cs` — **currently the only red test in the suite** (8 pass, 1 fails), red since T001 created the two new service directories; both shells have carried a `Features/HealthCheck/` capability folder since T007/T008, so this is now a two-name edit
+- [ ] T059 [P] Add `"bff"` and `"gateway"` to the hardcoded `ExpectedServices` array in **both** `tests/StructureConventionTests/VerticalSliceStructureTests.cs` (line 13) and `tests/CrossServiceIsolation.Tests/ConnectionStringIsolationTests.cs` (line 13) — **these are the only two red tests in the suite**, both red since T001 created the two new service directories, and both are guard assertions ("did the scan actually look at every service?") rather than the substantive checks, which pass. Note `ConnectionStringIsolationTests` additionally asserts `ScannedConnectionStringCount >= ExpectedServices.Length`, which will not hold once `bff`/`gateway` join the list, because neither owns a database and neither has a connection string — that assertion needs to count only the services that are supposed to have one, not every scanned service
 - [ ] T060 [P] Add `Gateway.Api.UnitTests` coverage for YARP route-config loading (config parses to the expected route/cluster) in `services/gateway/tests/Gateway.Api.UnitTests/RouteConfigurationTests.cs`
 - [ ] T061 [P] Add `Bff.Api.UnitTests` coverage for the Products/Baskets/Orders/Parties response-mapping functions in isolation (no HTTP) in `services/bff/tests/Bff.Api.UnitTests/ResponseMappingTests.cs`
 - [ ] T062 [P] Verify the BFF's generated `/openapi/v1.json` matches the hand-authored `specs/002-gateway-bff-routing/contracts/bff-openapi.yaml` for all four routes, and reconcile any drift in favour of the generated document (constitution Principle II; ADR-0004)

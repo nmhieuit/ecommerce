@@ -1,4 +1,5 @@
 using Baskets.Api.Data;
+using Baskets.Api.Features.Baskets;
 using Baskets.Api.Features.HealthCheck;
 using Microsoft.EntityFrameworkCore;
 using ServiceDefaults;
@@ -17,6 +18,7 @@ builder.Services.AddHealthCheckFeature();
 var app = builder.Build();
 app.UseServiceDefaults();
 app.MapHealthCheckEndpoints();
+app.MapBasketEndpoints();
 
 app.Run();
 

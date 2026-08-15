@@ -9,6 +9,9 @@
          framework; only the EF Core integration (AddDbContextCheck<T>) needs referencing. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <!-- Design-time only: supplies the `dotnet ef migrations` tooling. PrivateAssets="all" keeps
+         it out of the published image, which must never carry migration tooling into production. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>
 
   <PropertyGroup>

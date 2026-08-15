@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Products.Api.Data;
+using Products.Api.Features.Catalog;
 using Products.Api.Features.HealthCheck;
 using ServiceDefaults;
 
@@ -17,6 +18,7 @@ builder.Services.AddHealthCheckFeature();
 var app = builder.Build();
 app.UseServiceDefaults();
 app.MapHealthCheckEndpoints();
+app.MapCatalogEndpoints();
 
 app.Run();
 

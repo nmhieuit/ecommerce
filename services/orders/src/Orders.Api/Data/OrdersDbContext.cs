@@ -7,12 +7,29 @@ namespace Orders.Api.Data;
 /// schema is referenced here or anywhere downstream of it (spec FR-004, FR-005).
 /// </summary>
 /// <remarks>
-/// Deliberately has no entity sets: this feature scaffolds the service shell, and Order plus its
-/// line items arrive with the first domain story. The outbox table (constitution Principle IV)
-/// is not created here either — it lands alongside the first event this platform publishes.
-/// The context exists now so the readiness probe can prove real connectivity rather than assert
-/// process liveness alone. The connection is supplied through <see cref="DbContextOptions{TContext}"/>
-/// at registration rather than resolved inside the context, so SCRUM-12's tenant-keyed connection
-/// resolver can replace that one call site without changing this type.
+/// Holds the minimal order read surface the BFF proxies (002-gateway-bff-routing). Line items,
+/// status transitions, and the outbox table (constitution Principle IV) still belong to this
+/// service's first domain story; what exists here is the smallest set of fields that makes the
+/// BFF's order route a real proxy.
+/// The connection is supplied through <see cref="DbContextOptions{TContext}"/> at registration
+/// rather than resolved inside the context, so SCRUM-12's tenant-keyed connection resolver can
+/// replace that one call site without changing this type.
 /// </remarks>
-public class OrdersDbContext(DbContextOptions<OrdersDbContext> options) : DbContext(options);
+public class OrdersDbContext(DbContextOptions<OrdersDbContext> options) : DbContext(options)
+{
+    public DbSet<Order> Orders => Set<Order>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Order>(order =>
+        {
+            order.HasKey(entity => entity.Id);
+
+            // Explicit precision: EF's default for decimal on SQL Server truncates to two decimal
+            // places with a warning. Money is stated, not inferred.
+            order.Property(entity => entity.Total).HasPrecision(18, 2);
+        });
+    }
+}
