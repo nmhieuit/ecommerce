@@ -4,6 +4,12 @@
     <ProjectReference Include="..\..\..\..\shared\ServiceDefaults\ServiceDefaults.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The reverse proxy itself (ADR-0002). The gateway's entire routing surface is this package
+         plus the declarative ReverseProxy section in appsettings.json (research.md Decision 2). -->
+    <PackageReference Include="Yarp.ReverseProxy" />
+  </ItemGroup>
+
   <!-- No health-check package reference: Microsoft.Extensions.Diagnostics.HealthChecks ships in the
        ASP.NET Core shared framework, and the EF Core integration the domain services pull in
        (AddDbContextCheck<T>) has nothing to check here — the gateway owns no database. -->

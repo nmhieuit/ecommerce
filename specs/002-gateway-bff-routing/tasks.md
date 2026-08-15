@@ -206,15 +206,24 @@ The alternative — real data for products only, with the basket/order/party rou
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T049 [P] [US2] Integration test: a request to the gateway is forwarded to the BFF and returns the BFF's response, using nothing but the gateway's own host/port, in `services/gateway/tests/Gateway.Api.IntegrationTests/RoutingTests.cs` (US2 Acceptance Scenario 1)
-- [ ] T050 [P] [US2] Integration test: a request to a path with no matching gateway route returns a clear 404, not a hang, in `services/gateway/tests/Gateway.Api.IntegrationTests/UnmatchedRouteTests.cs` (FR-007; Edge Case)
+- [X] T049 [P] [US2] Integration test: a request to the gateway is forwarded to the BFF and returns the BFF's response, using nothing but the gateway's own host/port, in `services/gateway/tests/Gateway.Api.IntegrationTests/RoutingTests.cs` (US2 Acceptance Scenario 1)
+- [X] T050 [P] [US2] Integration test: a request to a path with no matching gateway route returns a clear 404, not a hang, in `services/gateway/tests/Gateway.Api.IntegrationTests/UnmatchedRouteTests.cs` (FR-007; Edge Case)
 
 ### Implementation for User Story 2
 
-- [ ] T051 [US2] Define the gateway's `ReverseProxy:Routes`/`Clusters` config — a single `bff-route` catch-all matched to a single `bff-cluster`, with the BFF's `BaseUrl` and a forwarding timeout ≥ the BFF's downstream timeout budget — in `services/gateway/src/Gateway.Api/appsettings.json` (data-model.md Route Mapping; research.md Decision 1/2)
-- [ ] T052 [US2] Wire YARP into `services/gateway/src/Gateway.Api/Program.cs`: `builder.Services.AddReverseProxy().LoadFromConfig(...)`, `app.MapReverseProxy()`, and reference `Yarp.ReverseProxy` from `Gateway.Api.csproj` (version already in `Directory.Packages.props` from T006) (depends on T051; makes T049/T050 pass)
+- [X] T051 [US2] Define the gateway's `ReverseProxy:Routes`/`Clusters` config — a single `bff-route` catch-all matched to a single `bff-cluster`, with the BFF's `BaseUrl` and a forwarding timeout ≥ the BFF's downstream timeout budget — in `services/gateway/src/Gateway.Api/appsettings.json` (data-model.md Route Mapping; research.md Decision 1/2)
+- [X] T052 [US2] Wire YARP into `services/gateway/src/Gateway.Api/Program.cs`: `builder.Services.AddReverseProxy().LoadFromConfig(...)`, `app.MapReverseProxy()`, and reference `Yarp.ReverseProxy` from `Gateway.Api.csproj` (version already in `Directory.Packages.props` from T006) (depends on T051; makes T049/T050 pass)
 
-**Checkpoint**: User Stories 1 and 2 both work independently and together — gateway → BFF → services end-to-end (quickstart.md Scenarios 1-3).
+**Checkpoint**: ✅ User Stories 1 and 2 both work independently and together — gateway → BFF → services end-to-end (quickstart.md Scenarios 1-3). Verified twice over: **8 gateway integration tests pass**, and a real three-process run (Products.Api + Bff.Api + Gateway.Api against a containerised SQL Server) returned seeded product data from `curl http://localhost:5300/bff/products` — the caller naming only the gateway's port, exactly quickstart Scenario 2.
+
+> **Phase 5 implementation notes**
+>
+> - **Route table is a single catch-all**, per data-model.md: `{**catch-all}` → `bff-cluster`. A gateway that enumerated the BFF's paths would need editing every time the BFF gained one — the topology coupling US2 exists to remove. Cluster timeout is `ActivityTimeout: 00:00:10`, comfortably above the BFF's 3 s per-downstream budget as data-model.md requires (T058 re-verifies this under US3).
+> - **Where the FR-007 404 comes from, precisely**: because the gateway route is a catch-all, *no* path is unmatched at the gateway — an unknown path is forwarded and the BFF, which has a finite route table, answers 404. The requirement is about what the caller observes, and the caller observes a prompt, clear 404 either way (measured at **5.7 ms** live). The alternative design — scoping the route to `/bff/{**catch-all}` so YARP itself 404s anything outside — would satisfy FR-007 one layer earlier and is recorded in `UnmatchedRouteTests`' remarks as the road not taken.
+> - **The gateway's own health probes are guarded by test**, not left to routing precedence. ASP.NET Core prefers the more specific `/health/live` over the catch-all, so they work today; `TheGatewaysOwnHealthProbes_AreServedLocally_NotForwarded` exists so a later route-table change cannot silently make a BFF outage restart every gateway pod.
+> - **How YARP is pointed at an in-process BFF**: by replacing `IForwarderHttpClientFactory`, so route matching, cluster selection, header handling, and timeout all still run as configured and only the socket is swapped — the same substitution the BFF's tests make one layer down. Deliberately not by binding a real Kestrel port, which makes suites flaky under parallel CI.
+>
+> **⚠️ Finding for US3 — cold start exceeds the BFF's downstream budget.** In the live run, the *very first* request through the chain returned `500` after 3.0 s (`Polly.Timeout.TimeoutRejectedException`); every subsequent request returned `200` in **11-40 ms**. The first call pays JIT, EF model build, and connection-pool warm-up, which does not fit the 3 s `TotalRequestTimeout` set in T047. This is a real availability concern — it would burn error budget on the first request after every deploy or scale-out, against an error-rate SLO of 0.1 % 5xx — and it is not visible to the integration suite, which warms each host before asserting. **The timeout was deliberately not widened here**: it is US3's territory (T056 owns downstream failure mapping), and changing a Principle VIII budget should be a recorded decision rather than a quiet edit made to make one manual observation look better. Options for T056: raise `TotalRequestTimeout`, warm the pipeline at startup, or gate readiness on a first successful downstream call.
 
 ---
 

@@ -25,4 +25,20 @@
     <ProjectReference Include="..\..\src\Gateway.Api\Gateway.Api.csproj" />
   </ItemGroup>
 
+  <!--
+    US2 is "the gateway reaches the right destination", so the destination in these tests is the
+    real BFF running in-process, not a stub that would prove only that YARP can reach something.
+
+    Aliased for the same reason as the BFF's own integration tests: Bff.Api and Gateway.Api both
+    declare `public partial class Program` in the global namespace, so referencing both is
+    otherwise ambiguous (CS0433). Test files say `extern alias BffApi;` and use `BffApi::Program`,
+    leaving the gateway's own unqualified `Program` unambiguous.
+
+    Test-only. Gateway.Api itself references no other service — it knows the BFF solely as a
+    configured address (research.md Decision 1/2).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\bff\src\Bff.Api\Bff.Api.csproj" Aliases="BffApi" />
+  </ItemGroup>
+
 </Project>
