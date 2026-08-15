@@ -7,14 +7,15 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <!-- No Testcontainers.MsSql here, unlike the domain services' integration tests: the BFF is a
-       stateless proxy/aggregation layer and owns no database (plan.md Technical Context: Storage
-       N/A). Its downstream dependencies are the real domain services, hosted in-process via
-       WebApplicationFactory (research.md Decision 5), which US1's tests reference directly. -->
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <!-- The BFF owns no database, but the real downstream services it is tested against do, and
+         constitution Principle III requires those to run against real SQL Server rather than a
+         fake. One container is shared across the suite; each service migrates its own database
+         on it, mirroring the production isolation rule (Principle I). -->
+    <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
@@ -25,6 +26,26 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Bff.Api\Bff.Api.csproj" />
+  </ItemGroup>
+
+  <!--
+    research.md Decision 5: the BFF's integration tests exercise the REAL downstream services
+    in-process via WebApplicationFactory, not a mocking library — the BFF's dependency here is
+    another of our own HTTP services, so "real dependency" means the real service.
+
+    Each reference carries an alias because all four services (and the BFF itself) declare
+    `public partial class Program` in the global namespace, so referencing them together is
+    otherwise ambiguous (CS0433). Test files say `extern alias ProductsApi;` and then
+    `ProductsApi::Program`, which leaves the BFF's own unqualified `Program` unambiguous.
+
+    These are test-only references. Nothing in Bff.Api itself references a domain service; it
+    reaches them over HTTP through their published APIs (constitution Principle I).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\products\src\Products.Api\Products.Api.csproj" Aliases="ProductsApi" />
+    <ProjectReference Include="..\..\..\baskets\src\Baskets.Api\Baskets.Api.csproj" Aliases="BasketsApi" />
+    <ProjectReference Include="..\..\..\orders\src\Orders.Api\Orders.Api.csproj" Aliases="OrdersApi" />
+    <ProjectReference Include="..\..\..\parties\src\Parties.Api\Parties.Api.csproj" Aliases="PartiesApi" />
   </ItemGroup>
 
 </Project>

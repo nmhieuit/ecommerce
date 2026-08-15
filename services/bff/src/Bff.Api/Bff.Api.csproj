@@ -8,6 +8,10 @@
     <!-- Native OpenAPI document generation (research.md Decision 6 / ADR-0003), which ADR-0004's
          Orval codegen pipeline consumes. Not in the shared framework — needs referencing. -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Supplies AddStandardResilienceHandler(): the timeout + retry + circuit-breaker pipeline
+         every outbound call is wrapped in, so no unbounded wait can exist (constitution
+         Principle VIII; research.md Decision 3). -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
   </ItemGroup>
 
   <!-- No health-check package reference: Microsoft.Extensions.Diagnostics.HealthChecks ships in the

@@ -162,27 +162,37 @@ The alternative — real data for products only, with the basket/order/party rou
 
 > Write these FIRST; confirm they FAIL before implementation. Each hosts the real downstream service in-process via `WebApplicationFactory<Program>` (research.md Decision 5 — the real service, not a mock), which in turn needs that service's Testcontainers database from Phase 3.
 
-- [ ] T033 [P] [US1] Integration test: `GET /bff/products` proxies to an in-process `Products.Api` and returns a shaped `ProductListResponse` (`items[].id/name/price`) in `services/bff/tests/Bff.Api.IntegrationTests/ProductsRouteTests.cs` (spec Test Scenario 1; contracts/bff-openapi.yaml)
-- [ ] T034 [P] [US1] Integration test: `GET /bff/baskets/{basketId}` proxies to an in-process `Baskets.Api` and returns basket data in `services/bff/tests/Bff.Api.IntegrationTests/BasketsRouteTests.cs`
-- [ ] T035 [P] [US1] Integration test: `GET /bff/orders/{orderId}` proxies to an in-process `Orders.Api` and returns order data in `services/bff/tests/Bff.Api.IntegrationTests/OrdersRouteTests.cs`
-- [ ] T036 [P] [US1] Integration test: `GET /bff/parties/{partyId}` proxies to an in-process `Parties.Api` and returns party data in `services/bff/tests/Bff.Api.IntegrationTests/PartiesRouteTests.cs`
-- [ ] T037 [P] [US1] Unit test: a downstream client configured with no `BaseUrl` fails at startup rather than per request, in `services/bff/tests/Bff.Api.UnitTests/DownstreamServiceClientOptionsTests.cs` (data-model.md validation rule)
+- [X] T033 [P] [US1] Integration test: `GET /bff/products` proxies to an in-process `Products.Api` and returns a shaped `ProductListResponse` (`items[].id/name/price`) in `services/bff/tests/Bff.Api.IntegrationTests/ProductsRouteTests.cs` (spec Test Scenario 1; contracts/bff-openapi.yaml)
+- [X] T034 [P] [US1] Integration test: `GET /bff/baskets/{basketId}` proxies to an in-process `Baskets.Api` and returns basket data in `services/bff/tests/Bff.Api.IntegrationTests/BasketsRouteTests.cs`
+- [X] T035 [P] [US1] Integration test: `GET /bff/orders/{orderId}` proxies to an in-process `Orders.Api` and returns order data in `services/bff/tests/Bff.Api.IntegrationTests/OrdersRouteTests.cs`
+- [X] T036 [P] [US1] Integration test: `GET /bff/parties/{partyId}` proxies to an in-process `Parties.Api` and returns party data in `services/bff/tests/Bff.Api.IntegrationTests/PartiesRouteTests.cs`
+- [X] T037 [P] [US1] Unit test: a downstream client configured with no `BaseUrl` fails at startup rather than per request, in `services/bff/tests/Bff.Api.UnitTests/DownstreamServiceClientOptionsTests.cs` (data-model.md validation rule)
 
 ### Implementation for User Story 1
 
-- [ ] T038 [US1] Add `DownstreamServiceClientOptions` (ServiceName, BaseUrl) with options validation that fails fast on a missing `BaseUrl` in `services/bff/src/Bff.Api/DownstreamClients/DownstreamServiceClientOptions.cs` (data-model.md Downstream Service Client; makes T037 pass)
-- [ ] T039 [P] [US1] Add typed `ProductsApiClient` `HttpClient` in `services/bff/src/Bff.Api/DownstreamClients/ProductsApiClient.cs` (depends on T038)
-- [ ] T040 [P] [US1] Add typed `BasketsApiClient` `HttpClient` in `services/bff/src/Bff.Api/DownstreamClients/BasketsApiClient.cs` (depends on T038)
-- [ ] T041 [P] [US1] Add typed `OrdersApiClient` `HttpClient` in `services/bff/src/Bff.Api/DownstreamClients/OrdersApiClient.cs` (depends on T038)
-- [ ] T042 [P] [US1] Add typed `PartiesApiClient` `HttpClient` in `services/bff/src/Bff.Api/DownstreamClients/PartiesApiClient.cs` (depends on T038)
-- [ ] T043 [US1] Implement the `GET /bff/products` route group, mapping `ProductsApiClient`'s response to `ProductListResponse`/`ProductSummary`, in `services/bff/src/Bff.Api/Features/Products/ProductsEndpoints.cs` (depends on T039; makes T033 pass)
-- [ ] T044 [US1] Implement the `GET /bff/baskets/{basketId}` route group in `services/bff/src/Bff.Api/Features/Baskets/BasketsEndpoints.cs` (depends on T040; makes T034 pass)
-- [ ] T045 [US1] Implement the `GET /bff/orders/{orderId}` route group in `services/bff/src/Bff.Api/Features/Orders/OrdersEndpoints.cs` (depends on T041; makes T035 pass)
-- [ ] T046 [US1] Implement the `GET /bff/parties/{partyId}` route group in `services/bff/src/Bff.Api/Features/Parties/PartiesEndpoints.cs` (depends on T042; makes T036 pass)
-- [ ] T047 [US1] Register all four typed clients (`AddHttpClient<T>()` + `AddStandardResilienceHandler()` at the internal-service-API timeout budget) and map all four route groups in `services/bff/src/Bff.Api/Program.cs` (depends on T038-T046)
-- [ ] T048 [P] [US1] Add `Services:ProductsApi:BaseUrl` / `BasketsApi` / `OrdersApi` / `PartiesApi` configuration keys to `services/bff/src/Bff.Api/appsettings.json` and `appsettings.Development.json`, pointing at the domain services' dev ports (`5088`, `5041`, `5188`, `5204`)
+- [X] T038 [US1] Add `DownstreamServiceClientOptions` (ServiceName, BaseUrl) with options validation that fails fast on a missing `BaseUrl` in `services/bff/src/Bff.Api/DownstreamClients/DownstreamServiceClientOptions.cs` (data-model.md Downstream Service Client; makes T037 pass)
+- [X] T039 [P] [US1] Add typed `ProductsApiClient` `HttpClient` in `services/bff/src/Bff.Api/DownstreamClients/ProductsApiClient.cs` (depends on T038)
+- [X] T040 [P] [US1] Add typed `BasketsApiClient` `HttpClient` in `services/bff/src/Bff.Api/DownstreamClients/BasketsApiClient.cs` (depends on T038)
+- [X] T041 [P] [US1] Add typed `OrdersApiClient` `HttpClient` in `services/bff/src/Bff.Api/DownstreamClients/OrdersApiClient.cs` (depends on T038)
+- [X] T042 [P] [US1] Add typed `PartiesApiClient` `HttpClient` in `services/bff/src/Bff.Api/DownstreamClients/PartiesApiClient.cs` (depends on T038)
+- [X] T043 [US1] Implement the `GET /bff/products` route group, mapping `ProductsApiClient`'s response to `ProductListResponse`/`ProductSummary`, in `services/bff/src/Bff.Api/Features/Products/ProductsEndpoints.cs` (depends on T039; makes T033 pass)
+- [X] T044 [US1] Implement the `GET /bff/baskets/{basketId}` route group in `services/bff/src/Bff.Api/Features/Baskets/BasketsEndpoints.cs` (depends on T040; makes T034 pass)
+- [X] T045 [US1] Implement the `GET /bff/orders/{orderId}` route group in `services/bff/src/Bff.Api/Features/Orders/OrdersEndpoints.cs` (depends on T041; makes T035 pass)
+- [X] T046 [US1] Implement the `GET /bff/parties/{partyId}` route group in `services/bff/src/Bff.Api/Features/Parties/PartiesEndpoints.cs` (depends on T042; makes T036 pass)
+- [X] T047 [US1] Register all four typed clients (`AddHttpClient<T>()` + `AddStandardResilienceHandler()` at the internal-service-API timeout budget) and map all four route groups in `services/bff/src/Bff.Api/Program.cs` (depends on T038-T046)
+- [X] T048 [P] [US1] Add `Services:ProductsApi:BaseUrl` / `BasketsApi` / `OrdersApi` / `PartiesApi` configuration keys to `services/bff/src/Bff.Api/appsettings.json` and `appsettings.Development.json`, pointing at the domain services' dev ports (`5088`, `5041`, `5188`, `5204`)
 
-**Checkpoint**: User Story 1 is fully functional and independently testable — the BFF proxies/aggregates all four services (quickstart.md Scenario 1).
+**Checkpoint**: ✅ User Story 1 is fully functional and independently testable — the BFF proxies/shapes all four services (quickstart.md Scenario 1). Verified: **8 BFF integration tests + 3 unit tests pass**, each route asserted against the real downstream service running in-process over a real database; solution builds 0 warnings / 0 errors; no regressions across the rest of the suite.
+
+> **Phase 4 implementation notes**
+>
+> - **All four domain services declare `public partial class Program` in the global namespace**, so a single test project referencing them together hits CS0433. The four `ProjectReference`s in `Bff.Api.IntegrationTests.csproj` therefore carry `Aliases` (`ProductsApi`, `BasketsApi`, …), and each test file opens with `extern alias ProductsApi;` and uses `ProductsApi::Program`. The BFF's own unqualified `Program` stays unambiguous. These are test-only references — `Bff.Api` itself references no domain service and reaches them only over HTTP (Principle I).
+> - **How a typed client is pointed at an in-process downstream**: each client is registered *by its logical service name* (`AddHttpClient<TClient>(serviceName, …)`), so a test can call `AddHttpClient(serviceName).ConfigurePrimaryHttpMessageHandler(downstream.Server.CreateHandler)` and reroute it without the BFF knowing it is under test. A base URL is still configured because the request needs an absolute URI, but the handler decides where it lands. `BffTestHost` holds this arrangement.
+> - **Each downstream gets its own database on the shared container** (`bff-products`, `bff-baskets`, …) rather than sharing one catalog, so the test topology mirrors the production isolation rule (Principle I) instead of proving the BFF works in a world where all four services share a schema.
+> - **A downstream 404 stays a 404.** The typed clients map `NotFound` to a `null` result instead of letting `EnsureSuccessStatusCode` throw. "No such basket" is the downstream answering correctly; routing it through the failure path would turn it into US3's 502 and lose a distinction the SPA needs. Asserted in three tests.
+> - **Resilience budgets** (`DownstreamClientRegistrationExtensions`): 1 s per attempt, 3 s total per downstream call including retries, 10 s circuit-breaker sampling window. Chosen to sit above the downstream services' declared p99 of 500 ms and below SC-003's 5-second ceiling. Verified live: with the products service down, `GET /bff/products` returned in **3.16 s** rather than hanging.
+> - **Contract generation confirmed working end-to-end**: the BFF's `/openapi/v1.json`, which listed `paths: {}` at the Phase 2 checkpoint, now advertises all four routes automatically. T062 still owns reconciling it against the hand-authored `bff-openapi.yaml`.
+> - **Known gap, owned by US3 (T053-T056)**: with a downstream unreachable the BFF currently returns a bare `500`, not the `502`/`504` `ProblemDetails` with `correlationId` the contract specifies. The *timing* half of FR-006 is already satisfied (bounded at ~3 s); the *shape* half is Phase 6's work.
 
 ---
 
