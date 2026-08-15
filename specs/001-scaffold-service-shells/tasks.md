@@ -127,16 +127,37 @@ tests/StructureConventionTests/     # US3 solution-level structure check
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T036 [US2] Write failing test asserting no service's `appsettings.json` contains another service's connection string or credential, in `tests/CrossServiceIsolation.Tests/ConnectionStringIsolationTests.cs`
-- [ ] T037 [P] [US2] Extend `services/parties/tests/Parties.Api.IntegrationTests/ReadinessTests.cs` with an assertion that stopping parties' own database never causes a fallback read from another service's database
-- [ ] T038 [P] [US2] Same fallback-prevention assertion in `services/products/tests/Products.Api.IntegrationTests/ReadinessTests.cs`
-- [ ] T039 [P] [US2] Same fallback-prevention assertion in `services/baskets/tests/Baskets.Api.IntegrationTests/ReadinessTests.cs`
-- [ ] T040 [P] [US2] Same fallback-prevention assertion in `services/orders/tests/Orders.Api.IntegrationTests/ReadinessTests.cs`
+- [X] T036 [US2] Write failing test asserting no service's `appsettings.json` contains another service's connection string or credential, in `tests/CrossServiceIsolation.Tests/ConnectionStringIsolationTests.cs` (observed RED: 6/6 failed against the not-yet-implemented scanner)
+- [X] T037 [P] [US2] Extend `services/parties/tests/Parties.Api.IntegrationTests/ReadinessTests.cs` with an assertion that stopping parties' own database never causes a fallback read from another service's database
+- [X] T038 [P] [US2] Same fallback-prevention assertion in `services/products/tests/Products.Api.IntegrationTests/ReadinessTests.cs`
+- [X] T039 [P] [US2] Same fallback-prevention assertion in `services/baskets/tests/Baskets.Api.IntegrationTests/ReadinessTests.cs`
+- [X] T040 [P] [US2] Same fallback-prevention assertion in `services/orders/tests/Orders.Api.IntegrationTests/ReadinessTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T041 [US2] Implement the connection-string isolation scanner making T036 pass, in `tests/CrossServiceIsolation.Tests/ConnectionStringScanner.cs` (depends on T028-T031, T036)
-- [ ] T042 [US2] Document the data-isolation guarantee in `services/README.md`, referencing the T041 scanner as its enforcement mechanism (depends on T041)
+- [X] T041 [US2] Implement the connection-string isolation scanner making T036 pass, in `tests/CrossServiceIsolation.Tests/ConnectionStringScanner.cs` (depends on T028-T031, T036)
+- [X] T042 [US2] Document the data-isolation guarantee in `services/README.md`, referencing the T041 scanner as its enforcement mechanism (depends on T041)
+
+**Implementation notes (US2)**
+
+- New solution-level project `tests/CrossServiceIsolation.Tests`, registered in `Ecommerce.slnx`.
+  It deliberately references no service project, so the check cannot come to depend on the code
+  it polices.
+- The scanner reads **files, not running services** — possession of another service's credential is
+  the violation, not its use — and discovers services from the directory layout, so `logistics` and
+  `invoices` are covered the day their folders appear.
+- Two guards keep T036 from passing vacuously: `ScanResult` reports what was examined (so a scan
+  that resolved the wrong directory fails instead of reporting clean), and fixture-driven theories
+  feed the scanner deliberately-broken configuration to prove it still detects a breach.
+- T037–T040 are adversarial rather than passive: each hands its service an unreachable connection
+  string for its own database *while* offering a genuinely reachable one under every other
+  service's key, then requires 503 with `self-database` unhealthy.
+- The four readiness suites now share one Testcontainers SQL Server per class (`SqlServerFixture`)
+  instead of starting one per test — the new test needs a reachable "foreign" database anyway, and
+  sharing keeps the container count per suite at one.
+- Open caveat recorded in `services/README.md`: all four local database containers share one
+  `MSSQL_SA_PASSWORD`, so local isolation rests on host/port separation rather than distinct
+  credentials. Deployed environments are unaffected.
 
 **Checkpoint**: Structural data isolation is proven by a repeatable check, not just asserted by convention.
 

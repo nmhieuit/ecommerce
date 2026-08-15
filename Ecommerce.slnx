@@ -35,4 +35,7 @@
   <Folder Name="/shared/">
     <Project Path="shared/ServiceDefaults/ServiceDefaults.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CrossServiceIsolation.Tests/CrossServiceIsolation.Tests.csproj" />
+  </Folder>
 </Solution>
