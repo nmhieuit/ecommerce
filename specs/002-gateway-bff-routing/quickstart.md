@@ -16,7 +16,17 @@ Validates the feature end-to-end against spec.md's acceptance scenarios and test
 docker compose -f docker-compose.deps.yml up --wait products-db-init baskets-db-init orders-db-init parties-db-init
 ```
 
-2. Run each domain service locally (separate terminals, or via the solution's multi-startup profile):
+2. Create each service's schema. `docker-compose.deps.yml` creates empty databases only — tables are EF Core migrations' job, and a service started against an empty database connects successfully and then fails on its first query. The tooling is pinned in `.config/dotnet-tools.json`, so restore it first:
+
+```bash
+dotnet tool restore
+dotnet dotnet-ef database update --project services/products/src/Products.Api
+dotnet dotnet-ef database update --project services/baskets/src/Baskets.Api
+dotnet dotnet-ef database update --project services/orders/src/Orders.Api
+dotnet dotnet-ef database update --project services/parties/src/Parties.Api
+```
+
+3. Run each domain service locally (separate terminals, or via the solution's multi-startup profile):
 
 ```bash
 dotnet run --project services/products/src/Products.Api
@@ -25,24 +35,32 @@ dotnet run --project services/orders/src/Orders.Api
 dotnet run --project services/parties/src/Parties.Api
 ```
 
-3. Run the BFF, pointed at the four running services via its `Services:*:BaseUrl` configuration:
+4. Run the BFF, pointed at the four running services via its `Services:*:BaseUrl` configuration:
 
 ```bash
 dotnet run --project services/bff/src/Bff.Api
 ```
 
-4. Run the gateway, pointed at the running BFF via its `ReverseProxy` configuration:
+5. Run the gateway, pointed at the running BFF via its `ReverseProxy` configuration:
 
 ```bash
 dotnet run --project services/gateway/src/Gateway.Api
 ```
+
+6. **Wait for readiness, not liveness, before issuing the first request.** `/health/live` answers as soon as the process is up; `/health/ready` additionally opens a real database connection, which is what warms the EF model and connection pool. A request issued before then pays that cost inside the BFF's 3-second per-downstream budget and can time out — measured at just over 3 s cold versus ~1 s once ready, so this is the difference between the first `curl` below returning data and returning a 504.
+
+```bash
+curl --fail --silent --retry 30 --retry-all-errors --retry-delay 1 http://localhost:5088/health/ready
+```
+
+Note the local ports: products `5088`, baskets `5041`, orders `5188`, parties `5204`, BFF `5301`, gateway `5300`.
 
 ## Validation Scenarios
 
 ### Scenario 1 — BFF proxies the product-listing route (spec Test Scenario 1, US1 Acceptance Scenario 1)
 
 ```bash
-curl -i http://localhost:<gateway-port>/bff/products
+curl -i http://localhost:5300/bff/products
 ```
 
 **Expected**: `200 OK` with a JSON body matching `ProductListResponse` in the contract — an `items` array of shaped product summaries sourced from the products service, not a raw pass-through of its internal response shape.
@@ -50,7 +68,7 @@ curl -i http://localhost:<gateway-port>/bff/products
 ### Scenario 2 — Gateway reaches the correct destination without the caller specifying topology (US2 Acceptance Scenario 1)
 
 ```bash
-curl -i http://localhost:<gateway-port>/bff/products
+curl -i http://localhost:5300/bff/products
 ```
 
 **Expected**: The request only ever names the gateway's own host/port — no products/baskets/orders/parties host or port appears anywhere in the request the caller issues. Confirm this by checking that this single call, with zero other configuration, reaches products-backed data.
@@ -63,7 +81,7 @@ No SPA exists yet in this repo (SCRUM-14 builds it next); this scenario becomes 
 
 ```bash
 # Stop the products service, then:
-curl -i http://localhost:<gateway-port>/bff/products
+curl -i http://localhost:5300/bff/products
 ```
 
 **Expected**: A response within 5 seconds (SC-003) with `502` or `504` status and a `ProblemDetails` JSON body including `correlationId` — not a hang, not a raw exception stack trace, and not an indefinite wait.

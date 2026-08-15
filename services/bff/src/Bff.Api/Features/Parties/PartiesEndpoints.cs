@@ -25,7 +25,14 @@ public static class PartiesEndpoints
             return party is null
                 ? Results.NotFound()
                 : Results.Ok(ToResponse(party));
-        });
+        })
+            .WithName("getParty")
+            // See ProductsEndpoints for why the failure responses are declared explicitly: the
+            // generated document is the contract the frontend's client is built from.
+            .Produces<PartyResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status502BadGateway)
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
 
         return app;
     }

@@ -10,9 +10,17 @@ namespace Bff.Api.IntegrationTests;
 /// caller gets a clear, well-formed error within a bounded time instead of hanging.
 /// </summary>
 /// <remarks>
-/// No downstream host is started here. The "products service is stopped" condition is produced by
-/// pointing the BFF at an address with nothing listening, so the failure is a real socket failure
-/// travelling through the real resilience pipeline.
+/// No downstream host is started here. Every failure below travels through the real resilience
+/// pipeline and the real exception handler; only the transport underneath is substituted.
+/// <para>
+/// The tests that assert a *specific* status inject the transport failure, because 502 versus 504
+/// turns on whether the failure occurs inside the 1 s attempt timeout — and how fast a real machine
+/// reports an unreachable host is that machine's business, not ours. That was not a hypothetical:
+/// asserting against a genuinely unresolvable host passed in isolation and failed intermittently
+/// when the suite ran alongside other Testcontainers suites, where DNS resolution slowed past the
+/// attempt timeout and a 502 became a 504. The last test keeps a real unreachable address, and
+/// asserts only what is true regardless of the host's speed.
+/// </para>
 /// </remarks>
 public class DownstreamUnavailableTests
 {
@@ -25,21 +33,14 @@ public class DownstreamUnavailableTests
 
     /// <summary>
     /// A host that cannot resolve. <c>.invalid</c> is reserved by RFC 2606 precisely so it can
-    /// never exist, making the failure both certain and immediate.
+    /// never exist.
     /// </summary>
-    /// <remarks>
-    /// Deliberately not a closed port such as <c>http://127.0.0.1:1</c>. How quickly a refused
-    /// connection is reported is an operating-system behaviour, not ours — measured at ~2 s on
-    /// Windows loopback here, which exceeds the 1 s per-attempt timeout and would make this test
-    /// observe a 504 on one machine and a 502 on another. A name that cannot resolve fails in
-    /// milliseconds everywhere, so the "unreachable ⇒ 502" branch is exercised deterministically.
-    /// </remarks>
     private const string UnreachableAddress = "http://products-service.invalid";
 
     [Fact]
     public async Task GetProducts_ReturnsBadGateway_WhenTheProductsServiceIsUnreachable()
     {
-        await using var bff = BffTestHost.CreateBffWithUnreachableService("ProductsApi", UnreachableAddress);
+        await using var bff = BffTestHost.CreateBffWithFailingTransport("ProductsApi");
         var client = bff.CreateClient();
 
         var stopwatch = Stopwatch.StartNew();
@@ -80,7 +81,7 @@ public class DownstreamUnavailableTests
     [Fact]
     public async Task ADownstreamFailure_ReturnsProblemDetailsCarryingTheCorrelationId()
     {
-        await using var bff = BffTestHost.CreateBffWithUnreachableService("ProductsApi", UnreachableAddress);
+        await using var bff = BffTestHost.CreateBffWithFailingTransport("ProductsApi");
         var client = bff.CreateClient();
 
         var response = await client.GetAsync("/bff/products");
@@ -109,7 +110,7 @@ public class DownstreamUnavailableTests
     [Fact]
     public async Task ADownstreamFailure_NamesTheLogicalServiceOnly_NeverItsAddress()
     {
-        await using var bff = BffTestHost.CreateBffWithUnreachableService("ProductsApi", UnreachableAddress);
+        await using var bff = BffTestHost.CreateBffWithFailingTransport("ProductsApi");
         var client = bff.CreateClient();
 
         var response = await client.GetAsync("/bff/products");
@@ -120,7 +121,7 @@ public class DownstreamUnavailableTests
 
         // But nothing about where it lives — no host, no scheme, and no stack trace.
         foreach (var leak in new[]
-                 { "products-service.invalid", ".invalid", "http://", "Polly", "System.Net.Http", "at Bff.Api" })
+                 { "downstream.test", "http://", "Polly", "System.Net.Http", "at Bff.Api", "No such host" })
         {
             Assert.DoesNotContain(leak, body, StringComparison.OrdinalIgnoreCase);
         }
@@ -138,14 +139,44 @@ public class DownstreamUnavailableTests
         string serviceConfigurationName,
         string route)
     {
-        await using var bff = BffTestHost.CreateBffWithUnreachableService(
-            serviceConfigurationName,
-            UnreachableAddress);
+        await using var bff = BffTestHost.CreateBffWithFailingTransport(serviceConfigurationName);
         var client = bff.CreateClient();
 
         var response = await client.GetAsync(route);
 
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    /// <summary>
+    /// The real transport, against a genuinely unreachable host — no substituted handler anywhere.
+    /// </summary>
+    /// <remarks>
+    /// Asserts only what holds however slowly the machine reports the failure: it is bounded, it is
+    /// a structured problem document, and it names the dependency. Which of 502 or 504 it lands on
+    /// depends on whether resolution beats the attempt timeout, so pinning that here is what made
+    /// this suite flaky under load; both are correct answers to "the dependency did not answer".
+    /// </remarks>
+    [Fact]
+    public async Task ADownstreamFailure_IsBoundedAndStructured_AgainstARealUnreachableHost()
+    {
+        await using var bff = BffTestHost.CreateBffWithUnreachableService("ProductsApi", UnreachableAddress);
+        var client = bff.CreateClient();
+
+        var stopwatch = Stopwatch.StartNew();
+        var response = await client.GetAsync("/bff/products");
+        stopwatch.Stop();
+
+        Assert.Contains(
+            response.StatusCode,
+            new[] { HttpStatusCode.BadGateway, HttpStatusCode.GatewayTimeout });
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.True(
+            stopwatch.Elapsed < ClearErrorBudget,
+            $"Took {stopwatch.Elapsed.TotalSeconds:F1}s; SC-003 requires a clear error in under 5s.");
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains("ProductsApi", problem.GetProperty("detail").GetString()!, StringComparison.Ordinal);
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("correlationId").GetString()));
     }
 }

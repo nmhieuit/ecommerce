@@ -19,13 +19,21 @@ public static class ProductsEndpoints
         var group = app.MapGroup("/bff");
 
         group.MapGet("/products", async (
-            ProductsApiClient products,
-            CancellationToken cancellationToken) =>
-        {
-            var catalog = await products.GetProductsAsync(cancellationToken);
+                ProductsApiClient products,
+                CancellationToken cancellationToken) =>
+            {
+                var catalog = await products.GetProductsAsync(cancellationToken);
 
-            return new ProductListResponse([.. catalog.Select(ToSummary)]);
-        });
+                return new ProductListResponse([.. catalog.Select(ToSummary)]);
+            })
+            .WithName("listProducts")
+            // The generated OpenAPI document is the authoritative contract (ADR-0004), and the
+            // frontend's client is generated from it — so the failure responses this route really
+            // produces have to be declared, or the SPA gets a client that believes 200 is the only
+            // possible outcome. Inferred metadata covers the success case only.
+            .Produces<ProductListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status502BadGateway)
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
 
         return app;
     }

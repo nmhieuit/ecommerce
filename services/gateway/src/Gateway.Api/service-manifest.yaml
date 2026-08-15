@@ -35,6 +35,21 @@ slos:
     p99: 500ms
 
 endpoints:
+  - route: ANY /{**catch-all}
+    purpose: >-
+      Forwards every request that is not one of this service's own health probes to the BFF
+      (research.md Decision 1/2; spec FR-001). A catch-all is deliberate: enumerating the BFF's
+      paths here would reintroduce the topology coupling the gateway exists to remove.
+      Unmatched application paths are answered 404 by the BFF, which holds the finite route table.
+    authentication: anonymous   # no identity server yet — see plan.md Constitution Check (VI)
+    forwards-to: bff
+    forwarding-timeout: 10s     # must stay >= the BFF's 3s per-downstream budget (data-model.md);
+                                # enforced by Gateway.Api.UnitTests/ForwardingTimeoutBudgetTests
+    latency:
+      # The gateway's own overhead on top of whatever the BFF spends, not an end-to-end budget:
+      # the BFF's client-facing SLO (p95 300ms / p99 800ms) governs what a caller actually sees.
+      p95: 150ms
+      p99: 500ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check

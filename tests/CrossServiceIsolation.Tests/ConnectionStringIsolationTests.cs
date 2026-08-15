@@ -10,7 +10,21 @@ namespace CrossServiceIsolation.Tests;
 /// </summary>
 public class ConnectionStringIsolationTests
 {
-    private static readonly string[] ExpectedServices = ["baskets", "orders", "parties", "products"];
+    /// <summary>Every service under <c>services/</c>, in the ordinal order the scanner returns them.</summary>
+    private static readonly string[] ExpectedServices =
+        ["baskets", "bff", "gateway", "orders", "parties", "products"];
+
+    /// <summary>
+    /// The services that own a database, and so are the only ones expected to declare a connection
+    /// string. <c>bff</c> and <c>gateway</c> are stateless proxy/aggregation layers — constitution
+    /// Principle I gives persistence only to services that own business invariants — so counting
+    /// connection strings against <see cref="ExpectedServices"/> would assert something untrue of
+    /// two of them.
+    /// </summary>
+    private static readonly string[] DatabaseOwningServices = ["baskets", "orders", "parties", "products"];
+
+    /// <summary>The services that must declare no connection string at all.</summary>
+    private static readonly string[] StatelessServices = ["bff", "gateway"];
 
     [Fact]
     public void NoServiceConfiguration_NamesAnotherServicesDatabase()
@@ -37,8 +51,44 @@ public class ConnectionStringIsolationTests
                 result.ScannedConfigurationFiles,
                 file => file.Contains(service, StringComparison.OrdinalIgnoreCase)));
         Assert.True(
-            result.ScannedConnectionStringCount >= ExpectedServices.Length,
-            $"Expected at least one connection string per service, found {result.ScannedConnectionStringCount}.");
+            result.ScannedConnectionStringCount >= DatabaseOwningServices.Length,
+            "Expected at least one connection string per database-owning service, "
+            + $"found {result.ScannedConnectionStringCount}.");
+    }
+
+    /// <summary>
+    /// The other half of Principle I: a service that owns no data must not be handed a database at
+    /// all. The gateway and BFF reach the domain services over HTTP, and a connection string
+    /// appearing in either one's configuration would be a boundary breach the scan above cannot
+    /// see — it looks for connections that name <em>another</em> service's database, and a
+    /// stateless service has no database of its own for one to be compared against.
+    /// </summary>
+    [Fact]
+    public void NoStatelessService_DeclaresAConnectionString()
+    {
+        var servicesDirectory = ConnectionStringScanner.LocateServicesDirectory();
+
+        Assert.All(StatelessServices, service =>
+        {
+            var configurationFiles = Directory.GetFiles(
+                Path.Combine(servicesDirectory, service),
+                "appsettings*.json",
+                SearchOption.AllDirectories)
+                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                            && !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
+
+            // Guards against the assertion passing because the files were never found.
+            Assert.NotEmpty(configurationFiles);
+
+            Assert.All(configurationFiles, file =>
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(file));
+                Assert.False(
+                    document.RootElement.TryGetProperty("ConnectionStrings", out _),
+                    $"'{file}' declares a ConnectionStrings section, but {service} owns no database "
+                    + "(constitution Principle I).");
+            });
+        });
     }
 
     /// <summary>

@@ -27,7 +27,14 @@ public static class BasketsEndpoints
             return basket is null
                 ? Results.NotFound()
                 : Results.Ok(ToResponse(basket));
-        });
+        })
+            .WithName("getBasket")
+            // See ProductsEndpoints for why the failure responses are declared explicitly: the
+            // generated document is the contract the frontend's client is built from.
+            .Produces<BasketResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status502BadGateway)
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
 
         return app;
     }

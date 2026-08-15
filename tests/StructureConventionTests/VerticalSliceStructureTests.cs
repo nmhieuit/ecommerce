@@ -7,7 +7,14 @@ namespace StructureConventionTests;
 /// </summary>
 public class VerticalSliceStructureTests
 {
-    private static readonly string[] ExpectedServices = ["baskets", "orders", "parties", "products"];
+    /// <summary>
+    /// Every service under <c>services/</c>, in the ordinal order the scanner returns them.
+    /// Vertical-slice organisation applies to the edge services too: <c>bff</c> and <c>gateway</c>
+    /// own no data, but they still organise what they do have by capability rather than by
+    /// technical role, and nothing about them earns an exemption from SC-004.
+    /// </summary>
+    private static readonly string[] ExpectedServices =
+        ["baskets", "bff", "gateway", "orders", "parties", "products"];
 
     [Fact]
     public void NoService_HasATopLevelTechnicalLayerFolder()

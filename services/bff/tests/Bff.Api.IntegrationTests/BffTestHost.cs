@@ -74,6 +74,25 @@ public static class BffTestHost
         CreateBff(serviceConfigurationName, unreachableBaseUrl, handlerFactory: null);
 
     /// <summary>
+    /// Starts the BFF with a downstream whose transport fails immediately — a refused connection or
+    /// an unresolvable host, without depending on the machine actually producing one.
+    /// </summary>
+    /// <remarks>
+    /// Whether a *real* unreachable address fails fast is an environment behaviour, and it decides
+    /// which status this maps to: a transport error under the attempt timeout is unavailability
+    /// (502), one that exceeds it is a timeout (504). Measured here, a refused connection on Windows
+    /// loopback took ~2 s and DNS failure ~13 ms — but under Docker contention the DNS path was
+    /// observed exceeding the 1 s attempt timeout too, flipping 502 to 504 and failing the suite
+    /// intermittently. Injecting the failure removes the machine from the equation, so the mapping
+    /// under test is asserted rather than the host's socket timing. The real-transport path is still
+    /// exercised by <c>ADownstreamFailure_IsBoundedAndStructured_AgainstARealUnreachableHost</c>
+    /// and by quickstart Scenario 4.
+    /// </remarks>
+    public static WebApplicationFactory<Program> CreateBffWithFailingTransport(
+        string serviceConfigurationName) =>
+        CreateBff(serviceConfigurationName, UnusedDownstreamBaseUrl, () => new FailingTransportHandler());
+
+    /// <summary>
     /// Starts the BFF with a downstream that accepts the request and then never answers — the
     /// "responds slowly rather than being fully down" case the spec's Edge Cases call out, which
     /// must produce a timeout rather than an unbounded wait.
@@ -102,6 +121,19 @@ public static class BffTestHost
                         .ConfigurePrimaryHttpMessageHandler(handlerFactory));
             }
         });
+    }
+
+    /// <summary>
+    /// Fails the transport immediately, exactly as an unresolvable host or refused connection does,
+    /// but in no measurable time — so the failure cannot be reclassified as a timeout on a loaded
+    /// machine.
+    /// </summary>
+    private sealed class FailingTransportHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            throw new HttpRequestException("No such host is known.");
     }
 
     /// <summary>

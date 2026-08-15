@@ -25,7 +25,14 @@ public static class OrdersEndpoints
             return order is null
                 ? Results.NotFound()
                 : Results.Ok(ToResponse(order));
-        });
+        })
+            .WithName("getOrder")
+            // See ProductsEndpoints for why the failure responses are declared explicitly: the
+            // generated document is the contract the frontend's client is built from.
+            .Produces<OrderResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status502BadGateway)
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
 
         return app;
     }

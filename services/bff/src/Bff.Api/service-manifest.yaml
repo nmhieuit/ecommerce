@@ -61,6 +61,39 @@ downstream-dependencies:
       p99: 500ms
 
 endpoints:
+  # The client-facing surface. Every one of these is a proxy-and-shape over a single downstream
+  # call and carries no business logic (spec FR-005); each can return 502/504 ProblemDetails when
+  # its downstream is unavailable (FR-006), and the by-id routes 404 for an unknown id.
+  - route: GET /bff/products
+    purpose: >-
+      Product listing, shaped from the products service (spec FR-004; the proxy path Test
+      Scenario 1 proves). Returns an empty items envelope for an empty catalog, never 404.
+    authentication: anonymous   # no identity server yet — see plan.md Constitution Check (VI)
+    proxies: products
+    latency:
+      p95: 300ms
+      p99: 800ms
+  - route: GET /bff/baskets/{basketId}
+    purpose: Single basket, shaped from the baskets service. 404 when no such basket exists.
+    authentication: anonymous
+    proxies: baskets
+    latency:
+      p95: 300ms
+      p99: 800ms
+  - route: GET /bff/orders/{orderId}
+    purpose: Single order, shaped from the orders service. 404 when no such order exists.
+    authentication: anonymous
+    proxies: orders
+    latency:
+      p95: 300ms
+      p99: 800ms
+  - route: GET /bff/parties/{partyId}
+    purpose: Single party (customer), shaped from the parties service. 404 when no such party exists.
+    authentication: anonymous
+    proxies: parties
+    latency:
+      p95: 300ms
+      p99: 800ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check

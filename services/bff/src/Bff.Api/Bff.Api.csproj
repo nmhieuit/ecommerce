@@ -24,4 +24,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The response-shaping functions are internal because nothing outside this service should
+         call them, but they are the one piece of logic the BFF actually owns (everything else is
+         proxying), so they are worth testing directly rather than only through HTTP. -->
+    <InternalsVisibleTo Include="Bff.Api.UnitTests" />
+  </ItemGroup>
+
 </Project>
