@@ -75,31 +75,45 @@ tests/StructureConventionTests/     # US3 solution-level structure check
 - [X] T011 [P] [US1] Write failing unit test asserting `/health/live` returns 200 in `services/orders/tests/Orders.Api.UnitTests/HealthCheckTests.cs`
 - [X] T012 [P] [US1] Write failing Testcontainers integration test asserting `/health/ready` is 200 when the database is reachable and 503 when it is not, in `services/parties/tests/Parties.Api.IntegrationTests/ReadinessTests.cs`
 - [X] T013 [P] [US1] Same readiness test shape in `services/products/tests/Products.Api.IntegrationTests/ReadinessTests.cs`
-- [X] T014 [P] [US1] Same readiness test shape in `services/baskets/tests/Baskets.Api.IntegrationTests/ReadinessTests.cs` (code identical to T012/T013, proven on Parties/Products with a real Testcontainers SQL instance; not independently re-run after the timeout misdiagnosis below)
-- [X] T015 [P] [US1] Same readiness test shape in `services/orders/tests/Orders.Api.IntegrationTests/ReadinessTests.cs` (same note as T014)
+- [X] T014 [P] [US1] Same readiness test shape in `services/baskets/tests/Baskets.Api.IntegrationTests/ReadinessTests.cs` (since independently re-run against a real Testcontainers SQL instance during T026 — 2 passed)
+- [X] T015 [P] [US1] Same readiness test shape in `services/orders/tests/Orders.Api.IntegrationTests/ReadinessTests.cs` (same note as T014 — 2 passed)
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Create `Parties.Api` ASP.NET Core Minimal API project (.NET 10) referencing `shared/ServiceDefaults`, in `services/parties/src/Parties.Api/Parties.Api.csproj`
-- [ ] T017 [P] [US1] Create `Products.Api` Minimal API project in `services/products/src/Products.Api/Products.Api.csproj`
-- [ ] T018 [P] [US1] Create `Baskets.Api` Minimal API project in `services/baskets/src/Baskets.Api/Baskets.Api.csproj`
-- [ ] T019 [P] [US1] Create `Orders.Api` Minimal API project in `services/orders/src/Orders.Api/Orders.Api.csproj`
-- [ ] T020 [P] [US1] Add `PartiesDbContext` (EF Core, connection string scoped to this service only) in `services/parties/src/Parties.Api/Data/PartiesDbContext.cs` (depends on T016)
-- [ ] T021 [P] [US1] Add `ProductsDbContext` in `services/products/src/Products.Api/Data/ProductsDbContext.cs` (depends on T017)
-- [ ] T022 [P] [US1] Add `BasketsDbContext` in `services/baskets/src/Baskets.Api/Data/BasketsDbContext.cs` (depends on T018)
-- [ ] T023 [P] [US1] Add `OrdersDbContext` in `services/orders/src/Orders.Api/Data/OrdersDbContext.cs` (depends on T019)
-- [ ] T024 [P] [US1] Implement `/health/live` and `/health/ready` (via `AddDbContextCheck<PartiesDbContext>()`) in `services/parties/src/Parties.Api/Features/HealthCheck/HealthCheckEndpoints.cs`; wire `AddServiceDefaults()` in `services/parties/src/Parties.Api/Program.cs` (depends on T020, T005 — makes T008, T012 pass)
-- [ ] T025 [P] [US1] Same for products in `services/products/src/Products.Api/Features/HealthCheck/HealthCheckEndpoints.cs` + `Program.cs` (depends on T021, T005 — makes T009, T013 pass)
-- [ ] T026 [P] [US1] Same for baskets in `services/baskets/src/Baskets.Api/Features/HealthCheck/HealthCheckEndpoints.cs` + `Program.cs` (depends on T022, T005 — makes T010, T014 pass)
-- [ ] T027 [P] [US1] Same for orders in `services/orders/src/Orders.Api/Features/HealthCheck/HealthCheckEndpoints.cs` + `Program.cs` (depends on T023, T005 — makes T011, T015 pass)
-- [ ] T028 [P] [US1] Add `appsettings.json` with a connection string scoped only to its own database for parties in `services/parties/src/Parties.Api/appsettings.json`
-- [ ] T029 [P] [US1] Same for products in `services/products/src/Products.Api/appsettings.json`
-- [ ] T030 [P] [US1] Same for baskets in `services/baskets/src/Baskets.Api/appsettings.json`
-- [ ] T031 [P] [US1] Same for orders in `services/orders/src/Orders.Api/appsettings.json`
-- [ ] T032 [P] [US1] Add `Dockerfile` for parties in `services/parties/src/Parties.Api/Dockerfile`
-- [ ] T033 [P] [US1] Add `Dockerfile` for products in `services/products/src/Products.Api/Dockerfile`
-- [ ] T034 [P] [US1] Add `Dockerfile` for baskets in `services/baskets/src/Baskets.Api/Dockerfile`
-- [ ] T035 [P] [US1] Add `Dockerfile` for orders in `services/orders/src/Orders.Api/Dockerfile`
+- [X] T016 [P] [US1] Create `Parties.Api` ASP.NET Core Minimal API project (.NET 10) referencing `shared/ServiceDefaults`, in `services/parties/src/Parties.Api/Parties.Api.csproj`
+- [X] T017 [P] [US1] Create `Products.Api` Minimal API project in `services/products/src/Products.Api/Products.Api.csproj`
+- [X] T018 [P] [US1] Create `Baskets.Api` Minimal API project in `services/baskets/src/Baskets.Api/Baskets.Api.csproj`
+- [X] T019 [P] [US1] Create `Orders.Api` Minimal API project in `services/orders/src/Orders.Api/Orders.Api.csproj`
+- [X] T020 [P] [US1] Add `PartiesDbContext` (EF Core, connection string scoped to this service only) in `services/parties/src/Parties.Api/Data/PartiesDbContext.cs` (depends on T016)
+- [X] T021 [P] [US1] Add `ProductsDbContext` in `services/products/src/Products.Api/Data/ProductsDbContext.cs` (depends on T017)
+- [X] T022 [P] [US1] Add `BasketsDbContext` in `services/baskets/src/Baskets.Api/Data/BasketsDbContext.cs` (depends on T018)
+- [X] T023 [P] [US1] Add `OrdersDbContext` in `services/orders/src/Orders.Api/Data/OrdersDbContext.cs` (depends on T019)
+- [X] T024 [P] [US1] Implement `/health/live` and `/health/ready` (via `AddDbContextCheck<PartiesDbContext>()`) in `services/parties/src/Parties.Api/Features/HealthCheck/HealthCheckEndpoints.cs`; wire `AddServiceDefaults()` in `services/parties/src/Parties.Api/Program.cs` (depends on T020, T005 — makes T008, T012 pass)
+- [X] T025 [P] [US1] Same for products in `services/products/src/Products.Api/Features/HealthCheck/HealthCheckEndpoints.cs` + `Program.cs` (depends on T021, T005 — makes T009, T013 pass)
+- [X] T026 [P] [US1] Same for baskets in `services/baskets/src/Baskets.Api/Features/HealthCheck/HealthCheckEndpoints.cs` + `Program.cs` (depends on T022, T005 — makes T010, T014 pass)
+- [X] T027 [P] [US1] Same for orders in `services/orders/src/Orders.Api/Features/HealthCheck/HealthCheckEndpoints.cs` + `Program.cs` (depends on T023, T005 — makes T011, T015 pass)
+- [X] T028 [P] [US1] Add `appsettings.json` with a connection string scoped only to its own database for parties in `services/parties/src/Parties.Api/appsettings.json`
+- [X] T029 [P] [US1] Same for products in `services/products/src/Products.Api/appsettings.json`
+- [X] T030 [P] [US1] Same for baskets in `services/baskets/src/Baskets.Api/appsettings.json`
+- [X] T031 [P] [US1] Same for orders in `services/orders/src/Orders.Api/appsettings.json`
+- [X] T032 [P] [US1] Add `Dockerfile` for parties in `services/parties/src/Parties.Api/Dockerfile`
+- [X] T033 [P] [US1] Add `Dockerfile` for products in `services/products/src/Products.Api/Dockerfile`
+- [X] T034 [P] [US1] Add `Dockerfile` for baskets in `services/baskets/src/Baskets.Api/Dockerfile`
+- [X] T035 [P] [US1] Add `Dockerfile` for orders in `services/orders/src/Orders.Api/Dockerfile`
+
+**Implementation notes (US1)**
+
+- Each service's readiness check uses `AddDbContextCheck<T>` with a `customTestQuery` that opens a
+  real connection rather than EF's default `CanConnectAsync`, which collapses every failure into a
+  bare `false` and so cannot populate the `description` field the health-check contract's 503 body
+  specifies.
+- `appsettings.json` carries a credential-free connection string naming only that service's own
+  host and database; `appsettings.Development.json` carries the local container connection matching
+  `.env.example`, and deployed environments override via `ConnectionStrings__<Service>Db`.
+- Docker builds take the **repository root** as context (the projects need `Directory.*.props` and
+  `shared/ServiceDefaults`): `docker build -f services/parties/src/Parties.Api/Dockerfile -t parties-api .`
+- Fixed alongside this phase: `.gitignore`'s `.env.*` rule was swallowing `.env.example`, so a fresh
+  clone could not bring up its own database container (SC-001). Added a `!.env.example` negation.
 
 **Checkpoint**: All four services are independently runnable, each reports live/ready accurately, each builds as its own container. This alone is a demonstrable MVP.
 

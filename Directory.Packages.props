@@ -10,8 +10,11 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
 
-    <!-- Health checks (liveness/readiness — constitution Principle VII; research.md Decision 3) -->
+    <!-- Health checks (liveness/readiness — constitution Principle VII; research.md Decision 3).
+         The EntityFrameworkCore package supplies AddDbContextCheck<T>(), which readiness uses to
+         prove real connectivity to the service's own database rather than probing a raw socket. -->
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
 
     <!-- Observability (constitution Principle VII). Pinned to 1.17.0, not 1.10.x —

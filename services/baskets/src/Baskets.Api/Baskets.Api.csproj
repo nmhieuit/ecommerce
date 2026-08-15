@@ -4,6 +4,13 @@
     <ProjectReference Include="..\..\..\..\shared\ServiceDefaults\ServiceDefaults.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Microsoft.Extensions.Diagnostics.HealthChecks itself ships in the ASP.NET Core shared
+         framework; only the EF Core integration (AddDbContextCheck<T>) needs referencing. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>

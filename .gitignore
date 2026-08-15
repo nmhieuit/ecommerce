@@ -29,6 +29,9 @@ build/
 # Environment / secrets
 .env
 .env.*
+# ...except the committed template a fresh clone needs to bring up its own database
+# container (quickstart.md, SC-001). It holds no real secret.
+!.env.example
 
 # OS cruft
 .DS_Store
