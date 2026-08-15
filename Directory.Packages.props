@@ -26,6 +26,15 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
 
+    <!-- Contract generation (ADR-0003/ADR-0004; 002-gateway-bff-routing research.md Decision 6).
+         The native ASP.NET Core OpenAPI generator, deliberately not Swashbuckle. Unlike the
+         health-check abstractions this one is not in the shared framework, so it needs a version.
+         Pinned to 10.0.11, not 10.0.0 to match the packages above: 10.0.0 resolves a transitive
+         Microsoft.OpenApi 2.0.0, which carries a known high-severity advisory
+         (GHSA-v5pm-xwqc-g5wc). 10.0.11 resolves 2.7.5 and clears it without pinning the
+         transitive directly. -->
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
+
     <!-- Edge routing (ADR-0002: YARP is the API gateway). Only Gateway.Api references this; the
          BFF proxies via typed HttpClients, not a reverse proxy. -->
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />

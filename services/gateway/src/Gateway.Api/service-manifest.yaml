@@ -1,0 +1,59 @@
+# Service manifest — gateway
+#
+# Constitution Principle VIII: "Every service MUST declare its SLOs — latency, error rate, and
+# availability — in its service manifest, and those SLOs MUST be measured continuously from the
+# telemetry required by Principle VII." Declared at scaffold time so the budget is measured from
+# day one rather than bolted on after the first regression.
+#
+# Scope note: the health endpoints are the only surface this service exposes today. The forwarding
+# route declares its own budget here when T030/T031 add it.
+
+service:
+  name: gateway
+  description: >-
+    API gateway. Forwards all client API traffic to the BFF so no caller needs to know service
+    topology (ADR-0002). Routing shell only — no forwarding route configured yet.
+  classification: internal-service-api
+  stateless: true
+
+data:
+  # No data section equivalent to the domain services': the gateway owns no database and reads no
+  # other service's (constitution Principle I — only services owning business invariants get
+  # persistence). There is deliberately no connection-string key for it to be given.
+  store: none
+  owned-exclusively: false
+
+slos:
+  # Platform defaults for an internal service API (constitution Principle VIII). The gateway adds
+  # only forwarding overhead on top of the BFF's own budget; no justified alternative is claimed,
+  # so the defaults apply verbatim.
+  availability: 99.9%          # monthly
+  error-rate:
+    max-5xx-ratio: 0.1%
+  latency:
+    p95: 150ms
+    p99: 500ms
+
+endpoints:
+  - route: GET /health/live
+    purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
+    authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check
+    latency:
+      p95: 150ms
+      p99: 500ms
+  - route: GET /health/ready
+    purpose: >-
+      Readiness probe. Gates traffic on this process accepting requests only — deliberately not on
+      the BFF being reachable, so a BFF outage produces a clear bounded error per request (FR-006)
+      rather than pulling every gateway instance out of rotation.
+    authentication: anonymous
+    latency:
+      p95: 150ms
+      p99: 500ms
+
+observability:
+  # Principle VII — emitted via shared/ServiceDefaults, never configured per service by hand.
+  traces: otlp
+  metrics: otlp
+  logs: otlp
+  correlation-id-header: X-Correlation-Id

@@ -44,7 +44,7 @@ This feature adds two new peer service shells to the existing `services/<name>/{
 >
 > - T001/T002 each include a minimal placeholder `Program.cs` (`CreateBuilder`/`Build`/`Run` plus `public partial class Program;`). A `Microsoft.NET.Sdk.Web` project with no entry point fails to compile (CS5001), which would have left the solution unbuildable at this checkpoint and blocked the T003/T004 test projects that reference it. T007/T008 replace these bodies with the ServiceDefaults wiring.
 > - T003/T004 deliberately omit `Testcontainers.MsSql` (present in the domain services' integration tests): the gateway and BFF own no database (plan.md Technical Context: Storage N/A).
-> - **Known failing test until T037**: `StructureConventionTests.VerticalSliceStructureTests.Scan_ActuallyExaminesEveryServicesApiProject` asserts against a hardcoded `ExpectedServices = ["baskets", "orders", "parties", "products"]` and now sees `bff`/`gateway` too. It cannot be fixed by simply adding the two names — `EveryService_OrganisesAtLeastOneCapabilityUnderFeatures` would then fail as well, since neither new shell has a `Features/<Capability>/` folder until Phase 2 (T007/T008 health checks). T037 owns reconciling the scanner with the two new shells.
+> - **Known failing test until T037**: `StructureConventionTests.VerticalSliceStructureTests.Scan_ActuallyExaminesEveryServicesApiProject` asserts against a hardcoded `ExpectedServices = ["baskets", "orders", "parties", "products"]` and now sees `bff`/`gateway` too. At the end of Phase 1 it could not be fixed by simply adding the two names — `EveryService_OrganisesAtLeastOneCapabilityUnderFeatures` would then have failed too, since neither shell had a `Features/<Capability>/` folder yet. Phase 2's health-check feature removed that blocker (see Phase 2 notes); T037 still owns the fix.
 
 ---
 
@@ -54,15 +54,23 @@ This feature adds two new peer service shells to the existing `services/<name>/{
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T007 [P] Reference `shared/ServiceDefaults` from `Gateway.Api.csproj` and wire `builder.AddServiceDefaults()` / `app.UseServiceDefaults()` plus health-check endpoints in `services/gateway/src/Gateway.Api/Program.cs` (constitution Principle VII; matches `services/products/src/Products.Api/Program.cs`)
-- [ ] T008 [P] Reference `shared/ServiceDefaults` from `Bff.Api.csproj` and wire `builder.AddServiceDefaults()` / `app.UseServiceDefaults()` plus health-check endpoints in `services/bff/src/Bff.Api/Program.cs` (same convention as T007)
-- [ ] T009 [P] Create `services/gateway/src/Gateway.Api/service-manifest.yaml` declaring SLOs (internal-service-API defaults, constitution Principle VIII) matching `services/products/src/Products.Api/service-manifest.yaml`
-- [ ] T010 [P] Create `services/bff/src/Bff.Api/service-manifest.yaml` declaring SLOs (client-facing BFF read budget: p95 ≤ 300 ms / p99 ≤ 800 ms, constitution Principle VIII)
-- [ ] T011 [P] Create `services/gateway/src/Gateway.Api/Dockerfile` matching `services/products/src/Products.Api/Dockerfile`
-- [ ] T012 [P] Create `services/bff/src/Bff.Api/Dockerfile` matching the same convention
-- [ ] T013 Enable native `Microsoft.AspNetCore.OpenApi` document generation in `services/bff/src/Bff.Api/Program.cs` (research.md Decision 6; feeds ADR-0004's codegen pipeline) (depends on T008)
+- [X] T007 [P] Reference `shared/ServiceDefaults` from `Gateway.Api.csproj` and wire `builder.AddServiceDefaults()` / `app.UseServiceDefaults()` plus health-check endpoints in `services/gateway/src/Gateway.Api/Program.cs` (constitution Principle VII; matches `services/products/src/Products.Api/Program.cs`)
+- [X] T008 [P] Reference `shared/ServiceDefaults` from `Bff.Api.csproj` and wire `builder.AddServiceDefaults()` / `app.UseServiceDefaults()` plus health-check endpoints in `services/bff/src/Bff.Api/Program.cs` (same convention as T007)
+- [X] T009 [P] Create `services/gateway/src/Gateway.Api/service-manifest.yaml` declaring SLOs (internal-service-API defaults, constitution Principle VIII) matching `services/products/src/Products.Api/service-manifest.yaml`
+- [X] T010 [P] Create `services/bff/src/Bff.Api/service-manifest.yaml` declaring SLOs (client-facing BFF read budget: p95 ≤ 300 ms / p99 ≤ 800 ms, constitution Principle VIII)
+- [X] T011 [P] Create `services/gateway/src/Gateway.Api/Dockerfile` matching `services/products/src/Products.Api/Dockerfile`
+- [X] T012 [P] Create `services/bff/src/Bff.Api/Dockerfile` matching the same convention
+- [X] T013 Enable native `Microsoft.AspNetCore.OpenApi` document generation in `services/bff/src/Bff.Api/Program.cs` (research.md Decision 6; feeds ADR-0004's codegen pipeline) (depends on T008)
 
 **Checkpoint**: Both services build, boot, expose health checks, are wired into the solution, and the BFF publishes an OpenAPI document. Ready for story-specific routes.
+
+> **Phase 2 implementation notes** — checkpoint verified by running both services, not only by building them: `GET /health/live` and `/health/ready` return `200` on each (gateway `{"status":"Healthy"}`, readiness `{"status":"Healthy","checks":[]}`), responses carry the `X-Correlation-Id` header from `ServiceDefaults`, and the BFF serves a valid OpenAPI 3.1.1 document at `/openapi/v1.json` (`paths: {}` — correct, no routes until US1).
+>
+> - **Readiness registers no checks, deliberately.** Neither service owns a database, and neither probes its downstream (gateway→BFF, BFF→the four services). Readiness gates whether an instance receives traffic at all; depending on a downstream would pull every instance out of rotation during a downstream outage — including, for the BFF, on routes that never touch the failing service — when the required behaviour is to stay up and return a clear bounded error per request (FR-006, US3). Rationale is recorded in each `HealthCheckEndpoints.AddHealthCheckFeature` and in both manifests.
+> - **T013 forced a package-version decision.** `Microsoft.AspNetCore.OpenApi` needed a `Directory.Packages.props` entry (T006 covered only YARP + resilience). Pinned to **10.0.11**, not the 10.0.0 used by the file's other ASP.NET Core/EF entries: 10.0.0 resolves a transitive `Microsoft.OpenApi` 2.0.0 carrying high-severity advisory GHSA-v5pm-xwqc-g5wc, which fails the repo's NuGet audit (`TreatWarningsAsErrors`). 10.0.11 resolves 2.7.5 and clears it without pinning the transitive directly.
+> - **`MapOpenApi()` is Development-only.** The document maps the BFF's whole client-facing surface and no authorization sits in front of it yet (plan.md Complexity Tracking, Principle VI deviation). The ADR-0004 codegen pipeline reads it from a local/CI run, which is a Development host.
+> - Both shells gained `appsettings.json`, `appsettings.Development.json`, and `Properties/launchSettings.json` (gateway `5300`/`7300`, BFF `5301`/`7301` — no collision with the four domain services' `5041/5088/5188/5204`), matching the existing per-service convention so `dotnet run` works for quickstart.md.
+> - **Phase 1's note on T037 is now out of date**: both shells have a `Features/HealthCheck/` capability folder, so `EveryService_OrganisesAtLeastOneCapabilityUnderFeatures` would pass for them. T037 is now just adding `"bff"` and `"gateway"` to `ExpectedServices` in `tests/StructureConventionTests/VerticalSliceStructureTests.cs`; that one test is still the only red one in the suite.
 
 ---
 

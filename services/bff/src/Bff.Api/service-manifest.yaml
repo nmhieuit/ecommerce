@@ -1,0 +1,95 @@
+# Service manifest — bff
+#
+# Constitution Principle VIII: "Every service MUST declare its SLOs — latency, error rate, and
+# availability — in its service manifest, and those SLOs MUST be measured continuously from the
+# telemetry required by Principle VII." Declared at scaffold time so the budget is measured from
+# day one rather than bolted on after the first regression.
+#
+# Scope note: the health endpoints are the only surface this service exposes today. The /bff/*
+# routes declare their own budgets here as T022-T025 add them.
+
+service:
+  name: bff
+  description: >-
+    Backend-for-frontend. The only backend surface clients may call; proxies and shapes responses
+    from products, baskets, orders, and parties (ADR-0003). No business logic beyond aggregation
+    and shaping (spec FR-005). Routing shell only — no domain routes yet.
+  classification: client-facing-bff
+  stateless: true
+
+data:
+  # No data section equivalent to the domain services': the BFF owns no database and reads no other
+  # service's (constitution Principle I — only services owning business invariants get persistence).
+  # It reaches products/baskets/orders/parties over HTTP, through their public APIs only.
+  store: none
+  owned-exclusively: false
+
+slos:
+  # Client-facing BFF read budget (constitution Principle VIII), which is looser than the
+  # internal-service-api default the four downstream services carry: a BFF read legitimately spans
+  # one or more downstream calls, each of which is itself allowed p95 150ms / p99 500ms.
+  availability: 99.9%          # monthly
+  error-rate:
+    max-5xx-ratio: 0.1%
+  latency:
+    p95: 300ms
+    p99: 800ms
+
+# Every outbound call declares an explicit timeout and is wrapped in retry/circuit-breaker policy —
+# constitution Principle VIII allows no unbounded wait. Budgets are the internal-service-api default
+# per call (research.md Decision 3); the typed clients enforcing them arrive with T018-T021/T026.
+downstream-dependencies:
+  - service: products
+    base-url-key: Services:ProductsApi:BaseUrl
+    latency:
+      p95: 150ms
+      p99: 500ms
+  - service: baskets
+    base-url-key: Services:BasketsApi:BaseUrl
+    latency:
+      p95: 150ms
+      p99: 500ms
+  - service: orders
+    base-url-key: Services:OrdersApi:BaseUrl
+    latency:
+      p95: 150ms
+      p99: 500ms
+  - service: parties
+    base-url-key: Services:PartiesApi:BaseUrl
+    latency:
+      p95: 150ms
+      p99: 500ms
+
+endpoints:
+  - route: GET /health/live
+    purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
+    authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check
+    latency:
+      p95: 150ms
+      p99: 500ms
+  - route: GET /health/ready
+    purpose: >-
+      Readiness probe. Gates traffic on this process accepting requests only — deliberately not on
+      the four downstream services being reachable, so a downstream outage produces a clear bounded
+      ProblemDetails per request (FR-006, US3) rather than pulling every BFF instance out of
+      rotation, including for routes that never touch the failing service.
+    authentication: anonymous
+    latency:
+      p95: 150ms
+      p99: 500ms
+  - route: GET /openapi/v1.json
+    purpose: >-
+      Generated OpenAPI document (research.md Decision 6) consumed by the frontend's Orval codegen
+      (ADR-0004). Development-only until real authorization exists (SCRUM-23).
+    authentication: anonymous
+    environments: [development]
+    latency:
+      p95: 300ms
+      p99: 800ms
+
+observability:
+  # Principle VII — emitted via shared/ServiceDefaults, never configured per service by hand.
+  traces: otlp
+  metrics: otlp
+  logs: otlp
+  correlation-id-header: X-Correlation-Id

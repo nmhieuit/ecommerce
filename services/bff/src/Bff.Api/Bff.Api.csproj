@@ -1,5 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\ServiceDefaults\ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Native OpenAPI document generation (research.md Decision 6 / ADR-0003), which ADR-0004's
+         Orval codegen pipeline consumes. Not in the shared framework — needs referencing. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+  <!-- No health-check package reference: Microsoft.Extensions.Diagnostics.HealthChecks ships in the
+       ASP.NET Core shared framework, and the EF Core integration the domain services pull in
+       (AddDbContextCheck<T>) has nothing to check here — the BFF owns no database. -->
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
