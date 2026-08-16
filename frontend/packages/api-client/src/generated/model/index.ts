@@ -13,6 +13,8 @@ export * from './basketItemQuantity';
 export * from './basketItemUnitPrice';
 export * from './basketResponse';
 export * from './basketResponseTotal';
+export * from './orderConfirmationResponse';
+export * from './orderConfirmationResponseTotal';
 export * from './orderResponse';
 export * from './orderResponseTotal';
 export * from './partyResponse';

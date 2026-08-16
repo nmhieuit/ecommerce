@@ -1,12 +1,9 @@
 import { createBrowserRouter, Link, Outlet, RouterProvider } from 'react-router-dom';
 import { ProductList } from '@/features/catalog/ProductList';
-import { BasketView } from '@/features/basket/BasketView';
+import { BasketScreen } from '@/features/basket/BasketScreen';
+import { ConfirmationScreen } from '@/features/checkout/ConfirmationScreen';
 
-/**
- * The storefront's routes. Each screen arrives with the user story that owns it — the catalog is
- * here (US1); the basket (US2) and confirmation (US3) are still placeholders and get replaced, not
- * added to.
- */
+/** The storefront's three screens: browse, basket, confirmation. */
 
 function Layout() {
   return (
@@ -41,26 +38,6 @@ function Catalog() {
   );
 }
 
-function BasketScreen() {
-  return (
-    <>
-      <h1 className="text-2xl font-semibold">Basket</h1>
-      <div className="mt-6">
-        <BasketView />
-      </div>
-    </>
-  );
-}
-
-function Placeholder({ title }: { readonly title: string }) {
-  return (
-    <>
-      <h1 className="text-2xl font-semibold">{title}</h1>
-      <p className="mt-2">This screen arrives with its user story.</p>
-    </>
-  );
-}
-
 const router = createBrowserRouter([
   {
     path: '/',
@@ -68,7 +45,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Catalog /> },
       { path: 'basket', element: <BasketScreen /> },
-      { path: 'confirmation', element: <Placeholder title="Order confirmation" /> },
+      { path: 'confirmation', element: <ConfirmationScreen /> },
     ],
   },
 ]);

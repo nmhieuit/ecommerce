@@ -55,6 +55,31 @@ public sealed class BasketsApiClient(HttpClient httpClient)
         });
 
     /// <summary>
+    /// Empties the calling shopper's basket after their order has been created.
+    /// </summary>
+    /// <returns>
+    /// <see langword="false"/> when the service reports the basket was already empty, which is a
+    /// correct answer rather than a failure — it means there was nothing to check out.
+    /// </returns>
+    public Task<bool> ClearCurrentBasketAsync(CancellationToken cancellationToken) =>
+        DownstreamCall.ExecuteAsync(ServiceName, async () =>
+        {
+            using var response = await httpClient.PostAsync(
+                "/baskets/current/clear",
+                content: null,
+                cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                return false;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            return true;
+        });
+
+    /// <summary>
     /// Returns the basket, or <see langword="null"/> if the service reports it does not exist.
     /// </summary>
     /// <remarks>

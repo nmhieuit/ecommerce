@@ -1,6 +1,7 @@
 using Bff.Api.DownstreamClients;
 using Bff.Api.ErrorHandling;
 using Bff.Api.Features.Baskets;
+using Bff.Api.Features.Checkout;
 using Bff.Api.Features.HealthCheck;
 using Bff.Api.Features.Orders;
 using Bff.Api.Features.Parties;
@@ -66,6 +67,9 @@ app.MapProductsEndpoints();
 app.MapBasketsEndpoints();
 app.MapOrdersEndpoints();
 app.MapPartiesEndpoints();
+
+// The one route that spans a workflow rather than a single read (004 research.md Decision 9).
+app.MapCheckoutEndpoints();
 
 app.Run();
 

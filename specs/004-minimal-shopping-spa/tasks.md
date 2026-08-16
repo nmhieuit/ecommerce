@@ -168,25 +168,44 @@ Five things worth knowing:
 
 ### Tests for User Story 3
 
-- [ ] T049 [P] [US3] Write a failing unit test for order-total computation in `services/orders/tests/Orders.Api.UnitTests/OrderTotalTests.cs` — the total is computed from the lines in the request and is never taken from the caller ([research.md](./research.md) Decision 8)
-- [ ] T050 [P] [US3] Write a failing integration test for place-order in `services/orders/tests/Orders.Api.IntegrationTests/PlaceOrderTests.cs` — creates and returns an order, and rejects a request with no line items ([contracts/downstream-openapi.yaml](./contracts/downstream-openapi.yaml))
-- [ ] T051 [P] [US3] Write a failing integration test for basket clearing in `services/baskets/tests/Baskets.Api.IntegrationTests/ClearBasketTests.cs` — removes every line, keeps the basket row, and answers 409 when the basket is already empty
-- [ ] T052 [P] [US3] Write a failing integration test for checkout in `services/bff/tests/Bff.Api.IntegrationTests/CheckoutTests.cs` — the order is created before the basket is cleared, an empty basket yields 409, and the response carries the order's identifier and total (spec FR-008, FR-009, [research.md](./research.md) Decision 9)
-- [ ] T053 [P] [US3] Write a failing component test for the confirmation screen in `frontend/apps/web/tests/checkout/Confirmation.test.tsx` — the order identifier is shown verbatim alongside the total (spec FR-009)
-- [ ] T054 [P] [US3] Write a failing component test for empty-basket blocking in `frontend/apps/web/tests/checkout/EmptyBasketBlocks.test.tsx` — the control is unavailable and **no request is issued at all** (spec FR-008, SC-004)
-- [ ] T055 [P] [US3] Write a failing component test for the in-flight guard in `frontend/apps/web/tests/checkout/DoubleSubmit.test.tsx` — triggering checkout twice fires exactly one mutation (spec FR-016)
+- [X] T049 [P] [US3] Write a failing unit test for order-total computation in `services/orders/tests/Orders.Api.UnitTests/OrderTotalTests.cs` — the total is computed from the lines in the request and is never taken from the caller ([research.md](./research.md) Decision 8)
+- [X] T050 [P] [US3] Write a failing integration test for place-order in `services/orders/tests/Orders.Api.IntegrationTests/PlaceOrderTests.cs` — creates and returns an order, and rejects a request with no line items ([contracts/downstream-openapi.yaml](./contracts/downstream-openapi.yaml))
+- [X] T051 [P] [US3] Write a failing integration test for basket clearing in `services/baskets/tests/Baskets.Api.IntegrationTests/ClearBasketTests.cs` — removes every line, keeps the basket row, and answers 409 when the basket is already empty
+- [X] T052 [P] [US3] Write a failing integration test for checkout in `services/bff/tests/Bff.Api.IntegrationTests/CheckoutTests.cs` — the order is created before the basket is cleared, an empty basket yields 409, and the response carries the order's identifier and total (spec FR-008, FR-009, [research.md](./research.md) Decision 9)
+- [X] T053 [P] [US3] Write a failing component test for the confirmation screen in `frontend/apps/web/tests/checkout/Confirmation.test.tsx` — the order identifier is shown verbatim alongside the total (spec FR-009)
+- [X] T054 [P] [US3] Write a failing component test for empty-basket blocking in `frontend/apps/web/tests/checkout/EmptyBasketBlocks.test.tsx` — the control is unavailable and **no request is issued at all** (spec FR-008, SC-004)
+- [X] T055 [P] [US3] Write a failing component test for the in-flight guard in `frontend/apps/web/tests/checkout/DoubleSubmit.test.tsx` — triggering checkout twice fires exactly one mutation (spec FR-016)
 
 ### Implementation for User Story 3
 
-- [ ] T056 [US3] Implement `POST /orders` in `services/orders/src/Orders.Api/Features/Orders/OrderEndpoints.cs` — compute the total from the request's lines, persist the order, return 201 with a `Location` header, and reject an empty line set
-- [ ] T057 [US3] Implement `POST /baskets/current/clear` in `services/baskets/src/Baskets.Api/Features/Baskets/BasketEndpoints.cs` — delete the line items, keep the basket row, answer 409 when already empty
-- [ ] T058 [P] [US3] Extend `services/bff/src/Bff.Api/DownstreamClients/OrdersApiClient.cs` with the place-order call
-- [ ] T059 [P] [US3] Extend `services/bff/src/Bff.Api/DownstreamClients/BasketsApiClient.cs` with the clear-basket call
-- [ ] T060 [US3] Implement `POST /bff/checkout` in `services/bff/src/Bff.Api/Features/Checkout/CheckoutEndpoints.cs` — read the caller's basket, place the order, clear the basket, return the confirmation, performing no arithmetic — and map it in `services/bff/src/Bff.Api/Program.cs`
-- [ ] T061 [US3] Regenerate the API client and commit `frontend/packages/api-client/src/generated/`
-- [ ] T062 [P] [US3] Implement the checkout control in `frontend/apps/web/src/features/checkout/CheckoutButton.tsx` — unavailable when the basket is empty and while a checkout is in flight (spec FR-008, FR-016)
-- [ ] T063 [P] [US3] Implement the confirmation screen in `frontend/apps/web/src/features/checkout/Confirmation.tsx` — the order identifier verbatim, the total, and a "nothing to show" state when the route is reached without having checked out (spec FR-009, Edge Cases)
-- [ ] T064 [US3] Wire the confirmation route and post-checkout basket invalidation into `frontend/apps/web/src/app/routes.tsx` so the basket reads as empty afterwards (spec FR-010)
+- [X] T056 [US3] Implement `POST /orders` in `services/orders/src/Orders.Api/Features/Orders/OrderEndpoints.cs` — compute the total from the request's lines, persist the order, return 201 with a `Location` header, and reject an empty line set
+- [X] T057 [US3] Implement `POST /baskets/current/clear` in `services/baskets/src/Baskets.Api/Features/Baskets/BasketEndpoints.cs` — delete the line items, keep the basket row, answer 409 when already empty
+- [X] T058 [P] [US3] Extend `services/bff/src/Bff.Api/DownstreamClients/OrdersApiClient.cs` with the place-order call
+- [X] T059 [P] [US3] Extend `services/bff/src/Bff.Api/DownstreamClients/BasketsApiClient.cs` with the clear-basket call
+- [X] T060 [US3] Implement `POST /bff/checkout` in `services/bff/src/Bff.Api/Features/Checkout/CheckoutEndpoints.cs` — read the caller's basket, place the order, clear the basket, return the confirmation, performing no arithmetic — and map it in `services/bff/src/Bff.Api/Program.cs`
+- [X] T061 [US3] Regenerate the API client and commit `frontend/packages/api-client/src/generated/`
+- [X] T062 [P] [US3] Implement the checkout control in `frontend/apps/web/src/features/checkout/CheckoutButton.tsx` — unavailable when the basket is empty and while a checkout is in flight (spec FR-008, FR-016)
+- [X] T063 [P] [US3] Implement the confirmation screen in `frontend/apps/web/src/features/checkout/Confirmation.tsx` — the order identifier verbatim, the total, and a "nothing to show" state when the route is reached without having checked out (spec FR-009, Edge Cases)
+- [X] T064 [US3] Wire the confirmation route and post-checkout basket invalidation into `frontend/apps/web/src/app/routes.tsx` so the basket reads as empty afterwards (spec FR-010)
+
+**Phase 5 completed 2026-08-16.** The walking skeleton is closed. Verified through the real edge with all four services and the gateway running:
+
+| Check | Result |
+|---|---|
+| Empty basket blocked | `409` — "There is nothing in your basket to check out." |
+| Checkout of notebook ×2 + apron | `201`, order `b82a5234…`, total **$59.25** |
+| SC-005 — reference reads back | `GET /bff/orders/b82a5234…` → same id, same total |
+| FR-010 — basket emptied | `{"items":[],"total":0}`, same basket id retained |
+| SC-008 — second checkout | `409`, no second order |
+
+Suites: orders unit 9, orders integration 13, baskets integration 19, BFF integration 42, frontend 41 across 10 files. Solution builds clean at 0 warnings; bundle 106.28 kB of 150 kB.
+
+Four notes:
+
+- **T057 was already done.** `POST /baskets/current/clear` landed in Phase 4 alongside the other caller-scoped routes — writing the whole basket surface at once was cheaper than returning to the file. Its tests are here, in `ClearBasketTests`, where the task list put them.
+- **CA1848 forced a source-generated logger.** The one `LogWarning` in the checkout route — the compensation gap being recorded — failed the build as a direct call. It is now a `[LoggerMessage]` partial, which also gives that gap a single greppable name.
+- **`ILogger<T>` cannot name a static class**, so the endpoint class takes an `ILoggerFactory` and creates its logger by type. Not a workaround so much as the only shape available for a static vertical slice.
+- **The confirmation's order travels as router state, not a query.** It is the result of a mutation the shopper just performed, not a cached resource (data-model.md — Client-side state), and `replace: true` means the back button returns to the basket rather than re-entering a confirmation for an order already placed. Reaching `/confirmation` directly shows "no recent order" rather than inventing a reference.
 
 **Checkpoint**: the full walking skeleton is demoable — browse → basket → checkout → confirmation.
 

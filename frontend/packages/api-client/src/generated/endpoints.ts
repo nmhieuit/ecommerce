@@ -26,6 +26,7 @@ import type {
 import type {
   AddBasketItemRequest,
   BasketResponse,
+  OrderConfirmationResponse,
   OrderResponse,
   PartyResponse,
   ProblemDetails,
@@ -742,3 +743,101 @@ export function useGetParty<TData = Awaited<ReturnType<typeof getParty>>, TError
 
   return query;
 }
+
+
+
+
+
+export type checkoutResponse201 = {
+  data: OrderConfirmationResponse
+  status: 201
+}
+
+export type checkoutResponse409 = {
+  data: ProblemDetails
+  status: 409
+}
+
+export type checkoutResponse502 = {
+  data: ProblemDetails
+  status: 502
+}
+
+export type checkoutResponse504 = {
+  data: ProblemDetails
+  status: 504
+}
+    
+export type checkoutResponseSuccess = (checkoutResponse201) & {
+  headers: Headers;
+};
+export type checkoutResponseError = (checkoutResponse409 | checkoutResponse502 | checkoutResponse504) & {
+  headers: Headers;
+};
+
+export type checkoutResponse = (checkoutResponseSuccess | checkoutResponseError)
+
+export const getCheckoutUrl = () => {
+
+
+  
+
+  return `/bff/checkout`
+}
+
+export const checkout = async ( options?: RequestInit): Promise<checkoutResponse> => {
+  
+  return bffFetch<checkoutResponse>(getCheckoutUrl(),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+
+
+
+
+export const getCheckoutMutationOptions = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkout>>, TError,void, TContext>, request?: SecondParameter<typeof bffFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof checkout>>, TError,void, TContext> => {
+
+const mutationKey = ['checkout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkout>>, void> = () => {
+          
+
+          return  checkout(requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof checkout>>>
+    
+    export type CheckoutMutationError = ProblemDetails
+
+    export const useCheckout = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkout>>, TError,void, TContext>, request?: SecondParameter<typeof bffFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof checkout>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getCheckoutMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
