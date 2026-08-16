@@ -1,0 +1,217 @@
+# Domain-service surfaces the BFF calls — additions and changes made by 004-minimal-shopping-spa.
+#
+# Companion to specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml, which describes the
+# read-only surfaces that exist today. Only what this feature adds or changes appears here.
+#
+# These services are never reachable by a client. Every request arrives from the BFF carrying
+# X-Tenant-Id and X-Subject-Id; a request without a tenant cannot obtain a DbContext at all
+# (Tenancy's RequireTenantId gate), and the routes below additionally require a subject.
+
+openapi: 3.0.3
+info:
+  title: Commerce domain services — shopping flow
+  version: "0.2.0"
+
+paths:
+  # ---------------------------------------------------------------- baskets service
+  /baskets/current:
+    get:
+      operationId: getCurrentBasket
+      summary: The basket belonging to the calling subject, created empty on first read if absent.
+      description: >
+        "Current" is resolved from X-Subject-Id, never from a path or query value the caller could
+        change (spec FR-006). Returns an empty basket rather than 404 for a caller who has never
+        added anything.
+      responses:
+        "200":
+          description: The caller's basket, with its line items and computed total.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Basket"
+        "500":
+          $ref: "#/components/responses/UnresolvedCaller"
+
+  /baskets/current/items:
+    post:
+      operationId: addCurrentBasketItem
+      summary: Adds a product to the calling subject's basket, or increases its quantity.
+      description: >
+        The unit price is supplied by the caller (the BFF, which resolved it from the products
+        service) and captured on the line as the price at the time of adding — it is not recomputed
+        later (research Decision 7). Adding a product already on the basket increments that line's
+        quantity; it never creates a second line for the same product (spec FR-005, FR-021).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddBasketItemRequest"
+      responses:
+        "200":
+          description: The basket as it stands after the addition.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Basket"
+        "400":
+          description: Quantity below 1, or a non-positive unit price.
+        "500":
+          $ref: "#/components/responses/UnresolvedCaller"
+
+  /baskets/current/clear:
+    post:
+      operationId: clearCurrentBasket
+      summary: Removes every line item from the calling subject's basket, leaving the basket itself.
+      description: >
+        Called by the BFF immediately after an order is created (research Decision 9). The basket row
+        survives so the shopper's basket identity is stable across purchases (data-model.md — Basket
+        lifecycle).
+      responses:
+        "204":
+          description: The basket is now empty.
+        "409":
+          description: >
+            The basket was already empty. Reported rather than silently succeeding so that a
+            checkout of an empty basket cannot reach the orders service (spec FR-008).
+        "500":
+          $ref: "#/components/responses/UnresolvedCaller"
+
+  /baskets/{basketId}:
+    get:
+      operationId: getBasket
+      summary: Unchanged route from 002; its response shape changes with this feature.
+      description: >
+        Now returns line items, a computed total, and a customerRef string in place of the
+        customerId GUID (data-model.md — Basket).
+      parameters:
+        - name: basketId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The named basket.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Basket"
+        "404":
+          description: No such basket.
+
+  # ---------------------------------------------------------------- orders service
+  /orders:
+    post:
+      operationId: placeOrder
+      summary: Creates an order from the line items it is sent (spec FR-022).
+      description: >
+        The total is computed by this service from the lines in the request and is deliberately not
+        accepted from the caller — money arithmetic belongs in a domain service, not in the
+        aggregation layer (research Decision 8). Line items are used to compute the total and are
+        not persisted; orders gain line items with the story that owns them (spec Assumptions).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceOrderRequest"
+      responses:
+        "201":
+          description: The created order.
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The created order's URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: >
+            No line items in the request. An order with a zero total from an empty basket is not
+            something this endpoint may create.
+        "500":
+          $ref: "#/components/responses/UnresolvedCaller"
+
+components:
+  schemas:
+    Basket:
+      type: object
+      required: [id, customerRef, items, total]
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerRef:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BasketLineItem"
+        total:
+          type: number
+          format: double
+          description: Computed from the line items; never stored (data-model.md — BasketLineItem).
+
+    BasketLineItem:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: double
+
+    AddBasketItemRequest:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: double
+          description: The catalog price at the moment of adding, resolved by the BFF.
+
+    PlaceOrderRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/BasketLineItem"
+
+    Order:
+      type: object
+      required: [id, placedAtUtc, total]
+      properties:
+        id:
+          type: string
+          format: uuid
+        placedAtUtc:
+          type: string
+          format: date-time
+        total:
+          type: number
+          format: double
+
+  responses:
+    UnresolvedCaller:
+      description: >
+        No tenant or no subject was resolved for this request, which means it did not come through
+        the gateway. Persistence is refused rather than defaulted (constitution Principle V); the
+        failure is loud by design.

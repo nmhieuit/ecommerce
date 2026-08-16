@@ -1,0 +1,247 @@
+# BFF client-facing surface — additions and changes made by 004-minimal-shopping-spa.
+#
+# Per ADR-0004 and constitution Principle II, the authoritative document is the one the BFF
+# generates from its Minimal API route definitions at build time (served at /openapi/v1.json in
+# Development). This file is the design-time reference that drives that implementation and gets the
+# shape reviewed before code exists — the same role the equivalent file plays in
+# specs/002-gateway-bff-routing/contracts/bff-openapi.yaml.
+#
+# Only the paths this feature adds or changes appear here. The routes 002 already established
+# (/bff/products, /bff/orders/{orderId}, /bff/parties/{partyId}) are unchanged and are not repeated,
+# with one exception noted under /bff/baskets/{basketId}.
+#
+# Every route below is reached by the storefront through the gateway, never directly (spec FR-014).
+# Every route requires X-Tenant-Id and X-Subject-Id, which the gateway stamps and the client never
+# sets — see contracts/subject-id-header.md.
+
+openapi: 3.0.3
+info:
+  title: Commerce BFF — shopping flow
+  version: "0.2.0"
+  description: >
+    The browse → basket → checkout → confirmation surface the storefront consumes. Aggregates and
+    shapes responses from the products, baskets, and orders services; performs no arithmetic and
+    holds no domain rule (spec 002 FR-005).
+
+paths:
+  /bff/basket:
+    get:
+      operationId: getCurrentBasket
+      summary: The calling shopper's basket, with its line items, quantities, and total (spec FR-004, FR-020).
+      description: >
+        The basket is resolved from the caller's identity, never from anything the client supplies
+        (spec FR-006). A caller who has never added anything receives an empty basket, not a 404 —
+        "nothing in it yet" is a legitimate state, and making it an error would force the storefront
+        to treat a first visit as a failure.
+      responses:
+        "200":
+          description: The caller's basket.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BasketResponse"
+        "502":
+          $ref: "#/components/responses/DownstreamUnavailable"
+        "504":
+          $ref: "#/components/responses/DownstreamTimeout"
+
+  /bff/basket/items:
+    post:
+      operationId: addBasketItem
+      summary: Adds a product to the calling shopper's basket (spec FR-003, FR-021).
+      description: >
+        The request names a product and a quantity only. The unit price is resolved by the BFF from
+        the products service and is never accepted from the client — a client-supplied price is a
+        client-supplied discount. Adding a product already in the basket increases that line's
+        quantity rather than creating a second line (spec FR-005).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddBasketItemRequest"
+      responses:
+        "200":
+          description: The basket as it stands after the addition.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BasketResponse"
+        "404":
+          description: No such product in the catalog.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "400":
+          description: Malformed request — for example a quantity below 1.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "502":
+          $ref: "#/components/responses/DownstreamUnavailable"
+        "504":
+          $ref: "#/components/responses/DownstreamTimeout"
+
+  /bff/checkout:
+    post:
+      operationId: checkout
+      summary: Turns the calling shopper's basket into an order and empties it (spec FR-007, FR-009, FR-010).
+      description: >
+        Takes no request body — the basket being checked out is the caller's own. The order is
+        created first and the basket cleared second, so a failure between the two leaves the shopper
+        with a real order rather than an emptied basket and nothing to show (research Decision 9).
+        The response carries the created order's identifier verbatim; there is no separate,
+        friendlier order number (spec FR-009, Clarifications 2026-08-16).
+      responses:
+        "201":
+          description: The order that was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderConfirmationResponse"
+        "409":
+          description: >
+            The basket is empty, so there is nothing to order. The storefront must block this before
+            it is ever sent (spec FR-008); this is the server-side half of that rule, because
+            client-side validation is UX only (constitution Principle VI).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "502":
+          $ref: "#/components/responses/DownstreamUnavailable"
+        "504":
+          $ref: "#/components/responses/DownstreamTimeout"
+
+  /bff/baskets/{basketId}:
+    get:
+      operationId: getBasket
+      summary: Unchanged route from 002; its response shape changes with this feature.
+      description: >
+        Kept as-is. Its BasketResponse now carries line items, a total, and a customerRef string in
+        place of the customerId GUID (data-model.md — Basket). 002's contract marked this shape "to
+        be finalized" and there is no released consumer, so the shape is corrected rather than
+        versioned.
+      parameters:
+        - name: basketId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The named basket.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BasketResponse"
+        "404":
+          description: No such basket.
+        "502":
+          $ref: "#/components/responses/DownstreamUnavailable"
+        "504":
+          $ref: "#/components/responses/DownstreamTimeout"
+
+components:
+  schemas:
+    BasketResponse:
+      type: object
+      required: [id, customerRef, items, total]
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerRef:
+          type: string
+          description: The subject identifier of the shopper this basket belongs to.
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BasketItem"
+        total:
+          type: number
+          format: double
+          description: >
+            Computed by the baskets service from its own line items and passed through unchanged.
+            The BFF does not calculate it (spec 002 FR-005).
+
+    BasketItem:
+      type: object
+      required: [productId, name, quantity, unitPrice, lineTotal]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: >
+            The product's display name, aggregated in by the BFF from the products service — the
+            baskets service stores an identifier, not a name (data-model.md — BasketLineItem).
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: double
+          description: The price captured when the product was added, not the catalog's current price.
+        lineTotal:
+          type: number
+          format: double
+
+    AddBasketItemRequest:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          default: 1
+
+    OrderConfirmationResponse:
+      type: object
+      required: [id, placedAtUtc, total]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Shown verbatim on the confirmation screen (spec FR-009).
+        placedAtUtc:
+          type: string
+          format: date-time
+        total:
+          type: number
+          format: double
+
+    ProblemDetails:
+      type: object
+      description: RFC 7807 problem details, as produced by the BFF's existing exception handler.
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+
+  responses:
+    DownstreamUnavailable:
+      description: A service the BFF depends on is unreachable or refusing calls (spec 002 FR-006).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+
+    DownstreamTimeout:
+      description: A service the BFF depends on did not answer inside its budget (spec 002 FR-006).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
