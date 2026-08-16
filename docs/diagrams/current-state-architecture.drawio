@@ -1,88 +1,94 @@
 <mxfile host="Electron" agent="5.0">
-  <diagram id="current-state-002" name="Trang thai hien tai - sau 002">
-    <mxGraphModel dx="1245" dy="516" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1420" pageHeight="1400" math="0" shadow="0">
+  <diagram id="current-state-003" name="Trang thai hien tai - sau 003">
+    <mxGraphModel dx="1234" dy="2116" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="1600" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#2d6a2d;" value="PHAN 1 -- DA CO TRONG CODE HOM NAY (21 du an, 96 test xanh)" vertex="1">
-          <mxGeometry height="26" width="900" x="30" y="10" as="geometry" />
+        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#2d6a2d;" value="PHAN 1 -- DA CO TRONG CODE HOM NAY (23 du an; build sach 0 loi 0 canh bao; so luong test xem docs)" vertex="1">
+          <mxGeometry height="26" width="1200" x="30" y="-60" as="geometry" />
         </mxCell>
-        <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="Nguoi goi (curl / Postman)&#xa;SPA React se den o SCRUM-14&#xa;CHI biet DUY NHAT dia chi cong 5300" vertex="1">
-          <mxGeometry height="70" width="330" x="30" y="45" as="geometry" />
+        <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="Nguoi goi (curl / Postman)&#xa;SPA React: CHUA CO CODE (xem specs/004, con la spec)&#xa;CHI biet DUY NHAT dia chi cong 5300&#xa;Chua dang nhap that -- Gateway tu dong gan 1 danh tinh gia lap" vertex="1">
+          <mxGeometry height="100" width="320" x="30" y="50" as="geometry" />
         </mxCell>
-        <mxCell id="sd" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="shared/ServiceDefaults&#xa;(thu vien dung chung, KHONG phai service)&#xa;- OpenTelemetry: log / trace / metric&#xa;- Correlation-Id: ma tra cuu 1 request&#xa;  di xuyen ca 3 tang" vertex="1">
-          <mxGeometry height="110" width="360" x="1055" y="45" as="geometry" />
+        <mxCell id="sd" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="shared/ServiceDefaults&#xa;(thu vien dung chung, KHONG phai service)&#xa;- OpenTelemetry: log / trace / metric&#xa;- Correlation-Id (X-Correlation-Id): sinh o Gateway,&#xa;  ghi vao request de moi hop sau dung chung 1 ma" vertex="1">
+          <mxGeometry height="100" width="280" x="860" y="50" as="geometry" />
         </mxCell>
-        <mxCell id="gw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="Gateway.Api (services/gateway) -- YARP&#xa;Cong 5300&#xa;Bang route = 1 dong duy nhat: MOI duong dan -&gt; BFF&#xa;Toan bo dinh tuyen nam trong file cau hinh JSON,&#xa;khong co logic trong code C#" vertex="1">
-          <mxGeometry height="105" width="430" x="30" y="150" as="geometry" />
+        <mxCell id="tenancy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="shared/Tenancy&#xa;(thu vien dung chung, KHONG phai service, MOI tu 003)&#xa;- TenantContext.RequireTenantId(): chan MOI ket noi&#xa;  CSDL neu tenant chua duoc xac dinh&#xa;- Header lan truyen: X-Tenant-Id" vertex="1">
+          <mxGeometry height="100" width="260" x="1160" y="50" as="geometry" />
         </mxCell>
-        <mxCell id="gwnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" value="Vi sao 1 route catch-all: neu Gateway phai liet ke tung duong dan cua BFF thi&#xa;moi lan BFF them tinh nang lai phai sua + deploy Gateway. Do chinh la su rang buoc&#xa;ma tinh nang nay sinh ra de xoa bo.&#xa;&#xa;Gateway CO TINH khong co duong di thang toi service nghiep vu nao&#xa;(co bai test canh dieu nay)." vertex="1">
-          <mxGeometry height="105" width="500" x="490" y="155" as="geometry" />
+        <mxCell id="gw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="Gateway.Api (services/gateway) -- YARP&#xa;Cong 5300&#xa;Bang route = 1 dong duy nhat: MOI duong dan -&gt; BFF&#xa;StubIdentity: xac thuc LUON thanh cong, gan co dinh&#xa;tenant &quot;contoso&quot; + nguoi dung gia lap, ghi de X-Tenant-Id&#xa;(khong tin gia tri tu ngoai gui vao)" vertex="1">
+          <mxGeometry height="140" width="460" x="30" y="175" as="geometry" />
         </mxCell>
-        <mxCell id="bff" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="Bff.Api (services/bff) -- Backend For Frontend&#xa;Cong 5301  |  KHONG co co so du lieu&#xa;GET /bff/products, /bff/baskets/{id},&#xa;      /bff/orders/{id}, /bff/parties/{id}&#xa;Sinh tu dong tai lieu API tai /openapi/v1.json" vertex="1">
-          <mxGeometry height="120" width="430" x="30" y="290" as="geometry" />
+        <mxCell id="gwnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" value="Vi sao 1 route catch-all: neu Gateway phai liet ke tung duong dan cua BFF thi&#xa;moi lan BFF them tinh nang lai phai sua + deploy Gateway.&#xa;&#xa;Gateway CO TINH khong co duong di thang toi service nghiep vu nao&#xa;(co bai test canh dieu nay).&#xa;&#xa;StubIdentity la &quot;cam tam&quot; thay cho Identity Server that (SCRUM-23, Giai&#xa;doan 3) -- hom nay MOI request deu duoc xac thuc thanh cong." vertex="1">
+          <mxGeometry height="140" width="650" x="510" y="175" as="geometry" />
         </mxCell>
-        <mxCell id="bffnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" value="Ngan sach thoi gian cho MOI loi goi ra ngoai (khong cho vo han):&#xa;   1 giay / lan thu   |   toi da 3 giay ke ca thu lai   |   cau dao ngat khi service kia da chet&#xa;&#xa;Phan biet loai loi tra ve nguoi dung:&#xa;   502 = service kia BIEN MAT      504 = service kia DANG DUOI&#xa;   500 = loi cua chinh BFF          404 = khong tim thay ban ghi (KHONG phai loi)&#xa;&#xa;Du lieu duoc CAT GOT lai truoc khi ra ngoai: truong noi bo (vd gia von) khong tu dong&#xa;lot ra trinh duyet khi service phia sau them truong moi." vertex="1">
-          <mxGeometry height="140" width="900" x="490" y="270" as="geometry" />
+        <mxCell id="bff" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="Bff.Api (services/bff) -- Backend For Frontend&#xa;Cong 5301  |  KHONG co co so du lieu&#xa;GET /bff/products, /bff/baskets/{id},&#xa;      /bff/orders/{id}, /bff/parties/{id}&#xa;TenantPropagationHandler: gan lai X-Tenant-Id len ca 4&#xa;loi goi ra ngoai (HttpClient khong tu chuyen tiep header)" vertex="1">
+          <mxGeometry height="140" width="460" x="30" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="bffnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" value="Ngan sach thoi gian cho MOI loi goi ra ngoai (khong cho vo han):&#xa;   1 giay / lan thu (toi da 2 lan thu lai)  |  toi da 3 giay tong cong  |  cau dao ngat sau 10s loi lien tuc&#xa;&#xa;Phan biet loai loi tra ve nguoi dung:&#xa;   502 = downstream khong ket noi duoc / cau dao da ngat        504 = downstream vuot thoi gian cho&#xa;   500 = loi cua chinh BFF (khong phai downstream)                404 = khong tim thay ban ghi (KHONG phai loi)&#xa;&#xa;Du lieu duoc CAT GOT lai truoc khi ra ngoai qua ham anh xa rieng (vd ToSummary): truong noi bo&#xa;khong tu dong lot ra ngoai khi service phia sau them truong moi." vertex="1">
+          <mxGeometry height="160" width="890" x="514" y="322" as="geometry" />
         </mxCell>
         <mxCell id="svcnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;" value="4 service nghiep vu HOAN TOAN khong biet den nhau: khong cai nao goi cai nao, khong cai nao tham chieu code cua cai nao." vertex="1">
-          <mxGeometry height="20" width="1360" x="30" y="442" as="geometry" />
+          <mxGeometry height="20" width="1390" x="30" y="509" as="geometry" />
         </mxCell>
-        <mxCell id="svc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Products.Api&#xa;Cong 5088&#xa;GET /products&#xa;+ /health/live, /health/ready&#xa;Bang: Product (Id, Name, Price)" vertex="1">
-          <mxGeometry height="115" width="320" x="30" y="470" as="geometry" />
+        <mxCell id="svc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Products.Api&#xa;Cong 5088&#xa;GET /products -- HIEN LUON TRA VE RONG (chua co du lieu mau)&#xa;+ /health/live, /health/ready&#xa;Bang: Product (Id, Name, Price)&#xa;Chan doc/ghi CSDL neu thieu X-Tenant-Id (RequireTenantId)" vertex="1">
+          <mxGeometry height="145" width="320" x="30" y="535" as="geometry" />
         </mxCell>
-        <mxCell id="svc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Baskets.Api&#xa;Cong 5188&#xa;GET /baskets/{id}&#xa;+ /health/live, /health/ready&#xa;Bang: Basket (Id, CustomerId)" vertex="1">
-          <mxGeometry height="115" width="320" x="380" y="470" as="geometry" />
+        <mxCell id="svc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Baskets.Api&#xa;Cong 5188&#xa;GET /baskets/{id}&#xa;+ /health/live, /health/ready&#xa;Bang: Basket (Id, CustomerId)&#xa;Chan doc/ghi CSDL neu thieu X-Tenant-Id (RequireTenantId)" vertex="1">
+          <mxGeometry height="145" width="320" x="380" y="535" as="geometry" />
         </mxCell>
-        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Orders.Api&#xa;Cong 5041&#xa;GET /orders/{id}&#xa;+ /health/live, /health/ready&#xa;Bang: Order (Id, PlacedAtUtc, Total)" vertex="1">
-          <mxGeometry height="115" width="320" x="730" y="470" as="geometry" />
+        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Orders.Api&#xa;Cong 5041&#xa;GET /orders/{id}&#xa;+ /health/live, /health/ready&#xa;Bang: Order (Id, PlacedAtUtc, Total)&#xa;Chan doc/ghi CSDL neu thieu X-Tenant-Id (RequireTenantId)" vertex="1">
+          <mxGeometry height="145" width="320" x="730" y="535" as="geometry" />
         </mxCell>
-        <mxCell id="svc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Parties.Api&#xa;Cong 5204&#xa;GET /parties/{id}&#xa;+ /health/live, /health/ready&#xa;Bang: Party (Id, DisplayName)" vertex="1">
-          <mxGeometry height="115" width="310" x="1080" y="470" as="geometry" />
+        <mxCell id="svc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Parties.Api&#xa;Cong 5204&#xa;GET /parties/{id}&#xa;+ /health/live, /health/ready&#xa;Bang: Party (Id, DisplayName)&#xa;Chan doc/ghi CSDL neu thieu X-Tenant-Id (RequireTenantId)" vertex="1">
+          <mxGeometry height="145" width="320" x="1080" y="535" as="geometry" />
         </mxCell>
         <mxCell id="composebg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#999999;dashed=1;verticalAlign=top;fontColor=#666666;fontSize=11;" value="" vertex="1">
-          <mxGeometry height="150" width="1380" x="20" y="605" as="geometry" />
+          <mxGeometry height="140" width="1400" x="20" y="695" as="geometry" />
         </mxCell>
-        <mxCell id="composelbl" parent="1" style="text;html=1;fontSize=11;fontColor=#666666;" value="docker-compose.deps.yml -- 4 container SQL Server rieng biet + 4 job tao database rong. Bang du lieu ben trong do EF Core migration tao ra (da co trong repo)." vertex="1">
-          <mxGeometry height="20" width="1330" x="40" y="612" as="geometry" />
+        <mxCell id="composelbl" parent="1" style="text;html=1;fontSize=11;fontColor=#666666;" value="docker-compose.deps.yml -- 4 container SQL Server rieng biet + 4 job tao database rong. Bang du lieu ben trong do EF Core migration tao ra. CHUA co compose chay ca 6 service API cung luc." vertex="1">
+          <mxGeometry height="20" width="1350" x="39" y="706" as="geometry" />
         </mxCell>
         <mxCell id="db1" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="SQL Server (container rieng)&#xa;Database: products -- cong 14331&#xa;Khong service nao khac duoc cham vao" vertex="1">
-          <mxGeometry height="90" width="320" x="30" y="645" as="geometry" />
+          <mxGeometry height="85" width="320" x="30" y="735" as="geometry" />
         </mxCell>
         <mxCell id="db2" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="SQL Server (container rieng)&#xa;Database: baskets -- cong 14332&#xa;Khong service nao khac duoc cham vao" vertex="1">
-          <mxGeometry height="90" width="320" x="380" y="645" as="geometry" />
+          <mxGeometry height="85" width="320" x="380" y="735" as="geometry" />
         </mxCell>
         <mxCell id="db3" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="SQL Server (container rieng)&#xa;Database: orders -- cong 14333&#xa;Khong service nao khac duoc cham vao" vertex="1">
-          <mxGeometry height="90" width="320" x="730" y="645" as="geometry" />
+          <mxGeometry height="85" width="320" x="730" y="735" as="geometry" />
         </mxCell>
         <mxCell id="db4" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="SQL Server (container rieng)&#xa;Database: parties -- cong 14330&#xa;Khong service nao khac duoc cham vao" vertex="1">
-          <mxGeometry height="90" width="310" x="1080" y="645" as="geometry" />
+          <mxGeometry height="85" width="320" x="1080" y="735" as="geometry" />
         </mxCell>
-        <mxCell id="guardtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#666666;" value="&#39;Luoi an toan&#39; kien truc tu dong -- chay nhu bai test moi lan build, FAIL build khi bi vi pham" vertex="1">
-          <mxGeometry height="24" width="1000" x="30" y="785" as="geometry" />
+        <mxCell id="guardtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#666666;" value="&#39;Luoi an toan&#39; kien truc tu dong -- chay nhu bai test moi lan build, FAIL build khi bi vi pham (6 loai)" vertex="1">
+          <mxGeometry height="24" width="1100" x="30" y="855" as="geometry" />
         </mxCell>
-        <mxCell id="guard1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/CrossServiceIsolation.Tests&#xa;- Service A cam chuoi ket noi CSDL cua service B&#xa;- Gateway/BFF cam BAT KY chuoi ket noi nao&#xa;  (chung khong so huu du lieu)&#xa;Bat o khau SO HUU, khong doi den khi SU DUNG" vertex="1">
-          <mxGeometry height="110" width="440" x="30" y="820" as="geometry" />
+        <mxCell id="guard1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/CrossServiceIsolation.Tests&#xa;- Service A cam chuoi ket noi CSDL cua service B&#xa;- Gateway/BFF cam BAT KY chuoi ket noi nao (khong so huu du lieu)&#xa;- MOI (003): moi service phai co DUNG 1 diem khoi tao&#xa;  DbContext, va diem do phai goi RequireTenantId()" vertex="1">
+          <mxGeometry height="120" width="460" x="30" y="890" as="geometry" />
         </mxCell>
-        <mxCell id="guard2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/StructureConventionTests&#xa;FAIL build neu service co thu muc&#xa;Controllers/, Services/, Repositories/&#xa;Bat buoc moi service co it nhat 1 thu muc&#xa;Features/&lt;TenNangLuc&gt; -- ap dung ca Gateway va BFF" vertex="1">
-          <mxGeometry height="110" width="440" x="490" y="820" as="geometry" />
+        <mxCell id="guard2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/StructureConventionTests&#xa;FAIL build neu service co thu muc Controllers/, Services/,&#xa;Repositories/... Bat buoc moi service co it nhat 1 thu muc&#xa;Features/&lt;TenNangLuc&gt; -- ap dung ca Gateway va BFF" vertex="1">
+          <mxGeometry height="120" width="460" x="510" y="890" as="geometry" />
         </mxCell>
-        <mxCell id="guard3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="Gateway.Api.UnitTests&#xa;- RouteConfigurationTests: cau hinh dinh tuyen sai&#xa;  chinh ta, hoac co route di thang toi service nghiep vu&#xa;- ForwardingTimeoutBudgetTests: timeout Gateway&#xa;  bi dat THAP HON ngan sach cua BFF" vertex="1">
-          <mxGeometry height="110" width="440" x="950" y="820" as="geometry" />
+        <mxCell id="guard3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="Gateway.Api.UnitTests&#xa;- RouteConfigurationTests: cau hinh dinh tuyen sai chinh&#xa;  ta, hoac co route di thang toi service nghiep vu&#xa;- ForwardingTimeoutBudgetTests: timeout Gateway (10s) bi&#xa;  dat THAP HON ngan sach 3s cua BFF" vertex="1">
+          <mxGeometry height="120" width="430" x="990" y="890" as="geometry" />
         </mxCell>
-        <mxCell id="guard4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="Bff.Api.IntegrationTests/GeneratedContractTests&#xa;Tai lieu API sinh tu dong phai khai bao DU ca truong hop loi&#xa;(404 / 502 / 504), khong chi truong hop thanh cong -- vi ma nguon&#xa;giao dien se duoc SINH TU DONG tu tai lieu nay (SCRUM-14)" vertex="1">
-          <mxGeometry height="80" width="660" x="30" y="945" as="geometry" />
+        <mxCell id="guard4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="Bff.Api.IntegrationTests/GeneratedContractTests&#xa;Tai lieu API sinh tu dong phai khai bao DU ca truong hop&#xa;loi (404/502/504), khong chi truong hop thanh cong -- vi ma&#xa;nguon giao dien se duoc SINH TU DONG tu tai lieu nay&#xa;(SCRUM-14, chua bat dau)" vertex="1">
+          <mxGeometry height="100" width="460" x="30" y="1025" as="geometry" />
         </mxCell>
-        <mxCell id="guard5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="services/*/tests/*.IntegrationTests -- dung Testcontainers.MsSql:&#xa;chay SQL Server THAT trong container, khong dung gia lap.&#xa;Test cua BFF con chay ca 4 service THAT trong bo nho de kiem tra&#xa;that su goi duoc, thay vi gia lap cau tra loi." vertex="1">
-          <mxGeometry height="80" width="670" x="720" y="945" as="geometry" />
+        <mxCell id="guard5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="services/*/tests/*.IntegrationTests -- Testcontainers.MsSql:&#xa;chay SQL Server THAT trong container, khong dung gia lap.&#xa;Test cua BFF con chay ca 4 service THAT trong bo nho de&#xa;kiem tra that su goi duoc, thay vi gia lap cau tra loi." vertex="1">
+          <mxGeometry height="100" width="460" x="510" y="1025" as="geometry" />
+        </mxCell>
+        <mxCell id="guard6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="*/tests/*.IntegrationTests/TenantEnforcementTests&#xa;(1 bo / service nghiep vu, MOI tu 003)&#xa;Request KHONG co X-Tenant-Id phai nhan loi 500,&#xa;khong duoc am tham tra ve du lieu" vertex="1">
+          <mxGeometry height="100" width="430" x="990" y="1025" as="geometry" />
         </mxCell>
         <mxCell id="e_client_gw" edge="1" parent="1" source="client" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="gw" value="HTTP :5300">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_gw_bff" edge="1" parent="1" source="gw" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="bff" value="YARP chuyen tiep TAT CA (khong mo goi)">
+        <mxCell id="e_gw_bff" edge="1" parent="1" source="gw" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="bff" value="YARP chuyen tiep TAT CA + X-Tenant-Id + X-Correlation-Id">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_bff_1" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="svc1" value="HTTP + ngan sach thoi gian">
+        <mxCell id="e_bff_1" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="svc1" value="HTTP + ngan sach thoi gian + X-Tenant-Id">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e_bff_2" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="svc2">
@@ -94,115 +100,130 @@
         <mxCell id="e_bff_4" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="svc4">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_db1" edge="1" parent="1" source="svc1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db1" value="EF Core">
+        <mxCell id="e_db1" edge="1" parent="1" source="svc1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db1" value="EF Core (sau RequireTenantId)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_db2" edge="1" parent="1" source="svc2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db2" value="EF Core">
+        <mxCell id="e_db2" edge="1" parent="1" source="svc2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db2">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_db3" edge="1" parent="1" source="svc3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db3" value="EF Core">
+        <mxCell id="e_db3" edge="1" parent="1" source="svc3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db3">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_db4" edge="1" parent="1" source="svc4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db4" value="EF Core">
+        <mxCell id="e_db4" edge="1" parent="1" source="svc4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db4">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e_sd_gw" edge="1" parent="1" source="sd" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="gw" value="tham chieu thu vien (ca 6 service)">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="880" y="100" />
-              <mxPoint x="880" y="202.5" />
+              <mxPoint x="920" y="160" />
+              <mxPoint x="440" y="160" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_sd_svc4" edge="1" parent="1" source="sd" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="svc4">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="e_tn_gw" edge="1" parent="1" source="tenancy" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;entryX=1;entryY=1;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" value="tham chieu thu vien (4 service nghiep vu + BFF + Gateway)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1290" y="300.06" />
+            </Array>
+            <mxPoint x="1290" y="135" as="sourcePoint" />
+            <mxPoint x="490" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_tn_svc1" edge="1" parent="1" source="tenancy" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="svc1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1290" y="20" />
+              <mxPoint x="10" y="20" />
+              <mxPoint x="10" y="607.57" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="title2" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#a03030;" value="PHAN 2 -- CHUA XAY DUNG, MOI LA KE HOACH (Phase 2-5, xem docs/roadmap.md)" vertex="1">
-          <mxGeometry height="26" width="1000" x="30" y="1060" as="geometry" />
+          <mxGeometry height="26" width="1000" x="30" y="1145" as="geometry" />
         </mxCell>
         <mxCell id="futurebg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#cc6666;dashed=1;" value="" vertex="1">
-          <mxGeometry height="165" width="1380" x="20" y="1095" as="geometry" />
+          <mxGeometry height="180" width="1410" x="20" y="1180" as="geometry" />
         </mxCell>
-        <mxCell id="f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="React SPA&#xa;Web + Mobile-web&#xa;(SCRUM-14)" vertex="1">
-          <mxGeometry height="60" width="170" x="45" y="1120" as="geometry" />
+        <mxCell id="f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="React SPA&#xa;(specs/004: co spec,&#xa;CHUA co code)" vertex="1">
+          <mxGeometry height="70" width="185" x="35" y="1205" as="geometry" />
         </mxCell>
         <mxCell id="f2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Chay toan bo bang&#xa;1 lenh duy nhat&#xa;(SCRUM-15)" vertex="1">
-          <mxGeometry height="60" width="170" x="230" y="1120" as="geometry" />
+          <mxGeometry height="70" width="185" x="235" y="1205" as="geometry" />
         </mxCell>
-        <mxCell id="f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Identity Server&#xa;(Duende)&#xa;(SCRUM-23)" vertex="1">
-          <mxGeometry height="60" width="170" x="415" y="1120" as="geometry" />
+        <mxCell id="f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Identity Server that&#xa;(Duende)&#xa;(SCRUM-23)" vertex="1">
+          <mxGeometry height="70" width="185" x="435" y="1205" as="geometry" />
         </mxCell>
-        <mxCell id="f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="RabbitMQ +&#xa;MassTransit" vertex="1">
-          <mxGeometry height="60" width="170" x="600" y="1120" as="geometry" />
+        <mxCell id="f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Ngan cach VAT LY theo&#xa;tenant (da thu, da&#xa;chu dong huy -- muc 1.3)" vertex="1">
+          <mxGeometry height="70" width="185" x="635" y="1205" as="geometry" />
         </mxCell>
-        <mxCell id="f5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Redis&#xa;(basket cache)" vertex="1">
-          <mxGeometry height="60" width="170" x="785" y="1120" as="geometry" />
+        <mxCell id="f5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="RabbitMQ +&#xa;MassTransit" vertex="1">
+          <mxGeometry height="70" width="185" x="835" y="1205" as="geometry" />
         </mxCell>
-        <mxCell id="f6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Logistics +&#xa;Invoices service" vertex="1">
-          <mxGeometry height="60" width="170" x="970" y="1120" as="geometry" />
+        <mxCell id="f6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Redis, Logistics +&#xa;Invoices service" vertex="1">
+          <mxGeometry height="70" width="185" x="1035" y="1205" as="geometry" />
         </mxCell>
-        <mxCell id="f7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Jenkins CI/CD&#xa;Vault, Unleash,&#xa;Pact Broker" vertex="1">
-          <mxGeometry height="60" width="170" x="1155" y="1120" as="geometry" />
+        <mxCell id="f7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Jenkins CI/CD,&#xa;Vault, Unleash,&#xa;Pact Broker" vertex="1">
+          <mxGeometry height="70" width="185" x="1235" y="1205" as="geometry" />
         </mxCell>
-        <mxCell id="fnote" parent="1" style="text;html=1;fontSize=10;fontColor=#a03030;whiteSpace=wrap;" value="Cac khoi nay moi la quyet dinh trong ADR / ban ve trong docs/system-design.md -- chua co dong code nao. Luu y: API Gateway va BFF DA CHUYEN LEN PHAN 1 -- chung khong con la ke hoach nua." vertex="1">
-          <mxGeometry height="50" width="1290" x="45" y="1190" as="geometry" />
+        <mxCell id="fnote" parent="1" style="text;html=1;fontSize=10;fontColor=#a03030;whiteSpace=wrap;" value="Cac khoi nay moi la quyet dinh trong ADR / ban ve trong docs/system-design.md, hoac (voi &quot;Ngan cach vat ly theo tenant&quot;) da thu va bi huy giua chung khi trien khai -- chua co dong code chay that nao cho chung. Gateway, BFF, va co che tenant gia lap DA o Phan 1, khong con la ke hoach nua." vertex="1">
+          <mxGeometry height="60" width="1370" x="35" y="1285" as="geometry" />
         </mxCell>
         <mxCell id="lgtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=12;" value="Chu giai" vertex="1">
-          <mxGeometry height="20" width="100" x="30" y="1275" as="geometry" />
+          <mxGeometry height="20" width="100" x="30" y="1375" as="geometry" />
         </mxCell>
         <mxCell id="lgc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1">
-          <mxGeometry height="20" width="20" x="30" y="1305" as="geometry" />
+          <mxGeometry height="20" width="20" x="30" y="1405" as="geometry" />
         </mxCell>
         <mxCell id="lgc1t" parent="1" style="text;html=1;fontSize=11;" value="Service nghiep vu (so huu du lieu rieng)" vertex="1">
-          <mxGeometry height="20" width="300" x="55" y="1305" as="geometry" />
+          <mxGeometry height="20" width="300" x="55" y="1405" as="geometry" />
         </mxCell>
         <mxCell id="lgc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1">
-          <mxGeometry height="20" width="20" x="30" y="1335" as="geometry" />
+          <mxGeometry height="20" width="20" x="30" y="1435" as="geometry" />
         </mxCell>
         <mxCell id="lgc2t" parent="1" style="text;html=1;fontSize=11;" value="Service o bien (khong so huu du lieu)" vertex="1">
-          <mxGeometry height="20" width="300" x="55" y="1335" as="geometry" />
+          <mxGeometry height="20" width="300" x="55" y="1435" as="geometry" />
         </mxCell>
         <mxCell id="lgc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1">
-          <mxGeometry height="20" width="20" x="390" y="1305" as="geometry" />
+          <mxGeometry height="20" width="20" x="390" y="1405" as="geometry" />
         </mxCell>
-        <mxCell id="lgc3t" parent="1" style="text;html=1;fontSize=11;" value="Thu vien dung chung (khong phai service)" vertex="1">
-          <mxGeometry height="20" width="300" x="415" y="1305" as="geometry" />
+        <mxCell id="lgc3t" parent="1" style="text;html=1;fontSize=11;" value="Thu vien dung chung (khong phai service) -- 2 cai" vertex="1">
+          <mxGeometry height="20" width="330" x="415" y="1405" as="geometry" />
         </mxCell>
         <mxCell id="lgc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1">
-          <mxGeometry height="20" width="20" x="390" y="1335" as="geometry" />
+          <mxGeometry height="20" width="20" x="390" y="1435" as="geometry" />
         </mxCell>
-        <mxCell id="lgc4t" parent="1" style="text;html=1;fontSize=11;" value="Luoi an toan kien truc (tests)" vertex="1">
-          <mxGeometry height="20" width="300" x="415" y="1335" as="geometry" />
+        <mxCell id="lgc4t" parent="1" style="text;html=1;fontSize=11;" value="Luoi an toan kien truc (tests) -- 6 loai" vertex="1">
+          <mxGeometry height="20" width="330" x="415" y="1435" as="geometry" />
         </mxCell>
         <mxCell id="lgc5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1">
-          <mxGeometry height="20" width="20" x="750" y="1305" as="geometry" />
+          <mxGeometry height="20" width="20" x="790" y="1405" as="geometry" />
         </mxCell>
         <mxCell id="lgc5t" parent="1" style="text;html=1;fontSize=11;" value="Co so du lieu (moi service 1 CSDL rieng)" vertex="1">
-          <mxGeometry height="20" width="300" x="775" y="1305" as="geometry" />
+          <mxGeometry height="20" width="300" x="815" y="1405" as="geometry" />
         </mxCell>
         <mxCell id="lgc6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;" vertex="1">
-          <mxGeometry height="20" width="20" x="750" y="1335" as="geometry" />
+          <mxGeometry height="20" width="20" x="790" y="1435" as="geometry" />
         </mxCell>
-        <mxCell id="lgc6t" parent="1" style="text;html=1;fontSize=11;" value="Chi la ke hoach -- chua co code" vertex="1">
-          <mxGeometry height="20" width="300" x="775" y="1335" as="geometry" />
+        <mxCell id="lgc6t" parent="1" style="text;html=1;fontSize=11;" value="Chi la ke hoach, hoac da thu va bi huy -- chua co code" vertex="1">
+          <mxGeometry height="20" width="330" x="815" y="1435" as="geometry" />
         </mxCell>
         <mxCell id="lgline1" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;fontSize=9;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1110" y="1315" as="sourcePoint" />
-            <mxPoint x="1160" y="1315" as="targetPoint" />
+            <mxPoint x="1150" y="1415" as="sourcePoint" />
+            <mxPoint x="1200" y="1415" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="lgline1t" parent="1" style="text;html=1;fontSize=11;" value="Goi that luc chay (HTTP / EF Core)" vertex="1">
-          <mxGeometry height="20" width="240" x="1170" y="1305" as="geometry" />
+          <mxGeometry height="20" width="230" x="1210" y="1405" as="geometry" />
         </mxCell>
         <mxCell id="lgline2" edge="1" parent="1" style="edgeStyle=none;dashed=1;html=1;endArrow=block;fontSize=9;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1110" y="1345" as="sourcePoint" />
-            <mxPoint x="1160" y="1345" as="targetPoint" />
+            <mxPoint x="1150" y="1445" as="sourcePoint" />
+            <mxPoint x="1200" y="1445" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="lgline2t" parent="1" style="text;html=1;fontSize=11;" value="Tham chieu thu vien luc build" vertex="1">
-          <mxGeometry height="20" width="240" x="1170" y="1335" as="geometry" />
+          <mxGeometry height="20" width="230" x="1210" y="1435" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
