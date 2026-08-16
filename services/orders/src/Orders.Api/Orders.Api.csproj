@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\shared\ServiceDefaults\ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\..\..\shared\Tenancy\Tenancy.csproj" />
   </ItemGroup>
 
   <ItemGroup>

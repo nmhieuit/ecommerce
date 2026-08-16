@@ -50,6 +50,8 @@
   </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/ServiceDefaults/ServiceDefaults.csproj" />
+    <Project Path="shared/Tenancy/Tenancy.csproj" />
+    <Project Path="shared/Tenancy.UnitTests/Tenancy.UnitTests.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CrossServiceIsolation.Tests/CrossServiceIsolation.Tests.csproj" />

@@ -35,10 +35,10 @@ This feature adds one new shared library and touches the gateway, BFF, and four 
 
 **Purpose**: Scaffold the new `Tenancy` shared library and wire it into the projects that will consume it.
 
-- [ ] T001 Create the `Tenancy` class library project shell at `shared/Tenancy/Tenancy.csproj` (`Microsoft.NET.Sdk`, `net10.0`, `Nullable`/`ImplicitUsings` enabled — flat layout matching `shared/ServiceDefaults/ServiceDefaults.csproj`)
-- [ ] T002 [P] Create the `Tenancy.UnitTests` project shell at `shared/Tenancy.UnitTests/Tenancy.UnitTests.csproj` (xUnit, referencing `Tenancy.csproj`)
-- [ ] T003 Add `shared/Tenancy` and `shared/Tenancy.UnitTests` to `Ecommerce.slnx` under the `/shared/` folder (depends on T001, T002)
-- [ ] T004 Add a `ProjectReference` to `shared/Tenancy/Tenancy.csproj` from `Bff.Api.csproj`, `Products.Api.csproj`, `Baskets.Api.csproj`, `Orders.Api.csproj`, and `Parties.Api.csproj` (depends on T001). The gateway does **not** reference `Tenancy` — it only produces the header (research.md Decision 3), via its own `Identity/` components (US1).
+- [X] T001 Create the `Tenancy` class library project shell at `shared/Tenancy/Tenancy.csproj` (`Microsoft.NET.Sdk`, `net10.0`, `Nullable`/`ImplicitUsings` enabled — flat layout matching `shared/ServiceDefaults/ServiceDefaults.csproj`)
+- [X] T002 [P] Create the `Tenancy.UnitTests` project shell at `shared/Tenancy.UnitTests/Tenancy.UnitTests.csproj` (xUnit, referencing `Tenancy.csproj`)
+- [X] T003 Add `shared/Tenancy` and `shared/Tenancy.UnitTests` to `Ecommerce.slnx` under the `/shared/` folder (depends on T001, T002)
+- [X] T004 Add a `ProjectReference` to `shared/Tenancy/Tenancy.csproj` from `Bff.Api.csproj`, `Products.Api.csproj`, `Baskets.Api.csproj`, `Orders.Api.csproj`, and `Parties.Api.csproj` (depends on T001). The gateway does **not** reference `Tenancy` — it only produces the header (research.md Decision 3), via its own `Identity/` components (US1).
 
 **Checkpoint**: `Tenancy` is scaffolded, part of the solution, and referenced by every project that will consume it.
 

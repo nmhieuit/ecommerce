@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- ServiceDefaults has no test project; Tenancy does, because TenantContext's throw/return
+       branching is exactly the pure logic constitution Principle III requires a preceding failing
+       test for. The ASP.NET Core framework reference the middleware tests need arrives transitively
+       through this reference. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Tenancy\Tenancy.csproj" />
+  </ItemGroup>
+
+</Project>
