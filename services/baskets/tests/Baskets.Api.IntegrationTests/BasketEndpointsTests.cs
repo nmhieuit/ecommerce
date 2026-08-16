@@ -26,7 +26,8 @@ public class BasketEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sq
     [Fact]
     public async Task GetBasket_ReturnsTheBasket_WhenItExists()
     {
-        var basket = new Basket { Id = Guid.NewGuid(), CustomerId = Guid.NewGuid() };
+        var basket = Basket.ForCustomer("read-by-id-shopper");
+        basket.AddItem(new Guid("9f8d6b1e-0001-4000-8000-000000000001"), quantity: 2, unitPrice: 12.50m);
 
         await using var factory = await CreateFactoryWithBasketsAsync([basket]);
         var client = CreateTenantClient(factory);
@@ -38,7 +39,13 @@ public class BasketEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sq
         var actual = await response.Content.ReadFromJsonAsync<BasketResponse>();
         Assert.NotNull(actual);
         Assert.Equal(basket.Id, actual.Id);
-        Assert.Equal(basket.CustomerId, actual.CustomerId);
+        Assert.Equal(basket.CustomerRef, actual.CustomerRef);
+
+        // 004 widened this shape: the read-by-id route now carries line items and a total like
+        // every other basket response (004 contracts/downstream-openapi.yaml).
+        var line = Assert.Single(actual.Items);
+        Assert.Equal(2, line.Quantity);
+        Assert.Equal(25.00m, actual.Total);
     }
 
     /// <summary>
@@ -95,5 +102,11 @@ public class BasketEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sq
         return client;
     }
 
-    private sealed record BasketResponse(Guid Id, Guid CustomerId);
+    private sealed record BasketResponse(
+        Guid Id,
+        string CustomerRef,
+        IReadOnlyList<BasketLineItemResponse> Items,
+        decimal Total);
+
+    private sealed record BasketLineItemResponse(Guid ProductId, int Quantity, decimal UnitPrice, decimal LineTotal);
 }

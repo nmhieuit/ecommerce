@@ -5,7 +5,14 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './addBasketItemRequest';
+export * from './addBasketItemRequestQuantity';
+export * from './basketItem';
+export * from './basketItemLineTotal';
+export * from './basketItemQuantity';
+export * from './basketItemUnitPrice';
 export * from './basketResponse';
+export * from './basketResponseTotal';
 export * from './orderResponse';
 export * from './orderResponseTotal';
 export * from './partyResponse';

@@ -96,6 +96,55 @@ public static class BffTestHost
     }
 
     /// <summary>
+    /// Starts the BFF with more than one typed client routed into its own in-process downstream.
+    /// </summary>
+    /// <remarks>
+    /// 004-minimal-shopping-spa needs this because the add-to-basket route spans two services: the
+    /// BFF resolves the product's price from products and then writes to baskets (004 research.md
+    /// Decision 7). A single-downstream host cannot exercise that path at all.
+    /// </remarks>
+    public static WebApplicationFactory<Program> CreateBff(
+        IReadOnlyDictionary<string, Func<HttpMessageHandler>> downstreamsByServiceName)
+    {
+        ArgumentNullException.ThrowIfNull(downstreamsByServiceName);
+
+        return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
+                downstreamsByServiceName.ToDictionary(
+                    entry => $"Services:{entry.Key}:BaseUrl",
+                    _ => (string?)UnusedDownstreamBaseUrl)));
+
+            builder.ConfigureServices(services =>
+            {
+                foreach (var (serviceName, handlerFactory) in downstreamsByServiceName)
+                {
+                    services.AddHttpClient(serviceName).ConfigurePrimaryHttpMessageHandler(handlerFactory);
+                }
+            });
+        });
+    }
+
+    /// <summary>
+    /// A client carrying both the tenant and the caller the gateway would have resolved. Routes
+    /// that reach a caller-scoped basket need the subject as well as the tenant, or the baskets
+    /// service refuses them — correctly (004 contracts/subject-id-header.md).
+    /// </summary>
+    public static HttpClient CreateShopperClient(
+        WebApplicationFactory<Program> factory,
+        string subjectId = SeedSubjectId)
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, SeedTenantId);
+        client.DefaultRequestHeaders.Add(CallerContextMiddleware.HeaderName, subjectId);
+
+        return client;
+    }
+
+    /// <summary>The Phase 1 stub subject, matching what the gateway resolves.</summary>
+    public const string SeedSubjectId = "phase1-stub-user";
+
+    /// <summary>
     /// Starts the BFF with a downstream that is configured but has nothing listening — the
     /// "service is down" case (US3). No handler is replaced: the real socket connect fails, which
     /// is what production failure actually looks like.

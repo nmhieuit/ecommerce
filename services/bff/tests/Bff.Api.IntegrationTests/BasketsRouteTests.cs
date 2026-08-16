@@ -17,7 +17,7 @@ public class BasketsRouteTests(DownstreamServicesFixture fixture)
     [Fact]
     public async Task GetBasket_ReturnsShapedBasketFromTheBasketsService()
     {
-        var basket = new Basket { Id = Guid.NewGuid(), CustomerId = Guid.NewGuid() };
+        var basket = Basket.ForCustomer("bff-route-shopper");
 
         await using var baskets = await CreateBasketsServiceAsync("bff-baskets", basket);
         await using var bff = BffTestHost.CreateBff("BasketsApi", baskets);
@@ -30,7 +30,11 @@ public class BasketsRouteTests(DownstreamServicesFixture fixture)
         var actual = await response.Content.ReadFromJsonAsync<BasketResponse>();
         Assert.NotNull(actual);
         Assert.Equal(basket.Id, actual.Id);
-        Assert.Equal(basket.CustomerId, actual.CustomerId);
+        Assert.Equal(basket.CustomerRef, actual.CustomerRef);
+
+        // Empty, so the route answers without calling the products service at all — a basket with
+        // nothing in it has no names to join in (004 BasketsEndpoints.ToResponseAsync).
+        Assert.Empty(actual.Items);
     }
 
     /// <summary>
@@ -62,5 +66,16 @@ public class BasketsRouteTests(DownstreamServicesFixture fixture)
                 await dbContext.SaveChangesAsync();
             });
 
-    private sealed record BasketResponse(Guid Id, Guid CustomerId);
+    private sealed record BasketResponse(
+        Guid Id,
+        string CustomerRef,
+        IReadOnlyList<BasketItemResponse> Items,
+        decimal Total);
+
+    private sealed record BasketItemResponse(
+        Guid ProductId,
+        string Name,
+        int Quantity,
+        decimal UnitPrice,
+        decimal LineTotal);
 }

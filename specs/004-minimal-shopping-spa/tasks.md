@@ -125,26 +125,36 @@ Four things worth knowing before the next phase:
 
 ### Tests for User Story 2
 
-- [ ] T032 [P] [US2] Write a failing unit test for the quantity-merge rule in `services/baskets/tests/Baskets.Api.UnitTests/BasketLineMergeTests.cs` — adding a product already present increments its line, never creating a second one (spec FR-005, FR-021)
-- [ ] T033 [P] [US2] Write a failing unit test for basket-total computation in `services/baskets/tests/Baskets.Api.UnitTests/BasketTotalTests.cs` — the sum of quantity × captured unit price, computed and never stored ([data-model.md](./data-model.md))
-- [ ] T034 [P] [US2] Write failing integration tests for the caller-scoped basket in `services/baskets/tests/Baskets.Api.IntegrationTests/CurrentBasketTests.cs` — a first read returns an empty basket rather than 404, the same subject resolves the same basket across separate requests (spec FR-006, FR-011), a second subject gets a different basket, and a request carrying no subject fails rather than defaulting
-- [ ] T035 [P] [US2] Write a failing integration test for the BFF basket routes in `services/bff/tests/Bff.Api.IntegrationTests/BasketFlowTests.cs` — `POST /bff/basket/items` resolves the unit price from the products service and rejects any price supplied by the client ([contracts/bff-openapi.yaml](./contracts/bff-openapi.yaml))
-- [ ] T036 [P] [US2] Write failing component tests for the basket view in `frontend/apps/web/tests/basket/BasketView.test.tsx` — lines, quantities, unit prices, and total, all asserted through accessible roles (spec FR-004)
-- [ ] T037 [P] [US2] Write a failing component test for a failed add in `frontend/apps/web/tests/basket/AddItemError.test.tsx` — a clear error appears and the basket never displays an item that was not actually added (US2 scenario 5)
+- [X] T032 [P] [US2] Write a failing unit test for the quantity-merge rule in `services/baskets/tests/Baskets.Api.UnitTests/BasketLineMergeTests.cs` — adding a product already present increments its line, never creating a second one (spec FR-005, FR-021)
+- [X] T033 [P] [US2] Write a failing unit test for basket-total computation in `services/baskets/tests/Baskets.Api.UnitTests/BasketTotalTests.cs` — the sum of quantity × captured unit price, computed and never stored ([data-model.md](./data-model.md))
+- [X] T034 [P] [US2] Write failing integration tests for the caller-scoped basket in `services/baskets/tests/Baskets.Api.IntegrationTests/CurrentBasketTests.cs` — a first read returns an empty basket rather than 404, the same subject resolves the same basket across separate requests (spec FR-006, FR-011), a second subject gets a different basket, and a request carrying no subject fails rather than defaulting
+- [X] T035 [P] [US2] Write a failing integration test for the BFF basket routes in `services/bff/tests/Bff.Api.IntegrationTests/BasketFlowTests.cs` — `POST /bff/basket/items` resolves the unit price from the products service and rejects any price supplied by the client ([contracts/bff-openapi.yaml](./contracts/bff-openapi.yaml))
+- [X] T036 [P] [US2] Write failing component tests for the basket view in `frontend/apps/web/tests/basket/BasketView.test.tsx` — lines, quantities, unit prices, and total, all asserted through accessible roles (spec FR-004)
+- [X] T037 [P] [US2] Write a failing component test for a failed add in `frontend/apps/web/tests/basket/AddItemError.test.tsx` — a clear error appears and the basket never displays an item that was not actually added (US2 scenario 5)
 
 ### Implementation for User Story 2
 
-- [ ] T038 [P] [US2] Create the line-item entity in `services/baskets/src/Baskets.Api/Data/BasketLineItem.cs` per [data-model.md](./data-model.md)
-- [ ] T039 [US2] Change the basket entity in `services/baskets/src/Baskets.Api/Data/Basket.cs` — `CustomerRef` (string, required, max 200) replacing `CustomerId`, plus the owned `LineItems` collection
-- [ ] T040 [US2] Configure the model in `services/baskets/src/Baskets.Api/Data/BasketsDbContext.cs` — unique index on `CustomerRef`, unique index on (`BasketId`, `ProductId`), decimal precision (18,2) on `UnitPrice`, cascade delete of line items
-- [ ] T041 [US2] Add the baskets migration under `services/baskets/src/Baskets.Api/Migrations/` covering the new table and the column change
-- [ ] T042 [US2] Implement `GET /baskets/current` and `POST /baskets/current/items` in `services/baskets/src/Baskets.Api/Features/Baskets/BasketEndpoints.cs` — resolve the basket from the caller's subject, enforce quantity ≥ 1, merge existing lines, compute the total, and update the existing `/baskets/{basketId}` response shape to match ([contracts/downstream-openapi.yaml](./contracts/downstream-openapi.yaml))
-- [ ] T043 [US2] Extend `services/bff/src/Bff.Api/DownstreamClients/BasketsApiClient.cs` with the current-basket read and add-item calls
-- [ ] T044 [US2] Implement `GET /bff/basket` and `POST /bff/basket/items` in `services/bff/src/Bff.Api/Features/Baskets/BasketsEndpoints.cs` — resolve the unit price via `ProductsApiClient`, aggregate product names onto the lines, and declare the 200/400/404/502/504 responses explicitly so the generated client knows them
-- [ ] T045 [US2] Regenerate the API client and commit `frontend/packages/api-client/src/generated/`
-- [ ] T046 [P] [US2] Implement the add-to-basket control in `frontend/apps/web/src/features/catalog/AddToBasketButton.tsx` using the generated mutation and invalidating the basket query on success (spec FR-003)
-- [ ] T047 [P] [US2] Implement the basket view in `frontend/apps/web/src/features/basket/BasketView.tsx` — lines, quantities, unit prices, and total through the shared money formatter (spec FR-004, FR-024)
-- [ ] T048 [US2] Wire the basket route into `frontend/apps/web/src/app/routes.tsx`
+- [X] T038 [P] [US2] Create the line-item entity in `services/baskets/src/Baskets.Api/Data/BasketLineItem.cs` per [data-model.md](./data-model.md)
+- [X] T039 [US2] Change the basket entity in `services/baskets/src/Baskets.Api/Data/Basket.cs` — `CustomerRef` (string, required, max 200) replacing `CustomerId`, plus the owned `LineItems` collection
+- [X] T040 [US2] Configure the model in `services/baskets/src/Baskets.Api/Data/BasketsDbContext.cs` — unique index on `CustomerRef`, unique index on (`BasketId`, `ProductId`), decimal precision (18,2) on `UnitPrice`, cascade delete of line items
+- [X] T041 [US2] Add the baskets migration under `services/baskets/src/Baskets.Api/Migrations/` covering the new table and the column change
+- [X] T042 [US2] Implement `GET /baskets/current` and `POST /baskets/current/items` in `services/baskets/src/Baskets.Api/Features/Baskets/BasketEndpoints.cs` — resolve the basket from the caller's subject, enforce quantity ≥ 1, merge existing lines, compute the total, and update the existing `/baskets/{basketId}` response shape to match ([contracts/downstream-openapi.yaml](./contracts/downstream-openapi.yaml))
+- [X] T043 [US2] Extend `services/bff/src/Bff.Api/DownstreamClients/BasketsApiClient.cs` with the current-basket read and add-item calls
+- [X] T044 [US2] Implement `GET /bff/basket` and `POST /bff/basket/items` in `services/bff/src/Bff.Api/Features/Baskets/BasketsEndpoints.cs` — resolve the unit price via `ProductsApiClient`, aggregate product names onto the lines, and declare the 200/400/404/502/504 responses explicitly so the generated client knows them
+- [X] T045 [US2] Regenerate the API client and commit `frontend/packages/api-client/src/generated/`
+- [X] T046 [P] [US2] Implement the add-to-basket control in `frontend/apps/web/src/features/catalog/AddToBasketButton.tsx` using the generated mutation and invalidating the basket query on success (spec FR-003)
+- [X] T047 [P] [US2] Implement the basket view in `frontend/apps/web/src/features/basket/BasketView.tsx` — lines, quantities, unit prices, and total through the shared money formatter (spec FR-004, FR-024)
+- [X] T048 [US2] Wire the basket route into `frontend/apps/web/src/app/routes.tsx`
+
+**Phase 4 completed 2026-08-16.** Verified through the real edge, not only in tests: adding the notebook twice and the apron once through `POST http://localhost:5300/bff/basket/items` produced two lines, quantity 2 on the first, and a total of **$59.25** — the figure quickstart.md quotes. A request carrying `unitPrice: 0.01` for the $48.00 Pour-Over Set stored it at **$48.00**; an unknown product returned 404 and a zero quantity returned 400. Suites: baskets unit 15, baskets integration 15, BFF unit 12, BFF integration 36, frontend 31 across 7 files. Solution builds clean at 0 warnings; bundle 105.88 kB of 150 kB.
+
+Five things worth knowing:
+
+- **A test caught an arithmetic error in another test.** `Total_MatchesTheWalkthroughFigure` was written asserting $59.25 for one notebook plus one apron, which is $46.75. The walkthrough's figure is two notebooks plus an apron. Pinning a number the documentation quotes is what made the mismatch visible.
+- **EF issued an UPDATE instead of an INSERT for new basket lines.** `Basket.AddItem` was assigning `Id = Guid.NewGuid()`, and the change tracker decides "new row" versus "existing row" by whether a navigation-discovered child already has a key — so it tried to update a row that did not exist and failed with a concurrency exception. The identifier is now generated on insert. Found by the integration suite, invisible to the unit tests.
+- **`EnsureSuccessStatusCode` was hiding the cause.** It reports "500" and nothing else. The basket test helper now asserts with the response body attached, which is what turned the above from guesswork into a one-line diagnosis.
+- **The line total moved into the baskets service.** The BFF was briefly computing `quantity × unitPrice` while the plan claims it performs no arithmetic. The baskets service now returns `lineTotal` per line and the BFF passes it through; `contracts/downstream-openapi.yaml` was updated to match.
+- **The add-item request has no price field at all.** Not "a price field that is ignored" — the request record cannot carry one, so there is nothing to accidentally trust. Verified against the running edge above.
 
 **Checkpoint**: browse and basket both work independently. The basket survives a refresh because it is the server's basket for this caller.
 

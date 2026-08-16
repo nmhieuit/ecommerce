@@ -2,6 +2,7 @@ import { useListProducts } from '@ecommerce/api-client';
 import { formatMoney } from '@/shared/money';
 import { ErrorState } from '@/shared/ErrorState';
 import { CatalogLoading, EmptyCatalog } from './CatalogStates';
+import { AddToBasketButton } from './AddToBasketButton';
 
 /**
  * Spec US1 / FR-001: the products available to buy, each with its name and price, retrieved from
@@ -45,6 +46,7 @@ export function ProductList() {
         <li key={product.id} className="rounded border border-current/15 p-4">
           <h2 className="font-medium">{product.name}</h2>
           <p className="mt-1">{formatMoney(product.price)}</p>
+          <AddToBasketButton productId={product.id} productName={product.name} />
         </li>
       ))}
     </ul>

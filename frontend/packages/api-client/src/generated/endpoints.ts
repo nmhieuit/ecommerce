@@ -5,21 +5,26 @@
  * OpenAPI spec version: 1.0.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  AddBasketItemRequest,
   BasketResponse,
   OrderResponse,
   PartyResponse,
@@ -151,6 +156,225 @@ export function useListProducts<TData = Awaited<ReturnType<typeof listProducts>>
 
 
 
+export type getCurrentBasketResponse200 = {
+  data: BasketResponse
+  status: 200
+}
+
+export type getCurrentBasketResponse502 = {
+  data: ProblemDetails
+  status: 502
+}
+
+export type getCurrentBasketResponse504 = {
+  data: ProblemDetails
+  status: 504
+}
+    
+export type getCurrentBasketResponseSuccess = (getCurrentBasketResponse200) & {
+  headers: Headers;
+};
+export type getCurrentBasketResponseError = (getCurrentBasketResponse502 | getCurrentBasketResponse504) & {
+  headers: Headers;
+};
+
+export type getCurrentBasketResponse = (getCurrentBasketResponseSuccess | getCurrentBasketResponseError)
+
+export const getGetCurrentBasketUrl = () => {
+
+
+  
+
+  return `/bff/basket`
+}
+
+export const getCurrentBasket = async ( options?: RequestInit): Promise<getCurrentBasketResponse> => {
+  
+  return bffFetch<getCurrentBasketResponse>(getGetCurrentBasketUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getGetCurrentBasketQueryKey = () => {
+    return [
+    `/bff/basket`
+    ] as const;
+    }
+
+    
+export const getGetCurrentBasketQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentBasket>>, TError = ProblemDetails>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentBasket>>, TError, TData>>, request?: SecondParameter<typeof bffFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentBasketQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentBasket>>> = ({ signal }) => getCurrentBasket({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentBasket>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetCurrentBasketQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentBasket>>>
+export type GetCurrentBasketQueryError = ProblemDetails
+
+
+export function useGetCurrentBasket<TData = Awaited<ReturnType<typeof getCurrentBasket>>, TError = ProblemDetails>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentBasket>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentBasket>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentBasket>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof bffFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentBasket<TData = Awaited<ReturnType<typeof getCurrentBasket>>, TError = ProblemDetails>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentBasket>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentBasket>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentBasket>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof bffFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentBasket<TData = Awaited<ReturnType<typeof getCurrentBasket>>, TError = ProblemDetails>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentBasket>>, TError, TData>>, request?: SecondParameter<typeof bffFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetCurrentBasket<TData = Awaited<ReturnType<typeof getCurrentBasket>>, TError = ProblemDetails>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentBasket>>, TError, TData>>, request?: SecondParameter<typeof bffFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetCurrentBasketQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+export type addBasketItemResponse200 = {
+  data: BasketResponse
+  status: 200
+}
+
+export type addBasketItemResponse400 = {
+  data: ProblemDetails
+  status: 400
+}
+
+export type addBasketItemResponse404 = {
+  data: ProblemDetails
+  status: 404
+}
+
+export type addBasketItemResponse502 = {
+  data: ProblemDetails
+  status: 502
+}
+
+export type addBasketItemResponse504 = {
+  data: ProblemDetails
+  status: 504
+}
+    
+export type addBasketItemResponseSuccess = (addBasketItemResponse200) & {
+  headers: Headers;
+};
+export type addBasketItemResponseError = (addBasketItemResponse400 | addBasketItemResponse404 | addBasketItemResponse502 | addBasketItemResponse504) & {
+  headers: Headers;
+};
+
+export type addBasketItemResponse = (addBasketItemResponseSuccess | addBasketItemResponseError)
+
+export const getAddBasketItemUrl = () => {
+
+
+  
+
+  return `/bff/basket/items`
+}
+
+export const addBasketItem = async (addBasketItemRequest: AddBasketItemRequest, options?: RequestInit): Promise<addBasketItemResponse> => {
+  
+  return bffFetch<addBasketItemResponse>(getAddBasketItemUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      addBasketItemRequest,)
+  }
+);}
+
+
+
+
+export const getAddBasketItemMutationOptions = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addBasketItem>>, TError,{data: AddBasketItemRequest}, TContext>, request?: SecondParameter<typeof bffFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addBasketItem>>, TError,{data: AddBasketItemRequest}, TContext> => {
+
+const mutationKey = ['addBasketItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addBasketItem>>, {data: AddBasketItemRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  addBasketItem(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddBasketItemMutationResult = NonNullable<Awaited<ReturnType<typeof addBasketItem>>>
+    export type AddBasketItemMutationBody = AddBasketItemRequest
+    export type AddBasketItemMutationError = ProblemDetails
+
+    export const useAddBasketItem = <TError = ProblemDetails,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addBasketItem>>, TError,{data: AddBasketItemRequest}, TContext>, request?: SecondParameter<typeof bffFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof addBasketItem>>,
+        TError,
+        {data: AddBasketItemRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getAddBasketItemMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
 export type getBasketResponse200 = {
   data: BasketResponse
   status: 200

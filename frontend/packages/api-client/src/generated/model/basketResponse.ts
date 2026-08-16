@@ -4,8 +4,13 @@
  * Bff.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { BasketItem } from './basketItem';
+import type { BasketResponseTotal } from './basketResponseTotal';
 
 export interface BasketResponse {
   id: string;
-  customerId: string;
+  customerRef: string;
+  items: BasketItem[];
+  /** @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$ */
+  total: BasketResponseTotal;
 }

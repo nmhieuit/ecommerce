@@ -31,20 +31,43 @@ public class ResponseMappingTests
     }
 
     /// <summary>
-    /// Two distinct identifiers of the same type sit next to each other here, which is exactly the
-    /// shape a transposition hides in.
+    /// 004: the basket line the shopper sees is the downstream line plus a product name joined in
+    /// from the catalog. Every other field must survive that join untouched — and the line total
+    /// in particular is passed through, never recomputed, because money arithmetic belongs to the
+    /// baskets service (004 plan.md, post-design re-check).
     /// </summary>
     [Fact]
-    public void BasketResponse_DoesNotTransposeItsTwoIdentifiers()
+    public void BasketItem_JoinsTheProductName_AndPassesEveryOtherFieldThrough()
     {
-        var basket = new BasketResource(
-            Id: Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            CustomerId: Guid.Parse("22222222-2222-2222-2222-222222222222"));
+        var productId = Guid.Parse("9f8d6b1e-0001-4000-8000-000000000001");
+        var line = new BasketLineItemResource(productId, Quantity: 2, UnitPrice: 12.50m, LineTotal: 25.00m);
 
-        var response = BasketsEndpoints.ToResponse(basket);
+        var item = BasketsEndpoints.ToItem(line, new Dictionary<Guid, string>
+        {
+            [productId] = "Field Notes Notebook",
+        });
 
-        Assert.Equal(basket.Id, response.Id);
-        Assert.Equal(basket.CustomerId, response.CustomerId);
+        Assert.Equal(productId, item.ProductId);
+        Assert.Equal("Field Notes Notebook", item.Name);
+        Assert.Equal(2, item.Quantity);
+        Assert.Equal(12.50m, item.UnitPrice);
+        Assert.Equal(25.00m, item.LineTotal);
+    }
+
+    /// <summary>
+    /// A line whose product has since left the catalog keeps its place rather than vanishing: the
+    /// shopper chose it and is being charged for it, so dropping it would misrepresent the total
+    /// they are about to pay.
+    /// </summary>
+    [Fact]
+    public void BasketItem_SurvivesAProductMissingFromTheCatalog()
+    {
+        var line = new BasketLineItemResource(Guid.NewGuid(), Quantity: 1, UnitPrice: 9.99m, LineTotal: 9.99m);
+
+        var item = BasketsEndpoints.ToItem(line, new Dictionary<Guid, string>());
+
+        Assert.Equal(9.99m, item.LineTotal);
+        Assert.False(string.IsNullOrWhiteSpace(item.Name));
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Link, Outlet, RouterProvider } from 'react-router-dom';
 import { ProductList } from '@/features/catalog/ProductList';
+import { BasketView } from '@/features/basket/BasketView';
 
 /**
  * The storefront's routes. Each screen arrives with the user story that owns it — the catalog is
@@ -40,6 +41,17 @@ function Catalog() {
   );
 }
 
+function BasketScreen() {
+  return (
+    <>
+      <h1 className="text-2xl font-semibold">Basket</h1>
+      <div className="mt-6">
+        <BasketView />
+      </div>
+    </>
+  );
+}
+
 function Placeholder({ title }: { readonly title: string }) {
   return (
     <>
@@ -55,7 +67,7 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <Catalog /> },
-      { path: 'basket', element: <Placeholder title="Basket" /> },
+      { path: 'basket', element: <BasketScreen /> },
       { path: 'confirmation', element: <Placeholder title="Order confirmation" /> },
     ],
   },

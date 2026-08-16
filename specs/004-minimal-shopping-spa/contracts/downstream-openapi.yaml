@@ -158,7 +158,7 @@ components:
 
     BasketLineItem:
       type: object
-      required: [productId, quantity, unitPrice]
+      required: [productId, quantity, unitPrice, lineTotal]
       properties:
         productId:
           type: string
@@ -169,6 +169,13 @@ components:
         unitPrice:
           type: number
           format: double
+        lineTotal:
+          type: number
+          format: double
+          description: >
+            Included rather than left for the caller to compute. Money arithmetic belongs in the
+            service that owns the data — the BFF above is an aggregation layer and must not
+            multiply anything (004 plan.md, post-design re-check).
 
     AddBasketItemRequest:
       type: object
