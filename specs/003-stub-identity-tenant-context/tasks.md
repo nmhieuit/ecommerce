@@ -83,17 +83,17 @@ This feature adds one new shared library and touches the gateway, BFF, and four 
 
 > Write these tests FIRST; confirm they FAIL before starting implementation.
 
-- [ ] T016 [P] [US1] Integration test: using `GatewayTestHost.CreateBff()` / `CreateGateway(bff)`, a request through the gateway always carries the resolved Phase 1 tenant id to the BFF, and a caller-supplied `X-Tenant-Id` header is overwritten rather than trusted, in `services/gateway/tests/Gateway.Api.IntegrationTests/TenantPropagationTests.cs` (spec US1 Acceptance Scenario 1, Test Scenario 1; Edge Cases — never client-controlled)
-- [ ] T017 [P] [US1] Integration test: using `BffTestHost.CreateDownstreamAsync` + `CreateBff<TClient>`, the BFF's outbound call to a downstream service carries the tenant id the BFF itself received, in `services/bff/tests/Bff.Api.IntegrationTests/TenantPropagationTests.cs` (spec US1 Acceptance Scenario 1)
+- [X] T016 [P] [US1] Integration test: using `GatewayTestHost.CreateBff()` / `CreateGateway(bff)`, a request through the gateway always carries the resolved Phase 1 tenant id to the BFF, and a caller-supplied `X-Tenant-Id` header is overwritten rather than trusted, in `services/gateway/tests/Gateway.Api.IntegrationTests/TenantPropagationTests.cs` (spec US1 Acceptance Scenario 1, Test Scenario 1; Edge Cases — never client-controlled)
+- [X] T017 [P] [US1] Integration test: using `BffTestHost.CreateDownstreamAsync` + `CreateBff<TClient>`, the BFF's outbound call to a downstream service carries the tenant id the BFF itself received, in `services/bff/tests/Bff.Api.IntegrationTests/TenantPropagationTests.cs` (spec US1 Acceptance Scenario 1)
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Implement `StubIdentityAuthenticationHandler` (an always-succeeding `AuthenticationHandler` issuing a `ClaimsPrincipal` with a fixed tenant claim and a fixed subject/user-id claim) in `services/gateway/src/Gateway.Api/Identity/StubIdentityAuthenticationHandler.cs` (research.md Decision 1; data-model.md Stub Identity)
-- [ ] T019 [US1] Implement `TenantHeaderPropagationMiddleware` (reads the authenticated tenant claim and writes `X-Tenant-Id` onto `context.Request.Headers`, always overwriting any inbound value — mirrors `CorrelationIdMiddleware`'s pattern) in `services/gateway/src/Gateway.Api/Identity/TenantHeaderPropagationMiddleware.cs` (research.md Decision 2; depends on T018; makes T016 pass)
-- [ ] T020 [US1] Wire `builder.Services.AddAuthentication().AddScheme<...>(...)`, `app.UseAuthentication()`, and the new middleware into `services/gateway/src/Gateway.Api/Program.cs`, ordered after `UseServiceDefaults()` and before `MapReverseProxy()` (depends on T018, T019)
-- [ ] T021 [P] [US1] Configure the Phase 1 hardcoded tenant id in `services/gateway/src/Gateway.Api/appsettings.json` (data-model.md Stub Identity)
-- [ ] T022 [US1] Implement `TenantPropagationHandler` (a `DelegatingHandler` reading `TenantContext` and setting `X-Tenant-Id` on each outgoing request) in `services/bff/src/Bff.Api/DownstreamClients/TenantPropagationHandler.cs` (research.md Decision 4; makes T017 pass)
-- [ ] T023 [US1] Attach `TenantPropagationHandler` to each of the four typed `HttpClient`s in `services/bff/src/Bff.Api/DownstreamClients/DownstreamClientRegistrationExtensions.cs` (depends on T022, T011)
+- [X] T018 [US1] Implement `StubIdentityAuthenticationHandler` (an always-succeeding `AuthenticationHandler` issuing a `ClaimsPrincipal` with a fixed tenant claim and a fixed subject/user-id claim) in `services/gateway/src/Gateway.Api/Identity/StubIdentityAuthenticationHandler.cs` (research.md Decision 1; data-model.md Stub Identity)
+- [X] T019 [US1] Implement `TenantHeaderPropagationMiddleware` (reads the authenticated tenant claim and writes `X-Tenant-Id` onto `context.Request.Headers`, always overwriting any inbound value — mirrors `CorrelationIdMiddleware`'s pattern) in `services/gateway/src/Gateway.Api/Identity/TenantHeaderPropagationMiddleware.cs` (research.md Decision 2; depends on T018; makes T016 pass)
+- [X] T020 [US1] Wire `builder.Services.AddAuthentication().AddScheme<...>(...)`, `app.UseAuthentication()`, and the new middleware into `services/gateway/src/Gateway.Api/Program.cs`, ordered after `UseServiceDefaults()` and before `MapReverseProxy()` (depends on T018, T019)
+- [X] T021 [P] [US1] Configure the Phase 1 hardcoded tenant id in `services/gateway/src/Gateway.Api/appsettings.json` (data-model.md Stub Identity)
+- [X] T022 [US1] Implement `TenantPropagationHandler` (a `DelegatingHandler` reading `TenantContext` and setting `X-Tenant-Id` on each outgoing request) in `services/bff/src/Bff.Api/DownstreamClients/TenantPropagationHandler.cs` (research.md Decision 4; makes T017 pass)
+- [X] T023 [US1] Attach `TenantPropagationHandler` to each of the four typed `HttpClient`s in `services/bff/src/Bff.Api/DownstreamClients/DownstreamClientRegistrationExtensions.cs` (depends on T022, T011)
 
 **Checkpoint**: User Story 1 is fully functional and independently testable — a resolved tenant id reaches every hop (quickstart.md Scenarios 1-2).
 

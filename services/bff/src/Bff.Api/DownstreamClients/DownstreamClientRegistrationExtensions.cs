@@ -41,6 +41,11 @@ public static class DownstreamClientRegistrationExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        // Both required by TenantPropagationHandler, which reads the current request's tenant
+        // through the accessor rather than capturing a scoped service into a pooled handler.
+        services.AddHttpContextAccessor();
+        services.AddTransient<TenantPropagationHandler>();
+
         services.AddDownstreamClient<ProductsApiClient>(ProductsApiClient.ServiceName, configuration);
         services.AddDownstreamClient<BasketsApiClient>(BasketsApiClient.ServiceName, configuration);
         services.AddDownstreamClient<OrdersApiClient>(OrdersApiClient.ServiceName, configuration);
@@ -67,6 +72,10 @@ public static class DownstreamClientRegistrationExtensions
                 // instead of during service-collection construction.
                 client.BaseAddress = provider.GetDownstreamOptions(serviceName).BaseUrl;
             })
+            // Registered before the resilience handler, so it is outermost: the tenant is stamped
+            // once, up front, and every retry the pipeline makes reuses that same message rather
+            // than re-deriving the header per attempt.
+            .AddHttpMessageHandler<TenantPropagationHandler>()
             .AddStandardResilienceHandler(resilience =>
             {
                 resilience.AttemptTimeout.Timeout = AttemptTimeout;
