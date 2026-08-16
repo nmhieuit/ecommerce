@@ -5,7 +5,9 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
-packages/
+# Anchored to the repository root on purpose: this is NuGet's legacy restore folder, and an
+# unanchored `packages/` would also swallow frontend/packages/, where the generated API client lives.
+/packages/
 *.nupkg
 
 # Rider / VS / VS Code
@@ -21,10 +23,19 @@ coverage/
 *.coverage
 *.coveragexml
 
-# Node (frontend, when it lands)
+# Node (frontend)
 node_modules/
 dist/
 build/
+.turbo/
+.pnpm-store/
+*.tsbuildinfo
+
+# Playwright output
+test-results/
+playwright-report/
+blob-report/
+.playwright/
 
 # Environment / secrets
 .env

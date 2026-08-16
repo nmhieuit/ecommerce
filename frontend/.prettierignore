@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+
+# Generated from the BFF's OpenAPI document (ADR-0004) — formatting it would create diff noise on
+# every regeneration without changing anything a human reads.
+packages/api-client/src/generated/

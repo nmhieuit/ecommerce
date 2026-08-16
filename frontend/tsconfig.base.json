@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+
+    /* Constitution Principle IX: TypeScript runs in strict mode; `any` requires a written
+       justification. The three flags below strict are the ones that actually catch the mistakes
+       strict alone lets through — an unchecked array index and an unused variable are both how a
+       `undefined` reaches a screen. */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true
+  }
+}

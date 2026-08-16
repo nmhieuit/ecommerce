@@ -1,0 +1,17 @@
+@import 'tailwindcss';
+
+/* Tailwind v4 is configured in CSS rather than a JS config file. Design tokens that the eventual
+   shared design system (ADR-0009) will own live here for now — one app, one place, extracted when
+   a second client exists to share them with (research.md Decision 2). */
+@theme {
+  --color-surface: oklch(99% 0 0);
+  --color-ink: oklch(25% 0.01 260);
+  --color-accent: oklch(55% 0.14 250);
+}
+
+/* Principle IX / WCAG 2.2 AA: a visible focus indicator is not optional, and browsers drop the
+   default one for mouse users in ways that are easy to inherit accidentally. Stated once, here. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

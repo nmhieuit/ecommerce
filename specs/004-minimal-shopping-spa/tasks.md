@@ -31,16 +31,22 @@ description: "Task list for 004-minimal-shopping-spa"
 
 **Purpose**: Stand up the frontend workspace that does not exist yet, and clear one blocking defect in the existing backend configuration.
 
-- [ ] T001 Create the frontend workspace root — `frontend/package.json`, `frontend/pnpm-workspace.yaml`, `frontend/turbo.json`, `frontend/tsconfig.base.json` — as a pnpm workspace orchestrated by Turborepo per ADR-0010
-- [ ] T002 [P] Scaffold the storefront app in `frontend/apps/web/` — Vite + React entry (`index.html`, `src/main.tsx`, `vite.config.ts`) and `tsconfig.json` with `strict` and `noUncheckedIndexedAccess` enabled
-- [ ] T003 [P] Configure ESLint and Prettier for the workspace in `frontend/eslint.config.js` and `frontend/.prettierrc`, set to fail the build on violation (constitution: Development Workflow — style is machine-enforced)
-- [ ] T004 [P] Add Tailwind CSS and the Radix primitives dependency to `frontend/apps/web/` — `tailwind.config.ts` and `src/styles.css` per ADR-0009 and [research.md](./research.md) Decision 2
-- [ ] T005 [P] Add the Vitest + Testing Library + MSW harness in `frontend/apps/web/vitest.config.ts` and `frontend/apps/web/tests/setup.ts`
-- [ ] T006 [P] Add the Playwright config in `frontend/apps/web/playwright.config.ts`, pointing at the Vite dev server and the gateway on port 5300
-- [ ] T007 [P] Declare the download-size budget in `frontend/apps/web/.size-limit.json` at 150 kB gzipped for the entry screen, per [research.md](./research.md) Decision 5 (spec FR-025, SC-011)
-- [ ] T008 [P] Scaffold the generated client package in `frontend/packages/api-client/` with `orval.config.ts` targeting the BFF's `/openapi/v1.json` and emitting TanStack Query hooks into `src/generated/` (ADR-0004)
-- [ ] T009 Define the task pipelines in `frontend/turbo.json` — `generate` → `build` → `test` / `lint` / `typecheck` / `size` / `e2e`, with `api-client` building before `web`, and `size` failing the build when the budget is exceeded
-- [ ] T010 Fix the swapped downstream base URLs in `services/bff/src/Bff.Api/appsettings.Development.json` — `BasketsApi` to `http://localhost:5188` and `OrdersApi` to `http://localhost:5041` (they are currently the wrong way round; see [plan.md](./plan.md) Complexity Tracking)
+- [X] T001 Create the frontend workspace root — `frontend/package.json`, `frontend/pnpm-workspace.yaml`, `frontend/turbo.json`, `frontend/tsconfig.base.json` — as a pnpm workspace orchestrated by Turborepo per ADR-0010
+- [X] T002 [P] Scaffold the storefront app in `frontend/apps/web/` — Vite + React entry (`index.html`, `src/main.tsx`, `vite.config.ts`) and `tsconfig.json` with `strict` and `noUncheckedIndexedAccess` enabled
+- [X] T003 [P] Configure ESLint and Prettier for the workspace in `frontend/eslint.config.js` and `frontend/.prettierrc`, set to fail the build on violation (constitution: Development Workflow — style is machine-enforced)
+- [X] T004 [P] Add Tailwind CSS and the Radix primitives dependency to `frontend/apps/web/` — `tailwind.config.ts` and `src/styles.css` per ADR-0009 and [research.md](./research.md) Decision 2
+- [X] T005 [P] Add the Vitest + Testing Library + MSW harness in `frontend/apps/web/vitest.config.ts` and `frontend/apps/web/tests/setup.ts`
+- [X] T006 [P] Add the Playwright config in `frontend/apps/web/playwright.config.ts`, pointing at the Vite dev server and the gateway on port 5300
+- [X] T007 [P] Declare the download-size budget in `frontend/apps/web/.size-limit.json` at 150 kB gzipped for the entry screen, per [research.md](./research.md) Decision 5 (spec FR-025, SC-011)
+- [X] T008 [P] Scaffold the generated client package in `frontend/packages/api-client/` with `orval.config.ts` targeting the BFF's `/openapi/v1.json` and emitting TanStack Query hooks into `src/generated/` (ADR-0004)
+- [X] T009 Define the task pipelines in `frontend/turbo.json` — `generate` → `build` → `test` / `lint` / `typecheck` / `size` / `e2e`, with `api-client` building before `web`, and `size` failing the build when the budget is exceeded
+- [X] T010 Fix the swapped downstream base URLs in `services/bff/src/Bff.Api/appsettings.Development.json` — `BasketsApi` to `http://localhost:5188` and `OrdersApi` to `http://localhost:5041` (they are currently the wrong way round; see [plan.md](./plan.md) Complexity Tracking)
+
+**Phase 1 completed 2026-08-16.** Three departures from the task text as written, each deliberate:
+
+- **T004 has no `tailwind.config.ts`.** Tailwind v4 is configured in CSS rather than a JS config file, so the tokens and the focus-visible rule live in `frontend/apps/web/src/styles.css` behind `@import 'tailwindcss'`, wired through the `@tailwindcss/vite` plugin. Same outcome, current idiom, one fewer config file.
+- **Vitest is v3, not v2.** Vitest 2 pins Vite 5 internally, which collides with the app's Vite 6 under `exactOptionalPropertyTypes` — the typecheck failed on mismatched `Plugin` types from two Vite copies. Vitest 3 pairs with Vite 6 and the conflict disappears. The alternative was relaxing `exactOptionalPropertyTypes`, which would have traded a real type-safety guarantee for a tooling inconvenience.
+- **`/packages/` in the root `.gitignore` is now anchored.** It was NuGet's legacy restore folder pattern, unanchored, and would have silently ignored `frontend/packages/` — the generated API client's home. Fixed as part of T008 rather than left to be discovered by a missing file in review.
 
 ---
 
