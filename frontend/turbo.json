@@ -7,6 +7,10 @@
       "outputs": ["src/generated/**"]
     },
 
+    "verify-generated": {
+      "cache": false
+    },
+
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]

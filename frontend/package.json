@@ -12,6 +12,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "generate": "turbo run generate",
+    "verify-generated": "turbo run verify-generated",
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

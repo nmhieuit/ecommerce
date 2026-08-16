@@ -1,4 +1,5 @@
 import { useLocation } from 'react-router-dom';
+import { usePageTitle } from '@/shared/usePageTitle';
 import { Confirmation } from './Confirmation';
 import type { PlacedOrder } from './PlacedOrder';
 
@@ -14,6 +15,8 @@ interface ConfirmationLocationState {
  * (spec Edge Cases).
  */
 export function ConfirmationScreen() {
+  usePageTitle('Order confirmation');
+
   const { state } = useLocation() as { state: ConfirmationLocationState | null };
 
   return <Confirmation order={state?.order} />;

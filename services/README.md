@@ -1,8 +1,12 @@
 # Services
 
-Four independently deployable microservice shells — `parties`, `products`, `baskets`, `orders` —
-each owning its own database, its own health probes, and its own container image. None of them
-requires any of the others to be running.
+Four independently deployable microservices — `parties`, `products`, `baskets`, `orders` — each
+owning its own database, its own health probes, and its own container image. None of them requires
+any of the others to be running.
+
+They sit behind the `gateway` and the `bff`, and the shopper-facing storefront that consumes them
+lives in [`frontend/`](../frontend/README.md) — see that README for the client's commands and for
+why it addresses the gateway and nothing else.
 
 | Service | Database | Connection-string key | Local port | Local DB port |
 |---|---|---|---|---|

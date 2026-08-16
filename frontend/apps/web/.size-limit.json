@@ -2,7 +2,7 @@
   {
     "name": "storefront entry",
     "path": "dist/assets/*.js",
-    "limit": "150 kB",
+    "limit": "115 kB",
     "gzip": true
   }
 ]

@@ -213,13 +213,13 @@ Four notes:
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T065 [P] Write the end-to-end walkthrough in `frontend/apps/web/e2e/walkthrough.spec.ts` — the happy path with zero console errors, every request addressed to the gateway only, a mid-basket reload preserving contents, rapid double checkout creating one order, and the whole flow completed by keyboard (spec SC-002, SC-005, SC-007, SC-008, SC-009, SC-010)
-- [ ] T066 [P] Run an accessibility pass over the catalog, basket, and confirmation screens in `frontend/apps/web/src/features/` — accessible names, correct roles, visible focus on every interactive element (spec FR-017)
-- [ ] T067 Measure the built bundle and tighten the budget in `frontend/apps/web/.size-limit.json` to just above the measured figure ([research.md](./research.md) Decision 5)
-- [ ] T068 [P] Add the codegen drift check to `frontend/turbo.json` — run `pnpm generate` and fail when the working tree is dirty, so the committed client can never diverge from the BFF's document (ADR-0004)
-- [ ] T069 [P] Record the Phase 1 checkout orchestration decision as `docs/adr/0011-checkout-orchestration.md` — the synchronous two-step, the Principle IV deviation, and the SCRUM-18/SCRUM-31 close-out (constitution: architecturally significant decisions MUST be ADRs)
-- [ ] T070 [P] Document the frontend workspace commands in a new `frontend/README.md` and cross-reference it from `services/README.md`
-- [ ] T071 Run every scenario in [quickstart.md](./quickstart.md) end to end and record the results
+- [X] T065 [P] Write the end-to-end walkthrough in `frontend/apps/web/e2e/walkthrough.spec.ts` — the happy path with zero console errors, every request addressed to the gateway only, a mid-basket reload preserving contents, rapid double checkout creating one order, and the whole flow completed by keyboard (spec SC-002, SC-005, SC-007, SC-008, SC-009, SC-010)
+- [X] T066 [P] Run an accessibility pass over the catalog, basket, and confirmation screens in `frontend/apps/web/src/features/` — accessible names, correct roles, visible focus on every interactive element (spec FR-017)
+- [X] T067 Measure the built bundle and tighten the budget in `frontend/apps/web/.size-limit.json` to just above the measured figure ([research.md](./research.md) Decision 5)
+- [X] T068 [P] Add the codegen drift check to `frontend/turbo.json` — run `pnpm generate` and fail when the working tree is dirty, so the committed client can never diverge from the BFF's document (ADR-0004)
+- [X] T069 [P] Record the Phase 1 checkout orchestration decision as `docs/adr/0011-checkout-orchestration.md` — the synchronous two-step, the Principle IV deviation, and the SCRUM-18/SCRUM-31 close-out (constitution: architecturally significant decisions MUST be ADRs)
+- [X] T070 [P] Document the frontend workspace commands in a new `frontend/README.md` and cross-reference it from `services/README.md`
+- [X] T071 Run every scenario in [quickstart.md](./quickstart.md) end to end and record the results
 
 ---
 
@@ -285,6 +285,21 @@ Task: "Basket view in frontend/apps/web/src/features/basket/BasketView.tsx"
 3. + US2 → basket works, survives refresh → demo
 4. + US3 → checkout and confirmation → the walking skeleton is closed
 5. + Polish → the walkthrough is automated and the budget is real
+
+---
+
+**Phase 6 completed 2026-08-16. All 71 tasks are done.**
+
+**The end-to-end walkthrough found a defect that had already shipped, and that nothing else could have found.** In a real browser the storefront showed "We could not load the products" on every screen: the gateway had **no CORS policy**, so the browser blocked each cross-origin request before it left. Every component test mocks fetch, which has no notion of origins; every manual check used curl, which does not enforce CORS. The gateway now admits configured origins with credentials (`Cors:AllowedOrigins`), and `services/gateway/tests/Gateway.Api.IntegrationTests/StorefrontCorsTests.cs` pins it in preflights so it cannot regress silently.
+
+The accessibility pass (T066) found three more, all invisible to per-component tests because each is about moving *between* screens: no skip link (WCAG 2.4.1), one static document title across every route (2.4.2), and focus left on the clicked link after navigation. All three are fixed and covered by `tests/accessibility.test.tsx`.
+
+Two smaller things that were worth the detour:
+
+- **The router was a module-level singleton**, so it kept its history across every mount in a process — two tests in one file shared navigation state and the second silently started wherever the first left off. It is now created per mount, which is identical in the browser and honest in tests.
+- **The drift gate had to use `git status`, not `git diff`.** Diff only sees tracked files, so generated output that was never committed would sail through a diff-based check while asserting nothing — and uncommitted output is itself the failure the gate exists to prevent (a frontend build would need a live BFF).
+
+Verified: Playwright 4/4 in Chromium (SC-002, SC-005, SC-007, SC-008, SC-009, SC-010); frontend 45 tests across 11 files; gateway integration 22; bundle 106.46 kB against the tightened 115 kB budget; quickstart Scenario 7 returned `504` in 3.02 s, inside SC-006's five-second ceiling; Scenario 9 refused a gateway-bypassing call.
 
 ---
 

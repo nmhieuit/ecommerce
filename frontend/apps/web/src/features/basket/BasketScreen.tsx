@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useGetCurrentBasket } from '@ecommerce/api-client';
 import { CheckoutButton } from '@/features/checkout/CheckoutButton';
+import { usePageTitle } from '@/shared/usePageTitle';
 import { BasketView } from './BasketView';
 
 /**
@@ -11,6 +12,8 @@ import { BasketView } from './BasketView';
  * to check out without `BasketView` having to hand it up through props.
  */
 export function BasketScreen() {
+  usePageTitle('Basket');
+
   const navigate = useNavigate();
   const { data } = useGetCurrentBasket();
 

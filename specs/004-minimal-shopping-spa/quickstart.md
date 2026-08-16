@@ -13,22 +13,13 @@ Validates this feature against [spec.md](./spec.md)'s acceptance scenarios and s
 
 ## Setup
 
-### 1. Fix the swapped downstream base URLs *(one-time, do this first)*
-
-`services/bff/src/Bff.Api/appsettings.Development.json` currently points `BasketsApi` at
-`http://localhost:5041` and `OrdersApi` at `http://localhost:5188`. Those are the wrong way round —
-baskets listens on **5188** and orders on **5041** (`Properties/launchSettings.json` for each). The
-mistake is invisible today because both existing routes are GET-by-id and both answer 404 for an
-unknown identifier, but this feature's write paths would post basket items to the orders service.
-Swap them before anything below will work.
-
-### 2. Start the databases
+### 1. Start the databases
 
 ```bash
 docker compose -f docker-compose.deps.yml up --wait products-db-init baskets-db-init orders-db-init
 ```
 
-### 3. Apply migrations
+### 2. Apply migrations
 
 `docker-compose.deps.yml` creates empty databases only; tables and the seeded catalog are EF Core's
 job. The tooling is pinned in `.config/dotnet-tools.json`.
@@ -46,7 +37,7 @@ The products migration seeds three products (data-model.md — Product). Confirm
 dotnet dotnet-ef migrations list --project services/products/src/Products.Api
 ```
 
-### 4. Run the backend
+### 3. Run the backend
 
 Separate terminals, or the solution's multi-startup profile:
 
@@ -58,7 +49,7 @@ dotnet run --project services/bff/src/Bff.Api              # :5301
 dotnet run --project services/gateway/src/Gateway.Api      # :5300
 ```
 
-### 5. Generate the API client and run the storefront
+### 4. Generate the API client and run the storefront
 
 ```bash
 cd frontend

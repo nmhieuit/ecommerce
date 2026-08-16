@@ -11,6 +11,8 @@
   },
   "scripts": {
     "generate": "orval --config orval.config.ts",
+    "//verify-generated": "ADR-0004: CI must fail when the committed client has drifted from the BFF's document. Uses `git status --porcelain`, not `git diff`, on purpose — diff only sees tracked files, so an output that was never committed at all would pass a diff-based gate while asserting nothing. Untracked output is itself the failure: it means a frontend build cannot work without a live BFF.",
+    "verify-generated": "orval --config orval.config.ts && node -e \"const s=require('child_process').execSync('git status --porcelain -- src/generated',{encoding:'utf8'}).trim(); if(s){console.error('Generated client is not committed, or has drifted from the BFF document:\\n'+s); process.exit(1);}\"",
     "//build": "This package is consumed as TypeScript source, so its 'build' is a typecheck — there is no artifact for apps/web to wait on, only a guarantee that what it imports compiles.",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",

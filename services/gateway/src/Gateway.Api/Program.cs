@@ -16,6 +16,22 @@ builder.Services.AddAuthentication(StubIdentityAuthenticationHandler.SchemeName)
 // No AddDbContext here, unlike the domain services: the gateway owns no data and reads no
 // service's database (constitution Principle I; plan.md Technical Context — Storage: N/A).
 
+// The storefront is served from its own origin and calls the gateway cross-origin, so without a
+// policy here the browser blocks every request before it leaves — which no curl check and no
+// mocked-fetch component test can reveal. Origins come from configuration rather than a literal:
+// a deployment that serves the storefront from the gateway's own origin needs none of this, and one
+// that does not must state its origin explicitly.
+//
+// Explicit origins, not a wildcard: the client sends credentials, and the CORS specification
+// forbids `*` on a credentialed request.
+builder.Services.AddCors(options => options.AddPolicy(
+    StorefrontCorsPolicy,
+    policy => policy
+        .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()));
+
 // The gateway's whole routing surface, loaded from the ReverseProxy section rather than defined
 // in code (research.md Decision 2), so the route table stays reviewable as data and swappable per
 // environment without a rebuild. Exactly one cluster is configured, the BFF (Decision 1): the
@@ -27,6 +43,10 @@ builder.Services.AddHealthCheckFeature();
 
 var app = builder.Build();
 app.UseServiceDefaults();
+
+// Before authentication and before the proxy: a preflight OPTIONS carries no credentials and must
+// be answered by the gateway itself rather than forwarded downstream.
+app.UseCors(StorefrontCorsPolicy);
 
 // Authenticate first, then turn the resolved identity's tenant and subject claims into the headers
 // every hop below reads. All three must run before MapReverseProxy: once YARP forwards the request,
@@ -47,4 +67,12 @@ app.MapReverseProxy();
 
 app.Run();
 
-public partial class Program; // exposes the entry point to WebApplicationFactory<Program> in tests
+public partial class Program
+{
+    /// <summary>
+    /// The named CORS policy the storefront is admitted by (004-minimal-shopping-spa spec FR-014 —
+    /// the storefront reaches the gateway and nothing else, so this is the only origin policy the
+    /// platform needs).
+    /// </summary>
+    public const string StorefrontCorsPolicy = "storefront";
+}
