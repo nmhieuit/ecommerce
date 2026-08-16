@@ -54,20 +54,20 @@ This feature adds one new shared library and touches the gateway, BFF, and four 
 
 > Write these tests FIRST; confirm they FAIL before starting implementation (constitution Principle III).
 
-- [ ] T005 [P] Unit test: `TenantContext.RequireTenantId()` returns the resolved `TenantId` when it has been set, and throws `MissingTenantContextException` when it hasn't, in `shared/Tenancy.UnitTests/TenantContextTests.cs` (spec FR-004/FR-005, Test Scenario 2; data-model.md Tenant Context — Resolved/Unresolved states)
-- [ ] T006 [P] Unit test: `TenantContextMiddleware` populates `TenantContext` from an inbound `X-Tenant-Id` header when present, leaves it unresolved when the header is absent or empty, and pushes `TenantId` into the logger scope the same way `CorrelationIdMiddleware` already does, in `shared/Tenancy.UnitTests/TenantContextMiddlewareTests.cs` (spec FR-003/FR-006)
+- [X] T005 [P] Unit test: `TenantContext.RequireTenantId()` returns the resolved `TenantId` when it has been set, and throws `MissingTenantContextException` when it hasn't, in `shared/Tenancy.UnitTests/TenantContextTests.cs` (spec FR-004/FR-005, Test Scenario 2; data-model.md Tenant Context — Resolved/Unresolved states)
+- [X] T006 [P] Unit test: `TenantContextMiddleware` populates `TenantContext` from an inbound `X-Tenant-Id` header when present, leaves it unresolved when the header is absent or empty, and pushes `TenantId` into the logger scope the same way `CorrelationIdMiddleware` already does, in `shared/Tenancy.UnitTests/TenantContextMiddlewareTests.cs` (spec FR-003/FR-006)
 
 ### Implementation
 
-- [ ] T007 Implement `MissingTenantContextException` in `shared/Tenancy/MissingTenantContextException.cs`
-- [ ] T008 Implement `TenantContext` (scoped, settable `TenantId`, `RequireTenantId()` guard) in `shared/Tenancy/TenantContext.cs` (depends on T007; makes T005 pass)
-- [ ] T009 Implement `TenantContextMiddleware` (reads `X-Tenant-Id` into `TenantContext`; pushes `TenantId` into a logger scope) in `shared/Tenancy/TenantContextMiddleware.cs` (depends on T008; makes T006 pass)
-- [ ] T010 Implement `TenancyExtensions` (`AddTenancy()` / `UseTenancy()`, mirroring `ServiceDefaultsExtensions`' `AddServiceDefaults()` / `UseServiceDefaults()` shape) in `shared/Tenancy/TenancyExtensions.cs` (depends on T008, T009)
-- [ ] T011 [P] Wire `builder.Services.AddTenancy()` / `app.UseTenancy()` into `services/bff/src/Bff.Api/Program.cs`, after `UseServiceDefaults()` (depends on T010, T004)
-- [ ] T012 [P] Wire `AddTenancy()` / `UseTenancy()` into `services/products/src/Products.Api/Program.cs`, after `UseServiceDefaults()`
-- [ ] T013 [P] Wire `AddTenancy()` / `UseTenancy()` into `services/baskets/src/Baskets.Api/Program.cs`, after `UseServiceDefaults()`
-- [ ] T014 [P] Wire `AddTenancy()` / `UseTenancy()` into `services/orders/src/Orders.Api/Program.cs`, after `UseServiceDefaults()`
-- [ ] T015 [P] Wire `AddTenancy()` / `UseTenancy()` into `services/parties/src/Parties.Api/Program.cs`, after `UseServiceDefaults()`
+- [X] T007 Implement `MissingTenantContextException` in `shared/Tenancy/MissingTenantContextException.cs`
+- [X] T008 Implement `TenantContext` (scoped, settable `TenantId`, `RequireTenantId()` guard) in `shared/Tenancy/TenantContext.cs` (depends on T007; makes T005 pass)
+- [X] T009 Implement `TenantContextMiddleware` (reads `X-Tenant-Id` into `TenantContext`; pushes `TenantId` into a logger scope) in `shared/Tenancy/TenantContextMiddleware.cs` (depends on T008; makes T006 pass)
+- [X] T010 Implement `TenancyExtensions` (`AddTenancy()` / `UseTenancy()`, mirroring `ServiceDefaultsExtensions`' `AddServiceDefaults()` / `UseServiceDefaults()` shape) in `shared/Tenancy/TenancyExtensions.cs` (depends on T008, T009)
+- [X] T011 [P] Wire `builder.Services.AddTenancy()` / `app.UseTenancy()` into `services/bff/src/Bff.Api/Program.cs`, after `UseServiceDefaults()` (depends on T010, T004)
+- [X] T012 [P] Wire `AddTenancy()` / `UseTenancy()` into `services/products/src/Products.Api/Program.cs`, after `UseServiceDefaults()`
+- [X] T013 [P] Wire `AddTenancy()` / `UseTenancy()` into `services/baskets/src/Baskets.Api/Program.cs`, after `UseServiceDefaults()`
+- [X] T014 [P] Wire `AddTenancy()` / `UseTenancy()` into `services/orders/src/Orders.Api/Program.cs`, after `UseServiceDefaults()`
+- [X] T015 [P] Wire `AddTenancy()` / `UseTenancy()` into `services/parties/src/Parties.Api/Program.cs`, after `UseServiceDefaults()`
 
 **Checkpoint**: `Tenancy` is built, unit-tested, and wired into the BFF and all four domain services — each can now read a resolved tenant from a request. Ready for story-specific work.
 

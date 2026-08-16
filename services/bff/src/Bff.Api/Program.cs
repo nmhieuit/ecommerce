@@ -6,9 +6,15 @@ using Bff.Api.Features.Orders;
 using Bff.Api.Features.Parties;
 using Bff.Api.Features.Products;
 using ServiceDefaults;
+using Tenancy;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+
+// The BFF resolves nothing: it reads the tenant the gateway already resolved off the inbound
+// X-Tenant-Id header (constitution Principle V — one resolution point, at the edge) and relays it
+// onto every downstream call.
+builder.Services.AddTenancy();
 
 // No AddDbContext here, unlike the domain services: the BFF owns no data and reads no service's
 // database (constitution Principle I; plan.md Technical Context — Storage: N/A). It reaches the
@@ -36,6 +42,11 @@ var app = builder.Build();
 // UseServiceDefaults' correlation-ID middleware deliberately: the handler reads the correlation ID
 // that middleware resolves, so that must run first.
 app.UseServiceDefaults();
+
+// Outside the exception handler so that the handler's own log lines carry the tenant too, the same
+// way UseServiceDefaults' correlation ID wraps everything after it.
+app.UseTenancy();
+
 app.UseExceptionHandler();
 
 // Exposed in Development only. The document describes the BFF's whole client-facing surface, and
