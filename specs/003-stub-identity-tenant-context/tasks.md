@@ -145,8 +145,20 @@ This feature adds one new shared library and touches the gateway, BFF, and four 
 
 **Purpose**: Isolated coverage and final end-to-end validation.
 
-- [ ] T038 [P] Unit test: `StubIdentityAuthenticationHandler` always succeeds and issues the expected tenant claim, in isolation from the full pipeline test in T016, in `services/gateway/tests/Gateway.Api.UnitTests/StubIdentityAuthenticationHandlerTests.cs`
-- [ ] T039 Run [quickstart.md](quickstart.md) validation Scenarios 1-5 end-to-end locally and confirm every expected outcome
+- [X] T038 [P] Unit test: `StubIdentityAuthenticationHandler` always succeeds and issues the expected tenant claim, in isolation from the full pipeline test in T016, in `services/gateway/tests/Gateway.Api.UnitTests/StubIdentityAuthenticationHandlerTests.cs`
+- [X] T039 Run [quickstart.md](quickstart.md) validation Scenarios 1-5 end-to-end locally and confirm every expected outcome
+
+**T039 results** (full local stack: four SQL containers, four domain services, BFF, gateway):
+
+| Scenario | Outcome |
+|---|---|
+| 1 — tenant visible in logs at every hop | PASS. `"TenantId":"contoso"` in the log scope at gateway, BFF, and `Products.Api`, sharing one `TraceId`. Required adding a log scope to the gateway's `TenantHeaderPropagationMiddleware` — it produces the header but ran the one hop that logged no tenant. |
+| 2 — full path succeeds with the resolved tenant | PASS. `200 OK` with real catalog data through `http://localhost:5300/bff/products`. |
+| 3 — persistence without a tenant fails, not defaults | PASS. Direct call to `Products.Api` returned `500`; the service log shows `MissingTenantContextException` from `RequireTenantId()` inside the `AddDbContext` factory, before any connection was opened. |
+| 4 — no persistence call site bypasses the gate | PASS. `dotnet test tests/CrossServiceIsolation.Tests` — 14/14. |
+| 5 — swapping the resolution source touches only the gateway | PASS. Every reference to `StubIdentity*` and the `tenant_id` claim lives under `services/gateway/`; `Tenancy`, the BFF, and all four domain services read only the header/context. |
+
+Two things the run surfaced and fixed: `dotnet ef` could no longer discover a `DbContext` (design-time discovery resolves it through DI and hit the gate), so each domain service gained an `IDesignTimeDbContextFactory`; and the local run needs `ASPNETCORE_ENVIRONMENT=Development`, without which the Development connection strings never load.
 
 ---
 

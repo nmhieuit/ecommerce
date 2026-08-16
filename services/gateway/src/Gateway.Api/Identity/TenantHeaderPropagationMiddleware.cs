@@ -21,10 +21,14 @@ public sealed class TenantHeaderPropagationMiddleware
     public const string HeaderName = "X-Tenant-Id";
 
     private readonly RequestDelegate _next;
+    private readonly ILogger<TenantHeaderPropagationMiddleware> _logger;
 
-    public TenantHeaderPropagationMiddleware(RequestDelegate next)
+    public TenantHeaderPropagationMiddleware(
+        RequestDelegate next,
+        ILogger<TenantHeaderPropagationMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -37,12 +41,21 @@ public sealed class TenantHeaderPropagationMiddleware
             // Removing rather than leaving the inbound value alone matters: passing a caller's own
             // header through unchecked is exactly the smuggling route the overwrite above closes.
             context.Request.Headers.Remove(HeaderName);
-        }
-        else
-        {
-            context.Request.Headers[HeaderName] = tenantId;
+
+            await _next(context);
+            return;
         }
 
-        await _next(context);
+        context.Request.Headers[HeaderName] = tenantId;
+
+        // The same logging scope Tenancy's TenantContextMiddleware opens at every hop below. The
+        // gateway does not use that middleware (research.md Decision 3 — it produces the header
+        // rather than consuming one), but constitution Principle VII wants the tenant on every
+        // hop's logs, and the hop that resolved it is the last one that should be missing from
+        // that trail (quickstart.md Scenario 1).
+        using (_logger.BeginScope(new Dictionary<string, object> { ["TenantId"] = tenantId }))
+        {
+            await _next(context);
+        }
     }
 }
