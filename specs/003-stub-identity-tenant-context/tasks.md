@@ -109,23 +109,33 @@ This feature adds one new shared library and touches the gateway, BFF, and four 
 
 > Write these tests FIRST; confirm they FAIL before starting implementation.
 
-- [ ] T024 [P] [US2] Integration test: a request to `Products.Api` with no `X-Tenant-Id` fails when persistence is touched, rather than succeeding against a default schema, in `services/products/tests/Products.Api.IntegrationTests/TenantEnforcementTests.cs` (spec US2 Acceptance Scenario 1, Test Scenario 2)
-- [ ] T025 [P] [US2] Integration test: same for `Baskets.Api` in `services/baskets/tests/Baskets.Api.IntegrationTests/TenantEnforcementTests.cs`
-- [ ] T026 [P] [US2] Integration test: same for `Orders.Api` in `services/orders/tests/Orders.Api.IntegrationTests/TenantEnforcementTests.cs`
-- [ ] T027 [P] [US2] Integration test: same for `Parties.Api` in `services/parties/tests/Parties.Api.IntegrationTests/TenantEnforcementTests.cs`
-- [ ] T028 [P] [US2] Structural test: each of the four domain services has exactly one `AddDbContext` call site, and that call site is gated by `TenantContext.RequireTenantId()`, in `tests/CrossServiceIsolation.Tests/TenantGatedConnectionTests.cs` (spec Test Scenario 3, SC-003; research.md Decision 6 — extends the existing `ConnectionStringScanner` convention)
+- [X] T024 [P] [US2] Integration test: a request to `Products.Api` with no `X-Tenant-Id` fails when persistence is touched, rather than succeeding against a default schema, in `services/products/tests/Products.Api.IntegrationTests/TenantEnforcementTests.cs` (spec US2 Acceptance Scenario 1, Test Scenario 2)
+- [X] T025 [P] [US2] Integration test: same for `Baskets.Api` in `services/baskets/tests/Baskets.Api.IntegrationTests/TenantEnforcementTests.cs`
+- [X] T026 [P] [US2] Integration test: same for `Orders.Api` in `services/orders/tests/Orders.Api.IntegrationTests/TenantEnforcementTests.cs`
+- [X] T027 [P] [US2] Integration test: same for `Parties.Api` in `services/parties/tests/Parties.Api.IntegrationTests/TenantEnforcementTests.cs`
+- [X] T028 [P] [US2] Structural test: each of the four domain services has exactly one `AddDbContext` call site, and that call site is gated by `TenantContext.RequireTenantId()`, in `tests/CrossServiceIsolation.Tests/TenantGatedConnectionTests.cs` (spec Test Scenario 3, SC-003; research.md Decision 6 — extends the existing `ConnectionStringScanner` convention)
 
 ### Implementation for User Story 2
 
-- [ ] T029 [P] [US2] Switch `ProductsDbContext`'s registration to the `(serviceProvider, options)` overload — resolving `TenantContext.RequireTenantId()` before `UseSqlServer` — and call `modelBuilder.HasDefaultSchema(tenantId)` in `services/products/src/Products.Api/Program.cs` and `services/products/src/Products.Api/Data/ProductsDbContext.cs` (research.md Decision 5; makes T024 and part of T028 pass)
-- [ ] T030 [P] [US2] Same change for `Baskets.Api` in `services/baskets/src/Baskets.Api/Program.cs` and `Data/BasketsDbContext.cs` (makes T025 pass)
-- [ ] T031 [P] [US2] Same change for `Orders.Api` in `services/orders/src/Orders.Api/Program.cs` and `Data/OrdersDbContext.cs` (makes T026 pass)
-- [ ] T032 [P] [US2] Same change for `Parties.Api` in `services/parties/src/Parties.Api/Program.cs` and `Data/PartiesDbContext.cs` (makes T027 pass)
-- [ ] T033 [P] [US2] Update `CatalogEndpointsTests.CreateFactoryWithCatalogAsync` to set `TenantContext.TenantId` on its manually created DI scope before resolving `ProductsDbContext`, in `services/products/tests/Products.Api.IntegrationTests/CatalogEndpointsTests.cs` (research.md Decision 7 — otherwise this pre-existing seeding helper now throws; depends on T029)
-- [ ] T034 [P] [US2] Same fix in the basket-seeding helper, `services/baskets/tests/Baskets.Api.IntegrationTests/BasketEndpointsTests.cs` (depends on T030)
-- [ ] T035 [P] [US2] Same fix in the order-seeding helper, `services/orders/tests/Orders.Api.IntegrationTests/OrderEndpointsTests.cs` (depends on T031)
-- [ ] T036 [P] [US2] Same fix in the party-seeding helper, `services/parties/tests/Parties.Api.IntegrationTests/PartyEndpointsTests.cs` (depends on T032)
-- [ ] T037 [US2] Same fix in `BffTestHost.CreateDownstreamAsync`, `services/bff/tests/Bff.Api.IntegrationTests/BffTestHost.cs` (research.md Decision 7 — needed once T029-T032 land, and to keep US1's T017 green; depends on T029, T030, T031, T032)
+> **T029-T032 were rescoped during implementation — decided, not outstanding.** The tenant *gate*
+> (the `(serviceProvider, options)` overload calling `RequireTenantId()` before `UseSqlServer`) is
+> implemented and green in all four services. The `HasDefaultSchema(tenantId)` half was **dropped
+> for Phase 1**: it cannot work against the existing migrations, which create their tables
+> unqualified (schema `dbo`), so a runtime-set default schema makes every query fail with
+> `Invalid object name 'contoso.Products'` (verified empirically). US2's acceptance criteria are
+> met by the gate alone, and physical partitioning buys nothing while exactly one tenant is
+> resolvable (FR-008). See the **AMENDED** note on research.md Decision 5 — including its warning
+> that a second tenant must not be introduced before that decision is revisited.
+
+- [X] T029 [P] [US2] (gate only — see note above) Switch `ProductsDbContext`'s registration to the `(serviceProvider, options)` overload — resolving `TenantContext.RequireTenantId()` before `UseSqlServer` — and call `modelBuilder.HasDefaultSchema(tenantId)` in `services/products/src/Products.Api/Program.cs` and `services/products/src/Products.Api/Data/ProductsDbContext.cs` (research.md Decision 5; makes T024 and part of T028 pass)
+- [X] T030 [P] [US2] (gate only) Same change for `Baskets.Api` in `services/baskets/src/Baskets.Api/Program.cs` and `Data/BasketsDbContext.cs` (makes T025 pass)
+- [X] T031 [P] [US2] (gate only) Same change for `Orders.Api` in `services/orders/src/Orders.Api/Program.cs` and `Data/OrdersDbContext.cs` (makes T026 pass)
+- [X] T032 [P] [US2] (gate only) Same change for `Parties.Api` in `services/parties/src/Parties.Api/Program.cs` and `Data/PartiesDbContext.cs` (makes T027 pass)
+- [X] T033 [P] [US2] Update `CatalogEndpointsTests.CreateFactoryWithCatalogAsync` to set `TenantContext.TenantId` on its manually created DI scope before resolving `ProductsDbContext`, in `services/products/tests/Products.Api.IntegrationTests/CatalogEndpointsTests.cs` (research.md Decision 7 — otherwise this pre-existing seeding helper now throws; depends on T029)
+- [X] T034 [P] [US2] Same fix in the basket-seeding helper, `services/baskets/tests/Baskets.Api.IntegrationTests/BasketEndpointsTests.cs` (depends on T030)
+- [X] T035 [P] [US2] Same fix in the order-seeding helper, `services/orders/tests/Orders.Api.IntegrationTests/OrderEndpointsTests.cs` (depends on T031)
+- [X] T036 [P] [US2] Same fix in the party-seeding helper, `services/parties/tests/Parties.Api.IntegrationTests/PartyEndpointsTests.cs` (depends on T032)
+- [X] T037 [US2] Same fix in `BffTestHost.CreateDownstreamAsync`, `services/bff/tests/Bff.Api.IntegrationTests/BffTestHost.cs` (research.md Decision 7 — needed once T029-T032 land, and to keep US1's T017 green; depends on T029, T030, T031, T032)
 
 **Checkpoint**: All two user stories are independently functional — persistence structurally requires a resolved tenant across all four services, and pre-existing tests still pass.
 

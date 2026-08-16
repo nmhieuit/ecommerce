@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Tenancy;
 
 namespace Baskets.Api.IntegrationTests;
 
@@ -15,13 +16,20 @@ namespace Baskets.Api.IntegrationTests;
 /// </summary>
 public class BasketEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<SqlServerFixture>
 {
+    /// <summary>
+    /// The tenant these tests seed and read as. Any non-blank value works — this suite is about the
+    /// basket surface, not about which tenant resolved; that is
+    /// <see cref="TenantEnforcementTests"/>' subject.
+    /// </summary>
+    private const string SeedTenantId = "contoso";
+
     [Fact]
     public async Task GetBasket_ReturnsTheBasket_WhenItExists()
     {
         var basket = new Basket { Id = Guid.NewGuid(), CustomerId = Guid.NewGuid() };
 
         await using var factory = await CreateFactoryWithBasketsAsync([basket]);
-        var client = factory.CreateClient();
+        var client = CreateTenantClient(factory);
 
         var response = await client.GetAsync($"/baskets/{basket.Id}");
 
@@ -41,7 +49,7 @@ public class BasketEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sq
     public async Task GetBasket_ReturnsNotFound_WhenNoBasketHasThatId()
     {
         await using var factory = await CreateFactoryWithBasketsAsync([]);
-        var client = factory.CreateClient();
+        var client = CreateTenantClient(factory);
 
         var response = await client.GetAsync($"/baskets/{Guid.NewGuid()}");
 
@@ -59,6 +67,12 @@ public class BasketEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sq
                 })));
 
         using var scope = factory.Services.CreateScope();
+
+        // No HTTP request runs for this scope, so TenantContextMiddleware never populates it —
+        // seeding must prime the tenant itself or the gated registration throws (research.md
+        // Decision 7).
+        scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = SeedTenantId;
+
         var dbContext = scope.ServiceProvider.GetRequiredService<BasketsDbContext>();
         await dbContext.Database.MigrateAsync();
 
@@ -67,6 +81,18 @@ public class BasketEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sq
         await dbContext.SaveChangesAsync();
 
         return factory;
+    }
+
+    /// <summary>
+    /// A client whose requests carry the tenant the gateway would have resolved. Without it every
+    /// request here is Unresolved and never reaches persistence at all.
+    /// </summary>
+    private static HttpClient CreateTenantClient(WebApplicationFactory<Program> factory)
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, SeedTenantId);
+
+        return client;
     }
 
     private sealed record BasketResponse(Guid Id, Guid CustomerId);

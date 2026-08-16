@@ -32,7 +32,7 @@ public class ProductsRouteTests(DownstreamServicesFixture fixture)
             });
 
         await using var bff = BffTestHost.CreateBff("ProductsApi", products);
-        var client = bff.CreateClient();
+        var client = BffTestHost.CreateTenantClient(bff);
 
         var response = await client.GetAsync("/bff/products");
 
@@ -71,7 +71,7 @@ public class ProductsRouteTests(DownstreamServicesFixture fixture)
             });
 
         await using var bff = BffTestHost.CreateBff("ProductsApi", products);
-        var client = bff.CreateClient();
+        var client = BffTestHost.CreateTenantClient(bff);
 
         var response = await client.GetAsync("/bff/products");
 

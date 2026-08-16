@@ -55,7 +55,12 @@ public class TenantPropagationTests(DownstreamServicesFixture fixture)
         // No X-Tenant-Id on the way in: nothing resolved this request's tenant.
         await client.GetAsync("/bff/products");
 
-        Assert.Null(Assert.Single(recorder.Observed));
+        // More than one outbound call is expected here, not incidental: the downstream service's
+        // own gate rejects the untenanted request, so the resilience pipeline retries. Every one of
+        // those attempts must still refuse to invent a tenant — a retry is exactly where a "just
+        // use a default this time" fallback would hide.
+        Assert.NotEmpty(recorder.Observed);
+        Assert.All(recorder.Observed, Assert.Null);
     }
 
     private Task<Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<ProductsApi::Program>>

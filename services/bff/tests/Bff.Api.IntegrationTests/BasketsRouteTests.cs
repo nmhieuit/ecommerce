@@ -21,7 +21,7 @@ public class BasketsRouteTests(DownstreamServicesFixture fixture)
 
         await using var baskets = await CreateBasketsServiceAsync("bff-baskets", basket);
         await using var bff = BffTestHost.CreateBff("BasketsApi", baskets);
-        var client = bff.CreateClient();
+        var client = BffTestHost.CreateTenantClient(bff);
 
         var response = await client.GetAsync($"/bff/baskets/{basket.Id}");
 
@@ -43,7 +43,7 @@ public class BasketsRouteTests(DownstreamServicesFixture fixture)
     {
         await using var baskets = await CreateBasketsServiceAsync("bff-baskets-missing");
         await using var bff = BffTestHost.CreateBff("BasketsApi", baskets);
-        var client = bff.CreateClient();
+        var client = BffTestHost.CreateTenantClient(bff);
 
         var response = await client.GetAsync($"/bff/baskets/{Guid.NewGuid()}");
 

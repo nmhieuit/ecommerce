@@ -60,7 +60,7 @@ BFF (relays)
 Domain service — products | baskets | orders | parties (enforces)
   └─ TenantContextMiddleware reads X-Tenant-Id → TenantContext
        └─ AddDbContext<T>'s (serviceProvider, options) factory calls TenantContext.RequireTenantId()
-            ├─ Resolved  → modelBuilder.HasDefaultSchema(tenantId); connection proceeds
+            ├─ Resolved  → connection proceeds
             └─ Unresolved → MissingTenantContextException; no connection is ever opened
 ```
 

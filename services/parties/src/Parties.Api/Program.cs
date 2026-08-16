@@ -14,8 +14,16 @@ builder.Services.AddTenancy();
 // The one and only database this service is given a route to. The key is service-scoped so no
 // service can pick up another's connection by accident (spec FR-005); the value is overridden
 // per environment via ConnectionStrings__PartiesDb from the cluster secret store.
-builder.Services.AddDbContext<PartiesDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("PartiesDb")));
+//
+// This is the single place a connection to it is ever constructed, and it is gated: RequireTenantId()
+// runs before UseSqlServer, so an unresolved request cannot obtain a DbContext at all, let alone
+// open a connection with one (constitution Principle V; research.md Decisions 5-6). There is
+// deliberately no fallback tenant to resolve to.
+builder.Services.AddDbContext<PartiesDbContext>((serviceProvider, options) =>
+{
+    serviceProvider.GetRequiredService<TenantContext>().RequireTenantId();
+    options.UseSqlServer(builder.Configuration.GetConnectionString("PartiesDb"));
+});
 
 builder.Services.AddHealthCheckFeature();
 

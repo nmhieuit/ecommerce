@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Products.Api.Data;
 
@@ -31,29 +30,26 @@ public static class HealthCheckEndpoints
     /// <summary>
     /// Registers the readiness check against this service's own database only.
     /// </summary>
+    /// <remarks>
+    /// Opens a raw connection rather than resolving <see cref="ProductsDbContext"/>, which it used
+    /// to do via <c>AddDbContextCheck</c>. Since 003-stub-identity-tenant-context the context cannot
+    /// be constructed without a resolved tenant, and a probe has none — Kubernetes calls
+    /// <c>/health/ready</c> directly, never through the gateway, so there is no <c>X-Tenant-Id</c>
+    /// to read. Giving the probe a tenant of its own would have meant inventing exactly the default
+    /// tenant constitution Principle V forbids. Readiness asks "can I reach my database", which is
+    /// a connectivity question and genuinely tenant-independent.
+    /// </remarks>
     public static IServiceCollection AddHealthCheckFeature(this IServiceCollection services)
     {
         services.AddHealthChecks()
-            .AddDbContextCheck<ProductsDbContext>(
-                SelfDatabaseCheck,
-                tags: [ReadyTag],
-                customTestQuery: ProbeDatabaseAsync);
+            .AddSqlServer(
+                connectionStringFactory: serviceProvider =>
+                    serviceProvider.GetRequiredService<IConfiguration>().GetConnectionString("ProductsDb")
+                    ?? string.Empty,
+                name: SelfDatabaseCheck,
+                tags: [ReadyTag]);
 
         return services;
-    }
-
-    /// <summary>
-    /// Opens a real connection to this service's own database. EF's default <c>CanConnectAsync</c>
-    /// probe collapses every failure into a bare <c>false</c>; letting the connection error surface
-    /// instead is what lets the 503 body carry the failure detail the contract specifies.
-    /// </summary>
-    private static async Task<bool> ProbeDatabaseAsync(
-        ProductsDbContext dbContext,
-        CancellationToken cancellationToken)
-    {
-        await dbContext.Database.OpenConnectionAsync(cancellationToken);
-        await dbContext.Database.CloseConnectionAsync();
-        return true;
     }
 
     /// <summary>

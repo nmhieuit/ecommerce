@@ -9,6 +9,12 @@
     <!-- Microsoft.Extensions.Diagnostics.HealthChecks itself ships in the ASP.NET Core shared
          framework; only the EF Core integration (AddDbContextCheck<T>) needs referencing. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <!-- Readiness opens a raw connection rather than resolving the DbContext: since
+         003-stub-identity-tenant-context the context requires a resolved tenant, which a
+         Kubernetes probe (calling /health/ready directly, never through the gateway) does not
+         have. The EF Core health-check integration is kept for the AddDbContextCheck<T> surface
+         other checks may still want. -->
+    <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
     <!-- Design-time only: supplies the `dotnet ef migrations` tooling. PrivateAssets="all" keeps
          it out of the published image, which must never carry migration tooling into production. -->

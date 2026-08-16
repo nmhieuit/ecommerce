@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Tenancy;
 
 namespace Bff.Api.IntegrationTests;
 
@@ -26,6 +27,13 @@ public static class BffTestHost
     private const string UnusedDownstreamBaseUrl = "http://downstream.test";
 
     /// <summary>
+    /// The tenant downstream services are seeded as. Route tests reach these rows through the BFF,
+    /// which relays whatever tenant its own request carried — so a test that wants to read what it
+    /// seeded sends this same value inbound.
+    /// </summary>
+    public const string SeedTenantId = "contoso";
+
+    /// <summary>
     /// Starts a downstream service in-process against <paramref name="connectionString"/>, applies
     /// its migrations, and hands the seeded context to <paramref name="seedAsync"/>.
     /// </summary>
@@ -46,6 +54,12 @@ public static class BffTestHost
                 })));
 
         using var scope = factory.Services.CreateScope();
+
+        // No HTTP request runs for this scope, so the downstream service's TenantContextMiddleware
+        // never populates it — seeding must prime the tenant itself or that service's gated
+        // AddDbContext registration throws before any connection is built (research.md Decision 7).
+        scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = SeedTenantId;
+
         var dbContext = scope.ServiceProvider.GetRequiredService<TDbContext>();
         await dbContext.Database.MigrateAsync();
         await seedAsync(dbContext);
@@ -62,6 +76,24 @@ public static class BffTestHost
         WebApplicationFactory<TClient> downstream)
         where TClient : class =>
         CreateBff(serviceConfigurationName, UnusedDownstreamBaseUrl, downstream.Server.CreateHandler);
+
+    /// <summary>
+    /// A client whose requests carry the tenant the gateway would have resolved, matching what
+    /// <see cref="CreateDownstreamAsync{TEntryPoint, TDbContext}"/> seeded.
+    /// </summary>
+    /// <remarks>
+    /// Route tests need this because the BFF relays rather than resolves: an inbound request with
+    /// no tenant produces an outbound call with no tenant, and the downstream service's gate then
+    /// refuses it. That is the correct end-to-end behaviour (US2) — it just means a test asserting
+    /// on proxied data has to arrive as some tenant, exactly as a real caller does.
+    /// </remarks>
+    public static HttpClient CreateTenantClient(WebApplicationFactory<Program> factory)
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, SeedTenantId);
+
+        return client;
+    }
 
     /// <summary>
     /// Starts the BFF with a downstream that is configured but has nothing listening — the

@@ -26,7 +26,7 @@ public class OrdersRouteTests(DownstreamServicesFixture fixture)
 
         await using var orders = await CreateOrdersServiceAsync("bff-orders", order);
         await using var bff = BffTestHost.CreateBff("OrdersApi", orders);
-        var client = bff.CreateClient();
+        var client = BffTestHost.CreateTenantClient(bff);
 
         var response = await client.GetAsync($"/bff/orders/{order.Id}");
 
@@ -44,7 +44,7 @@ public class OrdersRouteTests(DownstreamServicesFixture fixture)
     {
         await using var orders = await CreateOrdersServiceAsync("bff-orders-missing");
         await using var bff = BffTestHost.CreateBff("OrdersApi", orders);
-        var client = bff.CreateClient();
+        var client = BffTestHost.CreateTenantClient(bff);
 
         var response = await client.GetAsync($"/bff/orders/{Guid.NewGuid()}");
 

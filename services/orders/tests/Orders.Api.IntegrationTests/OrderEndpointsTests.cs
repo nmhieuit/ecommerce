@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Orders.Api.Data;
+using Tenancy;
 
 namespace Orders.Api.IntegrationTests;
 
@@ -15,6 +16,13 @@ namespace Orders.Api.IntegrationTests;
 /// </summary>
 public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<SqlServerFixture>
 {
+    /// <summary>
+    /// The tenant these tests seed and read as. Any non-blank value works — this suite is about the
+    /// order surface, not about which tenant resolved; that is
+    /// <see cref="TenantEnforcementTests"/>' subject.
+    /// </summary>
+    private const string SeedTenantId = "contoso";
+
     [Fact]
     public async Task GetOrder_ReturnsTheOrder_WhenItExists()
     {
@@ -29,7 +37,7 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
         };
 
         await using var factory = await CreateFactoryWithOrdersAsync([order]);
-        var client = factory.CreateClient();
+        var client = CreateTenantClient(factory);
 
         var response = await client.GetAsync($"/orders/{order.Id}");
 
@@ -46,7 +54,7 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
     public async Task GetOrder_ReturnsNotFound_WhenNoOrderHasThatId()
     {
         await using var factory = await CreateFactoryWithOrdersAsync([]);
-        var client = factory.CreateClient();
+        var client = CreateTenantClient(factory);
 
         var response = await client.GetAsync($"/orders/{Guid.NewGuid()}");
 
@@ -64,6 +72,12 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
                 })));
 
         using var scope = factory.Services.CreateScope();
+
+        // No HTTP request runs for this scope, so TenantContextMiddleware never populates it —
+        // seeding must prime the tenant itself or the gated registration throws (research.md
+        // Decision 7).
+        scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = SeedTenantId;
+
         var dbContext = scope.ServiceProvider.GetRequiredService<OrdersDbContext>();
         await dbContext.Database.MigrateAsync();
 
@@ -72,6 +86,18 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
         await dbContext.SaveChangesAsync();
 
         return factory;
+    }
+
+    /// <summary>
+    /// A client whose requests carry the tenant the gateway would have resolved. Without it every
+    /// request here is Unresolved and never reaches persistence at all.
+    /// </summary>
+    private static HttpClient CreateTenantClient(WebApplicationFactory<Program> factory)
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, SeedTenantId);
+
+        return client;
     }
 
     private sealed record OrderResponse(Guid Id, DateTime PlacedAtUtc, decimal Total);

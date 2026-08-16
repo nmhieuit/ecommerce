@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Products.Api.Data;
+using Tenancy;
 
 namespace Products.Api.IntegrationTests;
 
@@ -16,6 +17,13 @@ namespace Products.Api.IntegrationTests;
 /// </summary>
 public class CatalogEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<SqlServerFixture>
 {
+    /// <summary>
+    /// The tenant these tests seed and read as. Any non-blank value works — this suite is about the
+    /// catalog surface, not about which tenant resolved; that is
+    /// <see cref="TenantEnforcementTests"/>' subject.
+    /// </summary>
+    private const string SeedTenantId = "contoso";
+
     [Fact]
     public async Task GetProducts_ReturnsEveryProduct_WithIdNameAndPrice()
     {
@@ -26,7 +34,7 @@ public class CatalogEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<S
         };
 
         await using var factory = await CreateFactoryWithCatalogAsync(seeded);
-        var client = factory.CreateClient();
+        var client = CreateTenantClient(factory);
 
         var response = await client.GetAsync("/products");
 
@@ -56,7 +64,7 @@ public class CatalogEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<S
     public async Task GetProducts_ReturnsEmptyArray_WhenCatalogIsEmpty()
     {
         await using var factory = await CreateFactoryWithCatalogAsync([]);
-        var client = factory.CreateClient();
+        var client = CreateTenantClient(factory);
 
         var response = await client.GetAsync("/products");
 
@@ -80,6 +88,13 @@ public class CatalogEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<S
                 })));
 
         using var scope = factory.Services.CreateScope();
+
+        // No HTTP request runs for this scope, so TenantContextMiddleware never populates it —
+        // seeding must prime the tenant itself or the gated registration throws (research.md
+        // Decision 7). Nothing about the guarantee under test changes: a real request still has
+        // this set only by the middleware.
+        scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = SeedTenantId;
+
         var dbContext = scope.ServiceProvider.GetRequiredService<ProductsDbContext>();
         await dbContext.Database.MigrateAsync();
 
@@ -88,6 +103,19 @@ public class CatalogEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<S
         await dbContext.SaveChangesAsync();
 
         return factory;
+    }
+
+    /// <summary>
+    /// A client whose requests carry the tenant the gateway would have resolved. Without it every
+    /// request here is Unresolved and never reaches the catalog at all — which is correct behaviour
+    /// (<see cref="TenantEnforcementTests"/>) but not what this suite is asserting.
+    /// </summary>
+    private static HttpClient CreateTenantClient(WebApplicationFactory<Program> factory)
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, SeedTenantId);
+
+        return client;
     }
 
     private sealed record ProductResponse(Guid Id, string Name, decimal Price);
