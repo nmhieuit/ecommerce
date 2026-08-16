@@ -32,6 +32,18 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Returns the `{ data, status }` envelope Orval's generated code expects — not the bare body.
+ * Orval types every operation's result as a union of `{ data: T; status: 200 }` and its failure
+ * shapes, and reads `.data` off it; returning the parsed body directly would typecheck against
+ * that union while being the wrong shape at runtime.
+ *
+ * Non-2xx responses throw rather than resolving to their failure member. TanStack Query turns a
+ * thrown error into `isError`, which is what the screens act on: spec FR-012 wants one clear,
+ * readable message, not the backend's own words. That also means the generated `TError` type
+ * (`ProblemDetails`) is nominal — what is actually thrown is an {@link ApiError}, so screens should
+ * branch on `isError` rather than read fields off `error`.
+ */
 export async function bffFetch<TResponse>(
   url: string,
   init?: RequestInit,
@@ -60,5 +72,5 @@ export async function bffFetch<TResponse>(
     throw new ApiError(response.status, url, body);
   }
 
-  return body as TResponse;
+  return { data: body, status: response.status } as TResponse;
 }

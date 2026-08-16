@@ -26,6 +26,16 @@ dotnet_naming_rule.types_pascal_case.style = pascal_case
 dotnet_naming_symbols.types.applicable_kinds = class, struct, interface, enum
 dotnet_naming_style.pascal_case.capitalization = pascal_case
 
+# EF Core writes these files; nobody hand-maintains them, and `dotnet ef migrations add` will
+# reproduce the same shapes on the next migration. Style rules that a developer cannot act on
+# without editing generated output are noise, so they are scoped off here rather than suppressed
+# platform-wide — hand-written code keeps every one of them.
+#
+# CA1861: migrations pass column-name arrays inline to InsertData/UpdateData. The rule's premise
+# (a method called repeatedly in a hot path) does not hold for a migration that runs once.
+[**/Migrations/*.cs]
+dotnet_diagnostic.CA1861.severity = none
+
 [*.{json,yml,yaml}]
 indent_size = 2
 

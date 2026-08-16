@@ -1,10 +1,12 @@
 /**
  * The package's public surface.
  *
- * The generated hooks are re-exported from here once the BFF's routes exist and `pnpm generate`
- * has been run against them (T028 for the catalog, T045 for the basket, T061 for checkout). Until
- * then this exports only the transport configuration, which is hand-written on purpose — it is the
- * one file in this package that is not generated (see src/http/fetcher.ts).
+ * Everything under `./generated` is produced by Orval from the BFF's OpenAPI document and is never
+ * hand-edited (ADR-0004, Principle II). The transport configuration below is the one hand-written
+ * file in this package — it is what binds every generated call to the gateway and nothing else.
  */
+export * from './generated/endpoints';
+export * from './generated/model';
+
 export { configureApiClient, ApiError, bffFetch } from './http/fetcher';
 export type { ApiClientConfig } from './http/fetcher';

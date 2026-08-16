@@ -22,7 +22,10 @@ export default defineConfig({
     output: {
       client: 'react-query',
       httpClient: 'fetch',
-      mode: 'tags-split',
+      // One file, not tags-split: the BFF tags every operation with its assembly name, so splitting
+      // by tag would produce a single file inside a directory named after a .NET project — a layout
+      // that says nothing and would reshuffle if the assembly were ever renamed.
+      mode: 'single',
       target: './src/generated/endpoints.ts',
       schemas: './src/generated/model',
       // A single custom fetch instance is where the gateway origin and credentials are applied, so

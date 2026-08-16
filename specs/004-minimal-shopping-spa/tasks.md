@@ -91,18 +91,27 @@ Three notes on how it was built:
 
 > **Write these first and confirm they fail before implementing.**
 
-- [ ] T023 [P] [US1] Write a failing integration test for the seeded catalog in `services/products/tests/Products.Api.IntegrationTests/CatalogSeedTests.cs` — three known products with the fixed identifiers, names, and prices from [data-model.md](./data-model.md)
-- [ ] T024 [P] [US1] Write a failing component test for the product list in `frontend/apps/web/tests/catalog/ProductList.test.tsx` — names and prices found by accessible role, from a mocked BFF response
-- [ ] T025 [P] [US1] Write a failing component test for the empty catalog in `frontend/apps/web/tests/catalog/EmptyCatalog.test.tsx` — an explicit empty state, not a blank page or an endless spinner (spec FR-002)
-- [ ] T026 [P] [US1] Write a failing component test for the catalog error state in `frontend/apps/web/tests/catalog/CatalogError.test.tsx` — readable message, page still usable, retry available (spec FR-012, US1 scenario 3)
+- [X] T023 [P] [US1] Write a failing integration test for the seeded catalog in `services/products/tests/Products.Api.IntegrationTests/CatalogSeedTests.cs` — three known products with the fixed identifiers, names, and prices from [data-model.md](./data-model.md)
+- [X] T024 [P] [US1] Write a failing component test for the product list in `frontend/apps/web/tests/catalog/ProductList.test.tsx` — names and prices found by accessible role, from a mocked BFF response
+- [X] T025 [P] [US1] Write a failing component test for the empty catalog in `frontend/apps/web/tests/catalog/EmptyCatalog.test.tsx` — an explicit empty state, not a blank page or an endless spinner (spec FR-002)
+- [X] T026 [P] [US1] Write a failing component test for the catalog error state in `frontend/apps/web/tests/catalog/CatalogError.test.tsx` — readable message, page still usable, retry available (spec FR-012, US1 scenario 3)
 
 ### Implementation for User Story 1
 
-- [ ] T027 [US1] Add the catalog seed migration under `services/products/src/Products.Api/Migrations/` using EF Core `HasData` with the three fixed products from [data-model.md](./data-model.md) (spec FR-018, [research.md](./research.md) Decision 10)
-- [ ] T028 [US1] Regenerate the API client and commit the output — run `pnpm generate` in `frontend/`, committing `frontend/packages/api-client/src/generated/`
-- [ ] T029 [P] [US1] Implement the product list in `frontend/apps/web/src/features/catalog/ProductList.tsx` using the generated products query hook and the shared money formatter (spec FR-001, FR-024)
-- [ ] T030 [P] [US1] Implement the empty and error states in `frontend/apps/web/src/features/catalog/CatalogStates.tsx` (spec FR-002, FR-012)
-- [ ] T031 [US1] Wire the catalog route as the storefront's landing screen in `frontend/apps/web/src/app/routes.tsx`
+- [X] T027 [US1] Add the catalog seed migration under `services/products/src/Products.Api/Migrations/` using EF Core `HasData` with the three fixed products from [data-model.md](./data-model.md) (spec FR-018, [research.md](./research.md) Decision 10)
+- [X] T028 [US1] Regenerate the API client and commit the output — run `pnpm generate` in `frontend/`, committing `frontend/packages/api-client/src/generated/`
+- [X] T029 [P] [US1] Implement the product list in `frontend/apps/web/src/features/catalog/ProductList.tsx` using the generated products query hook and the shared money formatter (spec FR-001, FR-024)
+- [X] T030 [P] [US1] Implement the empty and error states in `frontend/apps/web/src/features/catalog/CatalogStates.tsx` (spec FR-002, FR-012)
+- [X] T031 [US1] Wire the catalog route as the storefront's landing screen in `frontend/apps/web/src/app/routes.tsx`
+
+**Phase 3 completed 2026-08-16.** Verified end to end, not just in tests: with the products database migrated and the products service, BFF, and gateway all running, `GET http://localhost:5300/bff/products` returned the three seeded products with their names and prices, through the real edge. Plus: products integration tests 10 passed (3 new), frontend 22 tests passed across 5 files, typecheck/lint clean, bundle 104.55 kB of the 150 kB budget. Regeneration of the client was confirmed byte-identical, so the drift check T068 adds has something stable to compare against.
+
+Four things worth knowing before the next phase:
+
+- **The generated client types a price as `number | string`.** .NET's OpenAPI generator describes a `decimal` that way so a producer may preserve precision beyond a JSON double — but the design-time contract in [contracts/bff-openapi.yaml](./contracts/bff-openapi.yaml) says `number`/`double`. That is real drift between the two documents. `formatMoney` handles both rather than trusting the implementation, and SCRUM-17 (Phase 2, OpenAPI specs) is where the two should be reconciled.
+- **The hand-written `bffFetch` had to return `{ data, status }`, not the bare body.** Orval's fetch client types every result as a union of `{ data, status }` members and reads `.data` off it; returning the parsed body typechecked against that union while being the wrong shape at runtime. Caught by the first component test, which is the argument for having written it first.
+- **Screens narrow on `status`, not just `isError`.** The generated result type is a union over every declared response, so `data.data` is "products or problem details" until the status is checked. The check also degrades correctly if the transport ever stopped throwing on a failure status.
+- **`[**/Migrations/*.cs]` in `.editorconfig` now disables CA1861.** EF's generated `InsertData` passes column-name arrays inline, which the rule flags; the rule's premise (a repeatedly-called hot path) does not hold for a migration that runs once, and a developer cannot act on it without editing generated output. Scoped to migrations only — hand-written code keeps the rule.
 
 **Checkpoint**: browse works end to end and is demoable on its own. This is the MVP.
 

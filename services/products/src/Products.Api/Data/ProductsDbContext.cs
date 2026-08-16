@@ -31,6 +31,11 @@ public class ProductsDbContext(DbContextOptions<ProductsDbContext> options) : Db
             // Explicit precision: EF's default for decimal on SQL Server truncates to two decimal
             // places with a warning. Money is stated, not inferred.
             product.Property(entity => entity.Price).HasPrecision(18, 2);
+
+            // The catalog every environment starts with (004-minimal-shopping-spa FR-018). Seeded
+            // through the migration history rather than at startup, so it is applied once and rolls
+            // back with the migration that introduced it.
+            product.HasData(CatalogSeed.Products);
         });
     }
 }

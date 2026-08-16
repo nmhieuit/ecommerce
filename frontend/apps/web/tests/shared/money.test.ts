@@ -36,4 +36,19 @@ describe('formatMoney', () => {
   it('keeps the sign on a negative amount', () => {
     expect(formatMoney(-5)).toBe('-$5.00');
   });
+
+  /**
+   * The contract types a decimal as number-or-string (.NET's OpenAPI generator emits both so a
+   * producer may preserve precision), and the generated client passes that union straight through.
+   * Handling only the number half would leave a screen showing "NaN" the first time a producer
+   * exercised the other one.
+   */
+  it('accepts the string form the contract also permits', () => {
+    expect(formatMoney('12.50')).toBe('$12.50');
+    expect(formatMoney('48')).toBe('$48.00');
+  });
+
+  it('refuses a value that is not an amount at all', () => {
+    expect(() => formatMoney('not-a-price')).toThrow(TypeError);
+  });
 });
