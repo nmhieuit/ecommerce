@@ -3,15 +3,23 @@ import { describe, expect, it } from 'vitest';
 import { App } from '@/App';
 
 /**
- * A smoke test for the Phase 1 scaffolding itself: it proves jsdom, the React plugin, Testing
- * Library, and the setup file are all actually wired, rather than being a directory of config that
- * has never executed. Asserting through an accessible role (Principle III) from the very first
- * test sets the convention every later test follows.
+ * The shell, not any one screen: providers mount, the router resolves, and the landing route
+ * renders. Screens are asserted by their own stories' tests (T024 onward) — what this pins is that
+ * there is something for them to mount into.
  */
-describe('storefront scaffolding', () => {
-  it('renders the application shell', () => {
+describe('application shell', () => {
+  it('renders the landing route inside the shell', () => {
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Storefront' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Products' })).toBeInTheDocument();
+  });
+
+  it('exposes navigation to the shopper', () => {
+    render(<App />);
+
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+
+    expect(nav).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Basket' })).toBeInTheDocument();
   });
 });

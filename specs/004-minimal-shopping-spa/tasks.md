@@ -56,18 +56,26 @@ description: "Task list for 004-minimal-shopping-spa"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete. US2 and US3 cannot resolve a basket without the subject header; every story needs the app shell.
 
-- [ ] T011 [P] Write failing unit tests for the caller context in `shared/Tenancy.UnitTests/CallerContextTests.cs` — Unresolved and Resolved states, and `RequireSubjectId()` throwing when the subject is null or blank
-- [ ] T012 [P] Write failing unit tests for the caller middleware in `shared/Tenancy.UnitTests/CallerContextMiddlewareTests.cs` — reads `X-Subject-Id`, leaves the context unresolved when the header is absent or blank, and opens a logging scope carrying the subject
-- [ ] T013 Implement `shared/Tenancy/CallerContext.cs` and `shared/Tenancy/MissingCallerContextException.cs` per [data-model.md](./data-model.md) — CallerContext
-- [ ] T014 Implement `shared/Tenancy/CallerContextMiddleware.cs`, mirroring `TenantContextMiddleware` exactly, per [contracts/subject-id-header.md](./contracts/subject-id-header.md)
-- [ ] T015 Extend `shared/Tenancy/TenancyExtensions.cs` so `AddTenancy()` registers the caller context and `UseTenancy()` wires its middleware — no service's `Program.cs` may need editing
-- [ ] T016 [P] Write a failing unit test for gateway subject stamping in `services/gateway/tests/Gateway.Api.UnitTests/SubjectHeaderPropagationMiddlewareTests.cs` — stamps from the `NameIdentifier` claim, overwrites any inbound value, and removes the header when nothing is resolved
-- [ ] T017 Implement `services/gateway/src/Gateway.Api/Identity/SubjectHeaderPropagationMiddleware.cs` and register it after `TenantHeaderPropagationMiddleware` in `services/gateway/src/Gateway.Api/Program.cs`
-- [ ] T018 [P] Write a failing integration test in `services/bff/tests/Bff.Api.IntegrationTests/SubjectPropagationTests.cs` proving the subject reaches the downstream call, alongside the tenant
-- [ ] T019 Extend `services/bff/src/Bff.Api/DownstreamClients/TenantPropagationHandler.cs` to relay `X-Subject-Id` on every outbound call, using the same remove-then-set discipline it already applies to the tenant
-- [ ] T020 [P] Build the app shell in `frontend/apps/web/src/app/` — router, `QueryClientProvider`, and the single backend-origin configuration pointing at the gateway (never the BFF or a service directly, per [research.md](./research.md) Decision 11 and spec FR-014)
-- [ ] T021 [P] Build the error boundary and shared error surface in `frontend/apps/web/src/shared/ErrorState.tsx` — bounded, readable, retryable, never a blank screen (spec FR-012)
-- [ ] T022 [P] Implement USD money formatting in `frontend/apps/web/src/shared/money.ts` with unit tests in `frontend/apps/web/tests/shared/money.test.ts` — symbol and two decimal places (spec FR-024)
+- [X] T011 [P] Write failing unit tests for the caller context in `shared/Tenancy.UnitTests/CallerContextTests.cs` — Unresolved and Resolved states, and `RequireSubjectId()` throwing when the subject is null or blank
+- [X] T012 [P] Write failing unit tests for the caller middleware in `shared/Tenancy.UnitTests/CallerContextMiddlewareTests.cs` — reads `X-Subject-Id`, leaves the context unresolved when the header is absent or blank, and opens a logging scope carrying the subject
+- [X] T013 Implement `shared/Tenancy/CallerContext.cs` and `shared/Tenancy/MissingCallerContextException.cs` per [data-model.md](./data-model.md) — CallerContext
+- [X] T014 Implement `shared/Tenancy/CallerContextMiddleware.cs`, mirroring `TenantContextMiddleware` exactly, per [contracts/subject-id-header.md](./contracts/subject-id-header.md)
+- [X] T015 Extend `shared/Tenancy/TenancyExtensions.cs` so `AddTenancy()` registers the caller context and `UseTenancy()` wires its middleware — no service's `Program.cs` may need editing
+- [X] T016 [P] Write a failing unit test for gateway subject stamping in `services/gateway/tests/Gateway.Api.UnitTests/SubjectHeaderPropagationMiddlewareTests.cs` — stamps from the `NameIdentifier` claim, overwrites any inbound value, and removes the header when nothing is resolved
+- [X] T017 Implement `services/gateway/src/Gateway.Api/Identity/SubjectHeaderPropagationMiddleware.cs` and register it after `TenantHeaderPropagationMiddleware` in `services/gateway/src/Gateway.Api/Program.cs`
+- [X] T018 [P] Write a failing integration test in `services/bff/tests/Bff.Api.IntegrationTests/SubjectPropagationTests.cs` proving the subject reaches the downstream call, alongside the tenant
+- [X] T019 Extend `services/bff/src/Bff.Api/DownstreamClients/TenantPropagationHandler.cs` to relay `X-Subject-Id` on every outbound call, using the same remove-then-set discipline it already applies to the tenant
+- [X] T020 [P] Build the app shell in `frontend/apps/web/src/app/` — router, `QueryClientProvider`, and the single backend-origin configuration pointing at the gateway (never the BFF or a service directly, per [research.md](./research.md) Decision 11 and spec FR-014)
+- [X] T021 [P] Build the error boundary and shared error surface in `frontend/apps/web/src/shared/ErrorState.tsx` — bounded, readable, retryable, never a blank screen (spec FR-012)
+- [X] T022 [P] Implement USD money formatting in `frontend/apps/web/src/shared/money.ts` with unit tests in `frontend/apps/web/tests/shared/money.test.ts` — symbol and two decimal places (spec FR-024)
+
+**Phase 2 completed 2026-08-16.** Verified: `dotnet build` clean (0 warnings, warnings-as-errors on), Tenancy unit tests 28 passed, gateway unit tests 22 passed, gateway integration 17 passed, BFF propagation integration 4 passed (2 new subject + 2 existing tenant, against real containers), frontend typecheck/lint/test/build/size all green.
+
+Three notes on how it was built:
+
+- **T021 is a shared error surface, not a React error boundary.** `ErrorState` is the component every failing screen renders; TanStack Query already turns a failed request into an error state, so a thrown-exception boundary would catch render bugs rather than the backend failures FR-012 is about. A boundary can be added when there is a render path that can throw.
+- **T016's unit test is not duplicated at integration level, deliberately.** The "removes the header when nothing resolved" case is unreachable end to end — Phase 1's stub authentication handler always succeeds, so no request through a running gateway arrives unauthenticated. That is precisely the case worth pinning before Phase 3 swaps in an issuer that can fail.
+- **`TenantPropagationHandler` keeps its name while now relaying two headers.** Renaming it would leave three planning documents pointing at a file that no longer exists, for a cosmetic gain. Its doc comment states what it actually does. Worth revisiting as a standalone cleanup.
 
 **Checkpoint**: identity flows end to end and the app shell renders. User stories can now begin.
 

@@ -28,11 +28,12 @@ builder.Services.AddHealthCheckFeature();
 var app = builder.Build();
 app.UseServiceDefaults();
 
-// Authenticate first, then turn the resolved identity's tenant claim into the header every hop
-// below reads. Both must run before MapReverseProxy: once YARP forwards the request, the headers
-// it copied are already decided.
+// Authenticate first, then turn the resolved identity's tenant and subject claims into the headers
+// every hop below reads. All three must run before MapReverseProxy: once YARP forwards the request,
+// the headers it copied are already decided.
 app.UseAuthentication();
 app.UseMiddleware<TenantHeaderPropagationMiddleware>();
+app.UseMiddleware<SubjectHeaderPropagationMiddleware>();
 
 // Mapped before the proxy so the gateway answers its own probes. Routing prefers the more specific
 // /health/* over the proxy's {**catch-all} regardless of order, but relying on that silently would
