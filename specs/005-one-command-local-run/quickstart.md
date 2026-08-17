@@ -38,8 +38,17 @@ feature, not a missing instruction.
 docker compose ps
 ```
 
-4. **Expect**: fifteen components listed. Eleven running and healthy; four migrators exited `0`
-   ([data-model.md](./data-model.md) — the inventory).
+4. **Expect**: fifteen components listed, in exactly these states
+   ([data-model.md](./data-model.md) — the inventory):
+
+   | Count | State | Which |
+   |---|---|---|
+   | 10 | `Up (healthy)` | `sqlserver`, `redis`, `rabbitmq`, the four domain services, `bff-api`, `gateway-api`, `storefront` |
+   | 1 | `Up` — no healthcheck | `otel-collector`, whose distroless image has no probe tool |
+   | 4 | `Exited (0)` | the migrators, which run once and stop |
+
+   The collector is the one component whose gate is "running" rather than "healthy". That is a
+   limitation of its image, recorded rather than hidden — everything else must say `healthy`.
 
 **Subsequent-run check (SC-001)**: `./scripts/down.ps1` then `./scripts/up.ps1` again — **under
 3 minutes**, because images are already built.

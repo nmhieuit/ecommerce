@@ -26,7 +26,7 @@ One thing the command starts. Every component has:
 | `sqlserver` | Dependency | Server accepts a query | — | — |
 | `redis` | Dependency | Responds to a ping | — | — |
 | `rabbitmq` | Dependency | Reports running | — | — |
-| `otel-collector` | Telemetry | Accepts OTLP | — | — |
+| `otel-collector` | Telemetry | Container running *(see below)* | — | — |
 | `products-migrate` | Migrator | Exits 0 | `sqlserver` healthy | — |
 | `baskets-migrate` | Migrator | Exits 0 | `sqlserver` healthy | — |
 | `orders-migrate` | Migrator | Exits 0 | `sqlserver` healthy | — |
@@ -60,8 +60,19 @@ starting, unhealthy, or failed.
 | Gate kind | Applies to | Passes when |
 |---|---|---|
 | Command probe | `sqlserver`, `redis`, `rabbitmq` | The dependency's own CLI reports it serving |
-| HTTP probe | Every service | `/health/ready` (or `/health/live`) answers 200 |
+| HTTP probe | Every service, and the storefront | `/health/ready` (or `/health/live`) answers 200 |
 | Completion | Migrators | The container exits with status 0 |
+| Running only | `otel-collector` | The container reaches a running state |
+
+**The collector's gate is weaker than the rest, and that is a limitation rather than a choice.**
+Its image is distroless — no shell, no probe tool — so there is nothing to run a health check with,
+and Compose's `--wait` falls back to "running" for a container that declares none. Verified at
+implementation time: the other three report `(healthy)` and the collector reports only `Up`.
+
+In practice the container exiting on a bad config is what catches the realistic failure, and the
+collector's ports were confirmed accepting connections on the network. But a collector that started
+and then stopped serving would satisfy this gate, which the three command-probed dependencies would
+not.
 
 **The HTTP probes are the platform's own.** Each domain service's readiness check opens a real
 connection to its own database, so a service reports ready only when it can actually reach its data

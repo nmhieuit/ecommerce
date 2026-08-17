@@ -1,0 +1,290 @@
+# The whole platform, locally, in one command.
+#
+#   ./scripts/up.ps1        (or ./scripts/up.sh)
+#
+# This file is named `docker-compose.yml` deliberately: it is Compose's default, so the documented
+# command carries no -f flag and the one line a new contributor must get right has nothing in it to
+# mistype (005-one-command-local-run plan.md, Structure Decision).
+#
+# `docker-compose.deps.yml` beside this file is NOT superseded. It runs one database server per
+# service and starts them one at a time, which demonstrates two things this file deliberately
+# cannot: that a service runs without its neighbours, and the per-service-server topology of the
+# deployed environment. This file consolidates onto a single server for the resource floor
+# (spec FR-018) — a local convenience, never the deployed shape (spec FR-019).
+
+# A distinct project name from `docker-compose.deps.yml`, which uses the directory default
+# (`ecomerce`). Without this, `down` on either file would tear down the other's containers.
+name: ecomerce-stack
+
+networks:
+  # Explicit rather than relying on the default, so the topology is readable as data: everything
+  # below is on one network, and only the gateway and the storefront are reachable from the host.
+  backbone:
+    driver: bridge
+
+volumes:
+  # Survive `down`, removed by the reset command — the difference between "I am done for today" and
+  # "I want to start over" (spec FR-007, FR-008).
+  sqlserver-data:
+  rabbitmq-data:
+
+services:
+  # ---------------------------------------------------------------- dependencies
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env before starting}
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks: [backbone]
+    healthcheck:
+      # $$ escapes to a literal $ so the password is expanded by the shell inside the container
+      # rather than by Compose, keeping it out of `docker inspect` output.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      # SQL Server needs a while before it accepts anything; without this the retries are spent
+      # before the server is even listening.
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    networks: [backbone]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # No volume, on purpose: it holds nothing today. When the basket moves here, adding a volume is
+    # what makes basket contents survive a restart — and that belongs to the story that moves it.
+    #
+    # Nothing connects to this. Spec FR-017 chose to run the platform's declared dependencies even
+    # where no code uses them, so the story that first needs one finds it present. A passing health
+    # check here means "available", never "working".
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks: [backbone]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    # Also unused by any service — see the note on redis above. Its management interface is
+    # published only under the `debug` profile.
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./docker/otel-collector-config.yaml:/etc/otel/config.yaml:ro
+    networks: [backbone]
+    # No healthcheck, and that is a limitation rather than an oversight: the collector image is
+    # distroless — it has no shell and no probe tool, so there is nothing to run a check with.
+    # `--wait` still gates on the container reaching a running state, which is a weaker guarantee
+    # than the others here. Recorded in data-model.md so the inventory does not overstate it.
+    #
+    # This exists because ServiceDefaults calls AddOtlpExporter() with no endpoint configured, so
+    # the SDK defaults to localhost:4317 — inside a container, the container itself. Without
+    # something listening, every service logs export failures continuously, and that noise buries
+    # the real failures the health gates are meant to surface (research.md Decision 10).
+
+  # ---------------------------------------------------------------- schema
+  #
+  # Each service's migrations run as their own container, which must exit 0 before that service
+  # starts. Migrating at service startup was rejected: it races when more than one instance starts,
+  # and these services are meant to be horizontally scalable (research.md Decision 4).
+  #
+  # There is no database-creation step. EF creates a database that does not exist when it applies
+  # migrations — verified against a database name with nothing behind it — so the `*-db-init`
+  # containers `docker-compose.deps.yml` needs are unnecessary here (research.md Decision 3).
+  #
+  # Each migrator is given ONLY its own database's connection string. No service's configuration
+  # names another service's database (spec FR-018, constitution Principle I).
+  products-migrate:
+    build: &products-build
+      context: .
+      dockerfile: services/products/src/Products.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__ProductsDb: Server=sqlserver;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  baskets-migrate:
+    build: &baskets-build
+      context: .
+      dockerfile: services/baskets/src/Baskets.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__BasketsDb: Server=sqlserver;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  orders-migrate:
+    build: &orders-build
+      context: .
+      dockerfile: services/orders/src/Orders.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__OrdersDb: Server=sqlserver;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  parties-migrate:
+    build: &parties-build
+      context: .
+      dockerfile: services/parties/src/Parties.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__PartiesDb: Server=sqlserver;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------- domain services
+  #
+  # Service names match the hostnames already baked into the BFF's and gateway's configuration
+  # (`http://products-api:8080`), so no address needs overriding here.
+  #
+  # No ASPNETCORE_ENVIRONMENT is set, so these run as Production and read appsettings.json — which
+  # is what carries the compose hostnames. appsettings.Development.json points at localhost ports,
+  # and inside a container localhost is the container itself.
+  #
+  # The health gate is each service's own /health/ready, whose check opens a real connection to its
+  # own database. A TCP-connect gate would report a service healthy while its database was
+  # unreachable — the silent success the gate exists to catch (research.md Decision 9).
+  products-api: &domain-service
+    build:
+      <<: *products-build
+      target: final
+    # Deliberately not shared through a YAML anchor. Inheriting a common environment and overriding
+    # the connection string would leave every service holding every other service's key, and
+    # possession of another service's credential is the violation — not its use
+    # (constitution Principle I; the rule `tests/CrossServiceIsolation.Tests` enforces on config).
+    environment:
+      ConnectionStrings__ProductsDb: Server=sqlserver;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    networks: [backbone]
+    depends_on:
+      products-migrate:
+        condition: service_completed_successfully
+    healthcheck: &service-healthcheck
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  baskets-api:
+    <<: *domain-service
+    build:
+      <<: *baskets-build
+      target: final
+    environment:
+      ConnectionStrings__BasketsDb: Server=sqlserver;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      baskets-migrate:
+        condition: service_completed_successfully
+
+  orders-api:
+    <<: *domain-service
+    build:
+      <<: *orders-build
+      target: final
+    environment:
+      ConnectionStrings__OrdersDb: Server=sqlserver;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      orders-migrate:
+        condition: service_completed_successfully
+
+  parties-api:
+    <<: *domain-service
+    build:
+      <<: *parties-build
+      target: final
+    environment:
+      ConnectionStrings__PartiesDb: Server=sqlserver;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      parties-migrate:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------- edge
+  bff-api:
+    build:
+      context: .
+      dockerfile: services/bff/src/Bff.Api/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    networks: [backbone]
+    # The BFF owns no database, so it holds no connection string. It waits for all four services it
+    # aggregates: a BFF that is up before them would answer 502 to its first caller.
+    depends_on:
+      products-api: { condition: service_healthy }
+      baskets-api: { condition: service_healthy }
+      orders-api: { condition: service_healthy }
+      parties-api: { condition: service_healthy }
+    healthcheck: *service-healthcheck
+
+  gateway-api:
+    build:
+      context: .
+      dockerfile: services/gateway/src/Gateway.Api/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    networks: [backbone]
+    ports:
+      # One of only two published ports. Everything else is reachable on the network alone, so the
+      # storefront's "single entry point" rule is a property of the environment rather than an
+      # assertion — there is no address with which to call a service directly (research.md
+      # Decision 8).
+      - "5300:8080"
+    depends_on:
+      bff-api:
+        condition: service_healthy
+    healthcheck:
+      # Liveness, not readiness: the gateway's readiness is deliberately empty, because making it
+      # depend on the BFF would pull the gateway out of rotation during a downstream outage — when
+      # its job is to still answer and return a clear error (spec 002).
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # ---------------------------------------------------------------- storefront
+  storefront:
+    build:
+      context: ./frontend
+      dockerfile: apps/web/Dockerfile
+      args:
+        # The address the BROWSER must reach, and the browser runs on the host — so the gateway's
+        # published host address, never `gateway-api:8080`, which resolves only inside this network.
+        # Vite inlines this at build time, so it is fixed in the image (research.md Decision 6).
+        GATEWAY_ORIGIN: http://localhost:5300
+    networks: [backbone]
+    ports:
+      - "4173:80"
+    # Waits for nothing: it is static files. The browser calls the gateway afterwards, so a
+    # storefront that loads before the backend is ready shows its own error state — behaviour spec
+    # 004 already covers.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

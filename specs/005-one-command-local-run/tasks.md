@@ -73,11 +73,21 @@ Image sizes: services ~390 MB, migrators ~415 MB, storefront 93 MB.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T009 Create `docker-compose.yml` at the repository root with the project name, the network, the two named volumes (SQL Server data, RabbitMQ state), and `MSSQL_SA_PASSWORD` read from `.env` ([data-model.md](./data-model.md) — Stack Data)
-- [ ] T010 Add the `sqlserver` service to `docker-compose.yml` with a health gate that passes only when it accepts a query, reusing the healthcheck already proven in `docker-compose.deps.yml`
-- [ ] T011 [P] Add `redis` to `docker-compose.yml` with a ping health gate. Nothing connects to it — see spec FR-017; the gate means "available", never "working"
-- [ ] T012 [P] Add `rabbitmq` to `docker-compose.yml` with a running-check health gate and its named volume. Also unused by any service today
-- [ ] T013 [P] Add `otel-collector` to `docker-compose.yml`, wired to `docker/otel-collector-config.yaml` — **subject to the decision noted above**
+- [X] T009 Create `docker-compose.yml` at the repository root with the project name, the network, the two named volumes (SQL Server data, RabbitMQ state), and `MSSQL_SA_PASSWORD` read from `.env` ([data-model.md](./data-model.md) — Stack Data)
+- [X] T010 Add the `sqlserver` service to `docker-compose.yml` with a health gate that passes only when it accepts a query, reusing the healthcheck already proven in `docker-compose.deps.yml`
+- [X] T011 [P] Add `redis` to `docker-compose.yml` with a ping health gate. Nothing connects to it — see spec FR-017; the gate means "available", never "working"
+- [X] T012 [P] Add `rabbitmq` to `docker-compose.yml` with a running-check health gate and its named volume. Also unused by any service today
+- [X] T013 [P] Add `otel-collector` to `docker-compose.yml`, wired to `docker/otel-collector-config.yaml` — **subject to the decision noted above**
+
+**Phase 2 completed 2026-08-17.** `docker compose up sqlserver redis rabbitmq otel-collector --wait` returns success in **29 seconds**. All five listening ports confirmed accepting connections from inside the network — OTLP on 4317 and 4318, SQL Server 1433, Redis 6379, RabbitMQ 5672.
+
+Three things worth recording:
+
+- **The collector's gate is weaker than the other three, and the inventory now says so.** Its image is distroless — no shell, no probe tool — so no health check is possible, and Compose's `--wait` falls back to "container running". Verified: `docker compose ps` shows the other three as `(healthy)` and the collector as plain `Up`. [data-model.md](./data-model.md) was corrected; it had claimed a gate the component cannot have.
+- **The stack uses its own project name, `ecomerce-stack`.** `docker-compose.deps.yml` runs under the directory default (`ecomerce`), and without the separation a `down` on either file would tear down the other's containers. Verified empirically: after `docker compose down`, all four deps database containers were still running and zero stack containers remained.
+- **The missing-`.env` guard already produces the right message** without waiting for the wrapper script: `required variable MSSQL_SA_PASSWORD is missing a value: copy .env.example to .env before starting`. That is part of FR-011 satisfied by the topology rather than by T020.
+
+Volumes survive `down` as FR-007 requires — `ecomerce-stack_sqlserver-data` and `ecomerce-stack_rabbitmq-data` both persisted.
 
 **Checkpoint**: `docker compose up sqlserver redis rabbitmq otel-collector --wait` returns success.
 
@@ -93,18 +103,35 @@ Image sizes: services ~390 MB, migrators ~415 MB, storefront 93 MB.
 
 > Scenario-based, per the note at the top of this file. Write down the expected outcome before running.
 
-- [ ] T014 [US1] Record the expected component inventory and gates from [data-model.md](./data-model.md) as the acceptance checklist for quickstart Scenario 1, in `specs/005-one-command-local-run/quickstart.md`
+- [X] T014 [US1] Record the expected component inventory and gates from [data-model.md](./data-model.md) as the acceptance checklist for quickstart Scenario 1, in `specs/005-one-command-local-run/quickstart.md`
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Add the four migrator services to `docker-compose.yml`, each depending on `sqlserver` being healthy, each given only its own database's connection string — no service's configuration may name another's database (spec FR-018)
-- [ ] T016 [US1] Add the four domain services (`products-api`, `baskets-api`, `orders-api`, `parties-api`) to `docker-compose.yml`, each depending on its own migrator completing successfully, each health-gated on `/health/ready`
-- [ ] T017 [US1] Add `bff-api` to `docker-compose.yml`, depending on the four domain services being healthy, health-gated on `/health/ready`
-- [ ] T018 [US1] Add `gateway-api` to `docker-compose.yml`, depending on `bff-api`, health-gated on `/health/live` and publishing host port 5300 — liveness not readiness, because its readiness is deliberately empty ([data-model.md](./data-model.md))
-- [ ] T019 [US1] Add `storefront` to `docker-compose.yml` publishing host port 4173, health-gated on serving its index page. It waits for nothing: it is static files, and the browser reaches the gateway afterwards
-- [ ] T020 [US1] Write `scripts/up.ps1` — check Docker is installed, the daemon responds, `.env` exists, and the daemon meets the documented memory floor, each failing with one sentence naming the missing thing (spec FR-011), then delegate to `docker compose up --build --wait`
-- [ ] T021 [P] [US1] Write `scripts/up.sh` with the same checks and delegation, for macOS and Linux
-- [ ] T022 [US1] Verify quickstart Scenarios 1 and 7 in `specs/005-one-command-local-run/quickstart.md` — first run under 10 minutes, fifteen components in the expected states, and each prerequisite failure naming its own cause before any container starts
+- [X] T015 [US1] Add the four migrator services to `docker-compose.yml`, each depending on `sqlserver` being healthy, each given only its own database's connection string — no service's configuration may name another's database (spec FR-018)
+- [X] T016 [US1] Add the four domain services (`products-api`, `baskets-api`, `orders-api`, `parties-api`) to `docker-compose.yml`, each depending on its own migrator completing successfully, each health-gated on `/health/ready`
+- [X] T017 [US1] Add `bff-api` to `docker-compose.yml`, depending on the four domain services being healthy, health-gated on `/health/ready`
+- [X] T018 [US1] Add `gateway-api` to `docker-compose.yml`, depending on `bff-api`, health-gated on `/health/live` and publishing host port 5300 — liveness not readiness, because its readiness is deliberately empty ([data-model.md](./data-model.md))
+- [X] T019 [US1] Add `storefront` to `docker-compose.yml` publishing host port 4173, health-gated on serving its index page. It waits for nothing: it is static files, and the browser reaches the gateway afterwards
+- [X] T020 [US1] Write `scripts/up.ps1` — check Docker is installed, the daemon responds, `.env` exists, and the daemon meets the documented memory floor, each failing with one sentence naming the missing thing (spec FR-011), then delegate to `docker compose up --build --wait`
+- [X] T021 [P] [US1] Write `scripts/up.sh` with the same checks and delegation, for macOS and Linux
+- [X] T022 [US1] Verify quickstart Scenarios 1 and 7 in `specs/005-one-command-local-run/quickstart.md` — first run under 10 minutes, fifteen components in the expected states, and each prerequisite failure naming its own cause before any container starts
+
+**Phase 3 completed 2026-08-17.** `./scripts/up.sh` takes the platform from nothing to running in **66 seconds** with images already built — comfortably inside SC-001's 3-minute subsequent-run budget. `docker compose ps` matches the predicted inventory exactly: **10 healthy, 1 running-without-healthcheck (the collector), 4 migrators exited 0**.
+
+Verified beyond the checkpoint:
+
+- **The seeded catalog is served through the gateway from containers** — exactly the three products, in a database the stack created itself.
+- **Four databases, one per service**: `baskets`, `orders`, `parties`, `products`. No `*-db-init` step was needed, confirming research Decision 3 in the stack as well as in isolation.
+- **Only two ports are published.** 5300 and 4173 answer; 5301, 5088, 5188, 5041, and 5204 all refuse. Spec 004's single-entry-point rule is now a property of the environment rather than an assertion (research Decision 8).
+- **Both prerequisite failures name their cause and start nothing**: removing `.env` gives *"'.env' does not exist. Copy the template first"*, and hiding Docker from `PATH` gives *"Docker is not installed, or is not on PATH"*. The running stack was untouched by either.
+
+One real defect found, which only a containerised run could surface:
+
+- **nginx was binding IPv4 only, so the storefront never became healthy.** The nginx image adds an IPv6 `listen` directive to the config it ships, but skips a config that has been replaced — as ours has. Busybox `wget` resolves `localhost` to `::1` first and got connection refused from a server that was running perfectly, serving files, and listening on `0.0.0.0:80`. My earlier manual check passed precisely because it came from the host through the published port, which is IPv4. Fixed by adding `listen [::]:80` to `frontend/apps/web/nginx.conf`.
+
+  Worth noting how it presented: the first `./scripts/up.sh` run failed with `container ecomerce-stack-storefront-1 is unhealthy` and named the component — FR-010 doing its job on the first real failure it met.
+
+One design correction during implementation: the domain services' environment blocks are written out individually rather than sharing a YAML anchor. Inheriting a common environment and overriding the connection string leaves every service holding every other service's key, and **possession of another service's credential is the violation, not its use** — the same rule `tests/CrossServiceIsolation.Tests` enforces on configuration files. Verified: each service's environment contains exactly one `ConnectionStrings__*` entry.
 
 **Checkpoint**: the platform starts with one command. This is the MVP.
 
