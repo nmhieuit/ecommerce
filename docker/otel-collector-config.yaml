@@ -1,0 +1,50 @@
+# The endpoint ServiceDefaults already targets.
+#
+# Every service calls AddOtlpExporter() for traces, metrics, and logs with no endpoint configured,
+# so the SDK defaults to http://localhost:4317 — which inside a container is the container itself.
+# Without something listening, each service retries and logs export failures continuously, and that
+# noise buries the real failures the stack's health gates are meant to surface
+# (005-one-command-local-run research.md Decision 10).
+#
+# This is the collection point, not the backend. Elastic is the backend, and standing it up is
+# Phase 3 work (SCRUM-25). Here the traces go to the collector's own log, which is enough to read a
+# request's correlation id, tenant, and subject across hops while developing.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Bounds memory so a burst of telemetry cannot starve the services being observed.
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+exporters:
+  # Compact rather than verbose: one line per span keeps the log readable when six services are
+  # emitting at once. Raise to `detailed` when chasing a specific trace.
+  debug:
+    verbosity: normal
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+
+  telemetry:
+    logs:
+      level: warn

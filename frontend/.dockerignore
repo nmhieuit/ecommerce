@@ -1,0 +1,32 @@
+# The storefront image builds with `frontend/` as its context, so the repository-root .dockerignore
+# does not apply here — Docker reads the one at the context root.
+#
+# node_modules is the important entry: it is large, and its contents are platform-specific binaries
+# built for the host, which must never be copied into a Linux image. The image installs its own.
+
+node_modules
+**/node_modules
+
+# Build output — the image produces its own from source.
+dist
+**/dist
+.turbo
+**/.turbo
+
+# Test and tooling output
+coverage
+**/coverage
+playwright-report
+**/playwright-report
+test-results
+**/test-results
+
+# Local environment and editor state
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+
+# Nothing here affects the built bundle
+**/*.log

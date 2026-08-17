@@ -54,6 +54,7 @@
     <Project Path="shared/Tenancy.UnitTests/Tenancy.UnitTests.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ContainerConventionTests/ContainerConventionTests.csproj" />
     <Project Path="tests/CrossServiceIsolation.Tests/CrossServiceIsolation.Tests.csproj" />
     <Project Path="tests/StructureConventionTests/StructureConventionTests.csproj" />
   </Folder>

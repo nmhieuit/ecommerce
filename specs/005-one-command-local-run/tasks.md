@@ -38,14 +38,30 @@ description: "Task list for 005-one-command-local-run"
 
 **Purpose**: Nothing in this feature can run until the images build. Five of six currently cannot ([research.md](./research.md), Finding), and the storefront has no image at all.
 
-- [ ] T001 Create the `tests/ContainerConventionTests` xUnit project and register it in `Ecommerce.slnx`, alongside the existing `tests/CrossServiceIsolation.Tests` and `tests/StructureConventionTests`
-- [ ] T002 Write the failing convention test in `tests/ContainerConventionTests/DockerfileSharedProjectTests.cs` — for every `services/*/src/*.Api/*.csproj`, each `shared/*` project it references must be copied by the matching Dockerfile. Expect five failures today (baskets, bff, orders, parties, products); the gateway passes
-- [ ] T003 Write the scanner it uses in `tests/ContainerConventionTests/DockerfileReferenceScanner.cs`, reporting **what it examined** as well as what it objected to — a scan that resolved the wrong directory must not look identical to compliance, the same guard `ConnectionStringScanner` already applies
-- [ ] T004 Fix the five broken Dockerfiles to copy `shared/Tenancy` — `services/{baskets,bff,orders,parties,products}/src/*.Api/Dockerfile`, both the `.csproj` line and the source line, matching how `ServiceDefaults` is already copied
-- [ ] T005 [P] Add an HTTP probe utility to the final stage of all six `services/*/src/*.Api/Dockerfile`, installed before `USER $APP_UID` so the images still run as non-root ([research.md](./research.md) Decision 9)
-- [ ] T006 [P] Add a `migrator` stage producing a self-contained EF Core migration bundle to the four Dockerfiles whose service owns a `DbContext` — `services/{products,baskets,orders,parties}/src/*.Api/Dockerfile` ([research.md](./research.md) Decision 4)
-- [ ] T007 [P] Create the storefront image in `frontend/apps/web/Dockerfile` (build the production bundle, then serve it) with `frontend/apps/web/nginx.conf` providing SPA history fallback — without it a reload on `/basket` answers 404 ([research.md](./research.md) Decision 5)
-- [ ] T008 [P] Create `docker/otel-collector-config.yaml` — an OTLP receiver and a debug exporter, so traces and logs are readable locally
+- [X] T001 Create the `tests/ContainerConventionTests` xUnit project and register it in `Ecommerce.slnx`, alongside the existing `tests/CrossServiceIsolation.Tests` and `tests/StructureConventionTests`
+- [X] T002 Write the failing convention test in `tests/ContainerConventionTests/DockerfileSharedProjectTests.cs` — for every `services/*/src/*.Api/*.csproj`, each `shared/*` project it references must be copied by the matching Dockerfile. Expect five failures today (baskets, bff, orders, parties, products); the gateway passes
+- [X] T003 Write the scanner it uses in `tests/ContainerConventionTests/DockerfileReferenceScanner.cs`, reporting **what it examined** as well as what it objected to — a scan that resolved the wrong directory must not look identical to compliance, the same guard `ConnectionStringScanner` already applies
+- [X] T004 Fix the five broken Dockerfiles to copy `shared/Tenancy` — `services/{baskets,bff,orders,parties,products}/src/*.Api/Dockerfile`, both the `.csproj` line and the source line, matching how `ServiceDefaults` is already copied
+- [X] T005 [P] Add an HTTP probe utility to the final stage of all six `services/*/src/*.Api/Dockerfile`, installed before `USER $APP_UID` so the images still run as non-root ([research.md](./research.md) Decision 9)
+- [X] T006 [P] Add a `migrator` stage producing a self-contained EF Core migration bundle to the four Dockerfiles whose service owns a `DbContext` — `services/{products,baskets,orders,parties}/src/*.Api/Dockerfile` ([research.md](./research.md) Decision 4)
+- [X] T007 [P] Create the storefront image in `frontend/apps/web/Dockerfile` (build the production bundle, then serve it) with `frontend/apps/web/nginx.conf` providing SPA history fallback — without it a reload on `/basket` answers 404 ([research.md](./research.md) Decision 5)
+- [X] T008 [P] Create `docker/otel-collector-config.yaml` — an OTLP receiver and a debug exporter, so traces and logs are readable locally
+
+**Phase 1 completed 2026-08-17.** Verified by building every image, not by reading the Dockerfiles: all six service images, all four migrator images, and the storefront. The convention test went red on five services and green after the fix — 9 tests passing. Solution still builds at 0 warnings.
+
+Two defects the container build found that no local build could:
+
+- **`.editorconfig` was never copied into the image**, so the CA1861 suppression added in 004 (scoped to generated EF migrations) did not apply and `dotnet publish` failed inside the container on a rule the local build passes. Container builds were diverging from local builds through the analyzer configuration. Now copied alongside `Directory.Build.props` in all six images. This is a *second* instance of the same class as FR-014 — a build-input file the image never received.
+- **The migration bundle needs the ASP.NET shared framework, not the base runtime.** Basing the migrator on `dotnet/runtime:10.0` produced "No frameworks were found" at run time, because a bundle built from a web project declares `Microsoft.AspNetCore.App`. Now on `dotnet/aspnet:10.0`.
+
+Two things confirmed empirically rather than assumed:
+
+- **EF creates a database that does not exist** ([research.md](./research.md) Decision 3): the products bundle was run against `migrator-bundle-proof`, a name with no database behind it, and applied both migrations including the seed. The four `*-db-init` containers really are unnecessary.
+- **The storefront's history fallback works**: `/`, `/basket`, and `/confirmation` all return 200 from the container while a genuinely missing asset returns 404, and `http://localhost:5300` is inlined in the built bundle.
+
+One thing not in the task text but required: **`frontend/.dockerignore`**. The storefront builds with `frontend/` as its context, so the repository-root ignore file does not apply, and `COPY . .` would have copied host-built `node_modules` into a Linux image.
+
+Image sizes: services ~390 MB, migrators ~415 MB, storefront 93 MB.
 
 **Checkpoint**: every image builds from a clean checkout, and the convention test passes.
 
