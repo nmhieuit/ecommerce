@@ -182,16 +182,32 @@ Also verified: preflight from `http://localhost:4173` is admitted with credentia
 
 ### Tests for User Story 3
 
-- [ ] T030 [US3] Record the expected post-stop state — zero containers, ports 4173 and 5300 free — as the acceptance checklist for quickstart Scenario 3, in `specs/005-one-command-local-run/quickstart.md`
+- [X] T030 [US3] Record the expected post-stop state — zero containers, ports 4173 and 5300 free — as the acceptance checklist for quickstart Scenario 3, in `specs/005-one-command-local-run/quickstart.md`
 
 ### Implementation for User Story 3
 
-- [ ] T031 [P] [US3] Write `scripts/down.ps1` and `scripts/down.sh` — stop and remove every container, keep the volumes (spec FR-006, FR-007)
-- [ ] T032 [P] [US3] Write `scripts/reset.ps1` and `scripts/reset.sh` — stop, remove, and discard the volumes, so the next start behaves like a first run (spec FR-008). A separate command from `down` because losing an afternoon's test orders should take a deliberate act
-- [ ] T033 [US3] Verify quickstart Scenario 3 — stop leaves no containers and frees both ports; restart preserves the order and basket from before
-- [ ] T034 [US3] Verify quickstart Scenario 4 — after reset, the seeded catalog is present and prior orders are gone
-- [ ] T035 [US3] Run the stop/start cycle ten times, confirming no orphaned containers and no port conflicts on any cycle (spec SC-004)
-- [ ] T036 [US3] Verify quickstart Scenario 6 — a changed string in `frontend/apps/web/src/app/routes.tsx` appears after re-running the up command, proving no stale image was reused (spec FR-009)
+- [X] T031 [P] [US3] Write `scripts/down.ps1` and `scripts/down.sh` — stop and remove every container, keep the volumes (spec FR-006, FR-007)
+- [X] T032 [P] [US3] Write `scripts/reset.ps1` and `scripts/reset.sh` — stop, remove, and discard the volumes, so the next start behaves like a first run (spec FR-008). A separate command from `down` because losing an afternoon's test orders should take a deliberate act
+- [X] T033 [US3] Verify quickstart Scenario 3 — stop leaves no containers and frees both ports; restart preserves the order and basket from before
+- [X] T034 [US3] Verify quickstart Scenario 4 — after reset, the seeded catalog is present and prior orders are gone
+- [X] T035 [US3] Run the stop/start cycle ten times, confirming no orphaned containers and no port conflicts on any cycle (spec SC-004)
+- [X] T036 [US3] Verify quickstart Scenario 6 — a changed string in `frontend/apps/web/src/app/routes.tsx` appears after re-running the up command, proving no stale image was reused (spec FR-009)
+
+**Phase 5 completed 2026-08-18.** Ten stop/start cycles: **10 of 10 clean** — zero orphaned containers, zero held ports, all eleven long-running components healthy on every restart. Getting there took two distinct fixes for one bug, and neither alone was sufficient.
+
+**The first cycle run failed 4 of 10**, every time with SQL Server error 1801, `Database 'orders' already exists`.
+
+The health gate was wrong. `SELECT 1` succeeds as soon as *master* is up, while user databases are still recovering from the volume — and a migrator started in that window sees its database as absent, tries to create it, and is refused. **First runs always passed**, because a fresh volume has nothing to recover, which is precisely why one run could never have found this and ten could.
+
+Requiring every database to report `ONLINE` took it to **1 of 10**. The residual cause is subtler: EF decides whether a database exists by opening a connection to it, and that can fail transiently even after `state_desc` says ONLINE. So the four migrators also carry `restart: on-failure:3` — the correct response to a transient failure in an idempotent one-shot job, and the same reasoning behind Kubernetes init containers using `restartPolicy: OnFailure`.
+
+Verified alongside:
+
+- **FR-006/FR-007**: after `down`, zero containers under `ecomerce-stack`, both ports free, both volumes kept, and `docker-compose.deps.yml`'s four containers untouched. After restarting, an order placed beforehand read back intact at `96.00` and the basket still held its Linen Apron.
+- **FR-008**: after `reset`, both volumes are gone; the next start gives three seeded products, **zero** orders, and an empty basket — a true first run.
+- **FR-009**: a marker string added to the catalog heading appeared in the bundle the stack served after re-running the up command, and disappeared again when reverted. No stale image is silently reused.
+
+One timing characteristic worth carrying into the documentation: `--build` against a changed frontend context costs roughly ten minutes on this hardware, and leaves the machine busy enough afterwards that the BFF's three-second downstream budget can be exceeded for a while — every route returning 504 while every health gate reports healthy. It resolves on its own; requests settled back to 30–70 ms. That is host load rather than a defect, but it is the most confusing thing a contributor could meet, so it belongs in T038's guide.
 
 **Checkpoint**: the daily loop works, not just the first run.
 
@@ -199,13 +215,13 @@ Also verified: preflight from `http://localhost:4173` is admitted with credentia
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T037 [P] Add the `debug` profile to `docker-compose.yml`, publishing the internal service ports and the broker's management interface — needed when regenerating the API client from the BFF's document while the stack is what is running ([contracts/stack-interface.md](./contracts/stack-interface.md))
-- [ ] T038 [P] Write `docs/local-development.md` — the one command, the prerequisites, the measured resource floor, both addresses, the stop and reset commands, and the `debug` profile (spec FR-012)
-- [ ] T039 [P] Document in `docs/local-development.md` and `services/README.md` that the stack's single database server is a local convenience and **not** the deployed topology, so consolidation is not read as permission to share a database between services (spec FR-019)
-- [ ] T040 [P] Cross-reference the new guide from `services/README.md` and `frontend/README.md`, both of which currently send readers to the per-service workflow
-- [ ] T041 Measure and record the actual first-run and subsequent-run durations and the peak memory the stack uses, updating the figures in `docs/local-development.md` and confirming spec SC-001 and SC-009
-- [ ] T042 Verify quickstart Scenario 5 — stopping the database and restarting fails within 2 minutes naming the component, rather than reporting success and failing at first use (spec SC-005)
-- [ ] T043 Run every scenario in [quickstart.md](./quickstart.md) end to end and record the results
+- [X] T037 [P] Add the `debug` profile to `docker-compose.yml`, publishing the internal service ports and the broker's management interface — needed when regenerating the API client from the BFF's document while the stack is what is running ([contracts/stack-interface.md](./contracts/stack-interface.md))
+- [X] T038 [P] Write `docs/local-development.md` — the one command, the prerequisites, the measured resource floor, both addresses, the stop and reset commands, and the `debug` profile (spec FR-012)
+- [X] T039 [P] Document in `docs/local-development.md` and `services/README.md` that the stack's single database server is a local convenience and **not** the deployed topology, so consolidation is not read as permission to share a database between services (spec FR-019)
+- [X] T040 [P] Cross-reference the new guide from `services/README.md` and `frontend/README.md`, both of which currently send readers to the per-service workflow
+- [X] T041 Measure and record the actual first-run and subsequent-run durations and the peak memory the stack uses, updating the figures in `docs/local-development.md` and confirming spec SC-001 and SC-009
+- [X] T042 Verify quickstart Scenario 5 — stopping the database and restarting fails within 2 minutes naming the component, rather than reporting success and failing at first use (spec SC-005)
+- [X] T043 Run every scenario in [quickstart.md](./quickstart.md) end to end and record the results
 
 ---
 
@@ -266,6 +282,33 @@ Task: "Create docker/otel-collector-config.yaml"
 3. + US2 → the storefront works end to end, verified by 004's own walkthrough → demo
 4. + US3 → the daily stop/start loop is clean
 5. + Polish → documented, measured, and reachable for debugging
+
+---
+
+**Phase 6 completed 2026-08-18. All 43 tasks are done.**
+
+Every quickstart scenario was run against a stack reset to nothing beforehand:
+
+| Scenario | Result |
+|---|---|
+| 1 — cold start | **85 s**, exit 0; inventory exactly 10 healthy / 1 running / 4 exited 0 |
+| 2 — storefront end to end | Playwright **4/4** in 10.8 s |
+| 3 — stop and restart | 0 containers after `down`, both volumes kept, basket survived |
+| 4 — reset | Volumes removed; next start gave 3 products and an empty basket |
+| 5 — missing dependency | Fails in **89 s** naming every affected component (budget 120 s) |
+| 6 — source change | Marker appeared in the served bundle, and disappeared when reverted |
+| 7 — prerequisites | `.env` absent named before anything started |
+| 8 — entry point only | 5300 and 4173 answer; 5301 and 5088 refused |
+
+Automated checks: compose valid for both files, container conventions 9/9.
+
+**The `debug` profile in the plan could not exist as designed.** A Compose profile decides whether a service *starts*; it cannot add ports to one that is starting anyway. It is a `docker-compose.debug.yml` override instead, reached through `./scripts/up.sh --debug` or `up.ps1 -PublishInternalPorts`.
+
+Worse, the first working version of it was useless for its stated purpose. Publishing port 5301 gave **404** on `/openapi/v1.json`, because the BFF maps that document in Development only and the stack runs as Production — and regenerating the API client is the whole reason to want the port. The override now also switches the BFF's environment, which in turn required restoring the compose hostnames its Development configuration points at `localhost`. Verified after the fix: the document returns 200 **and** `/bff/products` still returns 200, which is the pair that matters — an override that served the document but broke every call would have been worse than none.
+
+`-Debug` also had to become `-PublishInternalPorts` in PowerShell: `Debug` is a common parameter, so declaring it under `CmdletBinding` is a collision rather than an override.
+
+Measured figures now in `docs/local-development.md`: ~60 s warm start, ~85 s after a reset, ~10 minutes when frontend source changed, ~1.3 GB idle and ~2.2 GB peak. The 6 GB floor the script enforces is deliberately above the running cost, because the command always builds and BuildKit needs the headroom. **One gap stated rather than papered over**: these were taken with base images already pulled, so a genuinely clean machine also pays roughly 2 GB of image downloads that were never measured here.
 
 ---
 

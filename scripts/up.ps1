@@ -18,7 +18,10 @@
 param(
     # Publishes the internal service ports as well, for regenerating the API client or inspecting
     # the broker. See contracts/stack-interface.md.
-    [switch]$Debug
+    #
+    # Not named -Debug: that is one of PowerShell's common parameters, and reusing the name in a
+    # CmdletBinding function is a conflict rather than an override.
+    [switch]$PublishInternalPorts
 )
 
 $ErrorActionPreference = 'Stop'
@@ -60,7 +63,11 @@ if ($daemonMemoryGb -lt $requiredMemoryGb) {
 Push-Location $repositoryRoot
 try {
     $composeArgs = @('compose')
-    if ($Debug) { $composeArgs += @('--profile', 'debug') }
+    if ($PublishInternalPorts) {
+        # An override file, not a profile: a profile decides whether a service starts, and cannot
+        # add ports to one that is starting anyway. See docker-compose.debug.yml.
+        $composeArgs += @('-f', 'docker-compose.yml', '-f', 'docker-compose.debug.yml')
+    }
 
     # --build so a source change is running code rather than a stale image (FR-009).
     # --wait so this returns only once every component is healthy, and non-zero if one is not

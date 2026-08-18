@@ -81,5 +81,12 @@ mobile-web arrives.
 
 ## Running the whole flow
 
-See [`specs/004-minimal-shopping-spa/quickstart.md`](../specs/004-minimal-shopping-spa/quickstart.md)
-for the full walkthrough: databases, migrations, the four services, the gateway, and the storefront.
+The short way is [`docs/local-development.md`](../docs/local-development.md): one command brings up
+the whole platform, storefront included, with nothing installed but Docker. Use that when you want
+the flow working rather than the frontend under your fingers.
+
+Use `pnpm dev` here instead when you are changing the storefront — the dev server gives you hot
+reload against a backend you started separately, which the containerised storefront cannot.
+
+For the step-by-step version, running each piece by hand, see
+[`specs/004-minimal-shopping-spa/quickstart.md`](../specs/004-minimal-shopping-spa/quickstart.md).

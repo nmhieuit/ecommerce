@@ -159,6 +159,24 @@ visible, reviewable change — alongside the justification in `plan.md`. A confi
 let the platform default erode one quiet commit at a time, which is the failure mode this check
 exists to prevent.
 
+## The one-command stack shares a database server. Deployment does not
+
+[`docs/local-development.md`](../docs/local-development.md) brings the whole platform up with one
+command, and to keep the memory floor reachable it puts all four service databases on **one** SQL
+Server container.
+
+Each service still gets its own database and its own connection string, and the scanner above still
+fails the build if any committed configuration names another service's database — so the rule this
+page describes is intact. What is not intact locally is the *host* separation: with one server,
+isolation rests on database names and that scan rather than on separate hosts and ports.
+
+**That is a local convenience, not the deployed topology.** Deployed environments give each service
+its own database server. Do not read the consolidation as permission to share a database between
+services.
+
+`docker-compose.deps.yml` keeps the faithful per-service-server arrangement for when you want to
+demonstrate it, and remains the way to prove a single service runs without its neighbours.
+
 ## Known local-development caveat
 
 `docker-compose.deps.yml` gives all four local database containers the same `MSSQL_SA_PASSWORD`

@@ -1,0 +1,60 @@
+# Publishes the stack's internal ports, for the times you need to reach past the front door.
+#
+#   ./scripts/up.sh --debug        (or ./scripts/up.ps1 -Debug)
+#
+# An override file rather than a Compose profile, because a profile decides *whether a service
+# starts* — it cannot add ports to a service that is starting anyway. The plan called this a
+# profile; this is the mechanism that actually does the job.
+#
+# Everything here is deliberately NOT in docker-compose.yml. Spec 004's SC-010 says the storefront
+# reaches the platform's single entry point and nothing else, and leaving these ports unpublished
+# by default makes that a property of the environment rather than an assertion: with only the
+# gateway exposed, a contributor cannot call a service directly because there is no address to call
+# (005-one-command-local-run research.md Decision 8).
+#
+# The main reason you will want this: regenerating the API client needs the BFF's OpenAPI document,
+# which it publishes in Development only, at http://localhost:5301/openapi/v1.json.
+
+name: ecomerce-stack
+
+services:
+  bff-api:
+    ports:
+      - "5301:8080"
+    environment:
+      # Publishing the port alone does not give you the OpenAPI document: the BFF maps it in
+      # Development only, so against the default stack (which runs as Production) 5301/openapi/v1.json
+      # answers 404 and the whole point of exposing the port is lost.
+      #
+      # Switching to Development brings a trap with it. appsettings.Development.json points the
+      # downstream clients at localhost:5088, :5188 and friends — addresses that mean "this
+      # container" once inside the network. So the compose hostnames have to be restored explicitly,
+      # or the BFF starts, serves its document, and fails every actual call.
+      ASPNETCORE_ENVIRONMENT: Development
+      Services__ProductsApi__BaseUrl: http://products-api:8080
+      Services__BasketsApi__BaseUrl: http://baskets-api:8080
+      Services__OrdersApi__BaseUrl: http://orders-api:8080
+      Services__PartiesApi__BaseUrl: http://parties-api:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+
+  products-api:
+    ports:
+      - "5088:8080"
+
+  baskets-api:
+    ports:
+      - "5188:8080"
+
+  orders-api:
+    ports:
+      - "5041:8080"
+
+  parties-api:
+    ports:
+      - "5204:8080"
+
+  rabbitmq:
+    ports:
+      # The management interface. Credentials are the image defaults, guest/guest, which is exactly
+      # why this is not published by default.
+      - "15672:15672"

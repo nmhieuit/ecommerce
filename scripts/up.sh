@@ -38,7 +38,9 @@ cd "$repository_root"
 
 compose_args=(compose)
 if [ "${1:-}" = "--debug" ]; then
-    compose_args+=(--profile debug)
+    # An override file, not a profile: a profile decides whether a service starts, and cannot add
+    # ports to one that is starting anyway. See docker-compose.debug.yml.
+    compose_args+=(-f docker-compose.yml -f docker-compose.debug.yml)
 fi
 
 # --build so a source change is running code rather than a stale image (FR-009).

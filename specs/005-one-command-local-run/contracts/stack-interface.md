@@ -42,12 +42,21 @@ are reachable only on the Compose network. A contributor cannot call the BFF or 
 directly, because there is no address to call — which is spec 004's SC-010 enforced by the
 environment rather than asserted by a test (research Decision 8).
 
-### The `debug` profile
+### Reaching past the front door
 
-`docker compose --profile debug up` additionally publishes the internal services on their existing
-development ports (BFF 5301, products 5088, baskets 5188, orders 5041, parties 5204), plus the
-broker's management interface. Needed when regenerating the API client from the BFF's OpenAPI
-document while the stack — rather than the per-service workflow — is what is running.
+`./scripts/up.sh --debug` (or `up.ps1 -PublishInternalPorts`) additionally publishes the internal
+services on their existing development ports — BFF 5301, products 5088, baskets 5188, orders 5041,
+parties 5204 — plus the broker's management interface on 15672.
+
+**An override file, not a Compose profile.** The plan called this a profile; a profile decides
+whether a service *starts*, and cannot add ports to one that is starting anyway. It layers
+`docker-compose.debug.yml` over the default file instead.
+
+It also switches the BFF into its Development environment, because that is the only way it maps the
+OpenAPI document — publishing the port alone answers 404 against the default stack, which runs as
+Production, and regenerating the API client is the main reason to want the port. Doing that requires
+restoring the compose hostnames its Development configuration would otherwise point at `localhost`,
+which the override file does explicitly.
 
 ## Configuration
 

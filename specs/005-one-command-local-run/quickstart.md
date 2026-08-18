@@ -136,13 +136,19 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:5300/bff/products   # 
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:5301/bff/products   # expect refused
 ```
 
-**Expect**: the gateway answers and the BFF is unreachable from the host. Then confirm the `debug`
-profile publishes it when asked:
+**Expect**: the gateway answers and the BFF is unreachable from the host. Then confirm the debug
+override publishes it when asked:
 
 ```bash
-docker compose --profile debug up -d
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:5301/bff/products   # expect 200
+./scripts/up.sh --debug                                                          # or up.ps1 -PublishInternalPorts
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:5301/bff/products      # expect 200
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:5301/openapi/v1.json   # expect 200
 ```
+
+The second call is the one that matters: regenerating the API client is the main reason to publish
+the BFF, and that document is mapped in Development only — so the override switches the BFF's
+environment as well as publishing its port. A Compose profile could not have done this: a profile
+decides whether a service starts, not how it is configured.
 
 ---
 
