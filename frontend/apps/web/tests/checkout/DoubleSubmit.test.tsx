@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
@@ -61,6 +61,42 @@ describe('CheckoutButton double submission', () => {
     release?.();
 
     await waitFor(() => expect(attempts).toHaveLength(1));
+  });
+
+  /**
+   * The clicks land in the same tick, before React has re-rendered with the pending state.
+   *
+   * This is not a hypothetical. Running 004's walkthrough against the containerized stack produced
+   * **two orders six milliseconds apart** for one double-click, which is exactly what FR-016
+   * forbids. The dev-server run had passed, because its timing let the re-render win the race — so
+   * the guard was never really tested, only the timing was.
+   *
+   * `fireEvent` rather than `userEvent` on purpose: userEvent awaits between its steps, which is
+   * what let the original test miss this.
+   */
+  it('issues one request even when both clicks land before React re-renders', async () => {
+    const attempts: string[] = [];
+
+    server.use(
+      http.post(`${GATEWAY_ORIGIN}/bff/checkout`, ({ request }) => {
+        attempts.push(request.url);
+        return HttpResponse.json(
+          { id: 'aaaaaaaa-0000-4000-8000-000000000001', placedAtUtc: '2026-08-16T12:00:00Z', total: 12.5 },
+          { status: 201 },
+        );
+      }),
+    );
+
+    renderWithQueryClient(<CheckoutButton itemCount={1} onCheckedOut={() => {}} />);
+
+    const button = screen.getByRole('button', { name: /check out/i });
+
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => expect(attempts.length).toBeGreaterThan(0));
+
+    expect(attempts).toHaveLength(1);
   });
 
   it('reports the created order exactly once', async () => {

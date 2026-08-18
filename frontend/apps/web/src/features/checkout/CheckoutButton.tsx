@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getGetCurrentBasketQueryKey, useCheckout } from '@ecommerce/api-client';
 import { ErrorState } from '@/shared/ErrorState';
@@ -22,8 +23,23 @@ export function CheckoutButton({ itemCount, onCheckedOut }: CheckoutButtonProps)
   const queryClient = useQueryClient();
   const isEmpty = itemCount === 0;
 
+  // Set synchronously in the click handler, and the reason it exists rather than relying on
+  // `isPending` is a defect that reached a running stack: two clicks in the same tick both call
+  // mutate() before React has re-rendered with the pending state, and running 004's walkthrough
+  // against containers produced two orders six milliseconds apart. `disabled` cannot close that
+  // race — it only takes effect on the next render. A ref is checked and set before either click
+  // can return.
+  //
+  // The server-side guard does not help here either: both requests read a non-empty basket before
+  // either had cleared it.
+  const isCheckingOut = useRef(false);
+
   const { mutate, isPending, isError } = useCheckout({
     mutation: {
+      onSettled: () => {
+        // Released however it ended, so a failed checkout can be retried (US3 scenario 4).
+        isCheckingOut.current = false;
+      },
       onSuccess: (result) => {
         // Spec FR-010: the basket is empty afterwards. Invalidating rather than assuming keeps the
         // screen showing what the server holds.
@@ -42,8 +58,17 @@ export function CheckoutButton({ itemCount, onCheckedOut }: CheckoutButtonProps)
         type="button"
         // Disabled for an empty basket, so no request is issued at all — spec SC-004 counts
         // requests, not rejected orders.
+        // `disabled` is still here: it is what a shopper sees and what assistive technology
+        // announces. The ref below is what actually makes FR-016 true.
         disabled={isEmpty || isPending}
-        onClick={() => mutate()}
+        onClick={() => {
+          if (isEmpty || isCheckingOut.current) {
+            return;
+          }
+
+          isCheckingOut.current = true;
+          mutate();
+        }}
         className="mt-6 rounded border border-current/30 px-4 py-2 disabled:opacity-50"
       >
         {isPending ? 'Placing your order…' : 'Check out'}

@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -122,11 +123,69 @@ public class StorefrontCorsTests
         Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
     }
 
-    private static WebApplicationFactory<Program> CreateGateway(string origin = StorefrontOrigin) =>
-        new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+    /// <summary>
+    /// The storefront is served two ways, and both are real: a Vite dev server on 5173 while
+    /// developing, and a container on 4173 in the one-command stack
+    /// (005-one-command-local-run research.md Decision 7). The allow-list has to admit both, so the
+    /// policy must handle more than a single origin.
+    /// </summary>
+    [Theory]
+    [InlineData("http://localhost:5173")]
+    [InlineData("http://localhost:4173")]
+    public async Task EachConfiguredOrigin_IsAdmitted(string origin)
+    {
+        await using var gateway = CreateGateway("http://localhost:5173", "http://localhost:4173");
+        var client = gateway.CreateClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/bff/products");
+        request.Headers.Add("Origin", origin);
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(origin, Assert.Single(response.Headers.GetValues("Access-Control-Allow-Origin")));
+    }
+
+    /// <summary>
+    /// The shipped Development configuration, not an in-memory substitute.
+    /// </summary>
+    /// <remarks>
+    /// Every other test here supplies its own origins, which proves the policy works but says
+    /// nothing about whether the repository is actually configured for the storefronts it ships.
+    /// That gap is how 004 shipped a gateway with no CORS at all — the tests were right and the
+    /// configuration was missing. This reads the real file.
+    /// </remarks>
+    [Theory]
+    [InlineData("http://localhost:5173")]
+    [InlineData("http://localhost:4173")]
+    public async Task TheDevelopmentConfiguration_Admits_BothStorefrontOrigins(string origin)
+    {
+        await using var gateway = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+
+        var client = gateway.CreateClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/bff/products");
+        request.Headers.Add("Origin", origin);
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+
+        var response = await client.SendAsync(request);
+
+        Assert.True(
+            response.Headers.Contains("Access-Control-Allow-Origin"),
+            $"'{origin}' is not in the gateway's configured allow-list, so a storefront served there "
+            + "would be blocked by the browser before any request left it.");
+    }
+
+    private static WebApplicationFactory<Program> CreateGateway(params string[] origins)
+    {
+        var configured = origins.Length == 0 ? [StorefrontOrigin] : origins;
+
+        return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
-                new Dictionary<string, string?>
-                {
-                    ["Cors:AllowedOrigins:0"] = origin,
-                })));
+                configured
+                    .Select((origin, index) =>
+                        new KeyValuePair<string, string?>($"Cors:AllowedOrigins:{index}", origin))
+                    .ToDictionary())));
+    }
 }

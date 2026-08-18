@@ -247,6 +247,13 @@ services:
       dockerfile: services/gateway/src/Gateway.Api/Dockerfile
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      # The storefront's published origin must be admitted or the browser blocks every call before
+      # it leaves — the defect 004 shipped and only its end-to-end walkthrough caught.
+      #
+      # Set here rather than inherited from appsettings.Development.json, because these containers
+      # run as Production and never read that file. Configuration a stack depends on has to be in
+      # the stack.
+      Cors__AllowedOrigins__0: http://localhost:4173
     networks: [backbone]
     ports:
       # One of only two published ports. Everything else is reachable on the network alone, so the

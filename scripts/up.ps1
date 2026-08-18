@@ -77,6 +77,29 @@ try {
         exit $LASTEXITCODE
     }
 
+    # Health checks say a service can reach its database. They do not say the platform can serve a
+    # request, and on a cold start those are different claims: the first call through any path pays
+    # JIT compilation, EF model building, and connection-pool creation, which measurably exceeds the
+    # BFF's 3-second downstream budget. Observed before this existed: the first checkout after a
+    # fresh start failed with `Downstream call to BasketsApi failed with 504`, from a stack every
+    # gate called healthy.
+    #
+    # The ticket's second acceptance criterion is that opening the SPA gives a working app with no
+    # further steps, so paying that cost here is the difference between "the containers started" and
+    # "the platform works".
+    Write-Host "Warming the request path..." -ForegroundColor Cyan
+    foreach ($path in @('/bff/products', '/bff/basket', '/bff/orders/00000000-0000-4000-8000-000000000000')) {
+        # Each primes a different service's EF model and connection pool. Failures are ignored: the
+        # orders probe is expected to 404, and a warm-up that cannot warm is not a reason to refuse
+        # a stack whose health gates all passed.
+        try {
+            Invoke-WebRequest -Uri "http://localhost:5300$path" -TimeoutSec 30 -UseBasicParsing | Out-Null
+        }
+        catch {
+            # Deliberately swallowed — see above.
+        }
+    }
+
     Write-Host ""
     Write-Host "The platform is up." -ForegroundColor Green
     Write-Host "  Storefront   http://localhost:4173"

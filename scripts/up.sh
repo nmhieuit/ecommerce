@@ -53,6 +53,26 @@ if ! docker "${compose_args[@]}"; then
     exit 1
 fi
 
+# --- warm the request path ----------------------------------------------------------------------
+#
+# Health checks say a service can reach its database. They do not say the platform can serve a
+# request, and on a cold start those are different claims: the first call through any path pays JIT
+# compilation, EF model building, and connection-pool creation, which measurably exceeds the BFF's
+# 3-second downstream budget. Observed before this existed: the first checkout after a fresh start
+# failed with `Downstream call to BasketsApi failed with 504`, from a stack every gate called
+# healthy.
+#
+# The ticket's second acceptance criterion is that opening the SPA gives a working app with no
+# further steps, so paying that cost here — once, in the command that claims the platform is up —
+# is the difference between "the containers started" and "the platform works".
+printf '\033[36mWarming the request path…\033[0m\n'
+for path in /bff/products /bff/basket "/bff/orders/00000000-0000-4000-8000-000000000000"; do
+    # Each primes a different service's EF model and connection pool. Failures are ignored: the
+    # orders probe is expected to 404, and a warm-up that cannot warm is not a reason to refuse a
+    # stack whose health gates all passed.
+    curl -fsS -m 30 -o /dev/null "http://localhost:5300${path}" 2>/dev/null || true
+done
+
 printf '\n\033[32mThe platform is up.\033[0m\n'
 printf '  Storefront   http://localhost:4173\n'
 printf '  Gateway      http://localhost:5300\n\n'

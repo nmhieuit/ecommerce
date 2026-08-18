@@ -145,16 +145,30 @@ One design correction during implementation: the domain services' environment bl
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Extend `services/gateway/tests/Gateway.Api.IntegrationTests/StorefrontCorsTests.cs` to cover the containerized storefront's origin — the suite that exists because 004's walkthrough found the storefront blocked in a real browser
-- [ ] T024 [P] [US2] Confirm 004's walkthrough needs no code change to target containers: `frontend/apps/web/e2e/walkthrough.spec.ts` already reads `STOREFRONT_URL` and `GATEWAY_ORIGIN` from the environment ([research.md](./research.md) Decision 12)
+- [X] T023 [P] [US2] Extend `services/gateway/tests/Gateway.Api.IntegrationTests/StorefrontCorsTests.cs` to cover the containerized storefront's origin — the suite that exists because 004's walkthrough found the storefront blocked in a real browser
+- [X] T024 [P] [US2] Confirm 004's walkthrough needs no code change to target containers: `frontend/apps/web/e2e/walkthrough.spec.ts` already reads `STOREFRONT_URL` and `GATEWAY_ORIGIN` from the environment ([research.md](./research.md) Decision 12)
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Pass the backend origin to the storefront image as a build argument in `docker-compose.yml` — it must be the host-reachable `http://localhost:5300`, **not** the compose hostname, because the browser runs on the host ([research.md](./research.md) Decision 6)
-- [ ] T026 [US2] Add the storefront's published origin to `Cors:AllowedOrigins` in `services/gateway/src/Gateway.Api/appsettings.Development.json`, alongside the existing dev-server origin
-- [ ] T027 [US2] Verify quickstart Scenario 2 in `specs/005-one-command-local-run/quickstart.md` — three seeded products with no seeding step, the basket totalling $59.25, **a reload on `/basket` that loads rather than 404s**, and checkout producing a confirmation
-- [ ] T028 [US2] Run 004's walkthrough against the stack from `frontend/apps/web` with `STOREFRONT_URL=http://localhost:4173` and `GATEWAY_ORIGIN=http://localhost:5300` — the acceptance test for this story
-- [ ] T029 [US2] Verify quickstart Scenario 8 — the gateway answers from the host and the BFF is refused, making spec 004's single-entry-point rule a property of the environment rather than an assertion
+- [X] T025 [US2] Pass the backend origin to the storefront image as a build argument in `docker-compose.yml` — it must be the host-reachable `http://localhost:5300`, **not** the compose hostname, because the browser runs on the host ([research.md](./research.md) Decision 6)
+- [X] T026 [US2] Add the storefront's published origin to `Cors:AllowedOrigins` in `services/gateway/src/Gateway.Api/appsettings.Development.json`, alongside the existing dev-server origin
+- [X] T027 [US2] Verify quickstart Scenario 2 in `specs/005-one-command-local-run/quickstart.md` — three seeded products with no seeding step, the basket totalling $59.25, **a reload on `/basket` that loads rather than 404s**, and checkout producing a confirmation
+- [X] T028 [US2] Run 004's walkthrough against the stack from `frontend/apps/web` with `STOREFRONT_URL=http://localhost:4173` and `GATEWAY_ORIGIN=http://localhost:5300` — the acceptance test for this story
+- [X] T029 [US2] Verify quickstart Scenario 8 — the gateway answers from the host and the BFF is refused, making spec 004's single-entry-point rule a property of the environment rather than an assertion
+
+**Phase 4 completed 2026-08-17.** 004's walkthrough passes **4/4 against the containerized stack** from a freshly reset state, in 9.4 seconds. Exactly three orders were created — `59.25`, `12.50`, `12.50`, one per checkout. Gateway integration tests 26/26; frontend 46/46.
+
+**The acceptance test found a real FR-016 violation that the dev-server run had been hiding.** The double-checkout test failed against containers, and the database showed why: **two orders six milliseconds apart** for one double-click. The cause is that both clicks land in the same tick and both call `mutate()` before React re-renders with the pending state — `disabled` only takes effect on the next render, so it cannot close that race. The server-side guard does not help either, because both requests read a non-empty basket before either had cleared it.
+
+The dev-server run passed purely because its timing let the re-render win. **The guard was never really tested; only the timing was.** Fixed with a `useRef` flag set synchronously in the click handler, and `tests/checkout/DoubleSubmit.test.tsx` gained a `fireEvent`-based test that reproduces the same-tick case — red before the fix, green after.
+
+**A second finding changed what "up" means.** After a reset, the first checkout failed with `Downstream call to BasketsApi failed with 504`, from a stack whose every health gate had passed. Health checks say a service can reach its database; they do not say the platform can serve a request. On a cold start the first call through any path pays JIT compilation, EF model building, and connection-pool creation, which exceeds the BFF's 3-second downstream budget — a budget tuned in 002 for localhost latency.
+
+Rather than loosen a budget the constitution ties to SLOs, the up scripts now warm the request path — one call each to products, baskets, and orders — before reporting the platform up. That is the difference between "the containers started" and "the platform works", which is what the ticket's second acceptance criterion actually asks for. Cold start including warm-up: **87 seconds**.
+
+One test-hygiene fix: the keyboard walkthrough tabbed toward the checkout button while the basket was still loading, and a disabled control is not in the tab order. It now waits for the button to be enabled first — a latency difference between environments, not a behaviour difference.
+
+Also verified: preflight from `http://localhost:4173` is admitted with credentials, and only 5300 and 4173 answer from the host.
 
 **Checkpoint**: the flow works through containers, verified by the same suite that verifies it outside them.
 

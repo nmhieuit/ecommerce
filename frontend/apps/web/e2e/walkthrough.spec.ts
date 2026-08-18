@@ -197,6 +197,14 @@ test.describe('shopping walkthrough', () => {
     await expect(page.getByRole('heading', { name: 'Basket' })).toBeVisible();
 
     const checkout = page.getByRole('button', { name: 'Check out' });
+
+    // Wait for the basket to actually load before tabbing. A disabled control is not in the tab
+    // order, so tabbing while the basket is still fetching walks past it forever — and the button
+    // is correctly disabled until the basket is known to hold something. Against a local dev server
+    // the fetch beat the tabbing; against containers it does not, which is a difference in latency
+    // rather than in behaviour.
+    await expect(checkout).toBeEnabled();
+
     await focusByTabbing(page, checkout);
     await expect(checkout).toBeFocused();
 
