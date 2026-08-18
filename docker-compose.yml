@@ -39,9 +39,19 @@ services:
       - sqlserver-data:/var/opt/mssql
     networks: [backbone]
     healthcheck:
+      # Not `SELECT 1`. That succeeds as soon as *master* is up, while user databases are still
+      # recovering after a restart — and a migrator started in that window sees its database as
+      # absent, tries to create it, and fails with "Database 'orders' already exists" (error 1801).
+      # Ten stop/start cycles turned that into four failed restarts; first runs always passed,
+      # because a fresh volume has nothing to recover.
+      #
+      # This asks the question that actually matters: is every database online? On a first run only
+      # the system databases exist and all are online, so it passes immediately.
+      #
       # $$ escapes to a literal $ so the password is expanded by the shell inside the container
-      # rather than by Compose, keeping it out of `docker inspect` output.
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      # rather than by Compose, keeping it out of `docker inspect` output. -b makes sqlcmd exit
+      # non-zero when the RAISERROR fires.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q \"SET NOCOUNT ON; IF EXISTS (SELECT 1 FROM sys.databases WHERE state_desc <> 'ONLINE') RAISERROR('databases still recovering', 16, 1);\" || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -106,7 +116,18 @@ services:
   #
   # Each migrator is given ONLY its own database's connection string. No service's configuration
   # names another service's database (spec FR-018, constitution Principle I).
+  #
+  # `restart: on-failure` is load-bearing, not belt-and-braces. Even with the health gate waiting for
+  # every database to report ONLINE, a migrator can still lose a race on restart: EF decides whether
+  # a database exists by opening a connection to it, and that can fail transiently while SQL Server
+  # finishes recovery — after which EF tries to CREATE a database that is already there and exits
+  # with error 1801. Ten stop/start cycles showed this once even with the improved gate.
+  #
+  # Applying migrations is idempotent, so re-running is the correct response to a transient failure
+  # rather than a way of hiding one. This is the same reason Kubernetes init containers use
+  # restartPolicy: OnFailure.
   products-migrate:
+    restart: on-failure:3
     build: &products-build
       context: .
       dockerfile: services/products/src/Products.Api/Dockerfile
@@ -119,6 +140,7 @@ services:
         condition: service_healthy
 
   baskets-migrate:
+    restart: on-failure:3
     build: &baskets-build
       context: .
       dockerfile: services/baskets/src/Baskets.Api/Dockerfile
@@ -131,6 +153,7 @@ services:
         condition: service_healthy
 
   orders-migrate:
+    restart: on-failure:3
     build: &orders-build
       context: .
       dockerfile: services/orders/src/Orders.Api/Dockerfile
@@ -143,6 +166,7 @@ services:
         condition: service_healthy
 
   parties-migrate:
+    restart: on-failure:3
     build: &parties-build
       context: .
       dockerfile: services/parties/src/Parties.Api/Dockerfile

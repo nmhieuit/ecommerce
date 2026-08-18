@@ -71,15 +71,22 @@ docker compose ps
 ## Scenario 3 — Stop and restart cleanly (spec US3, SC-004)
 
 ```bash
-./scripts/down.ps1
-docker ps -a --filter "name=ecomerce"      # expect: nothing
+./scripts/down.ps1                              # or ./scripts/down.sh
+docker ps -a --filter "name=ecomerce-stack"     # expect: nothing
 ```
 
-1. **Expect**: no containers remain, and ports 4173 and 5300 are free.
-2. Start again, and open the storefront.
-3. **Expect**: the order placed in Scenario 2 is still readable through the gateway, and the basket
+Filter on `ecomerce-stack`, not `ecomerce`: the stack runs under its own Compose project name so
+that stopping it cannot tear down `docker-compose.deps.yml`'s containers, which are named
+`ecomerce-*`. A broader filter would report those as leftovers of this stack, which they are not.
+
+1. **Expect**: zero containers under the `ecomerce-stack` project, and ports 4173 and 5300 free.
+2. **Expect**: both volumes still present — `docker volume ls` shows `ecomerce-stack_sqlserver-data`
+   and `ecomerce-stack_rabbitmq-data`. Stopping keeps data; only the reset command discards it
+   (FR-007, FR-008).
+3. Start again, and open the storefront.
+4. **Expect**: the order placed in Scenario 2 is still readable through the gateway, and the basket
    state is as you left it (FR-007).
-4. Repeat the stop/start cycle **10 times**. **Expect**: no orphaned containers and no port
+5. Repeat the stop/start cycle **10 times**. **Expect**: no orphaned containers and no port
    conflicts on any cycle (SC-004).
 
 ## Scenario 4 — Reset returns to a first run (spec FR-008, SC-008)
