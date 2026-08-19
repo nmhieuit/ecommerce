@@ -9,13 +9,19 @@ namespace Orders.Api.UnitTests;
 /// </summary>
 public class OrderTotalTests
 {
+    /// <summary>
+    /// Incidental to every assertion in this class - the tenant is required to build an order
+    /// (006 FR-005) but none of these tests are about it. <see cref="OrderTenantTests"/> is.
+    /// </summary>
+    private const string Tenant = "contoso";
+
     private static readonly Guid Notebook = new("9f8d6b1e-0001-4000-8000-000000000001");
     private static readonly Guid Apron = new("9f8d6b1e-0001-4000-8000-000000000003");
 
     [Fact]
     public void PlaceFrom_MultipliesQuantityByUnitPrice()
     {
-        var order = Order.PlaceFrom([new OrderLine(Notebook, 2, 12.50m)], placedAtUtc: Now);
+        var order = Order.PlaceFrom([new OrderLine(Notebook, 2, 12.50m)], placedAtUtc: Now, tenantId: Tenant);
 
         Assert.Equal(25.00m, order.Total);
     }
@@ -25,7 +31,8 @@ public class OrderTotalTests
     {
         var order = Order.PlaceFrom(
             [new OrderLine(Notebook, 2, 12.50m), new OrderLine(Apron, 1, 34.25m)],
-            placedAtUtc: Now);
+            placedAtUtc: Now,
+            tenantId: Tenant);
 
         // The figure quickstart.md Scenario 5 quotes: two notebooks and an apron.
         Assert.Equal(59.25m, order.Total);
@@ -36,7 +43,7 @@ public class OrderTotalTests
     {
         var placedAt = new DateTime(2026, 8, 16, 9, 30, 0, DateTimeKind.Utc);
 
-        var order = Order.PlaceFrom([new OrderLine(Notebook, 1, 12.50m)], placedAt);
+        var order = Order.PlaceFrom([new OrderLine(Notebook, 1, 12.50m)], placedAt, Tenant);
 
         Assert.Equal(placedAt, order.PlacedAtUtc);
         Assert.NotEqual(Guid.Empty, order.Id);
@@ -49,7 +56,7 @@ public class OrderTotalTests
     [Fact]
     public void PlaceFrom_Rejects_AnEmptyLineSet()
     {
-        Assert.Throws<ArgumentException>(() => Order.PlaceFrom([], Now));
+        Assert.Throws<ArgumentException>(() => Order.PlaceFrom([], Now, Tenant));
     }
 
     [Theory]
@@ -58,14 +65,14 @@ public class OrderTotalTests
     public void PlaceFrom_Rejects_ALineWithANonPositiveQuantity(int quantity)
     {
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => Order.PlaceFrom([new OrderLine(Notebook, quantity, 12.50m)], Now));
+            () => Order.PlaceFrom([new OrderLine(Notebook, quantity, 12.50m)], Now, Tenant));
     }
 
     [Fact]
     public void PlaceFrom_Rejects_ALineWithANegativePrice()
     {
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => Order.PlaceFrom([new OrderLine(Notebook, 1, -0.01m)], Now));
+            () => Order.PlaceFrom([new OrderLine(Notebook, 1, -0.01m)], Now, Tenant));
     }
 
     /// <summary>
@@ -78,7 +85,8 @@ public class OrderTotalTests
     {
         var order = Order.PlaceFrom(
             [new OrderLine(Notebook, 1, 0.10m), new OrderLine(Apron, 1, 0.20m)],
-            Now);
+            Now,
+            Tenant);
 
         Assert.Equal(0.30m, order.Total);
     }

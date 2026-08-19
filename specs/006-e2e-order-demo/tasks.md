@@ -106,28 +106,44 @@ work.
 
 **Contract before code** (Principle II): T018–T019 precede everything else in this phase.
 
-- [ ] T018 [P] [US2] Add `tenantId` to the `Order` schema in `specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml`, matching `specs/006-e2e-order-demo/contracts/orders-openapi.yaml` — required, `maxLength: 128`, with the note that the column is nullable for one release
-- [ ] T019 [P] [US2] Make the same addition to `specs/004-minimal-shopping-spa/contracts/downstream-openapi.yaml`. All three documents describe the same downstream `Order`; two agreeing and one disagreeing is worse than the original problem (plan.md, Post-Design re-check)
+- [X] T018 [P] [US2] Add `tenantId` to the `Order` schema in `specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml`, matching `specs/006-e2e-order-demo/contracts/orders-openapi.yaml` — required, `maxLength: 128`, with the note that the column is nullable for one release
+- [X] T019 [P] [US2] Make the same addition to `specs/004-minimal-shopping-spa/contracts/downstream-openapi.yaml`. All three documents describe the same downstream `Order`; two agreeing and one disagreeing is worse than the original problem (plan.md, Post-Design re-check)
 
 **Tests first** — T020–T024 must fail before T025–T028 exist.
 
-- [ ] T020 [P] [US2] Create `services/orders/tests/Orders.Api.UnitTests/OrderTenantTests.cs`: `Order.PlaceFrom` throws `ArgumentException` for null, empty, and whitespace tenant, and carries the tenant through on the happy path
-- [ ] T021 [US2] Update `services/orders/tests/Orders.Api.UnitTests/OrderTotalTests.cs` for `PlaceFrom`'s new tenant parameter, leaving every existing total assertion intact
-- [ ] T022 [US2] Extend `services/orders/tests/Orders.Api.IntegrationTests/PlaceOrderTests.cs`: an order placed with a resolved tenant persists that tenant on the row, and it equals the tenant the request resolved (FR-005)
-- [ ] T023 [US2] Extend `services/orders/tests/Orders.Api.IntegrationTests/OrderEndpointsTests.cs`: `GET /orders/{id}` returns `tenantId`, non-empty and matching (FR-005a)
-- [ ] T024 [US2] Extend `services/orders/tests/Orders.Api.IntegrationTests/TenantEnforcementTests.cs`: a `POST /orders` reaching the service with no resolved tenant creates **no** row — assert the count is unchanged, not merely that the response failed (FR-006, US2 scenario 2)
+- [X] T020 [P] [US2] Create `services/orders/tests/Orders.Api.UnitTests/OrderTenantTests.cs`: `Order.PlaceFrom` throws `ArgumentException` for null, empty, and whitespace tenant, and carries the tenant through on the happy path
+- [X] T021 [US2] Update `services/orders/tests/Orders.Api.UnitTests/OrderTotalTests.cs` for `PlaceFrom`'s new tenant parameter, leaving every existing total assertion intact
+- [X] T022 [US2] Extend `services/orders/tests/Orders.Api.IntegrationTests/PlaceOrderTests.cs`: an order placed with a resolved tenant persists that tenant on the row, and it equals the tenant the request resolved (FR-005)
+- [X] T023 [US2] Extend `services/orders/tests/Orders.Api.IntegrationTests/OrderEndpointsTests.cs`: `GET /orders/{id}` returns `tenantId`, non-empty and matching (FR-005a)
+- [X] T024 [US2] Extend `services/orders/tests/Orders.Api.IntegrationTests/TenantEnforcementTests.cs`: a `POST /orders` reaching the service with no resolved tenant creates **no** row — assert the count is unchanged, not merely that the response failed (FR-006, US2 scenario 2)
 
 **Then the implementation.**
 
-- [ ] T025 [US2] Add `TenantId` to `services/orders/src/Orders.Api/Data/Order.cs` and a `tenantId` parameter to `PlaceFrom`, rejecting blank with `ArgumentException`. Document in the remarks that the value comes from the resolved context and never from the request body (research Decision 2)
-- [ ] T026 [US2] Configure the column in `services/orders/src/Orders.Api/Data/OrdersDbContext.cs` — max length 128, nullable — with a comment naming this the expand half of expand/contract (research Decision 3)
-- [ ] T027 [US2] Generate the EF Core migration `AddOrderTenantId` into `services/orders/src/Orders.Api/Migrations/`. Additive, nullable, no default, no backfill; verify the generated `Down` drops only the new column
-- [ ] T028 [US2] Update `services/orders/src/Orders.Api/Features/Orders/OrderEndpoints.cs`: inject `TenantContext` into the `POST /orders` handler and pass `RequireTenantId()` into `PlaceFrom`; add `TenantId` to `OrderResponse` and the `GET` projection. Do not add tenant to `PlaceOrderRequest`
-- [ ] T029 [US2] Confirm the BFF needs no change: run `services/bff/tests` and verify `OrderResource` deserializes the new field-bearing response unchanged, and that `/bff/orders/{id}` still returns the three-field client shape (research Decision 4)
-- [ ] T030 [US2] Add the verification step to `scripts/demo.ps1` and `scripts/demo.sh`: `GET http://localhost:5041/orders/{reference}` once without `X-Tenant-Id` (expect failure, no order) and once with `X-Tenant-Id: contoso` (expect 200 with `tenantId`), asserting the returned tenant is non-empty and equals `contoso` (FR-012, SC-004)
-- [ ] T031 [US2] Format the summary block exactly as `specs/006-e2e-order-demo/data-model.md` specifies under "Verification output shape", writing it to `artifacts/demo/verification.txt` and stdout. It is a contract because US2 scenario 3 requires a non-author to read it
+- [X] T025 [US2] Add `TenantId` to `services/orders/src/Orders.Api/Data/Order.cs` and a `tenantId` parameter to `PlaceFrom`, rejecting blank with `ArgumentException`. Document in the remarks that the value comes from the resolved context and never from the request body (research Decision 2)
+- [X] T026 [US2] Configure the column in `services/orders/src/Orders.Api/Data/OrdersDbContext.cs` — max length 128, nullable — with a comment naming this the expand half of expand/contract (research Decision 3)
+- [X] T027 [US2] Generate the EF Core migration `AddOrderTenantId` into `services/orders/src/Orders.Api/Migrations/`. Additive, nullable, no default, no backfill; verify the generated `Down` drops only the new column
+- [X] T028 [US2] Update `services/orders/src/Orders.Api/Features/Orders/OrderEndpoints.cs`: inject `TenantContext` into the `POST /orders` handler and pass `RequireTenantId()` into `PlaceFrom`; add `TenantId` to `OrderResponse` and the `GET` projection. Do not add tenant to `PlaceOrderRequest`
+- [X] T029 [US2] Confirm the BFF needs no change: run `services/bff/tests` and verify `OrderResource` deserializes the new field-bearing response unchanged, and that `/bff/orders/{id}` still returns the three-field client shape (research Decision 4)
+- [X] T030 [US2] Add the verification step to `scripts/demo.ps1` and `scripts/demo.sh`: `GET http://localhost:5041/orders/{reference}` once without `X-Tenant-Id` (expect failure, no order) and once with `X-Tenant-Id: contoso` (expect 200 with `tenantId`), asserting the returned tenant is non-empty and equals `contoso` (FR-012, SC-004)
+- [X] T031 [US2] Format the summary block exactly as `specs/006-e2e-order-demo/data-model.md` specifies under "Verification output shape", writing it to `artifacts/demo/verification.txt` and stdout. It is a contract because US2 scenario 3 requires a non-author to read it
 
-**Checkpoint**: tenant attribution is provable end to end, and the no-tenant refusal is demonstrated rather than asserted.
+**Checkpoint**: tenant attribution is provable end to end, and the no-tenant refusal is demonstrated rather than asserted. **Verified** on 2026-08-19.
+
+Red before green, as required: the five test tasks were written first and failed to compile (`'Order' does not contain a definition for 'TenantId'`, `No overload for method 'PlaceFrom' takes 3 arguments`). After the implementation: **15 unit tests, 17 orders integration tests against real SQL Server, all green**. The BFF's 54 tests pass **unchanged**, which is Decision 4 confirmed rather than assumed.
+
+Confirmed on the running stack - the additive field went exactly where it was meant to:
+
+```
+orders service : {"id":"...","placedAtUtc":"...","total":59.25,"tenantId":"contoso"}
+BFF (client)   : {"id":"...","placedAtUtc":"...","total":59.25}
+```
+
+**Two PowerShell defects, both found by running demo.ps1 rather than reading it.**
+
+1. Node wrote a harmless warning to stderr, and under `$ErrorActionPreference = 'Stop'` Windows PowerShell 5.1 turns native-command stderr into a *terminating* error. The demo aborted on a warning while the flow underneath it was passing. Fixed with an `Invoke-Native` helper that drops to `Continue` around native calls and treats the exit code as the signal.
+2. The first version of that helper `return`ed `$LASTEXITCODE` - but `& $Command` also writes the command's output to the pipeline, so the caller received the whole transcript *and* the code as one array. Comparing it to `0` reported failure on a passing run, then `exit` on an array exited 0 anyway: wrong twice, in opposite directions. Fixed by handing the code back through a script-scoped variable and letting output stream.
+
+Neither is reachable from `demo.sh`, so testing only the POSIX twin would have shipped both.
 
 ---
 

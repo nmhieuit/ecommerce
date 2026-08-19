@@ -30,6 +30,17 @@ public class OrdersDbContext(DbContextOptions<OrdersDbContext> options) : DbCont
             // Explicit precision: EF's default for decimal on SQL Server truncates to two decimal
             // places with a warning. Money is stated, not inferred.
             order.Property(entity => entity.Total).HasPrecision(18, 2);
+
+            // Nullable on purpose - the expand half of expand/contract (constitution Principle X,
+            // 006 research.md Decision 3). A NOT NULL column with no default would break the
+            // previously deployed version's inserts the moment both versions run side by side,
+            // which is exactly what that principle forbids. Every row this version writes carries a
+            // tenant regardless, because Order.PlaceFrom will not build one without it.
+            //
+            // Bounded rather than nvarchar(max): the tenant identifier doubles as a SQL identifier
+            // for the schema-per-tenant separation still to come, and an unbounded key column
+            // cannot be indexed when that lands.
+            order.Property(entity => entity.TenantId).HasMaxLength(128);
         });
     }
 }

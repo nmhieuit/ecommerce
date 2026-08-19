@@ -25,6 +25,30 @@ public class Order
     public decimal Total { get; set; }
 
     /// <summary>
+    /// The tenant this order belongs to, as resolved for the request that placed it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Set from <c>TenantContext.RequireTenantId()</c> at the point of creation, never from the
+    /// request body (006 research.md Decision 2). A tenant the caller could name is a tenant the
+    /// caller could choose, which is the case constitution Principle V exists to close.
+    /// </para>
+    /// <para>
+    /// Nullable in the schema and never null in practice: the column was added as the expand half of
+    /// expand/contract (Principle X), so the previous version of this service keeps inserting rows
+    /// against the new schema. What guarantees the value is <see cref="PlaceFrom"/>, which refuses
+    /// to build an order without one. Tightening the column to NOT NULL is the contract half, and a
+    /// later story's work.
+    /// </para>
+    /// <para>
+    /// This is evidence of attribution, not the mechanism of isolation. What actually stops a
+    /// request reaching another tenant's data is the gate in <c>Program.cs</c>, which refuses to
+    /// construct a <see cref="OrdersDbContext"/> at all without a resolved tenant.
+    /// </para>
+    /// </remarks>
+    public string? TenantId { get; set; }
+
+    /// <summary>
     /// Creates an order from the lines it is being placed for, computing the total here rather than
     /// accepting one.
     /// </summary>
@@ -34,10 +58,25 @@ public class Order
     /// domain service that owns the record, not in the aggregation layer above it
     /// (004 research.md Decision 8).
     /// </remarks>
-    /// <exception cref="ArgumentException">There are no lines to order.</exception>
-    public static Order PlaceFrom(IReadOnlyCollection<OrderLine> lines, DateTime placedAtUtc)
+    /// <exception cref="ArgumentException">
+    /// There are no lines to order, or no tenant was given to attribute the order to.
+    /// </exception>
+    public static Order PlaceFrom(
+        IReadOnlyCollection<OrderLine> lines,
+        DateTime placedAtUtc,
+        string tenantId)
     {
         ArgumentNullException.ThrowIfNull(lines);
+
+        // Blank counts as absent, exactly as TenantContext.RequireTenantId treats it. An order
+        // attributed to an empty string is a row nobody can account for, and it would satisfy every
+        // other check here.
+        if (string.IsNullOrWhiteSpace(tenantId))
+        {
+            throw new ArgumentException(
+                "An order needs the tenant it was placed for - an order belonging to nobody is not an order this service can hold.",
+                nameof(tenantId));
+        }
 
         if (lines.Count == 0)
         {
@@ -57,6 +96,7 @@ public class Order
             Id = Guid.NewGuid(),
             PlacedAtUtc = placedAtUtc,
             Total = lines.Sum(line => line.Quantity * line.UnitPrice),
+            TenantId = tenantId,
         };
     }
 }

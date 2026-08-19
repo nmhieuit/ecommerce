@@ -135,6 +135,58 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
+    /// <summary>
+    /// 006-e2e-order-demo FR-005: the order carries the tenant resolved for the request that placed
+    /// it. Asserted against the stored row rather than the response, because the response could
+    /// echo a value the record never kept.
+    /// </summary>
+    [Fact]
+    public async Task PlaceOrder_PersistsTheResolvedTenant_OnTheOrderRow()
+    {
+        await using var factory = await CreateFactoryAsync("orders-tenant-persisted");
+        var client = CreateClient(factory);
+
+        var created = await (await client.PostAsJsonAsync("/orders", new
+        {
+            items = new[] { new { productId = Notebook, quantity = 1, unitPrice = 12.50m } },
+        })).Content.ReadFromJsonAsync<OrderResponse>();
+
+        using var scope = factory.Services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = TenantId;
+        var dbContext = scope.ServiceProvider.GetRequiredService<OrdersDbContext>();
+
+        var stored = await dbContext.Orders.AsNoTracking().SingleAsync(order => order.Id == created!.Id);
+
+        Assert.Equal(TenantId, stored.TenantId);
+    }
+
+    /// <summary>
+    /// FR-005 again, from the other direction: the tenant stored is the one the gateway resolved,
+    /// not something the caller could choose. A body that names a different tenant changes nothing
+    /// - the field is not part of the request contract, and adding one is the smuggling route
+    /// constitution Principle V exists to close.
+    /// </summary>
+    [Fact]
+    public async Task PlaceOrder_IgnoresATenantNamedInTheRequestBody()
+    {
+        await using var factory = await CreateFactoryAsync("orders-tenant-smuggle");
+        var client = CreateClient(factory);
+
+        var created = await (await client.PostAsJsonAsync("/orders", new
+        {
+            tenantId = "someone-elses-tenant",
+            items = new[] { new { productId = Notebook, quantity = 1, unitPrice = 12.50m } },
+        })).Content.ReadFromJsonAsync<OrderResponse>();
+
+        using var scope = factory.Services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = TenantId;
+        var dbContext = scope.ServiceProvider.GetRequiredService<OrdersDbContext>();
+
+        var stored = await dbContext.Orders.AsNoTracking().SingleAsync(order => order.Id == created!.Id);
+
+        Assert.Equal(TenantId, stored.TenantId);
+    }
+
     private async Task<WebApplicationFactory<Program>> CreateFactoryAsync(string database)
     {
         var connectionString = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(
@@ -166,5 +218,5 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
         return client;
     }
 
-    private sealed record OrderResponse(Guid Id, DateTime PlacedAtUtc, decimal Total);
+    private sealed record OrderResponse(Guid Id, DateTime PlacedAtUtc, decimal Total, string TenantId);
 }

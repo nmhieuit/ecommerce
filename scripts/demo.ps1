@@ -46,11 +46,39 @@ $playwrightCli = Join-Path $webAppDir 'node_modules/@playwright/test/cli.js'
 $artifactsDir = Join-Path $repositoryRoot 'artifacts/demo'
 $verificationFile = Join-Path $artifactsDir 'verification.txt'
 $referenceFile = Join-Path $artifactsDir 'last-reference.txt'
+$totalFile = Join-Path $artifactsDir 'last-total.txt'
 
 function Stop-WithReason {
     param([string]$Reason)
     Write-Host "Cannot run the demo: $Reason" -ForegroundColor Red
     exit 1
+}
+
+# Runs a native executable without letting anything it writes to stderr become a terminating error.
+#
+# Windows PowerShell 5.1 wraps each stderr line from a native command in an ErrorRecord, and under
+# $ErrorActionPreference = 'Stop' that ends the script -- even when the command goes on to exit 0.
+# Node does exactly this: it warned "'NO_COLOR' is ignored due to 'FORCE_COLOR'" and killed a demo
+# run that was otherwise succeeding. Exit codes are the signal here; stderr is just output.
+# The exit code is handed back through a script-scoped variable rather than returned, because a
+# function that returns it would also return everything the command printed: `& $Command` writes its
+# output to the pipeline, so `$code = Invoke-Native {...}` collects the whole transcript and the exit
+# code as one array. Comparing that array to 0 reported a failure on a run that had passed, and then
+# exited 0 anyway. Streaming the output and keeping the code separate avoids both.
+$script:NativeExitCode = 0
+
+function Invoke-Native {
+    param([scriptblock]$Command)
+
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Command
+        $script:NativeExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousPreference
+    }
 }
 
 function Test-Endpoint {
@@ -130,13 +158,18 @@ try {
         #   which is FR-009 -- the demo must not begin against a partially available stack.
         Write-Host "Starting the platform in demo mode. First run builds images and takes a few minutes." -ForegroundColor Cyan
 
-        & docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --wait
+        # Compose reports build and health progress on stderr, which 5.1 would otherwise treat as
+        # a failure. Same reason as Invoke-Native's, same fix.
+        Invoke-Native {
+            & docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build --wait
+        }
+        $composeExitCode = $script:NativeExitCode
 
-        if ($LASTEXITCODE -ne 0) {
+        if ($composeExitCode -ne 0) {
             Write-Host ""
             Write-Host "The stack did not come up, so the demo did not run. The component that failed is named above; its logs:" -ForegroundColor Red
             Write-Host "  docker compose logs <component>" -ForegroundColor Red
-            exit $LASTEXITCODE
+            exit $composeExitCode
         }
 
         # The same cold-start warm-up up.ps1 performs, and for the same measured reason: health
@@ -199,8 +232,8 @@ try {
 
     Push-Location $webAppDir
     try {
-        & node $playwrightCli test --config playwright.demo.config.ts
-        $flowExitCode = $LASTEXITCODE
+        Invoke-Native { & node $playwrightCli test --config playwright.demo.config.ts }
+        $flowExitCode = $script:NativeExitCode
     }
     finally {
         Pop-Location
@@ -215,11 +248,78 @@ try {
 
     # --- report ------------------------------------------------------------------------------------
 
-    if (-not (Test-Path $verificationFile)) {
-        Stop-WithReason "the flow reported success but wrote no order details to $verificationFile, so there is nothing to report."
+    if (-not (Test-Path $referenceFile)) {
+        Stop-WithReason "the flow reported success but wrote no order reference to $referenceFile, so there is nothing to verify."
     }
 
     $reference = (Get-Content $referenceFile -Raw).Trim()
+    $total = (Get-Content $totalFile -Raw).Trim()
+
+    # --- verify, straight against the orders service (FR-012, SC-004) --------------------------
+    #
+    # Two calls, both to the service that owns the record rather than to the database behind it or
+    # the BFF in front of it. The story asks to query the orders service directly, and the
+    # constitution forbids reaching into another component's store; this is the one reading that
+    # satisfies both.
+
+    # Without a tenant first. Not error handling -- the enforcement gate demonstrated (FR-006, User
+    # Story 2 scenario 2). A call from this machine has no gateway in front of it to resolve a
+    # tenant, so the service must refuse rather than answer from some default.
+    $untenantedStatus = 0
+    try {
+        $untenanted = Invoke-WebRequest -Uri "$ordersUrl/orders/$reference" -TimeoutSec 10 -UseBasicParsing
+        $untenantedStatus = [int]$untenanted.StatusCode
+    }
+    catch {
+        if ($_.Exception.Response) {
+            $untenantedStatus = [int]$_.Exception.Response.StatusCode
+        }
+    }
+
+    if ($untenantedStatus -ge 200 -and $untenantedStatus -lt 300) {
+        Stop-WithReason "the orders service answered a request that resolved no tenant (HTTP $untenantedStatus). That is a tenant-isolation failure, not a demo failure."
+    }
+
+    # Then with the tenant the gateway would have stamped.
+    try {
+        $order = Invoke-RestMethod -Uri "$ordersUrl/orders/$reference" -TimeoutSec 10 `
+            -Headers @{ 'X-Tenant-Id' = $tenantId }
+    }
+    catch {
+        Stop-WithReason "the orders service did not return order $reference even with a tenant resolved."
+    }
+
+    $storedTenant = $order.tenantId
+
+    if ([string]::IsNullOrWhiteSpace($storedTenant)) {
+        Stop-WithReason "order $reference came back without a tenant. FR-005 requires every order to carry the tenant it was placed for."
+    }
+
+    if ($storedTenant -ne $tenantId) {
+        Stop-WithReason "order $reference is attributed to '$storedTenant' but the placing request resolved '$tenantId'. That is a cross-tenant attribution fault."
+    }
+
+    # --- compose the report --------------------------------------------------------------------
+    #
+    # Shape fixed by specs/006-e2e-order-demo/data-model.md. It is a contract because User Story 2
+    # scenario 3 requires somebody who did not build this to read it and see what was proved.
+    New-Item -ItemType Directory -Force -Path $artifactsDir | Out-Null
+    @(
+        "ORDER PLACED"
+        "  reference : $reference"
+        "  total     : $total"
+        "  tenant    : $storedTenant"
+        ""
+        "TENANT ATTRIBUTION"
+        "  resolved tenant for the placing request : $tenantId"
+        "  tenant stored on the order              : $storedTenant"
+        "  match                                   : YES"
+        ""
+        "WITHOUT A TENANT"
+        "  GET /orders/$reference  (no X-Tenant-Id)  ->  $untenantedStatus, no order returned"
+        "  the orders service refuses to answer when no tenant was resolved"
+        ""
+    ) | Set-Content -Path $verificationFile -Encoding utf8
 
     Write-Host ""
     Write-Host "================================================================" -ForegroundColor Green

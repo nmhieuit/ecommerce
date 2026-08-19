@@ -26,6 +26,7 @@ playwright_cli="$web_app_dir/node_modules/@playwright/test/cli.js"
 artifacts_dir="$repository_root/artifacts/demo"
 verification_file="$artifacts_dir/verification.txt"
 reference_file="$artifacts_dir/last-reference.txt"
+total_file="$artifacts_dir/last-total.txt"
 
 skip_start=0
 if [ "${1:-}" = "--skip-start" ]; then
@@ -171,10 +172,59 @@ fi
 
 # --- report -----------------------------------------------------------------------------------------
 
-[ -f "$verification_file" ] \
-    || stop_with_reason "the flow reported success but wrote no order details to $verification_file, so there is nothing to report."
+[ -f "$reference_file" ] \
+    || stop_with_reason "the flow reported success but wrote no order reference to $reference_file, so there is nothing to verify."
 
 reference="$(tr -d '[:space:]' < "$reference_file")"
+total="$(tr -d '[:space:]' < "$total_file")"
+
+# --- verify, straight against the orders service (FR-012, SC-004) ---------------------------------
+#
+# Two calls, both to the service that owns the record rather than to the database behind it or the
+# BFF in front of it. The story asks to query the orders service directly, and the constitution
+# forbids reaching into another component's store; this is the one reading that satisfies both.
+
+# Without a tenant first. Not error handling — the enforcement gate demonstrated (FR-006, User Story
+# 2 scenario 2). A call from this machine has no gateway in front of it to resolve a tenant, so the
+# service must refuse rather than answer from some default.
+untenanted_status="$(curl -s -o /dev/null -w '%{http_code}' -m 10 "$orders_url/orders/$reference" || echo '000')"
+
+case "$untenanted_status" in
+    2*) stop_with_reason "the orders service answered a request that resolved no tenant (HTTP ${untenanted_status}). That is a tenant-isolation failure, not a demo failure." ;;
+esac
+
+# Then with the tenant the gateway would have stamped.
+order_json="$(curl -fsS -m 10 -H "X-Tenant-Id: ${tenant_id}" "$orders_url/orders/$reference" || echo '')"
+
+[ -n "$order_json" ] \
+    || stop_with_reason "the orders service did not return order $reference even with a tenant resolved."
+
+stored_tenant="$(printf '%s' "$order_json" | sed -n 's/.*"tenantId":"\([^"]*\)".*/\1/p')"
+
+[ -n "$stored_tenant" ] \
+    || stop_with_reason "order $reference came back without a tenant. FR-005 requires every order to carry the tenant it was placed for."
+
+[ "$stored_tenant" = "$tenant_id" ] \
+    || stop_with_reason "order $reference is attributed to '${stored_tenant}' but the placing request resolved '${tenant_id}'. That is a cross-tenant attribution fault."
+
+# --- compose the report ---------------------------------------------------------------------------
+#
+# Shape fixed by specs/006-e2e-order-demo/data-model.md. It is a contract because User Story 2
+# scenario 3 requires somebody who did not build this to read it and see what was proved.
+mkdir -p "$artifacts_dir"
+{
+    printf 'ORDER PLACED\n'
+    printf '  reference : %s\n' "$reference"
+    printf '  total     : %s\n' "$total"
+    printf '  tenant    : %s\n\n' "$stored_tenant"
+    printf 'TENANT ATTRIBUTION\n'
+    printf '  resolved tenant for the placing request : %s\n' "$tenant_id"
+    printf '  tenant stored on the order              : %s\n' "$stored_tenant"
+    printf '  match                                   : YES\n\n'
+    printf 'WITHOUT A TENANT\n'
+    printf '  GET /orders/%s  (no X-Tenant-Id)  ->  %s, no order returned\n' "$reference" "$untenanted_status"
+    printf '  the orders service refuses to answer when no tenant was resolved\n\n'
+} > "$verification_file"
 
 printf '\n\033[32m================================================================\033[0m\n'
 cat "$verification_file"

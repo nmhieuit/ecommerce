@@ -156,7 +156,7 @@ components:
 
     Order:
       type: object
-      required: [id, placedAtUtc, total]
+      required: [id, placedAtUtc, total, tenantId]
       properties:
         id:
           type: string
@@ -167,6 +167,16 @@ components:
         total:
           type: number
           format: decimal
+        tenantId:
+          type: string
+          maxLength: 128
+          description: >
+            Added by 006-e2e-order-demo. The tenant resolved for the request that placed this order,
+            stored on the record at creation and never taken from the request body (constitution
+            Principle V). Always present and never empty in a response. The database column is
+            nullable for one release - the expand half of expand/contract (Principle X) - so an order
+            written before 006 has none.
+          example: contoso
 
     Party:
       type: object

@@ -34,8 +34,18 @@ const EXPECTED_TOTAL_NUMERIC = 59.25;
 
 /** Repository root, four levels up from this file (frontend/apps/web/demo). */
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
-const verificationFile = resolve(repositoryRoot, 'artifacts/demo/verification.txt');
 const referenceFile = resolve(repositoryRoot, 'artifacts/demo/last-reference.txt');
+const totalFile = resolve(repositoryRoot, 'artifacts/demo/last-total.txt');
+
+/**
+ * Where the committed stills go (FR-013a).
+ *
+ * Deliberately not Playwright's own output directory: `test-results/`, `playwright-report/`, and
+ * `artifacts/` are all git-ignored, so anything written there cannot be the evidence the repository
+ * keeps. `docs/demo/` sits next to the walkthrough that embeds these images
+ * (research.md Decision 8).
+ */
+const stillsDir = resolve(repositoryRoot, 'docs/demo');
 
 test('one order, placed end to end, on the running stack', async ({ page }) => {
   /** Adds one of a product and waits for the write to have been accepted. See the call site. */
@@ -118,21 +128,12 @@ test('one order, placed end to end, on the running stack', async ({ page }) => {
   await page.getByRole('link', { name: 'Basket' }).click();
   await expect(page.getByText(/your basket is empty/i)).toBeVisible();
 
-  // ---- hand the reference to the script (FR-012 groundwork) ----
+  // ---- hand the facts to the script (FR-012 groundwork) ----
   //
-  // Written from here because this is where the reference exists. The script reads both files: the
-  // first to print and to query the orders service with, the second to prove a repeat run produced
-  // a different order rather than re-reporting this one.
-  mkdirSync(dirname(verificationFile), { recursive: true });
-  writeFileSync(
-    verificationFile,
-    [
-      'ORDER PLACED',
-      `  reference : ${reference}`,
-      `  total     : ${EXPECTED_TOTAL}`,
-      '',
-    ].join('\n'),
-    'utf8',
-  );
+  // Facts, not formatting. This spec knows the reference and the total because it just watched them
+  // appear; it does not know the tenant, which the script learns by asking the orders service. One
+  // place composes the report, and it is the place that has all of it (T031).
+  mkdirSync(dirname(referenceFile), { recursive: true });
   writeFileSync(referenceFile, reference, 'utf8');
+  writeFileSync(totalFile, EXPECTED_TOTAL, 'utf8');
 });

@@ -22,7 +22,7 @@ public static class OrderEndpoints
             var order = await dbContext.Orders
                 .AsNoTracking()
                 .Where(entity => entity.Id == orderId)
-                .Select(entity => new OrderResponse(entity.Id, entity.PlacedAtUtc, entity.Total))
+                .Select(entity => new OrderResponse(entity.Id, entity.PlacedAtUtc, entity.Total, entity.TenantId))
                 .SingleOrDefaultAsync(cancellationToken);
 
             return order is null ? Results.NotFound() : Results.Ok(order);
@@ -34,6 +34,7 @@ public static class OrderEndpoints
             PlaceOrderRequest request,
             OrdersDbContext dbContext,
             CallerContext caller,
+            TenantContext tenant,
             CancellationToken cancellationToken) =>
         {
             // Requiring a caller before touching persistence, the same way the tenant is required.
@@ -52,7 +53,11 @@ public static class OrderEndpoints
                 order = Order.PlaceFrom(
                     [.. request.Items.Select(item =>
                         new OrderLine(item.ProductId, item.Quantity, item.UnitPrice))],
-                    DateTime.UtcNow);
+                    DateTime.UtcNow,
+                    // Taken from the context the gateway resolved, never from the request. There is
+                    // deliberately no tenant field on PlaceOrderRequest for a caller to set
+                    // (006 contracts/orders-openapi.yaml).
+                    tenant.RequireTenantId());
             }
             catch (ArgumentException exception)
             {
@@ -64,7 +69,7 @@ public static class OrderEndpoints
             dbContext.Orders.Add(order);
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            var response = new OrderResponse(order.Id, order.PlacedAtUtc, order.Total);
+            var response = new OrderResponse(order.Id, order.PlacedAtUtc, order.Total, order.TenantId);
 
             return Results.Created($"/orders/{order.Id}", response);
         });
@@ -76,7 +81,13 @@ public static class OrderEndpoints
     /// The wire shape, kept separate from the <see cref="Order"/> entity so the stored model can
     /// grow with this service's first domain story without silently widening what callers receive.
     /// </summary>
-    public sealed record OrderResponse(Guid Id, DateTime PlacedAtUtc, decimal Total);
+    /// <remarks>
+    /// <c>TenantId</c> was added by 006-e2e-order-demo so the demo's verification step can show which
+    /// tenant an order belongs to without opening the database (FR-005a). It is additive, and the
+    /// BFF's client-facing order shape deliberately does not carry it - the storefront has no use
+    /// for it (006 research.md Decision 4).
+    /// </remarks>
+    public sealed record OrderResponse(Guid Id, DateTime PlacedAtUtc, decimal Total, string? TenantId);
 
     /// <summary>
     /// What the BFF sends to place an order. Carries the lines, never a total — the total is this

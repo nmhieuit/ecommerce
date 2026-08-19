@@ -34,6 +34,7 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
             // sub-millisecond precision loss.
             PlacedAtUtc = new DateTime(2026, 8, 15, 9, 30, 0, DateTimeKind.Utc),
             Total = 47.49m,
+            TenantId = SeedTenantId,
         };
 
         await using var factory = await CreateFactoryWithOrdersAsync([order]);
@@ -48,6 +49,33 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
         Assert.Equal(order.Id, actual.Id);
         Assert.Equal(order.PlacedAtUtc, actual.PlacedAtUtc);
         Assert.Equal(order.Total, actual.Total);
+    }
+
+    /// <summary>
+    /// 006-e2e-order-demo FR-005a: reading an order back shows which tenant it belongs to, so the
+    /// demo's verification step can state it without inspecting the database or the source.
+    /// </summary>
+    [Fact]
+    public async Task GetOrder_ReturnsTheTenantTheOrderBelongsTo()
+    {
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            PlacedAtUtc = new DateTime(2026, 8, 19, 10, 0, 0, DateTimeKind.Utc),
+            Total = 59.25m,
+            TenantId = SeedTenantId,
+        };
+
+        await using var factory = await CreateFactoryWithOrdersAsync([order]);
+        var client = CreateTenantClient(factory);
+
+        var actual = await client.GetFromJsonAsync<OrderResponse>($"/orders/{order.Id}");
+
+        Assert.NotNull(actual);
+        Assert.False(
+            string.IsNullOrWhiteSpace(actual.TenantId),
+            "an order read back must name its tenant, not merely have one stored");
+        Assert.Equal(SeedTenantId, actual.TenantId);
     }
 
     [Fact]
@@ -100,5 +128,5 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
         return client;
     }
 
-    private sealed record OrderResponse(Guid Id, DateTime PlacedAtUtc, decimal Total);
+    private sealed record OrderResponse(Guid Id, DateTime PlacedAtUtc, decimal Total, string TenantId);
 }
