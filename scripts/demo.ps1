@@ -47,6 +47,11 @@ $artifactsDir = Join-Path $repositoryRoot 'artifacts/demo'
 $verificationFile = Join-Path $artifactsDir 'verification.txt'
 $referenceFile = Join-Path $artifactsDir 'last-reference.txt'
 $totalFile = Join-Path $artifactsDir 'last-total.txt'
+$hopsFile = Join-Path $artifactsDir 'hops.txt'
+
+# Every component the checkout path is narrated as touching. The demo asserts each one actually
+# served traffic during the run (FR-011a).
+$expectedHops = @('Gateway.Api', 'Bff.Api', 'Products.Api', 'Baskets.Api', 'Orders.Api')
 
 function Stop-WithReason {
     param([string]$Reason)
@@ -200,6 +205,12 @@ try {
         $previousReference = (Get-Content $referenceFile -Raw).Trim()
     }
 
+    # --- mark the evidence window ------------------------------------------------------------------
+    #
+    # Everything the collector logs from here on belongs to this run. Taken before the basket is
+    # cleared so the clearing call itself is inside the window - it is traffic this run caused.
+    $evidenceSince = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
+
     # --- clean basket ------------------------------------------------------------------------------
     #
     # Straight to the baskets service, not through /bff/checkout. Checking out to empty a basket
@@ -320,6 +331,63 @@ try {
         "  the orders service refuses to answer when no tenant was resolved"
         ""
     ) | Set-Content -Path $verificationFile -Encoding utf8
+
+    # --- hop evidence (FR-011a, FR-011b, SC-006a) ----------------------------------------------
+    #
+    # Which components actually served this run, read from the spans they exported. The parsing is
+    # not incidental - it is what makes the assertion mean anything (006 research.md, follow-up
+    # measurement T005):
+    #
+    #   * anchored on `ResourceTraces`, because a bare `service.name=` also appears on `ResourceLog`
+    #     lines from the logs pipeline, and in the collector's own resource block on every line;
+    #   * every span whose url.path starts with /health is dropped, because Docker health-checks each
+    #     service every five seconds. Measured on this stack: Parties.Api emitted 461 spans in a
+    #     demo window and all 461 were health checks. Counting those, a component that served
+    #     nothing looks busy - evidence worse than none, because it looks like evidence.
+    Write-Host "Collecting hop evidence..." -ForegroundColor Cyan
+
+    Invoke-Native {
+        & docker compose -f docker-compose.yml -f docker-compose.demo.yml logs --since $evidenceSince otel-collector
+    } 2>$null | Out-String -OutVariable collectorLog | Out-Null
+
+    $spansByService = @{}
+    $currentService = $null
+
+    foreach ($line in ($collectorLog -split "`r?`n")) {
+        $resource = [regex]::Match($line, 'ResourceTraces #\d+ service\.name=([A-Za-z0-9._-]+)')
+        if ($resource.Success) {
+            $currentService = $resource.Groups[1].Value
+            continue
+        }
+
+        $urlPath = [regex]::Match($line, 'url\.path=(\S+)')
+        if ($urlPath.Success -and $currentService -and -not $urlPath.Groups[1].Value.StartsWith('/health')) {
+            if (-not $spansByService.ContainsKey($currentService)) {
+                $spansByService[$currentService] = 0
+            }
+            $spansByService[$currentService]++
+        }
+    }
+
+    ($spansByService.Keys | Sort-Object | ForEach-Object { "$_`t$($spansByService[$_])" }) |
+        Set-Content -Path $hopsFile -Encoding utf8
+
+    $missingHops = @($expectedHops | Where-Object { -not $spansByService.ContainsKey($_) })
+
+    if ($missingHops.Count -gt 0) {
+        Write-Host ""
+        Write-Host "Hop evidence is incomplete. These components served no non-health traffic during the run: $($missingHops -join ', ')" -ForegroundColor Red
+        Write-Host "  Collected evidence: $hopsFile" -ForegroundColor Red
+        Write-Host "  A demo that cannot show every named hop served it has not demonstrated the path (FR-011a)." -ForegroundColor Red
+        exit 1
+    }
+
+    $hopLines = @('HOPS THAT SERVED THIS RUN')
+    foreach ($service in ($spansByService.Keys | Sort-Object)) {
+        $hopLines += ("  {0,-14} spans: {1}" -f $service, $spansByService[$service])
+    }
+    $hopLines += ''
+    $hopLines | Add-Content -Path $verificationFile -Encoding utf8
 
     Write-Host ""
     Write-Host "================================================================" -ForegroundColor Green

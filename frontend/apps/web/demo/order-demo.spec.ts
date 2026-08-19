@@ -48,6 +48,14 @@ const totalFile = resolve(repositoryRoot, 'artifacts/demo/last-total.txt');
 const stillsDir = resolve(repositoryRoot, 'docs/demo');
 
 test('one order, placed end to end, on the running stack', async ({ page }) => {
+  /**
+   * Captures one committed still. Numbered so the walkthrough can embed them in flow order and a
+   * reader can follow the journey without playing the video (FR-013a, US3 scenario 1).
+   */
+  const capture = async (name: string) => {
+    await page.screenshot({ path: resolve(stillsDir, name) });
+  };
+
   /** Adds one of a product and waits for the write to have been accepted. See the call site. */
   const addToBasket = async (productName: string) => {
     const button = page.getByRole('button', { name: `Add ${productName} to basket` });
@@ -75,6 +83,8 @@ test('one order, placed end to end, on the running stack', async ({ page }) => {
   await expect(page.getByRole('listitem').filter({ hasText: NOTEBOOK })).toBeVisible();
   await expect(page.getByRole('listitem').filter({ hasText: APRON })).toBeVisible();
 
+  await capture('01-catalog.png');
+
   // ---- add to basket ----
   //
   // Each add waits for its own request to settle before the next step. The control disables itself
@@ -97,8 +107,16 @@ test('one order, placed end to end, on the running stack', async ({ page }) => {
   await expect(page.getByText(/quantity:\s*2\s*×\s*\$12\.50/i)).toBeVisible();
   await expect(page.getByText(EXPECTED_TOTAL)).toBeVisible();
 
+  await capture('02-basket.png');
+
   // ---- check out ----
-  await page.getByRole('button', { name: 'Check out' }).click();
+  //
+  // No still of this step. The first version captured one here, having focused the button first, and
+  // it came out byte-identical to 02-basket.png - the focus ring does not survive into the image. A
+  // duplicate under a name claiming to show something else is worse than one fewer picture.
+  const checkout = page.getByRole('button', { name: 'Check out' });
+  await expect(checkout).toBeEnabled();
+  await checkout.click();
 
   // ---- the confirmation carries a reference and a total (FR-002) ----
   await expect(page.getByRole('heading', { name: /your order is placed/i })).toBeVisible();
@@ -108,6 +126,8 @@ test('one order, placed end to end, on the running stack', async ({ page }) => {
     /^[0-9a-f-]{36}$/i,
   );
   await expect(page.getByText(EXPECTED_TOTAL)).toBeVisible();
+
+  await capture('03-confirmation.png');
 
   // ---- the order the confirmation names actually exists, and matches (FR-003, FR-004) ----
   //
@@ -127,6 +147,9 @@ test('one order, placed end to end, on the running stack', async ({ page }) => {
   // ---- the basket is empty afterwards, so the next run starts clean (FR-017) ----
   await page.getByRole('link', { name: 'Basket' }).click();
   await expect(page.getByText(/your basket is empty/i)).toBeVisible();
+
+  // Worth a still of its own: it is the visible half of what makes the demo repeatable.
+  await capture('04-basket-empty.png');
 
   // ---- hand the facts to the script (FR-012 groundwork) ----
   //

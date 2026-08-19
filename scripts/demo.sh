@@ -27,6 +27,7 @@ artifacts_dir="$repository_root/artifacts/demo"
 verification_file="$artifacts_dir/verification.txt"
 reference_file="$artifacts_dir/last-reference.txt"
 total_file="$artifacts_dir/last-total.txt"
+hops_file="$artifacts_dir/hops.txt"
 
 skip_start=0
 if [ "${1:-}" = "--skip-start" ]; then
@@ -138,6 +139,12 @@ if [ -f "$reference_file" ]; then
     previous_reference="$(tr -d '[:space:]' < "$reference_file")"
 fi
 
+# --- mark the evidence window -----------------------------------------------------------------------
+#
+# Everything the collector logs from here on belongs to this run. Taken before the basket is cleared
+# so the clearing call itself is inside the window - it is traffic this run caused.
+evidence_since="$(date -u +%Y-%m-%dT%H:%M:%S)"
+
 # --- clean basket ---------------------------------------------------------------------------------
 #
 # Straight to the baskets service, not through /bff/checkout. Checking out to empty a basket would
@@ -225,6 +232,64 @@ mkdir -p "$artifacts_dir"
     printf '  GET /orders/%s  (no X-Tenant-Id)  ->  %s, no order returned\n' "$reference" "$untenanted_status"
     printf '  the orders service refuses to answer when no tenant was resolved\n\n'
 } > "$verification_file"
+
+# --- hop evidence (FR-011a, FR-011b, SC-006a) -------------------------------------------------------
+#
+# Which components actually served this run, read from the spans they exported. The parsing is not
+# incidental - it is what makes the assertion mean anything (006 research.md, follow-up measurement
+# T005):
+#
+#   * anchored on `ResourceTraces`, because bare `service.name=` also appears on `ResourceLog` lines
+#     from the logs pipeline, and on the collector's own JSON resource block on every line;
+#   * every span whose url.path starts with /health is dropped, because Docker health-checks every
+#     service every five seconds. Counting those, all six services look busy on a stack where the
+#     demo never ran at all - evidence that would be worse than none, because it would look like
+#     evidence.
+#
+# What this is NOT is one request followed across five hops by a shared id. The spans already carry a
+# correlation.id and that would work, but request-level correlation is Phase 3's story
+# (SCRUM-25/26) and a half-built version here would be thrown away (research.md Decision 6).
+printf '\033[36mCollecting hop evidence…\033[0m\n'
+
+docker compose -f docker-compose.yml -f docker-compose.demo.yml logs --since "$evidence_since" otel-collector 2>/dev/null \
+    | awk '
+        /ResourceTraces #[0-9]+ service\.name=/ {
+            match($0, /service\.name=[A-Za-z0-9._-]+/)
+            service = substr($0, RSTART + 13, RLENGTH - 13)
+            next
+        }
+        /url\.path=/ {
+            match($0, /url\.path=[^ ]+/)
+            path = substr($0, RSTART + 9, RLENGTH - 9)
+            if (service != "" && path !~ /^\/health/) {
+                count[service]++
+                seen[service "\t" path] = 1
+            }
+        }
+        END {
+            for (s in count) printf "%s\t%d\n", s, count[s]
+        }
+    ' | sort > "$hops_file"
+
+missing=''
+for component in Gateway.Api Bff.Api Products.Api Baskets.Api Orders.Api; do
+    grep -q "^${component}	" "$hops_file" || missing="${missing} ${component}"
+done
+
+if [ -n "$missing" ]; then
+    printf '\n\033[31mHop evidence is incomplete. These components served no non-health traffic during the run:%s\033[0m\n' "$missing" >&2
+    printf '\033[31m  Collected evidence: %s\033[0m\n' "$hops_file" >&2
+    printf '\033[31m  A demo that cannot show every named hop served it has not demonstrated the path (FR-011a).\033[0m\n' >&2
+    exit 1
+fi
+
+{
+    printf 'HOPS THAT SERVED THIS RUN\n'
+    while IFS="$(printf '\t')" read -r service spans; do
+        printf '  %-14s spans: %s\n' "$service" "$spans"
+    done < "$hops_file"
+    printf '\n'
+} >> "$verification_file"
 
 printf '\n\033[32m================================================================\033[0m\n'
 cat "$verification_file"

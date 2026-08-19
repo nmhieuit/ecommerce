@@ -29,6 +29,7 @@ missing instruction ([spec SC-002](../specs/005-one-command-local-run/spec.md)).
 | `./scripts/down.ps1` · `down.sh` | Stops everything. **Keeps your data** |
 | `./scripts/reset.ps1` · `reset.sh` | Stops everything and **discards data**. The next start behaves like a first run |
 | `./scripts/up.sh --debug` · `up.ps1 -PublishInternalPorts` | Also publishes the internal ports — see [Reaching past the front door](#reaching-past-the-front-door) |
+| `./scripts/demo.ps1` · `demo.sh` | Runs the Phase 1 order demo end to end — see [The demo](#the-demo) |
 
 All of them delegate to Docker Compose against the repository's default `docker-compose.yml`, so
 `docker compose up --build --wait`, `docker compose down`, and `docker compose down --volumes` work
@@ -38,6 +39,28 @@ later for a reason that looks unrelated.
 
 `down` and `reset` are separate commands on purpose. Stopping for the day and starting over are
 different intentions, and conflating them is how somebody loses an afternoon's test orders.
+
+## The demo
+
+One command places a real order through the running stack, reads it back, and reports what it
+proved:
+
+```bash
+./scripts/demo.ps1        # or ./scripts/demo.sh
+```
+
+It brings the platform up in demo mode if it is not already, so it is also a reasonable way to start
+the stack for the first time. A repeat run against a warm stack takes about ten seconds
+(`-SkipStart` / `--skip-start`).
+
+**[docs/demo-phase-1.md](demo-phase-1.md)** is the walkthrough: what the flow looks like step by
+step with screenshots, the path a checkout takes through the services, and which Phase 1 exit
+criteria the run evidences. Read that rather than this file if what you want is to understand what
+the platform does.
+
+Demo mode differs from the default stack in two narrow ways: it publishes the orders and baskets
+services so the demo can query them directly, and it makes the telemetry collector print the spans
+the demo reads back. Nothing else changes, and `up`/`down`/`reset` are unaffected.
 
 ## What you get
 
