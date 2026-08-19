@@ -92,8 +92,32 @@ if [ "$skip_start" -eq 1 ]; then
     # stack publishes only the storefront and the gateway, so a stack brought up with up.sh fails
     # this check — which is the point, because the verification step and the clean-basket step both
     # call services directly.
-    endpoint_answers "$orders_url/health/ready" \
-        || stop_with_reason "the stack is not running in demo mode, so nothing is answering on $orders_url. Drop --skip-start, or start it with:  docker compose -f docker-compose.yml -f docker-compose.demo.yml up --wait"
+    if ! endpoint_answers "$orders_url/health/ready"; then
+        # Two different faults look identical from out here - a stopped container's published port
+        # is as closed as one that was never published. Asking Compose which it is turns "nothing is
+        # answering" into a diagnosis, which is what FR-016 asks for. Reporting "not in demo mode"
+        # for a crashed service sends the reader to the wrong fix.
+        # `ps --services` lists only what is running; `-a` includes stopped containers. The
+        # difference is what separates "this service died" from "this service was never here".
+        compose_running="$(docker compose -f docker-compose.yml -f docker-compose.demo.yml ps --services 2>/dev/null || true)"
+        compose_defined="$(docker compose -f docker-compose.yml -f docker-compose.demo.yml ps -a --services 2>/dev/null || true)"
+
+        if printf '%s\n' "$compose_running" | grep -qx 'orders-api'; then
+            # Running. So either its port was never published (the stack was started with up.sh
+            # rather than in demo mode), or it is up and unwell. Those need different fixes.
+            if [ -z "$(docker ps --filter publish=5041 -q 2>/dev/null)" ]; then
+                stop_with_reason "the stack is up but not in demo mode - the orders service is running and its port is not published. Drop --skip-start, or start it with:  docker compose -f docker-compose.yml -f docker-compose.demo.yml up --wait"
+            fi
+
+            stop_with_reason "the orders service is running and its port is published, but it is not answering on $orders_url. Check it with:  docker compose logs orders-api"
+        fi
+
+        if printf '%s\n' "$compose_defined" | grep -qx 'orders-api'; then
+            stop_with_reason "the orders service belongs to this stack but is not running, so the demo cannot read back the order it places. Start it with:  docker compose -f docker-compose.yml -f docker-compose.demo.yml up --wait orders-api"
+        fi
+
+        stop_with_reason "the stack is not running in demo mode, so nothing is answering on $orders_url. Drop --skip-start, or start it with:  docker compose -f docker-compose.yml -f docker-compose.demo.yml up --wait"
+    fi
 
     printf '\033[36mUsing the stack that is already up.\033[0m\n'
 else

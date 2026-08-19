@@ -148,6 +148,36 @@ try {
         # up with up.ps1 fails this check -- which is the point, because the verification step and
         # the clean-basket step both call services directly.
         if (-not (Test-Endpoint -Uri "$ordersUrl/health/ready")) {
+            # Three different faults look identical from out here: the service was never published,
+            # the service died, or the service is up and unwell. Asking Compose and Docker which it
+            # is turns "nothing is answering" into a diagnosis, which is what FR-016 asks for.
+            # Reporting "not in demo mode" for a crashed service sends the reader to the wrong fix.
+            #
+            # `ps --services` lists only what is running; `-a` includes stopped containers. The
+            # difference is what separates "this service died" from "this service was never here".
+            Invoke-Native { & docker compose -f docker-compose.yml -f docker-compose.demo.yml ps --services } 2>$null |
+                Out-String -OutVariable composeRunning | Out-Null
+            Invoke-Native { & docker compose -f docker-compose.yml -f docker-compose.demo.yml ps -a --services } 2>$null |
+                Out-String -OutVariable composeDefined | Out-Null
+
+            $runningServices = @($composeRunning -split "`r?`n" | ForEach-Object { $_.Trim() })
+            $definedServices = @($composeDefined -split "`r?`n" | ForEach-Object { $_.Trim() })
+
+            if ($runningServices -contains 'orders-api') {
+                Invoke-Native { & docker ps --filter publish=5041 -q } 2>$null |
+                    Out-String -OutVariable publishers | Out-Null
+
+                if ([string]::IsNullOrWhiteSpace($publishers)) {
+                    Stop-WithReason "the stack is up but not in demo mode - the orders service is running and its port is not published. Drop -SkipStart, or start it with:  docker compose -f docker-compose.yml -f docker-compose.demo.yml up --wait"
+                }
+
+                Stop-WithReason "the orders service is running and its port is published, but it is not answering on $ordersUrl. Check it with:  docker compose logs orders-api"
+            }
+
+            if ($definedServices -contains 'orders-api') {
+                Stop-WithReason "the orders service belongs to this stack but is not running, so the demo cannot read back the order it places. Start it with:  docker compose -f docker-compose.yml -f docker-compose.demo.yml up --wait orders-api"
+            }
+
             Stop-WithReason "the stack is not running in demo mode, so nothing is answering on $ordersUrl. Drop -SkipStart, or start it with:  docker compose -f docker-compose.yml -f docker-compose.demo.yml up --wait"
         }
 
