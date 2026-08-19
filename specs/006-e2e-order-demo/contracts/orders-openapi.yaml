@@ -1,0 +1,136 @@
+# Orders service — the delta this feature makes to its contract
+#
+# Constitution Principle II: contracts are written and reviewed before implementation. This file is
+# that review artifact for 006-e2e-order-demo.
+#
+# Scope: ONLY the orders service's own surface, and only what changes. The full downstream surface
+# lives in specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml and
+# specs/004-minimal-shopping-spa/contracts/downstream-openapi.yaml; both must have the `tenantId`
+# property added to their `Order` schema when this ships, so the three documents do not disagree.
+#
+# THE CHANGE: `Order` gains `tenantId`. That is all.
+#
+# It is additive, so it is not a breaking change and needs no version bump under Principle II —
+# consumers are already required to tolerate unknown fields. The BFF's client-facing contract
+# (bff-openapi.yaml) is deliberately NOT changed; see research.md Decision 4.
+
+openapi: 3.0.3
+info:
+  title: Orders service surface (006 delta)
+  version: "0.2.0"
+  description: >
+    The orders service's read and write surface as of 006-e2e-order-demo. Changed from 0.1.0 by the
+    addition of `tenantId` to the Order schema.
+
+tags:
+  - name: orders
+    description: Orders service — owns order records.
+
+paths:
+  /orders:
+    post:
+      operationId: placeOrder
+      tags: [orders]
+      summary: Creates an order from the line items it is sent.
+      description: >
+        Unchanged by this feature. The request body carries no tenant and MUST NOT gain one — the
+        service takes the tenant from the context resolved for the request (constitution Principle
+        V; research.md Decision 2). A caller-supplied tenant is exactly the smuggling route the
+        gateway already strips.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceOrderRequest"
+      responses:
+        "201":
+          description: The created order.
+          headers:
+            Location:
+              schema: { type: string }
+              description: The created order's URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: No line items, or a malformed line.
+        "500":
+          description: >
+            No tenant was resolved for this request, so no order was created (FR-006). Phase 1
+            surfaces this as a 500 rather than a typed problem response — the point under test is
+            that it fails loudly instead of answering from a default.
+
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Returns a single order by id.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The order, including the tenant it belongs to.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: No order with that id.
+        "500":
+          description: No tenant was resolved for this request (FR-006).
+
+components:
+  schemas:
+    Order:
+      type: object
+      required: [id, placedAtUtc, total, tenantId]
+      properties:
+        id:
+          type: string
+          format: uuid
+        placedAtUtc:
+          type: string
+          format: date-time
+        total:
+          type: number
+          format: decimal
+        tenantId:
+          type: string
+          maxLength: 128
+          description: >
+            NEW in 006. The tenant resolved for the request that placed this order, stored on the
+            record at creation. Required in the response and never empty. The database column is
+            nullable for one release — the expand half of expand/contract (Principle X, research.md
+            Decision 3) — so a row written before this feature has no tenant and is not returned by
+            any path the demo exercises.
+          example: contoso
+
+    PlaceOrderRequest:
+      type: object
+      required: [items]
+      description: Unchanged from 0.1.0. Deliberately carries no tenant.
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PlaceOrderLine"
+
+    PlaceOrderLine:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: decimal
