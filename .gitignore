@@ -52,3 +52,10 @@ Thumbs.db
 
 # Local override configs
 appsettings.*.local.json
+
+# Demo run output (006-e2e-order-demo)
+# The video recording and the raw evidence the demo produces. Deliberately not committed: the
+# repository has no binary-asset convention, and a video re-recorded on every change would
+# accumulate in history forever. The committed evidence is docs/demo-phase-1.md and the stills in
+# docs/demo/, which this rule does not touch.
+artifacts/

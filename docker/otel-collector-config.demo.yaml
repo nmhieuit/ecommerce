@@ -1,0 +1,55 @@
+# The collector, configured so the demo can read back which components served a run.
+#
+# Identical to otel-collector-config.yaml except for ONE line: `service.telemetry.logs.level` is
+# `info` here rather than `warn`. That single line is what makes the debug exporter's span output
+# appear at all — it writes through the collector's own logger at info, so under `warn` the exporter
+# runs, receives every span, and prints nothing (006 research.md, measurement finding T001).
+#
+# Used only by docker-compose.demo.yml, which the demo command layers over the default stack. The
+# default stack keeps `warn`, and keeps its startup logs quiet, because nothing there reads spans
+# back.
+#
+# Verbosity stays `normal`, deliberately. It already carries the resource attribute the demo needs —
+# `ResourceTraces #0 service.name=Orders.Api` — in three lines per span, where `detailed` spends
+# about twenty saying the same thing.
+#
+# This is a collection point, not a backend. Elastic is the backend and standing it up is Phase 3
+# work (SCRUM-25).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Bounds memory so a burst of telemetry cannot starve the services being observed.
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+exporters:
+  debug:
+    verbosity: normal
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+
+  telemetry:
+    logs:
+      # The one line that differs from the default config. See the header.
+      level: info

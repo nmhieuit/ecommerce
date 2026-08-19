@@ -15,7 +15,7 @@ anything up.
 Three things get built. **One persisted field** — the order now records the tenant resolved for the
 request that placed it, taken from the tenant context and never from the request body. **One demo
 command** — `scripts/demo.ps1` / `demo.sh`, joining the `up`/`down`/`reset` family, layering a small
-Compose override that publishes the internal ports and raises collector verbosity for the run.
+Compose override that publishes the two services it calls and makes the collector print spans.
 **One document** — `docs/demo-phase-1.md`, the procedure, the hops, and the exit-criteria mapping.
 
 The storefront does not change. The client-facing BFF contract does not change. No pipeline changes.
@@ -108,8 +108,8 @@ services/orders/tests/
 ├── Orders.Api.IntegrationTests/PlaceOrderTests.cs   # CHANGED — tenant persisted
 └── Orders.Api.IntegrationTests/OrderEndpointsTests.cs  # CHANGED — tenant returned on read
 
-docker-compose.demo.yml                              # NEW — publishes internal ports, detailed telemetry
-docker/otel-collector-config.demo.yaml               # NEW — verbosity: detailed
+docker-compose.demo.yml                              # NEW — publishes orders + baskets, demo telemetry
+docker/otel-collector-config.demo.yaml               # NEW — collector logs at info, so spans print
 scripts/demo.ps1                                     # NEW — the one command
 scripts/demo.sh                                      # NEW — its POSIX twin
 
@@ -165,10 +165,12 @@ Re-run after Phase 1 produced the contracts, the data model, and the quickstart.
 - **Principle X holds under design.** The nullable column means a rollback to the previous service
   version runs against the new schema without error. The tightening to `NOT NULL` is a separate
   contract migration and is deliberately not in this feature.
-- **One design consequence worth flagging for `/speckit-tasks`:** the collector verbosity decision
-  (research Decision 6) rests on `detailed` printing the `service.name` resource attribute. That is
-  the documented behaviour but has not been observed in this repository. The task list should verify
-  it empirically **before** the hop-evidence assertion is written, so the fallback — parsing spans
-  from a different field — is discovered while it is cheap rather than at the end.
+- **One design consequence flagged here was checked before implementation, and it moved.** The plan
+  asked `/speckit-tasks` to verify the collector's output shape first, because the hop-evidence
+  design rested on it. T001 did, and found the premise wrong in a useful direction: verbosity was
+  never the obstacle — `service.telemetry.logs.level: warn` suppresses the debug exporter's output
+  entirely, and both `normal` and `detailed` carry `service.name` once that is lifted. The demo
+  config is a one-line delta rather than a verbosity switch. Recorded in research.md's measurement
+  finding; Decision 6 was rewritten rather than annotated.
 
 **Gate result after design: proceed to `/speckit-tasks`.**

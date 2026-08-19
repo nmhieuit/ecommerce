@@ -1,0 +1,46 @@
+# Demo mode: what the end-to-end order demo needs on top of the default stack.
+#
+#   ./scripts/demo.ps1     (or ./scripts/demo.sh)
+#
+# Two additions, both narrow:
+#
+#   1. The orders and baskets services get published ports, because the demo calls them directly —
+#      orders to read an order back and show which tenant it belongs to, baskets to start from a
+#      clean basket without checking out a throwaway order (006 research.md Decisions 5 and 7).
+#
+#   2. The collector runs with a config whose logs are at `info`, which is the only thing that makes
+#      its span output visible. That output is the demo's evidence that every named hop actually
+#      served the run (006 research.md, measurement finding T001).
+#
+# An override file rather than a Compose profile, for the reason docker-compose.debug.yml already
+# gives: a profile decides whether a service *starts*, and cannot add ports to one that is starting
+# anyway.
+#
+# Deliberately narrower than docker-compose.debug.yml. That file publishes all five services and
+# switches the BFF into Development so it will serve its OpenAPI document; this one publishes the
+# two services the demo speaks to and changes no service's environment at all. The thing being
+# demonstrated should be the stack as it normally runs, not a stack reconfigured to be demonstrated.
+#
+# The storefront and the gateway are unaffected — they are already published by the default stack,
+# and the demo drives them at their usual addresses (:4173 and :5300).
+
+name: ecomerce-stack
+
+services:
+  orders-api:
+    ports:
+      # Read an order back from the service that owns it, rather than from the database behind it.
+      - "5041:8080"
+
+  baskets-api:
+    ports:
+      # POST /baskets/current/clear, the demo's clean-basket step.
+      - "5188:8080"
+
+  otel-collector:
+    # Selecting the demo config by command rather than by re-mounting over the default file's path:
+    # both configs stay mounted at distinct targets, so which one is in force is stated here in one
+    # place instead of depending on how Compose merges two volume entries.
+    command: ["--config=/etc/otel/config.demo.yaml"]
+    volumes:
+      - ./docker/otel-collector-config.demo.yaml:/etc/otel/config.demo.yaml:ro

@@ -104,28 +104,30 @@ wrong thing.
 
 ---
 
-## Decision 6 — Per-hop evidence comes from the collector's span log, at `detailed` verbosity
+## Decision 6 — Per-hop evidence comes from the collector's span log
 
 **Decision**: The demo captures `docker compose logs otel-collector` for the run window and asserts
 a span was recorded for each of `Gateway.Api`, `Bff.Api`, `Products.Api`, `Baskets.Api`, and
-`Orders.Api`. The demo layers a collector config with `verbosity: detailed` so the `service.name`
-resource attribute is printed.
+`Orders.Api`. The demo layers a collector config that differs from the default in **one line**:
+`service.telemetry.logs.level` is raised from `warn` to `info`.
 
 **Rationale**: Every service already exports OTLP traces through `ServiceDefaults`, and the collector
-already logs them ([otel-collector-config.yaml](docker/otel-collector-config.yaml)). This is
+already receives them ([otel-collector-config.yaml](docker/otel-collector-config.yaml)). This is
 component-activity evidence — exactly the Option B reading recorded in the spec's Clarifications —
 with no new instrumentation. The services' own container logs are not usable for this: every service
 sets `Microsoft.AspNetCore: Warning`, so successful requests produce no log line at all.
 
-**Why not the default `normal` verbosity**: at `normal` the debug exporter prints a compact per-record
-line whose inclusion of resource attributes varies by collector version. Pinning the demo's evidence
-to `detailed` makes the assertion deterministic instead of version-dependent. The default stack's
-config is untouched; only the demo override raises it.
+**Revised after measurement (T001)** — this decision originally called for raising the debug
+exporter to `verbosity: detailed`, on the assumption that `normal` might omit the service name. Both
+halves of that assumption turned out wrong, and the real obstacle was somewhere else entirely. See
+the measurement finding at the end of this file. The default `verbosity: normal` stays as it is.
 
 **Alternatives considered**: Following one request across hops by its correlation ID — which
 `CorrelationIdMiddleware` would actually make possible today. Rejected deliberately: the spec's
 Clarifications place request-level correlation in Phase 3 (SCRUM-25/26), and a half-built version
-here would be discarded by the story that owns it.
+here would be discarded by the story that owns it. Also considered `verbosity: detailed`: it works
+and prints the same attribute, but spends roughly twenty lines per span where `normal` spends three,
+which makes `hops.txt` worse to read for no gain.
 
 ---
 
@@ -182,7 +184,7 @@ its ownership.
 ## Decision 10 — Demo mode is one override file, layered like the debug override
 
 **Decision**: `docker-compose.demo.yml` layers over the default stack: it publishes the internal
-service ports and mounts the `detailed` collector config. It is applied only by the demo command.
+service ports and mounts the demo collector config. It is applied only by the demo command.
 
 **Rationale**: `docker-compose.debug.yml` already establishes the override pattern and already
 publishes the internal ports, so the demo file is small. Keeping demo mode out of the default stack
@@ -233,3 +235,88 @@ Check says so rather than repeating the spec's assumption.
 
 One thing this feature does improve: with the tenant persisted on the row, the day schema-per-tenant
 does land, existing orders can be routed to the right schema instead of being unattributable.
+
+---
+
+## Measurement finding (T001) — what the collector actually prints, and what was blocking it
+
+Measured on 2026-08-19 against `otel/opentelemetry-collector-contrib:0.159.0`, the image the stack
+pulls. Method: ran the collector alone with each candidate config and posted one synthetic OTLP span
+carrying `service.name=Orders.Api` to `/v1/traces`. Building the full stack was unnecessary — the
+question was entirely about the collector's own output.
+
+**The real obstacle was not verbosity. It was `service.telemetry.logs.level: warn`.**
+
+The existing [otel-collector-config.yaml](docker/otel-collector-config.yaml) sets that level to
+suppress the collector's startup chatter. But the debug exporter writes its span output through the
+same logger, at `info` — so with `level: warn`, **nothing is printed at all**, at any verbosity. The
+first probe run posted a span successfully (HTTP 200) and produced an empty log. That is the one
+line the demo config has to change.
+
+**Both verbosity levels print the service name.** With `level: info`:
+
+| Verbosity | Output for one span | Carries `service.name` |
+|---|---|---|
+| `normal` (the current default) | 3 lines | Yes — `ResourceTraces #0 service.name=Orders.Api` |
+| `detailed` | ~20 lines | Yes — `     -> service.name: Str(Orders.Api)` |
+
+So the plan's concern was unfounded in both directions: `normal` is not too sparse, and `detailed`
+buys nothing but volume. The demo keeps `verbosity: normal`.
+
+**What T033/T034 must parse**, at `normal`:
+
+```text
+ResourceTraces #0 service.name=Orders.Api
+ScopeTraces #0 Microsoft.AspNetCore
+GET /orders/{orderId} 5b8efff798038103d269b633813fc60c eee19b7ec3c1b174 http.request.method=GET
+```
+
+**One trap worth naming.** Every collector log line carries the collector's *own* resource block as
+JSON, which contains `"service.name": "otelcol-contrib"`. A naive `grep service.name` therefore
+matches every line and reports the collector as a hop. The assertion must anchor on the equals form
+produced by the exporter — `service.name=<Name>` — and must exclude `otelcol-contrib`.
+
+**Consequences for the task list**: T003 becomes a one-line change rather than a verbosity switch,
+and T033/T034 have a known parse target. No design change beyond Decision 6's revision above.
+
+### Follow-up measurement (T005) — health checks would have faked the hop evidence
+
+Repeated against the real stack once demo mode was up, rather than the synthetic probe. Two things
+came out of it, one confirming and one alarming.
+
+**Confirming**: the demo collector config works in situ. One request to `/bff/products` through the
+gateway, and `docker compose logs otel-collector` carried per-service span lines exactly as the probe
+predicted. The `service.name=<Name>` equals-form never collides with the collector's own JSON
+`"service.name": "otelcol-contrib"`, so the trap named above is avoidable with a plain pattern.
+
+**Alarming**: counting spans per service is not evidence of anything. Every service is healthchecked
+by Docker every five seconds, and each check emits a span. A window of any length therefore shows all
+six services active — **including services the demo never touched**. Measured directly: after a single
+`/bff/products` call, an unfiltered count reported Baskets, Orders, and Parties as busy, with 13
+spans each. They had served nothing but their own health probe.
+
+An assertion built that way would pass on a stack where the demo failed to run at all. It would be
+worse than no evidence, because it would look like evidence.
+
+**The fix, measured working**: anchor on `ResourceTraces` (not bare `service.name=`, which also
+appears on `ResourceLog` lines from the logs pipeline), then drop spans whose `url.path` starts with
+`/health`. The same single request then reports exactly the three components that served it:
+
+```text
+Bff.Api        2  ['/bff/products']
+Gateway.Api    2  ['/bff/products']
+Products.Api   3  ['/products']
+```
+
+Baskets, Orders, and Parties are correctly absent. Run the full checkout flow and all five expected
+components appear, for real reasons.
+
+**Consequences for the task list**: T033 must parse `ResourceTraces` blocks and exclude `/health`
+paths; T034's assertion must run against that filtered set. Without the filter the assertion is
+vacuous — it is the difference between FR-011a meaning something and FR-011a being decoration.
+
+**Incidental**: spans already carry `correlation.id`, propagated by `ServiceDefaults`'
+`CorrelationIdMiddleware`. Following one request across all five hops is therefore genuinely available
+today, not merely theoretically. Decision 6's rejection of that route stands — the spec's
+Clarifications put request-level correlation in Phase 3 — but it is a deferral by choice, not by
+capability, and SCRUM-25/26 will find the groundwork already laid.
