@@ -50,13 +50,20 @@ through.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T006 Create `frontend/apps/web/playwright.demo.config.ts`: `testDir: './demo'`, `baseURL` from `DEMO_STOREFRONT_URL` defaulting to `http://localhost:4173`, **no `webServer` block**, `video: 'on'`, `outputDir` under `artifacts/demo/`, single chromium project, `retries: 0`. Header comment explaining why this is separate from `playwright.config.ts` (research Decision 1)
-- [ ] T007 [P] Add a `demo` script to `frontend/apps/web/package.json` running `playwright test --config playwright.demo.config.ts`
-- [ ] T008 Create `scripts/demo.ps1` with argument parsing (`-SkipStart`) and prerequisite checks that name exactly one missing thing — Docker daemon, `.env`, Playwright browsers, and "stack is not in demo mode" when `-SkipStart` is given. Mirror the `Stop-WithReason` helper and comment style of `scripts/up.ps1`; contract is `specs/006-e2e-order-demo/contracts/demo-interface.md`
-- [ ] T009 [P] Create `scripts/demo.sh` as the POSIX twin of T008, matching `scripts/up.sh`'s conventions
-- [ ] T010 Add the demo-mode start step to both scripts: unless `-SkipStart`/`--skip-start`, run Compose with `docker-compose.demo.yml` layered and `--wait`, so the script returns only when every component is healthy (FR-009)
+- [X] T006 Create `frontend/apps/web/playwright.demo.config.ts`: `testDir: './demo'`, `baseURL` from `DEMO_STOREFRONT_URL` defaulting to `http://localhost:4173`, **no `webServer` block**, `video: 'on'`, `outputDir` under `artifacts/demo/`, single chromium project, `retries: 0`. Header comment explaining why this is separate from `playwright.config.ts` (research Decision 1)
+- [X] T007 [P] Add a `demo` script to `frontend/apps/web/package.json` running `playwright test --config playwright.demo.config.ts`
+- [X] T008 Create `scripts/demo.ps1` with argument parsing (`-SkipStart`) and prerequisite checks that name exactly one missing thing — Docker daemon, `.env`, Playwright browsers, and "stack is not in demo mode" when `-SkipStart` is given. Mirror the `Stop-WithReason` helper and comment style of `scripts/up.ps1`; contract is `specs/006-e2e-order-demo/contracts/demo-interface.md`
+- [X] T009 [P] Create `scripts/demo.sh` as the POSIX twin of T008, matching `scripts/up.sh`'s conventions
+- [X] T010 Add the demo-mode start step to both scripts: unless `-SkipStart`/`--skip-start`, run Compose with `docker-compose.demo.yml` layered and `--wait`, so the script returns only when every component is healthy (FR-009)
 
-**Checkpoint**: `./scripts/demo.ps1` starts demo mode, checks prerequisites, and exits cleanly with nothing to run yet.
+**Checkpoint**: `./scripts/demo.ps1` starts demo mode, checks prerequisites, and exits cleanly with nothing to run yet. **Verified** on 2026-08-19: full run built and started demo mode and exited 0; `--skip-start` succeeded against a demo-mode stack and refused a default-mode one with the message naming the fix.
+
+**Two defects found and fixed while verifying this phase** — both would have surfaced as confusing failures later:
+
+1. `demo.ps1` failed to parse under Windows PowerShell 5.1. No `.ps1` in this repository carries a UTF-8 BOM, so 5.1 reads them as ANSI and mangles non-ASCII characters; an em dash inside a double-quoted string turned the following `-SkipStart` into a parameter token. Fixed by making `demo.ps1` pure ASCII, matching `reset.ps1`. **`up.ps1` (3 non-ASCII characters) and `down.ps1` (1) carry the same latent risk** and have not been touched here — worth a follow-up.
+2. `demo.sh` looked for Playwright's browsers under `~/.cache/ms-playwright` on Git Bash, where they actually live under `%LOCALAPPDATA%`. It refused a correctly installed machine. Fixed with a `MINGW*|MSYS*|CYGWIN*` branch using `cygpath`.
+
+**One scope gap closed**: `frontend/apps/web/tsconfig.json` names its included paths explicitly and covered `e2e`/`playwright.config.ts` but not the demo, so T011's spec would never have been typechecked. `demo` and `playwright.demo.config.ts` are now in the include list.
 
 ---
 
@@ -69,15 +76,21 @@ an order is persisted, and running it again works.
 without intervention, prints an order reference and total, and exits 0. Run it again — a second,
 different order. Delivers the full Phase 1 claim without any of US2 or US3.
 
-- [ ] T011 [US1] Write `frontend/apps/web/demo/order-demo.spec.ts` — the flow and its assertions, expected to fail until the steps below land: navigate to `/`, add `Field Notes Notebook` ×2 and `Linen Apron`, open the basket, assert the `$59.25` total, check out, assert the confirmation heading and a 36-character reference, then read the order back through `GET {gateway}/bff/orders/{reference}` and assert its total matches the confirmation (US1 scenarios 1–2, FR-002, FR-003, FR-004)
-- [ ] T012 [US1] Add the clean-basket step to `scripts/demo.ps1` and `scripts/demo.sh`: `POST http://localhost:5188/baskets/current/clear` with `X-Tenant-Id: contoso` and `X-Subject-Id: phase1-stub-user`, treating 409 as success. Comment why this is not a `POST /bff/checkout` reset — that would place a real order (research Decision 7)
-- [ ] T013 [US1] Add the run-the-flow step to both scripts: invoke the Playwright demo project, propagate its exit code, and on failure print which step failed rather than a raw runner dump (FR-016)
-- [ ] T014 [US1] Write the order reference and total to `artifacts/demo/verification.txt` and echo them in the script's summary, so the reference is available to the verification step US2 adds (FR-012 groundwork)
-- [ ] T015 [US1] Assert repeatability in `frontend/apps/web/demo/order-demo.spec.ts` and the scripts: a second run must produce a **different** reference and must not depend on the first run's leftovers (US1 scenario 4, FR-007, FR-017)
-- [ ] T016 [US1] Run quickstart Scenario 5 (`./scripts/demo.ps1 -SkipStart` twice) and confirm two distinct orders, both readable (SC-003)
-- [ ] T017 [US1] Run quickstart Scenario 8 once — `reset` → `up` → `demo` — and confirm the confirmation screen is reached with no manual seeding or repair. Record the result and elapsed time in `docs/demo-phase-1.md` when US3 creates it, or in a scratch note until then (FR-007a, FR-008, SC-003a)
+- [X] T011 [US1] Write `frontend/apps/web/demo/order-demo.spec.ts` — the flow and its assertions, expected to fail until the steps below land: navigate to `/`, add `Field Notes Notebook` ×2 and `Linen Apron`, open the basket, assert the `$59.25` total, check out, assert the confirmation heading and a 36-character reference, then read the order back through `GET {gateway}/bff/orders/{reference}` and assert its total matches the confirmation (US1 scenarios 1–2, FR-002, FR-003, FR-004)
+- [X] T012 [US1] Add the clean-basket step to `scripts/demo.ps1` and `scripts/demo.sh`: `POST http://localhost:5188/baskets/current/clear` with `X-Tenant-Id: contoso` and `X-Subject-Id: phase1-stub-user`, treating 409 as success. Comment why this is not a `POST /bff/checkout` reset — that would place a real order (research Decision 7)
+- [X] T013 [US1] Add the run-the-flow step to both scripts: invoke the Playwright demo project, propagate its exit code, and on failure print which step failed rather than a raw runner dump (FR-016)
+- [X] T014 [US1] Write the order reference and total to `artifacts/demo/verification.txt` and echo them in the script's summary, so the reference is available to the verification step US2 adds (FR-012 groundwork)
+- [X] T015 [US1] Assert repeatability in `frontend/apps/web/demo/order-demo.spec.ts` and the scripts: a second run must produce a **different** reference and must not depend on the first run's leftovers (US1 scenario 4, FR-007, FR-017)
+- [X] T016 [US1] Run quickstart Scenario 5 (`./scripts/demo.ps1 -SkipStart` twice) and confirm two distinct orders, both readable (SC-003)
+- [X] T017 [US1] Run quickstart Scenario 8 once - `reset` -> `up` -> `demo` - and confirm the confirmation screen is reached with no manual seeding or repair (FR-007a, FR-008, SC-003a). **DONE** 2026-08-19: reset 17s, up 84s, demo 67s; **2m48s from wiped volumes to a placed order**, no manual step. Proof the wipe was real: an order placed before the reset now returns 404, the order placed after it reads back with the right total, and all three seeded catalogue products are present again. Elapsed times to be carried into `docs/demo-phase-1.md` by T035
 
-**Checkpoint**: US1 is independently demoable. Phase 1's core claim is evidenced.
+**Checkpoint**: US1 is independently demoable. Phase 1's core claim is evidenced. **Verified** on 2026-08-19: five consecutive runs, five distinct order references, zero failures.
+
+**A race in the demo spec, found by running it rather than reading it.** The second run failed on the basket total while the quantity assertion passed - the signature of a lost write, not a pricing fault. Cause: `AddToBasketButton` disables only its *own* control while a write is in flight, so clicking the apron and immediately following the Basket link could render the basket before that third write landed, showing the two notebooks alone. Fixed by waiting for each control to re-enable, which is the observable signal that the server accepted the item.
+
+Two things worth carrying forward: an intermittent demo would have failed FR-007 in front of an audience rather than in a task, and `e2e/walkthrough.spec.ts` clicks add-to-basket the same way - it has not been touched here, but it is exposed to the same race whenever it runs against containers rather than the dev server.
+
+**One prerequisite revised**: the scripts invoke Playwright through `node node_modules/@playwright/test/cli.js` rather than through pnpm. pnpm installs the dependencies but is not needed to run them, and dropping it as a runtime requirement means the demo runs on any machine where `pnpm install` has ever succeeded. The missing-dependency message still names `pnpm install`.
 
 ---
 

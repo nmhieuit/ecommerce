@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "size": "size-limit",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "demo": "playwright test --config playwright.demo.config.ts"
   },
   "dependencies": {
     "@ecommerce/api-client": "workspace:*",
