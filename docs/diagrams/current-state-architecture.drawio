@@ -4,8 +4,8 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#2d6a2d;" value="PHAN 1 -- DA CO TRONG CODE HOM NAY (24 du an .NET + 1 workspace frontend; 1 LENH DUY NHAT chay toan bo stack)" vertex="1">
-          <mxGeometry height="26" width="1400" x="30" as="geometry" />
+        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#2d6a2d;" value="PHAN 1 -- DA CO TRONG CODE HOM NAY (24 du an .NET + 1 workspace frontend; 1 LENH DUY NHAT chay toan bo stack; xem docs/demo-phase-1.md de co bang chung Giai doan 1 da xong)" vertex="1">
+          <mxGeometry height="26" width="1450" x="30" as="geometry" />
         </mxCell>
         <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="Storefront (frontend/apps/web)&#xa;CACH 1 -- 1 lenh, docker (moi tu 005): container nginx, cong 4173,&#xa;  tu Dockerfile rieng, CHI goi Gateway qua cong 5300&#xa;CACH 2 -- dev thu cong: pnpm dev, Vite, cong 5173&#xa;3 man hinh: San pham (/) - Gio hang (/basket) - Xac nhan (/confirmation)" vertex="1">
           <mxGeometry height="115" width="460" x="30" y="50" as="geometry" />
@@ -52,7 +52,7 @@
         <mxCell id="svc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Baskets.Api&#xa;Cong 5188 (chi mo trong che do debug)&#xa;Gio hang cua nguoi goi (CustomerRef)&#xa;+ /health/live, /health/ready&#xa;Bang: Basket (Total tinh tai cho) + BasketLineItem&#xa;Chan CSDL neu thieu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="380" y="610" as="geometry" />
         </mxCell>
-        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Orders.Api&#xa;Cong 5041 (chi mo trong che do debug)&#xa;Tao don hang tu dong gio hang; doc lai theo id&#xa;+ /health/live, /health/ready&#xa;Bang: Order (Id, PlacedAtUtc, Total)&#xa;Chan CSDL neu thieu X-Tenant-Id / X-Subject-Id" vertex="1">
+        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Orders.Api&#xa;Cong 5041 (chi mo trong che do debug, hoac che do demo)&#xa;Tao don hang tu dong gio hang; doc lai theo id&#xa;+ /health/live, /health/ready&#xa;Bang: Order (Id, PlacedAtUtc, Total, MOI: TenantId -- chi la&#xa;NHAN, khong phai ngan cach vat ly, xem Phan 2)&#xa;Chan CSDL neu thieu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="730" y="610" as="geometry" />
         </mxCell>
         <mxCell id="svc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Parties.Api&#xa;Cong 5204 (chi mo trong che do debug)&#xa;GET /parties/{id}&#xa;+ /health/live, /health/ready&#xa;Bang: Party (Id, DisplayName)&#xa;Chan CSDL neu thieu X-Tenant-Id / X-Subject-Id" vertex="1">
