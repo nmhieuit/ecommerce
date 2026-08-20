@@ -1,0 +1,418 @@
+# The whole platform with every port published, for trying the test cases by hand.
+#
+#   ./scripts/local-up.ps1        (or ./scripts/local-up.sh)
+#   docker compose -f docker-compose.local.yml up -d --wait
+#
+# Self-contained: this file is not an override and does not need docker-compose.yml beside it.
+#
+# ------------------------------------------------------------------------------------------------
+# WHY THIS FILE EXISTS, AND HOW IT DIFFERS FROM docker-compose.yml
+#
+# docker-compose.yml is the deployed shape in miniature: one SQL Server for all four databases, and
+# exactly two published ports, so "the storefront reaches the gateway and nothing else" is a
+# property of the environment rather than an assertion (004 SC-010).
+#
+# This file gives up both of those on purpose, to make failure modes reachable by hand:
+#
+#   1. ONE SQL SERVER PER SERVICE. Stopping `baskets-db` takes Baskets' database away and leaves
+#      every other service's alone, which is the only way to observe by hand what
+#      HealthReady_ReturnsServiceUnavailable_WhenDatabaseUnreachable and
+#      HealthReady_DoesNotFallBackToAnotherServicesDatabase_WhenOwnDatabaseUnreachable assert.
+#      With the shared server of docker-compose.yml, stopping the database stops all four at once
+#      and the second of those claims cannot be told apart from the first.
+#
+#   2. EVERY PORT PUBLISHED. Each service can be called directly, so a request that never went
+#      through the gateway — and therefore resolved no tenant — is something you can actually send.
+#
+# See docs/local-testing.md for the scenarios and the test-case ids each one covers.
+#
+# ------------------------------------------------------------------------------------------------
+# PORT MAP (host → container)
+#
+#   storefront          4173 → 80        http://localhost:4173
+#   gateway-api         5300 → 8080      http://localhost:5300
+#   bff-api             5301 → 8080      http://localhost:5301/openapi/v1.json
+#   products-api        5088 → 8080      http://localhost:5088/health/ready
+#   baskets-api         5188 → 8080      http://localhost:5188/health/ready
+#   orders-api          5041 → 8080      http://localhost:5041/health/ready
+#   parties-api         5204 → 8080      http://localhost:5204/health/ready
+#   parties-db         14330 → 1433      sa / $MSSQL_SA_PASSWORD
+#   products-db        14331 → 1433      sa / $MSSQL_SA_PASSWORD
+#   baskets-db         14332 → 1433      sa / $MSSQL_SA_PASSWORD
+#   orders-db          14333 → 1433      sa / $MSSQL_SA_PASSWORD
+#   redis               6379 → 6379
+#   rabbitmq            5672 → 5672      broker
+#   rabbitmq           15672 → 15672     management UI, guest/guest
+#   otel-collector      4317 → 4317      OTLP gRPC
+#   otel-collector      4318 → 4318      OTLP HTTP
+#
+# These are the ports the repository already uses everywhere else: the same ones
+# docker-compose.debug.yml publishes, the same ones docker-compose.deps.yml gives the databases,
+# and the same ones each service's appsettings.Development.json names.
+#
+# CONSEQUENCE: this stack CANNOT run at the same time as `ecomerce-stack` (docker-compose.yml) or
+# `ecomerce` (docker-compose.deps.yml). Ports 4173, 5300 and 14330-14333 collide. Stop the other
+# one first — `./scripts/down.ps1` — or this stack fails to bind.
+# ------------------------------------------------------------------------------------------------
+
+# A project name of its own, so `down` here never tears down `ecomerce-stack` or `ecomerce`.
+name: ecomerce-local
+
+networks:
+  backbone:
+    driver: bridge
+
+volumes:
+  # One volume per database server, so resetting one service's data does not touch another's.
+  # Named apart from the other files' volumes — Compose scopes them by project, and a shared name
+  # would still be a different volume, but the distinct names make `docker volume ls` readable.
+  local-parties-db-data:
+  local-products-db-data:
+  local-baskets-db-data:
+  local-orders-db-data:
+  local-rabbitmq-data:
+
+# The database servers are identical apart from their port and volume, so the parts that must not
+# drift are declared once.
+x-mssql: &mssql
+  image: mcr.microsoft.com/mssql/server:2022-latest
+  environment:
+    ACCEPT_EULA: "Y"
+    MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?copy .env.example to .env before starting}
+  networks: [backbone]
+  healthcheck:
+    # Not `SELECT 1`. That succeeds as soon as *master* is up, while user databases are still
+    # recovering after a restart — and a migrator started in that window sees its database as
+    # absent, tries to create it, and fails with "Database 'orders' already exists" (error 1801).
+    # Restarting a database on purpose is the whole point of this file, so this stack meets that
+    # window far more often than the default one does.
+    #
+    # $$ escapes to a literal $ so the password is expanded by the shell inside the container
+    # rather than by Compose, keeping it out of `docker inspect` output. -b makes sqlcmd exit
+    # non-zero when the RAISERROR fires.
+    test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q \"SET NOCOUNT ON; IF EXISTS (SELECT 1 FROM sys.databases WHERE state_desc <> 'ONLINE') RAISERROR('databases still recovering', 16, 1);\" || exit 1"]
+    interval: 5s
+    timeout: 5s
+    retries: 30
+    # SQL Server needs a while before it accepts anything; without this the retries are spent
+    # before the server is even listening.
+    start_period: 15s
+
+x-service-healthcheck: &service-healthcheck
+  test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
+  interval: 5s
+  timeout: 5s
+  retries: 20
+  start_period: 10s
+
+services:
+  # ---------------------------------------------------------------- databases
+  #
+  # Hostnames match what each service's appsettings.json already names (`Server=products-db`), which
+  # is the per-service topology the deployed environment has. docker-compose.yml is the file that
+  # departs from it, consolidating onto one server for the resource floor.
+  products-db:
+    <<: *mssql
+    ports:
+      - "14331:1433"
+    volumes:
+      - local-products-db-data:/var/opt/mssql
+
+  baskets-db:
+    <<: *mssql
+    ports:
+      - "14332:1433"
+    volumes:
+      - local-baskets-db-data:/var/opt/mssql
+
+  orders-db:
+    <<: *mssql
+    ports:
+      - "14333:1433"
+    volumes:
+      - local-orders-db-data:/var/opt/mssql
+
+  parties-db:
+    <<: *mssql
+    ports:
+      - "14330:1433"
+    volumes:
+      - local-parties-db-data:/var/opt/mssql
+
+  # ---------------------------------------------------------------- other dependencies
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks: [backbone]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # Nothing connects to this. It runs because the platform declares it as a dependency, so the
+    # story that first needs one finds it present. A passing health check means "available", never
+    # "working".
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - local-rabbitmq-data:/var/lib/rabbitmq
+    networks: [backbone]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    # Also unused by any service. The management UI on 15672 takes the image defaults, guest/guest,
+    # which is why docker-compose.yml keeps it behind an override — and why this file is for local
+    # experimentation only.
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel/config.yaml"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./docker/otel-collector-config.yaml:/etc/otel/config.yaml:ro
+    networks: [backbone]
+    # No healthcheck: the collector image is distroless — no shell, no probe tool, nothing to run a
+    # check with. `--wait` still gates on the container reaching a running state, which is weaker
+    # than the gates above.
+
+  # ---------------------------------------------------------------- schema
+  #
+  # Each service's migrations run as their own container and must exit 0 before that service starts.
+  #
+  # Deliberately NOT given ASPNETCORE_ENVIRONMENT=Development. The migrator image carries the EF
+  # bundle and nothing else — no appsettings files at all — so its whole configuration is the
+  # environment variable below. Naming an environment would change nothing except to imply a file
+  # that is not in the image.
+  #
+  # `restart: on-failure:3` is load-bearing rather than belt-and-braces: EF decides whether a
+  # database exists by opening a connection, and that can fail transiently while SQL Server
+  # finishes recovery, after which EF tries to CREATE a database that is already there (error
+  # 1801). Applying migrations is idempotent, so re-running is the correct response.
+  products-migrate:
+    restart: on-failure:3
+    build: &products-build
+      context: .
+      dockerfile: services/products/src/Products.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__ProductsDb: Server=products-db;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      products-db:
+        condition: service_healthy
+
+  baskets-migrate:
+    restart: on-failure:3
+    build: &baskets-build
+      context: .
+      dockerfile: services/baskets/src/Baskets.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__BasketsDb: Server=baskets-db;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      baskets-db:
+        condition: service_healthy
+
+  orders-migrate:
+    restart: on-failure:3
+    build: &orders-build
+      context: .
+      dockerfile: services/orders/src/Orders.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__OrdersDb: Server=orders-db;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      orders-db:
+        condition: service_healthy
+
+  parties-migrate:
+    restart: on-failure:3
+    build: &parties-build
+      context: .
+      dockerfile: services/parties/src/Parties.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__PartiesDb: Server=parties-db;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      parties-db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------- domain services
+  #
+  # ASPNETCORE_ENVIRONMENT=Development everywhere, which brings one trap with it that has to be
+  # closed explicitly at every single service:
+  #
+  #   appsettings.Development.json names localhost addresses — `Server=localhost,14332` for the
+  #   domain services, `http://localhost:5088` and friends for the BFF, `http://localhost:5301` for
+  #   the gateway's YARP cluster. Inside a container, localhost is the container itself. Every one
+  #   of those values is overridden below with the compose hostname. Miss one and the service
+  #   starts, looks healthy, and fails every call that goes through it.
+  #
+  # `Connect Timeout=3;ConnectRetryCount=0` is carried over from appsettings.Development.json on
+  # purpose. It is what makes /health/ready answer 503 within a few seconds of a database being
+  # stopped, instead of holding the request open for the 15-second default while the driver retries
+  # — which is the difference between observing the behaviour and waiting on it.
+  #
+  # No `restart:` policy: when a database is stopped, the service must stay up and report 503.
+  # A restarting container reports nothing.
+  products-api:
+    build:
+      <<: *products-build
+      target: final
+    # Each service is given ONLY its own database's connection string. Holding another service's
+    # credential is itself the violation, whether or not it is used (constitution Principle I —
+    # the rule tests/CrossServiceIsolation.Tests enforces against configuration).
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ProductsDb: Server=products-db;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5088:8080"
+    networks: [backbone]
+    depends_on:
+      products-migrate:
+        condition: service_completed_successfully
+    healthcheck: *service-healthcheck
+
+  baskets-api:
+    build:
+      <<: *baskets-build
+      target: final
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__BasketsDb: Server=baskets-db;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5188:8080"
+    networks: [backbone]
+    depends_on:
+      baskets-migrate:
+        condition: service_completed_successfully
+    healthcheck: *service-healthcheck
+
+  orders-api:
+    build:
+      <<: *orders-build
+      target: final
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__OrdersDb: Server=orders-db;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5041:8080"
+    networks: [backbone]
+    depends_on:
+      orders-migrate:
+        condition: service_completed_successfully
+    healthcheck: *service-healthcheck
+
+  parties-api:
+    build:
+      <<: *parties-build
+      target: final
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__PartiesDb: Server=parties-db;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5204:8080"
+    networks: [backbone]
+    depends_on:
+      parties-migrate:
+        condition: service_completed_successfully
+    healthcheck: *service-healthcheck
+
+  # ---------------------------------------------------------------- edge
+  bff-api:
+    build:
+      context: .
+      dockerfile: services/bff/src/Bff.Api/Dockerfile
+    environment:
+      # Development is what publishes /openapi/v1.json — the document the frontend's API client is
+      # generated from. It is also what points the four clients at localhost, so all four are
+      # restored to compose hostnames here.
+      ASPNETCORE_ENVIRONMENT: Development
+      Services__ProductsApi__BaseUrl: http://products-api:8080
+      Services__BasketsApi__BaseUrl: http://baskets-api:8080
+      Services__OrdersApi__BaseUrl: http://orders-api:8080
+      Services__PartiesApi__BaseUrl: http://parties-api:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5301:8080"
+    networks: [backbone]
+    # The BFF owns no database, so it holds no connection string. It waits for all four services it
+    # aggregates: a BFF that is up before them would answer 502 to its first caller.
+    depends_on:
+      products-api: { condition: service_healthy }
+      baskets-api: { condition: service_healthy }
+      orders-api: { condition: service_healthy }
+      parties-api: { condition: service_healthy }
+    healthcheck: *service-healthcheck
+
+  gateway-api:
+    build:
+      context: .
+      dockerfile: services/gateway/src/Gateway.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # appsettings.Development.json repoints the YARP cluster at http://localhost:5301, which
+      # inside this container is the gateway itself — every forwarded request would come back to
+      # the sender. Restored to the compose hostname.
+      ReverseProxy__Clusters__bff-cluster__Destinations__bff__Address: http://bff-api:8080
+      # The storefront's published origin must be admitted or the browser blocks every call before
+      # it leaves. Index 0 is the container storefront this stack serves; index 1 keeps the Vite
+      # dev server admitted too, so `pnpm dev` can be pointed at this backend.
+      Cors__AllowedOrigins__0: http://localhost:4173
+      Cors__AllowedOrigins__1: http://localhost:5173
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5300:8080"
+    networks: [backbone]
+    depends_on:
+      bff-api:
+        condition: service_healthy
+    healthcheck:
+      # Liveness, not readiness: the gateway's readiness is deliberately empty, because making it
+      # depend on the BFF would pull the gateway out of rotation during a downstream outage — when
+      # its job is to still answer and return a clear error. Stopping a service and watching
+      # /health/live stay 200 while /bff/products returns 502 is one of the scenarios in
+      # docs/local-testing.md.
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # ---------------------------------------------------------------- storefront
+  storefront:
+    build:
+      context: ./frontend
+      dockerfile: apps/web/Dockerfile
+      args:
+        # The address the BROWSER must reach, and the browser runs on the host — so the gateway's
+        # published host address, never `gateway-api:8080`, which resolves only inside this
+        # network. Vite inlines this at build time, so it is fixed in the image.
+        GATEWAY_ORIGIN: http://localhost:5300
+    ports:
+      - "4173:80"
+    networks: [backbone]
+    # Waits for nothing: it is static files. The browser calls the gateway afterwards, so a
+    # storefront that loads before the backend is ready shows its own error state.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

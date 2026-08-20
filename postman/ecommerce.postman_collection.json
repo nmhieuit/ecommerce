@@ -1,0 +1,2467 @@
+{
+  "info": {
+    "_postman_id": "8f3c1a52-7c4e-4f2a-9f1b-2d6a0c5e91b4",
+    "name": "Ecommerce - Local",
+    "description": "Toan bo mat tiep xuc HTTP cua he thong, goi duoc ngay sau khi import.\n\n## Chay truoc\nStack local phai dang chay: `./scripts/local-up.ps1` (hoac `.sh`). Chon environment **Ecommerce - Local** o goc tren ben phai Postman.\n\n## Quy tac header - doc truoc khi sua bat ky request nao\n- Request **qua gateway** (`{{gatewayUrl}}`) KHONG mang `X-Tenant-Id` hay `X-Subject-Id`. Gateway tu phan giai danh tinh va ghi de moi gia tri client gui len. Gan header vao se tao cam giac sai rang client quyet dinh duoc tenant, trong khi day chinh la dieu he thong chan.\n- Request **goi thang BFF hoac domain service** BAT BUOC mang ca hai header. Thieu tenant thi domain service tra 500; thieu subject thi cac endpoint theo nguoi mua tra 500. BFF chi relay chu khong tu phan giai.\n- `X-Correlation-Id` duoc pre-request script cap collection tu sinh cho moi request, de doi chieu log khi can.\n\n## Cach chay\nFolder **00 - Smoke Flow** chay tuan tu tu tren xuong bang Collection Runner va ket thuc bang mot don hang that. Cac folder con lai xep theo master feature khop `docs/test-cases-2026-08-20.xlsx`; moi request ghi ma test case tuong ung trong phan description.\n\n## Doi sang staging\nKhong request nao hardcode host hay cong. Duplicate environment nay, dien lai cac bien URL la chay duoc; nhung environment tren staging thuong chi co `gatewayUrl`, cac bien con lai de trong va cac folder goi thang service se that bai - dung nhu ky vong, vi staging khong publish chung.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Smoke Flow",
+      "item": [
+        {
+          "name": "00 Don giỏ truoc khi bat dau",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Dua giỏ ve trang thai rong de ca luong ben duoi khong phu thuoc du lieu con lai tu lan chay truoc. 204 neu giỏ dang co hang, 409 neu von da rong - ca hai deu la thanh cong o buoc nay.\n\nDay la request duy nhat trong folder khong di qua gateway: khong co endpoint clear nao duoc publish qua BFF, nen phai goi thang baskets service."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"giỏ da ve trang thai rong (204 vua don, hoac 409 von da rong)\", function () {",
+                  "    pm.expect([204, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "01 Xem catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Danh sach san pham qua gateway. Khong gan header danh tinh: gateway tu phan giai tenant va subject. Ba san pham la du lieu seed theo migration. [TC-CMN-039]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"tra ve envelope co items\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('items').that.is.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"catalog co Field Notes Notebook gia 12.50\", function () {",
+                  "    const items = pm.response.json().items;",
+                  "    const notebook = items.find(function (p) { return p.id === pm.collectionVariables.get('notebookId'); });",
+                  "    pm.expect(notebook, 'khong tim thay Notebook trong catalog').to.not.be.undefined;",
+                  "    pm.expect(Number(notebook.price)).to.eql(12.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 Them Notebook (lan 1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Chi gui productId va quantity. Gia khong phai viec cua client - BFF tu tra gia tu catalog. [TC-CMN-012]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"dong hang mang ten va gia lay tu catalog\", function () {",
+                  "    const line = pm.response.json().items[0];",
+                  "    pm.expect(line.name).to.eql('Field Notes Notebook');",
+                  "    pm.expect(Number(line.unitPrice)).to.eql(12.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 Them Notebook (lan 2, phai gop dong)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Them lai chinh san pham do: phai cong don so luong chu khong tao dong thu hai. [TC-CMN-014]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"van 1 dong, so luong len 2\", function () {",
+                  "    const items = pm.response.json().items;",
+                  "    pm.expect(items.length).to.eql(1);",
+                  "    pm.expect(items[0].quantity).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "04 Them Linen Apron",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "San pham khac phai nam tren dong rieng.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{apronId}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"gio co 2 dong\", function () {",
+                  "    pm.expect(pm.response.json().items.length).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "05 Xem gio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Hai Notebook gop mot dong, cong mot Apron: tong 59.25 - dung con so kich ban demo cong bo. Luu basketId de cac request theo id dung lai. [TC-CMN-011]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"2 dong, Notebook so luong 2, tong 59.25\", function () {",
+                  "    const basket = pm.response.json();",
+                  "    pm.expect(basket.items.length).to.eql(2);",
+                  "    const notebook = basket.items.find(function (i) { return i.productId === pm.collectionVariables.get('notebookId'); });",
+                  "    pm.expect(notebook.quantity).to.eql(2);",
+                  "    pm.expect(Number(basket.total)).to.eql(59.25);",
+                  "});",
+                  "",
+                  "pm.environment.set('basketId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "06 Checkout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/checkout",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "checkout"
+              ]
+            },
+            "description": "Bien gio thanh don hang. Luu orderId cho request sau. [TC-CMN-019]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"don hang co ma va tong 59.25\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "    pm.expect(Number(order.total)).to.eql(59.25);",
+                  "});",
+                  "",
+                  "pm.environment.set('orderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "07 Doc lai don vua dat",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/orders/{{orderId}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Ma don tren man hinh xac nhan phai doc lai duoc va khop. [TC-CMN-020]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"don doc lai trung ma va tong\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.id).to.eql(pm.environment.get('orderId'));",
+                  "    pm.expect(Number(order.total)).to.eql(59.25);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "08 Gio da rong nhung van la gio cu",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Checkout don sach gio nhung khong xoa gio: id giu nguyen. [TC-CMN-021]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"gio rong, tong 0, van dung id cu\", function () {",
+                  "    const basket = pm.response.json();",
+                  "    pm.expect(basket.items.length).to.eql(0);",
+                  "    pm.expect(Number(basket.total)).to.eql(0);",
+                  "    pm.expect(basket.id).to.eql(pm.environment.get('basketId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "09 Checkout lan hai phai bi tu choi",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/checkout",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "checkout"
+              ]
+            },
+            "description": "Bam dat hang hai lan khong duoc tao hai don. [TC-CMN-022, TC-CMN-023]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ],
+      "description": "Happy path day du, di qua gateway, chay tuan tu tu tren xuong."
+    },
+    {
+      "name": "Basket",
+      "item": [
+        {
+          "name": "Health live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{basketsUrl}}/health/live",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tien trinh con song. Khong can header nao: liveness khong cham database. [TC-BSK-014]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Health ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{basketsUrl}}/health/ready",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Readiness mo ket noi that toi database rieng cua service. 200 khi database song [TC-BSK-028]. Tat container database cua service nay roi goi lai: phai tra 503 va check 'self-database' la Unhealthy [TC-BSK-029] - xem docs/local-testing.md, kich ban 1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"readiness tra 200 (DB song) hoac 503 (DB tat)\", function () {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 503) {",
+                  "    pm.test(\"khi 503 thi check self-database phai Unhealthy\", function () {",
+                  "        const body = pm.response.json();",
+                  "        const self = body.checks.find(function (c) { return c.name === 'self-database'; });",
+                  "        pm.expect(self, 'khong tim thay check self-database').to.not.be.undefined;",
+                  "        pm.expect(self.status).to.eql('Unhealthy');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Gio hien tai cua nguoi mua",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current"
+              ]
+            },
+            "description": "Goi thang baskets service, nen bat buoc co ca hai header: tenant quyet dinh cham vao du lieu nao, subject quyet dinh gio cua ai. Luu basketId de request theo id ben duoi dung duoc ke ca khi khong chay Smoke Flow truoc. [TC-BSK-021, TC-BSK-022]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"gio thuoc ve dung nguoi goi\", function () {",
+                  "    pm.expect(pm.response.json().customerRef).to.eql(pm.environment.get('subjectId'));",
+                  "});",
+                  "",
+                  "pm.environment.set('basketId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Doc gio theo id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/{{basketId}}",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "{{basketId}}"
+              ]
+            },
+            "description": "Dung basketId da luu o request tren. [TC-BSK-015]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"tra ve dung gio duoc hoi\", function () {",
+                  "    pm.expect(pm.response.json().id).to.eql(pm.environment.get('basketId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Doc gio theo id khong ton tai",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/{{unknownGuid}}",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "404 chu khong phai 200 rong: 'khong co gio' khac 'gio khong co gi'. [TC-BSK-016]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Them hang voi so luong 0 bi tu choi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/items",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "items"
+              ]
+            },
+            "description": "Khong cho ton tai dong co so luong bang 0. [TC-BSK-026]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 0,\n  \"unitPrice\": 12.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thieu header subject thi khong phat gio cua ai",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current"
+              ]
+            },
+            "description": "Co tenant nhung khong co subject: du de cham database, khong du de goi ten nguoi mua. Khong co nguoi goi mac dinh. [TC-BSK-027]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thieu header tenant thi that bai ro rang",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current"
+              ]
+            },
+            "description": "Request khong di qua gateway nen khong phan giai tenant. Phai 500 chu khong duoc phuc vu du lieu cua schema mac dinh. [TC-BSK-032]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Don gio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "204 neu gio dang co hang, 409 neu von da rong. Request nay ton tai de dua gio ve trang thai biet truoc cho request ke tiep. [TC-BSK-017]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"don gio thanh cong hoac gio von da rong\", function () {",
+                  "    pm.expect([204, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Don gio lan hai phai bao xung dot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Ngay sau request tren, gio chac chan rong - nen lan don nay phai that bai ro rang thay vi im lang thanh cong. [TC-BSK-018, TC-BSK-019]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Gateway",
+      "item": [
+        {
+          "name": "Health live cua chinh gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/health/live",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Route catch-all khong duoc nuot health probe cua chinh gateway. Readiness cua gateway co y de rong, nen chi dung liveness. [TC-GTW-025]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Tai lieu OpenAPI di qua duoc gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/openapi/v1.json",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "openapi",
+                "v1.json"
+              ]
+            },
+            "description": "Tai lieu nay chi BFF moi tao ra duoc, nen 200 o day la bang chung request that su di den BFF chu khong dung o gateway. [TC-GTW-023]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"tai lieu la cua BFF (co duong dan /bff/products)\", function () {",
+                  "    pm.expect(Object.keys(pm.response.json().paths)).to.include('/bff/products');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Route client duoc chuyen tiep xuong BFF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Khac 404 nghia la gateway da chuyen tiep den handler cua BFF. [TC-GTW-024]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"khong phai 404 - da toi duoc handler cua BFF\", function () {",
+                  "    pm.expect(pm.response.code).to.not.eql(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Duong dan khong ton tai",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/no-such-path",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "no-such-path"
+              ]
+            },
+            "description": "404 den nhanh, va noi dung khong duoc lo chi tiet dinh tuyen noi bo. [TC-GTW-036, TC-GTW-037]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"khong lo bff-cluster, bff-route, products-api hay so cong\", function () {",
+                  "    const body = pm.response.text().toLowerCase();",
+                  "    ['bff-cluster', 'bff-route', 'products-api', '8080'].forEach(function (leak) {",
+                  "        pm.expect(body, 'body lo ' + leak).to.not.include(leak);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test(\"tra loi nhanh, khong treo\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(15000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "CORS preflight tu storefront",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{storefrontOrigin}}"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Trinh duyet gui preflight nay truoc moi request cross-origin co credentials. Gateway phai tu tra loi chu khong chuyen tiep. Origin lay tu bien storefrontOrigin: day la origin cua trinh duyet nguoi dung, khong phai dia chi cua backend, nen tren staging no doi theo storefront. [TC-GTW-026, TC-GTW-027, TC-GTW-031]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"preflight duoc chap nhan\", function () {",
+                  "    pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"cho phep dung origin cua storefront, khong dung dau *\", function () {",
+                  "    const allow = pm.response.headers.get('Access-Control-Allow-Origin');",
+                  "    pm.expect(allow).to.eql(pm.environment.get('storefrontOrigin'));",
+                  "    pm.expect(allow).to.not.eql('*');",
+                  "});",
+                  "",
+                  "pm.test(\"cho phep gui credentials\", function () {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Allow-Credentials')).to.eql('true');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "CORS preflight tu origin la",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://evil.example"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Danh sach origin la allow-list chu khong mo cua tu do: origin khong duoc cau hinh thi khong nhan duoc header cho phep nao, va trinh duyet se chan. [TC-GTW-028]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"khong co header Access-Control-Allow-Origin\", function () {",
+                  "    pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Order",
+      "item": [
+        {
+          "name": "Health live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{ordersUrl}}/health/live",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tien trinh con song. Khong can header nao: liveness khong cham database. [TC-ORD-001]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Health ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{ordersUrl}}/health/ready",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Readiness mo ket noi that toi database rieng cua service. 200 khi database song [TC-ORD-023]. Tat container database cua service nay roi goi lai: phai tra 503 va check 'self-database' la Unhealthy [TC-ORD-024] - xem docs/local-testing.md, kich ban 1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"readiness tra 200 (DB song) hoac 503 (DB tat)\", function () {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 503) {",
+                  "    pm.test(\"khi 503 thi check self-database phai Unhealthy\", function () {",
+                  "        const body = pm.response.json();",
+                  "        const self = body.checks.find(function (c) { return c.name === 'self-database'; });",
+                  "        pm.expect(self, 'khong tim thay check self-database').to.not.be.undefined;",
+                  "        pm.expect(self.status).to.eql('Unhealthy');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Dat hang truc tiep",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Goi thang orders service. Tong tien do server tu tinh tu cac dong duoc gui len, khong nhan tong tu client. Luu ma don vao bien collection directOrderId. [TC-ORD-015, TC-ORD-017]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"unitPrice\": 12.5\n    },\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000003\",\n      \"quantity\": 1,\n      \"unitPrice\": 34.25\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"tong tien server tu tinh la 59.25\", function () {",
+                  "    pm.expect(Number(pm.response.json().total)).to.eql(59.25);",
+                  "});",
+                  "",
+                  "pm.test(\"co header Location tro toi don vua tao\", function () {",
+                  "    const id = pm.response.json().id;",
+                  "    pm.expect(pm.response.headers.get('Location')).to.eql('/orders/' + id);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('directOrderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Doc lai don vua dat, kem tenant",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders/{{directOrderId}}",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{directOrderId}}"
+              ]
+            },
+            "description": "Doc thang orders service moi thay truong tenantId - hinh dang qua BFF khong mang no. [TC-ORD-012, TC-ORD-013, TC-ORD-016]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"don trung ma, tong 59.25 va thuoc dung tenant\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.id).to.eql(pm.collectionVariables.get('directOrderId'));",
+                  "    pm.expect(Number(order.total)).to.eql(59.25);",
+                  "    pm.expect(order.tenantId).to.eql(pm.environment.get('tenantId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Doc don khong ton tai",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "[TC-ORD-014]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Dat hang khong co dong nao bi tu choi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Giao dien da chan checkout gio rong, nhung goi thang API cung khong duoc tao don cho hu khong. [TC-ORD-018]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Dat hang voi so luong 0 bi tu choi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "[TC-ORD-019]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 0,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Tenant khai trong body bi bo qua",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Body co tenantId la, header co tenant that. Don phai thuoc tenant tu header - nguoi goi khong tu chon duoc tenant cho don cua minh. [TC-ORD-022]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"someone-elses-tenant\",\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 1,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"don thuoc tenant tu header, khong phai tenant khai trong body\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.tenantId).to.eql(pm.environment.get('tenantId'));",
+                  "    pm.expect(order.tenantId).to.not.eql('someone-elses-tenant');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Ghi don khi khong co tenant thi khong tao gi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "500 chung to nguoi goi bi tu choi. Rieng viec 'khong ghi gi vao database' thi phai dem so ban ghi moi biet - xem docs/local-testing.md kich ban 2. [TC-ORD-027, TC-ORD-028]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 1,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Doc don khong ton tai qua gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/orders/{{unknownGuid}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "orders",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "Downstream tra loi dung chu khong phai downstream hong: 404 chu khong phai 502. [TC-CMN-036]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Party",
+      "item": [
+        {
+          "name": "Health live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{partiesUrl}}/health/live",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tien trinh con song. Khong can header nao: liveness khong cham database. [TC-PTY-001]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Health ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{partiesUrl}}/health/ready",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Readiness mo ket noi that toi database rieng cua service. 200 khi database song [TC-PTY-004]. Tat container database cua service nay roi goi lai: phai tra 503 va check 'self-database' la Unhealthy [TC-PTY-005] - xem docs/local-testing.md, kich ban 1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"readiness tra 200 (DB song) hoac 503 (DB tat)\", function () {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 503) {",
+                  "    pm.test(\"khi 503 thi check self-database phai Unhealthy\", function () {",
+                  "        const body = pm.response.json();",
+                  "        const self = body.checks.find(function (c) { return c.name === 'self-database'; });",
+                  "        pm.expect(self, 'khong tim thay check self-database').to.not.be.undefined;",
+                  "        pm.expect(self.status).to.eql('Unhealthy');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Doc party khong ton tai",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{partiesUrl}}/parties/{{unknownGuid}}",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "parties",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "LUU Y: parties khong co du lieu seed va khong co endpoint tao party, nen bang Parties rong cho toi khi ai do chen tay. Vi vay chi kiem chung duoc nhanh 404; truong hop doc thanh cong (TC-PTY-002) phai chen ban ghi vao localhost,14330 truoc. [TC-PTY-003]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thieu header tenant thi that bai ro rang",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{partiesUrl}}/parties/{{unknownGuid}}",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "parties",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "500 chu khong phai 404: khong phan giai duoc tenant thi that bai truoc khi kip tra cuu. [TC-PTY-008]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Doc party khong ton tai qua gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/parties/{{unknownGuid}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "parties",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "[TC-CMN-038]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Product",
+      "item": [
+        {
+          "name": "Health live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{productsUrl}}/health/live",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tien trinh con song. Khong can header nao: liveness khong cham database. [TC-PRD-001]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Health ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{productsUrl}}/health/ready",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Readiness mo ket noi that toi database rieng cua service. 200 khi database song [TC-PRD-007]. Tat container database cua service nay roi goi lai: phai tra 503 va check 'self-database' la Unhealthy [TC-PRD-008] - xem docs/local-testing.md, kich ban 1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"readiness tra 200 (DB song) hoac 503 (DB tat)\", function () {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 503) {",
+                  "    pm.test(\"khi 503 thi check self-database phai Unhealthy\", function () {",
+                  "        const body = pm.response.json();",
+                  "        const self = body.checks.find(function (c) { return c.name === 'self-database'; });",
+                  "        pm.expect(self, 'khong tim thay check self-database').to.not.be.undefined;",
+                  "        pm.expect(self.status).to.eql('Unhealthy');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Danh sach san pham",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{productsUrl}}/products",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "Ba san pham nay do migration seed, khong phai nhap tay - ma va gia co dinh qua moi lan dung lai database. [TC-PRD-002, TC-PRD-004, TC-PRD-005, TC-PRD-006]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"co du ba san pham seed, dung ma va dung gia\", function () {",
+                  "    const products = pm.response.json();",
+                  "    const expected = {};",
+                  "    expected[pm.collectionVariables.get('notebookId')] = 12.5;",
+                  "    expected[pm.collectionVariables.get('pourOverId')] = 48;",
+                  "    expected[pm.collectionVariables.get('apronId')] = 34.25;",
+                  "    Object.keys(expected).forEach(function (id) {",
+                  "        const found = products.find(function (p) { return p.id === id; });",
+                  "        pm.expect(found, 'thieu san pham ' + id).to.not.be.undefined;",
+                  "        pm.expect(Number(found.price)).to.eql(expected[id]);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test(\"moi san pham deu co ten va gia lon hon 0\", function () {",
+                  "    pm.response.json().forEach(function (p) {",
+                  "        pm.expect(p.name).to.be.a('string').and.not.empty;",
+                  "        pm.expect(Number(p.price)).to.be.above(0);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thieu header tenant thi khong phuc vu catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{productsUrl}}/products",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "Database van song va van co du lieu - neu khong co cong chan tenant thi request nay se tra 200. 500 chinh la bang chung cong chan ton tai. [TC-PRD-011]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Common",
+      "item": [
+        {
+          "name": "BFF health live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{bffUrl}}/health/live",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tien trinh BFF con song. Khong co test case tu dong nao trong docs/test-cases-2026-08-20.xlsx phu endpoint nay - bo test cua BFF khong co HealthCheckTests nhu bon domain service."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "BFF health ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{bffUrl}}/health/ready",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "BFF khong so huu database nao nen readiness cua no khong mo ket noi toi dau ca."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Tai lieu OpenAPI cua BFF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{bffUrl}}/openapi/v1.json",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "openapi",
+                "v1.json"
+              ]
+            },
+            "description": "Tai lieu nay la hop dong sinh ra API client cua frontend, va chi duoc publish o Development - stack local chay Development nen goi duoc, stack mac dinh (Production) thi khong. [TC-CMN-031, TC-CMN-032, TC-CMN-033, TC-CMN-034]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"mo ta du 7 route client-facing\", function () {",
+                  "    const paths = Object.keys(pm.response.json().paths);",
+                  "    ['/bff/products', '/bff/basket', '/bff/basket/items', '/bff/baskets/{basketId}',",
+                  "     '/bff/checkout', '/bff/orders/{orderId}', '/bff/parties/{partyId}'].forEach(function (p) {",
+                  "        pm.expect(paths, 'thieu ' + p).to.include(p);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test(\"moi route GET deu khai bao 502 va 504\", function () {",
+                  "    const paths = pm.response.json().paths;",
+                  "    ['/bff/products', '/bff/baskets/{basketId}', '/bff/orders/{orderId}', '/bff/parties/{partyId}']",
+                  "        .forEach(function (p) {",
+                  "            const codes = Object.keys(paths[p].get.responses);",
+                  "            pm.expect(codes, p + ' thieu 502').to.include('502');",
+                  "            pm.expect(codes, p + ' thieu 504').to.include('504');",
+                  "        });",
+                  "});",
+                  "",
+                  "pm.test(\"cac route theo id deu khai bao 404\", function () {",
+                  "    const paths = pm.response.json().paths;",
+                  "    ['/bff/baskets/{basketId}', '/bff/orders/{orderId}', '/bff/parties/{partyId}']",
+                  "        .forEach(function (p) {",
+                  "            pm.expect(Object.keys(paths[p].get.responses), p + ' thieu 404').to.include('404');",
+                  "        });",
+                  "});",
+                  "",
+                  "pm.test(\"schema ProductSummary co du id, name, price\", function () {",
+                  "    const schemas = pm.response.json().components.schemas;",
+                  "    pm.expect(schemas).to.have.property('ProductListResponse');",
+                  "    pm.expect(schemas.ProductListResponse.properties).to.have.property('items');",
+                  "    ['id', 'name', 'price'].forEach(function (f) {",
+                  "        pm.expect(schemas.ProductSummary.properties, 'thieu ' + f).to.have.property(f);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "BFF: danh sach san pham (goi thang, co header)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{bffUrl}}/bff/products",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Goi thang BFF thi phai tu mang header: BFF chi relay chu khong tu phan giai danh tinh. [TC-CMN-039, TC-CMN-043]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"tra ve envelope items chu khong phai mang tran\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('items').that.is.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "BFF: thieu header thi downstream tu choi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{bffUrl}}/bff/products",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "BFF khong bia ra tenant khi chinh no khong co: no goi xuong products service khong kem header, products service tu choi, va BFF bao lai thanh loi downstream. 502 chu khong phai 200 voi du lieu cua tenant mac dinh. [TC-CMN-044]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"that bai ro rang (502 hoac 504), khong bao gio 200\", function () {",
+                  "    pm.expect([502, 504]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "BFF: gio hien tai (goi thang, co header)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{bffUrl}}/bff/basket",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "[TC-CMN-011, TC-CMN-041]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"gio thuoc ve dung nguoi goi\", function () {",
+                  "    pm.expect(pm.response.json().customerRef).to.eql(pm.environment.get('subjectId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Gia do client tu khai bi bo qua",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Client gui kem unitPrice 0.01. Gia ghi nhan phai la 12.50 lay tu catalog - neu khong, client tu dat gia cho chinh minh. [TC-CMN-013]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 1,\n  \"unitPrice\": 0.01\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"gia ghi nhan la 12.50 chu khong phai 0.01\", function () {",
+                  "    const line = pm.response.json().items.find(function (i) {",
+                  "        return i.productId === pm.collectionVariables.get('notebookId');",
+                  "    });",
+                  "    pm.expect(Number(line.unitPrice)).to.eql(12.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Them san pham khong ton tai",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "San pham khong co trong catalog thi khong co gia de tra ra, nen khong co gi de them. 404 chu khong phai 502: downstream tra loi dung, chi la request sai. [TC-CMN-015]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"11111111-1111-4111-8111-111111111111\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Them hang voi so luong 0 qua BFF",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "[TC-CMN-016]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Doc gio theo id khong ton tai qua gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/baskets/{{unknownGuid}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "baskets",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "[TC-CMN-018]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"tra ve 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Don gio sau khi thu xong",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Cac request phia tren da them hang vao gio that. Don lai de lan chay sau bat dau tu trang thai sach. 204 hoac 409 deu la thanh cong."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"gio da ve trang thai rong\", function () {",
+                  "    pm.expect([204, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Mot correlation id moi cho moi request, de tim lai no trong log cua cac service.",
+          "pm.request.headers.upsert({",
+          "    key: 'X-Correlation-Id',",
+          "    value: pm.variables.replaceIn('{{$guid}}')",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "notebookId",
+      "value": "9f8d6b1e-0001-4000-8000-000000000001",
+      "type": "string"
+    },
+    {
+      "key": "pourOverId",
+      "value": "9f8d6b1e-0001-4000-8000-000000000002",
+      "type": "string"
+    },
+    {
+      "key": "apronId",
+      "value": "9f8d6b1e-0001-4000-8000-000000000003",
+      "type": "string"
+    },
+    {
+      "key": "unknownGuid",
+      "value": "00000000-0000-4000-8000-000000000000",
+      "type": "string"
+    },
+    {
+      "key": "directOrderId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
