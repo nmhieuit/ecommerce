@@ -70,9 +70,43 @@ Không đổi so với bản trước — tính năng `006` **không thêm dự 
 
 ## 3. Mục đích từng phần + các tình huống thực tế được giải quyết
 
-### 3.1–3.2 (không đổi — thêm 2 tình huống mới)
+### 3.1 Mục đích từng dự án/thành phần (không đổi — xem bản cập nhật trước)
 
-Giữ nguyên 10 tình huống đã liệt kê ở các bản cập nhật trước, bổ sung:
+Bảng mục đích từng dự án giữ nguyên như bản cập nhật cho tính năng `005`; tính năng `006` không thêm dự án nào.
+
+### 3.2 Mười hai tình huống thật mà giải pháp này giải quyết
+
+*Mười tình huống đầu đã có từ các bản cập nhật trước, nay chép lại đầy đủ để đọc được một mạch mà không phải lần theo lịch sử tài liệu. Hai tình huống cuối là mới, đến từ tính năng `006`.*
+
+**1) Ngăn rò rỉ/đè dữ liệu chéo giữa các bộ phận nghiệp vụ, trước khi nó xảy ra.**
+Một lập trình viên copy-paste nhầm file cấu hình khiến service Baskets trỏ sang CSDL của Orders. Ở đây build **thất bại ngay**, trước khi code được merge — bắt lỗi ở khâu *sở hữu*, không đợi đến khâu *sử dụng*.
+
+**2) Phát hiện sự cố hạ tầng tự động, không cần con người theo dõi 24/7.**
+`/health/ready` thật sự thử mở kết nối tới CSDL; `/health/live` **cố tình không** kiểm tra CSDL, để một sự cố CSDL 30 giây không biến thành sự cố ứng dụng 5 phút do bị khởi động lại hàng loạt.
+
+**3) Giữ chất lượng kiến trúc ổn định khi thời gian trôi qua, không phụ thuộc trí nhớ một người.**
+Các bài test kiến trúc biến quy ước tổ chức code thành điều kiện bắt buộc để build thành công.
+
+**4) Một service chết không kéo sập cả hệ thống.**
+Không có ngân sách thời gian, mặc định .NET chờ tới 100 giây mỗi lời gọi — một service treo có thể làm BFF cạn luồng xử lý và ngừng trả lời **mọi thứ**, kể cả phần không liên quan. Với ngân sách 3 giây hiện tại, người gọi luôn nhận lỗi rõ ràng trong vài giây, các phần khác vẫn chạy bình thường.
+
+**5) Lỗi có mã tra cứu, thay vì "hệ thống đang bận, vui lòng thử lại".**
+Một mã theo dõi (`X-Correlation-Id`) lần được toàn bộ hành trình của request qua cả ba tầng trong hệ thống ghi log — không có nó, điều tra một khiếu nại cụ thể gần như bất khả thi trong hệ phân tán.
+
+**6) Đội frontend không thể vô tình bỏ sót trường hợp lỗi.**
+Tài liệu API sinh tự động từng chỉ khai báo trường hợp thành công; đã sửa để bắt buộc khai báo cả 404/502/504, và có test canh để không lệch trở lại — quan trọng vì mã nguồn giao diện dự kiến sẽ được sinh tự động từ chính tài liệu này.
+
+**7) "Quên xác định đang phục vụ ai" biến thành lỗi ồn ào ngay lập tức, không phải rò rỉ dữ liệu âm thầm.**
+Nếu một script nội bộ, một lần debug thủ công, hay một tính năng tương lai gọi thẳng vào service nghiệp vụ mà bỏ qua Gateway (nên thiếu header `X-Tenant-Id`), hệ thống **dừng cứng với lỗi 500** thay vì âm thầm trả lời bằng dữ liệu của tenant mặc định nào đó. Vì toàn hệ thống chỉ có đúng một điểm khởi tạo kết nối CSDL cho mỗi service, và điểm đó bắt buộc phải xác định tenant trước — không có đường vòng nào để tính năng mới lỡ quên bước này mà vẫn chạy được. *Từ tính năng `004`, điều này áp dụng cho cả tenant lẫn người gọi cụ thể (`X-Subject-Id`), không chỉ riêng tenant.*
+
+**8) Thanh toán trùng lặp do bấm nhầm/mạng chậm không tạo ra hai đơn hàng.**
+Một tình huống rất thật trong thương mại điện tử: khách hàng bấm "Thanh toán", mạng chậm, khách sốt ruột bấm thêm lần nữa. Vì bước đầu tiên của thanh toán luôn kiểm tra giỏ hàng có còn hàng không, và giỏ đã bị xoá ngay sau lần thanh toán thành công đầu tiên, lần bấm thứ hai tự động nhận lỗi rõ ràng (409 — "giỏ hàng trống") thay vì tạo ra đơn hàng thứ hai và tính tiền hai lần. Không cần viết thêm cơ chế "chống trùng lặp" riêng — tác dụng phụ tự nhiên của đúng thứ tự các bước.
+
+**9) "Test đều xanh" không có nghĩa là "chạy được" — cho tới khi có ai thực sự thử đóng gói.**
+Trong nhiều tháng, toàn bộ 96+ bài test của hệ thống đều báo xanh, `dotnet build` luôn sạch — nhưng **5 trên 6 Dockerfile thực ra không build được**, vì thiếu một dòng copy thư viện dùng chung. Không có bài test .NET nào từng phát hiện ra, đơn giản vì không có bài test .NET nào từng thử build container. Chỉ khi tính năng `005` thực sự cần chạy container thật, lỗi mới lộ ra — và ngay khi lộ ra, đã được biến thành một bài test tự động (`ContainerConventionTests`) để không bao giờ tái diễn âm thầm. Bài học quản lý: "test xanh" chỉ chứng minh những gì test đó *có kiểm tra*, không hơn.
+
+**10) Một lỗi chỉ xuất hiện khi thử lại nhiều lần, không xuất hiện ở lần chạy đầu tiên — và cách duy nhất tìm ra nó là chủ động thử lại nhiều lần.**
+Cách kiểm tra "CSDL đã sẵn sàng chưa" tưởng như đơn giản (hỏi server có phản hồi không) thực ra **sai trong khoảng 40% trường hợp** khi khởi động lại: server phản hồi trước khi từng database bên trong phục hồi xong, dẫn tới lỗi ngẫu nhiên "database đã tồn tại". Nếu chỉ thử một lần rồi kết luận "chạy được", lỗi này sẽ ngủ yên và một ngày nào đó xuất hiện ngẫu nhiên trong tay người dùng thật, không cách nào lặp lại để điều tra. Chỉ vì tính năng `005` chủ động yêu cầu thử "10 lần dừng-bật liên tiếp" thay vì "chạy một lần cho có", lỗi mới lộ diện đủ để sửa tận gốc.
 
 **11) Muốn có bằng chứng "hệ thống chạy được", đừng chỉ nói — hãy tự động hoá việc chứng minh, và chứng minh nhiều lần chứ không phải một lần.**
 Rất nhiều dự án phần mềm tuyên bố "đã xong giai đoạn 1" chỉ bằng lời hoặc một buổi demo trực tiếp không ai ghi lại — khi cần xác minh lại 3 tháng sau thì không còn gì để kiểm chứng. Ở đây, "bằng chứng" được biến thành một lệnh chạy lại được bất cứ lúc nào, tự so sánh với lần chạy trước để chứng minh không phải một lần trùng hợp may mắn, và để lại dấu vết cụ thể (ảnh chụp) trong chính repo — bất kỳ ai, kể cả người không kỹ thuật, đều xem lại được `docs/demo-phase-1.md` mà không cần chạy gì.
@@ -97,132 +131,132 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
 
 ```xml
 <mxfile host="Electron" agent="5.0">
-  <diagram id="current-state-005" name="Trang thai hien tai - sau 005">
+  <diagram id="current-state-005" name="Trạng thái hiện tại — sau 005">
     <mxGraphModel dx="3279" dy="737" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1820" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#2d6a2d;" value="PHAN 1 -- DA CO TRONG CODE HOM NAY (24 du an .NET + 1 workspace frontend; 1 LENH DUY NHAT chay toan bo stack; xem docs/demo-phase-1.md de co bang chung Giai doan 1 da xong)" vertex="1">
+        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#2d6a2d;" value="PHẦN 1 — ĐÃ CÓ TRONG CODE HÔM NAY (24 dự án .NET + 1 workspace frontend; 1 LỆNH DUY NHẤT chạy toàn bộ stack; xem docs/demo-phase-1.md để có bằng chứng Giai đoạn 1 đã xong)" vertex="1">
           <mxGeometry height="26" width="1450" x="30" as="geometry" />
         </mxCell>
-        <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="Storefront (frontend/apps/web)&#xa;CACH 1 -- 1 lenh, docker (moi tu 005): container nginx, cong 4173,&#xa;  tu Dockerfile rieng, CHI goi Gateway qua cong 5300&#xa;CACH 2 -- dev thu cong: pnpm dev, Vite, cong 5173&#xa;3 man hinh: San pham (/) - Gio hang (/basket) - Xac nhan (/confirmation)" vertex="1">
+        <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="Storefront (frontend/apps/web)&#xa;CÁCH 1 — 1 lệnh, docker (mới từ 005): container nginx, cổng 4173,&#xa;  từ Dockerfile riêng, CHỈ gọi Gateway qua cổng 5300&#xa;CÁCH 2 — dev thủ công: pnpm dev, Vite, cổng 5173&#xa;3 màn hình: Sản phẩm (/) - Giỏ hàng (/basket) - Xác nhận (/confirmation)" vertex="1">
           <mxGeometry height="115" width="460" x="30" y="50" as="geometry" />
         </mxCell>
-        <mxCell id="sd" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="shared/ServiceDefaults&#xa;(thu vien dung chung, KHONG phai service)&#xa;- OpenTelemetry: log / trace / metric -&gt; OTel Collector that&#xa;- Correlation-Id (X-Correlation-Id): sinh o Gateway,&#xa;  ghi vao request de moi hop sau dung chung 1 ma" vertex="1">
+        <mxCell id="sd" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="shared/ServiceDefaults&#xa;(thư viện dùng chung, KHÔNG phải service)&#xa;- OpenTelemetry: log / trace / metric -&gt; OTel Collector thật&#xa;- Correlation-Id (X-Correlation-Id): sinh ở Gateway,&#xa;  ghi vào request để mọi hop sau dùng chung 1 mã" vertex="1">
           <mxGeometry height="115" width="290" x="860" y="50" as="geometry" />
         </mxCell>
-        <mxCell id="tenancy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="shared/Tenancy&#xa;(thu vien dung chung, KHONG phai service)&#xa;- TenantContext.RequireTenantId()&#xa;- CallerContext.RequireSubjectId()&#xa;- Header: X-Tenant-Id + X-Subject-Id&#xa;- Chan MOI ket noi CSDL neu thieu 1 trong 2" vertex="1">
+        <mxCell id="tenancy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="shared/Tenancy&#xa;(thư viện dùng chung, KHÔNG phải service)&#xa;- TenantContext.RequireTenantId()&#xa;- CallerContext.RequireSubjectId()&#xa;- Header: X-Tenant-Id + X-Subject-Id&#xa;- Chặn MỌI kết nối CSDL nếu thiếu 1 trong 2" vertex="1">
           <mxGeometry height="115" width="260" x="1170" y="50" as="geometry" />
         </mxCell>
-        <mxCell id="gw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="Gateway.Api (services/gateway) -- YARP&#xa;Cong 5300 -- DUY NHAT cong backend duoc cong bo ra ngoai&#xa;Bang route = 1 dong duy nhat: MOI duong dan -&gt; BFF&#xa;StubIdentity: gan co dinh tenant &quot;contoso&quot; + nguoi dung&#xa;&quot;phase1-stub-user&quot;, ghi de X-Tenant-Id + X-Subject-Id&#xa;Docker: tu khoi dong sau khi BFF bao healthy (/health/ready)" vertex="1">
+        <mxCell id="gw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="Gateway.Api (services/gateway) — YARP&#xa;Cổng 5300 — DUY NHẤT cổng backend được công bố ra ngoài&#xa;Bảng route = 1 dòng duy nhất: MỌI đường dẫn -&gt; BFF&#xa;StubIdentity: gán cố định tenant &quot;contoso&quot; + người dùng&#xa;&quot;phase1-stub-user&quot;, ghi đè X-Tenant-Id + X-Subject-Id&#xa;Docker: tự khởi động sau khi BFF báo healthy (/health/ready)" vertex="1">
           <mxGeometry height="140" width="460" x="30" y="185" as="geometry" />
         </mxCell>
-        <mxCell id="gwnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" value="CORS: CHI 2 origin duoc phep goi -- localhost:5173 (dev) va localhost:4173&#xa;(storefront docker). StorefrontCorsTests canh dung dieu nay.&#xa;&#xa;Gateway tu healthcheck bang /health/live (con song), KHONG phai /health/ready&#xa;-- de Gateway van dung vung khi 1 service phia sau dang loi, thay vi tu&#xa;rut minh ra khoi vong lap va lam ca he thong sap theo." vertex="1">
+        <mxCell id="gwnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" value="CORS: CHỈ 2 origin được phép gọi — localhost:5173 (dev) và localhost:4173&#xa;(storefront docker). StorefrontCorsTests canh đúng điều này.&#xa;&#xa;Gateway tự healthcheck bằng /health/live (còn sống), KHÔNG phải /health/ready&#xa;— để Gateway vẫn đứng vững khi 1 service phía sau đang lỗi, thay vì tự&#xa;rút mình ra khỏi vòng lặp và làm cả hệ thống sập theo." vertex="1">
           <mxGeometry height="115" width="660" x="510" y="165" as="geometry" />
         </mxCell>
-        <mxCell id="bff" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="Bff.Api (services/bff) -- Backend For Frontend&#xa;Cong 5301 -- CHI mo trong che do debug, khong cong bo mac dinh&#xa;GET /bff/products, GET/POST /bff/basket, POST /bff/basket/items,&#xa;POST /bff/checkout, GET /bff/orders/{id}&#xa;Docker: tu khoi dong sau khi CA 4 service nghiep vu bao healthy" vertex="1">
+        <mxCell id="bff" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="Bff.Api (services/bff) — Backend For Frontend&#xa;Cổng 5301 — CHỈ mở trong chế độ debug, không công bố mặc định&#xa;GET /bff/products, GET/POST /bff/basket, POST /bff/basket/items,&#xa;POST /bff/checkout, GET /bff/orders/{id}&#xa;Docker: tự khởi động sau khi CẢ 4 service nghiệp vụ báo healthy" vertex="1">
           <mxGeometry height="130" width="460" x="30" y="345" as="geometry" />
         </mxCell>
-        <mxCell id="bffnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" value="Ngan sach thoi gian moi loi goi ra ngoai: 1s/lan thu (toi da 2 lan lai) | toi da 3s tong cong | cau dao ngat sau 10s loi lien tuc&#xa;502 = downstream khong ket noi duoc    504 = vuot thoi gian cho    500 = loi cua chinh BFF    404 = khong tim thay (KHONG phai loi)&#xa;&#xa;POST /bff/checkout -- dieu phoi dong bo 3 buoc theo DUNG thu tu (ADR-0011): 1. doc gio hang  2. gio RONG -&gt; 409, dung ngay&#xa;3. tao don hang (goi Orders)  4. XOA gio hang -- CHI SAU KHI da co don that. KHONG phai saga/outbox chuan -- sai lech co ghi chep." vertex="1">
+        <mxCell id="bffnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" value="Ngân sách thời gian mỗi lời gọi ra ngoài: 1s/lần thử (tối đa 2 lần thử lại) | tối đa 3s tổng cộng | cầu dao ngắt sau 10s lỗi liên tục&#xa;502 = downstream không kết nối được    504 = vượt thời gian chờ    500 = lỗi của chính BFF    404 = không tìm thấy (KHÔNG phải lỗi)&#xa;&#xa;POST /bff/checkout — điều phối đồng bộ 3 bước theo ĐÚNG thứ tự (ADR-0011): 1. đọc giỏ hàng  2. giỏ RỖNG -&gt; 409, dừng ngay&#xa;3. tạo đơn hàng (gọi Orders)  4. XOÁ giỏ hàng — CHỈ SAU KHI đã có đơn thật. KHÔNG phải saga/outbox chuẩn — sai lệch có ghi chép." vertex="1">
           <mxGeometry height="100" width="890" x="500" y="325" as="geometry" />
         </mxCell>
-        <mxCell id="svcnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;" value="4 service nghiep vu HOAN TOAN khong biet den nhau: khong cai nao goi cai nao, khong cai nao tham chieu code cua cai nao." vertex="1">
+        <mxCell id="svcnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;" value="4 service nghiệp vụ HOÀN TOÀN không biết đến nhau: không cái nào gọi cái nào, không cái nào tham chiếu code của cái nào." vertex="1">
           <mxGeometry height="18" width="1390" x="30" y="490" as="geometry" />
         </mxCell>
-        <mxCell id="mig1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="products-migrate&#xa;(1 lan, cho sqlserver&#xa;healthy, ap migration&#xa;+ seed 3 san pham)" vertex="1">
+        <mxCell id="mig1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="products-migrate&#xa;(1 lần, chờ sqlserver&#xa;healthy, áp migration&#xa;+ seed 3 sản phẩm)" vertex="1">
           <mxGeometry height="55" width="320" x="30" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="mig2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="baskets-migrate&#xa;(1 lan, cho sqlserver&#xa;healthy, ap migration)" vertex="1">
+        <mxCell id="mig2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="baskets-migrate&#xa;(1 lần, chờ sqlserver&#xa;healthy, áp migration)" vertex="1">
           <mxGeometry height="55" width="320" x="380" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="mig3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="orders-migrate&#xa;(1 lan, cho sqlserver&#xa;healthy, ap migration)" vertex="1">
+        <mxCell id="mig3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="orders-migrate&#xa;(1 lần, chờ sqlserver&#xa;healthy, áp migration)" vertex="1">
           <mxGeometry height="55" width="320" x="730" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="mig4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="parties-migrate&#xa;(1 lan, cho sqlserver&#xa;healthy, ap migration)" vertex="1">
+        <mxCell id="mig4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="parties-migrate&#xa;(1 lần, chờ sqlserver&#xa;healthy, áp migration)" vertex="1">
           <mxGeometry height="55" width="320" x="1080" y="515" as="geometry" />
         </mxCell>
-        <mxCell id="mignote" parent="1" style="text;html=1;fontSize=9;fontColor=#888888;whiteSpace=wrap;" value="4 &quot;migrator&quot; nay chay UNG 1 LAN moi lan len stack, tu Dockerfile cua chinh service (target rieng), roi tu thoat. Service nghiep vu&#xa;tuong ung CHI tu khoi dong sau khi migrator cua no bao &quot;hoan tat&quot; (docker depends_on: service_completed_successfully)." vertex="1">
+        <mxCell id="mignote" parent="1" style="text;html=1;fontSize=9;fontColor=#888888;whiteSpace=wrap;" value="4 &quot;migrator&quot; này chạy ĐÚNG 1 LẦN mỗi lần lên stack, từ Dockerfile của chính service (target riêng), rồi tự thoát. Service nghiệp vụ&#xa;tương ứng CHỈ tự khởi động sau khi migrator của nó báo &quot;hoàn tất&quot; (docker depends_on: service_completed_successfully)." vertex="1">
           <mxGeometry height="28" width="1150" x="270" y="573" as="geometry" />
         </mxCell>
-        <mxCell id="svc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Products.Api&#xa;Cong 5088 (chi mo trong che do debug)&#xa;GET /products -- 3 san pham mau that&#xa;+ /health/live, /health/ready&#xa;Bang: Product (Id, Name, Price)&#xa;Chan CSDL neu thieu X-Tenant-Id / X-Subject-Id" vertex="1">
+        <mxCell id="svc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Products.Api&#xa;Cổng 5088 (chỉ mở trong chế độ debug)&#xa;GET /products — 3 sản phẩm mẫu thật&#xa;+ /health/live, /health/ready&#xa;Bảng: Product (Id, Name, Price)&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="30" y="610" as="geometry" />
         </mxCell>
-        <mxCell id="svc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Baskets.Api&#xa;Cong 5188 (chi mo trong che do debug)&#xa;Gio hang cua nguoi goi (CustomerRef)&#xa;+ /health/live, /health/ready&#xa;Bang: Basket (Total tinh tai cho) + BasketLineItem&#xa;Chan CSDL neu thieu X-Tenant-Id / X-Subject-Id" vertex="1">
+        <mxCell id="svc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Baskets.Api&#xa;Cổng 5188 (chỉ mở trong chế độ debug)&#xa;Giỏ hàng của người gọi (CustomerRef)&#xa;+ /health/live, /health/ready&#xa;Bảng: Basket (Total tính tại chỗ) + BasketLineItem&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="380" y="610" as="geometry" />
         </mxCell>
-        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Orders.Api&#xa;Cong 5041 (chi mo trong che do debug, hoac che do demo)&#xa;Tao don hang tu dong gio hang; doc lai theo id&#xa;+ /health/live, /health/ready&#xa;Bang: Order (Id, PlacedAtUtc, Total, MOI: TenantId -- chi la&#xa;NHAN, khong phai ngan cach vat ly, xem Phan 2)&#xa;Chan CSDL neu thieu X-Tenant-Id / X-Subject-Id" vertex="1">
+        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Orders.Api&#xa;Cổng 5041 (chỉ mở trong chế độ debug, hoặc chế độ demo)&#xa;Tạo đơn hàng từ dòng giỏ hàng; đọc lại theo id&#xa;+ /health/live, /health/ready&#xa;Bảng: Order (Id, PlacedAtUtc, Total, MỚI: TenantId — chỉ là&#xa;NHÃN, không phải ngăn cách vật lý, xem Phần 2)&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="730" y="610" as="geometry" />
         </mxCell>
-        <mxCell id="svc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Parties.Api&#xa;Cong 5204 (chi mo trong che do debug)&#xa;GET /parties/{id}&#xa;+ /health/live, /health/ready&#xa;Bang: Party (Id, DisplayName)&#xa;Chan CSDL neu thieu X-Tenant-Id / X-Subject-Id" vertex="1">
+        <mxCell id="svc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Parties.Api&#xa;Cổng 5204 (chỉ mở trong chế độ debug)&#xa;GET /parties/{id}&#xa;+ /health/live, /health/ready&#xa;Bảng: Party (Id, DisplayName)&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="1080" y="610" as="geometry" />
         </mxCell>
         <mxCell id="composebg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#999999;dashed=1;verticalAlign=top;fontColor=#666666;fontSize=11;" value="" vertex="1">
           <mxGeometry height="110" width="1400" x="20" y="765" as="geometry" />
         </mxCell>
-        <mxCell id="composelbl" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;" value="docker-compose.yml (MOI, project &quot;ecomerce-stack&quot;) -- 1 SQL Server dung chung, moi service 1 database rieng ben trong (khong con 4 container SQL rieng biet o duong dan nay). docker-compose.deps.yml cu (4 container SQL rieng) van con, dung khi chay tung service rieng le de debug." vertex="1">
+        <mxCell id="composelbl" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;" value="docker-compose.yml (MỚI, project &quot;ecomerce-stack&quot;) — 1 SQL Server dùng chung, mỗi service 1 database riêng bên trong (không còn 4 container SQL riêng biệt ở đường dẫn này). docker-compose.deps.yml cũ (4 container SQL riêng) vẫn còn, dùng khi chạy từng service riêng lẻ để debug." vertex="1">
           <mxGeometry height="35" width="1360" x="40" y="772" as="geometry" />
         </mxCell>
-        <mxCell id="db1" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="Database: products&#xa;(trong 1 container SQL&#xa;Server dung chung)" vertex="1">
+        <mxCell id="db1" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="Database: products&#xa;(trong 1 container SQL&#xa;Server dùng chung)" vertex="1">
           <mxGeometry height="55" width="320" x="30" y="815" as="geometry" />
         </mxCell>
-        <mxCell id="db2" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="Database: baskets&#xa;(trong 1 container SQL&#xa;Server dung chung)" vertex="1">
+        <mxCell id="db2" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="Database: baskets&#xa;(trong 1 container SQL&#xa;Server dùng chung)" vertex="1">
           <mxGeometry height="55" width="320" x="380" y="815" as="geometry" />
         </mxCell>
-        <mxCell id="db3" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="Database: orders&#xa;(trong 1 container SQL&#xa;Server dung chung)" vertex="1">
+        <mxCell id="db3" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="Database: orders&#xa;(trong 1 container SQL&#xa;Server dùng chung)" vertex="1">
           <mxGeometry height="55" width="320" x="730" y="815" as="geometry" />
         </mxCell>
-        <mxCell id="db4" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="Database: parties&#xa;(trong 1 container SQL&#xa;Server dung chung)" vertex="1">
+        <mxCell id="db4" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;boundedLbl=1;" value="Database: parties&#xa;(trong 1 container SQL&#xa;Server dùng chung)" vertex="1">
           <mxGeometry height="55" width="320" x="1080" y="815" as="geometry" />
         </mxCell>
-        <mxCell id="infratitle" parent="1" style="text;html=1;fontStyle=1;fontSize=11;fontColor=#666666;" value="Ha tang chay kem trong docker-compose.yml -- khong phai service nghiep vu" vertex="1">
+        <mxCell id="infratitle" parent="1" style="text;html=1;fontStyle=1;fontSize=11;fontColor=#666666;" value="Hạ tầng chạy kèm trong docker-compose.yml — không phải service nghiệp vụ" vertex="1">
           <mxGeometry height="20" width="700" x="30" y="885" as="geometry" />
         </mxCell>
-        <mxCell id="otel" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="OTel Collector&#xa;DA duoc dung that: nhan log/trace/metric&#xa;tu ca 6 service qua ServiceDefaults.&#xa;Khong the healthcheck (image khong co shell)." vertex="1">
+        <mxCell id="otel" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="OTel Collector&#xa;ĐÃ được dùng thật: nhận log/trace/metric&#xa;từ cả 6 service qua ServiceDefaults.&#xa;Không thể healthcheck (image không có shell)." vertex="1">
           <mxGeometry height="80" width="450" x="30" y="910" as="geometry" />
         </mxCell>
-        <mxCell id="redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="Redis&#xa;Chay va co healthcheck, nhung CHUA co&#xa;service nao ket noi vao (co chu dich,&#xa;xem FR-017 cua tinh nang 005)" vertex="1">
+        <mxCell id="redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="Redis&#xa;Chạy và có healthcheck, nhưng CHƯA có&#xa;service nào kết nối vào (có chủ đích,&#xa;xem FR-017 của tính năng 005)" vertex="1">
           <mxGeometry height="80" width="440" x="500" y="910" as="geometry" />
         </mxCell>
-        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="RabbitMQ&#xa;Chay va co healthcheck, nhung CHUA co&#xa;service nao ket noi vao -- danh cho&#xa;saga/outbox tuong lai (xem Phan 2)" vertex="1">
+        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="RabbitMQ&#xa;Chạy và có healthcheck, nhưng CHƯA có&#xa;service nào kết nối vào — dành cho&#xa;saga/outbox tương lai (xem Phần 2)" vertex="1">
           <mxGeometry height="80" width="440" x="960" y="910" as="geometry" />
         </mxCell>
-        <mxCell id="guardtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#666666;" value="&#39;Luoi an toan&#39; kien truc tu dong -- chay nhu bai test moi lan build, FAIL build khi bi vi pham (7 loai)" vertex="1">
+        <mxCell id="guardtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#666666;" value="&#39;Lưới an toàn&#39; kiến trúc tự động — chạy như bài test mỗi lần build, FAIL build khi bị vi phạm (7 loại)" vertex="1">
           <mxGeometry height="24" width="1100" x="30" y="1005" as="geometry" />
         </mxCell>
-        <mxCell id="guard1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/CrossServiceIsolation.Tests&#xa;- Service A cam chuoi ket noi CSDL cua service B&#xa;- Gateway/BFF cam BAT KY chuoi ket noi nao&#xa;- Moi service phai co DUNG 1 diem khoi tao&#xa;  DbContext, goi RequireTenantId()" vertex="1">
+        <mxCell id="guard1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/CrossServiceIsolation.Tests&#xa;- Service A cấm chuỗi kết nối CSDL của service B&#xa;- Gateway/BFF cấm BẤT KỲ chuỗi kết nối nào&#xa;- Mỗi service phải có ĐÚNG 1 điểm khởi tạo&#xa;  DbContext, gọi RequireTenantId()" vertex="1">
           <mxGeometry height="115" width="345" x="30" y="1040" as="geometry" />
         </mxCell>
-        <mxCell id="guard2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/StructureConventionTests&#xa;FAIL build neu service co thu muc Controllers/,&#xa;Services/, Repositories/... Bat buoc moi service&#xa;co it nhat 1 thu muc Features/&lt;TenNangLuc&gt;" vertex="1">
+        <mxCell id="guard2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/StructureConventionTests&#xa;FAIL build nếu service có thư mục Controllers/,&#xa;Services/, Repositories/... Bắt buộc mỗi service&#xa;có ít nhất 1 thư mục Features/&lt;TênNăngLực&gt;" vertex="1">
           <mxGeometry height="115" width="345" x="385" y="1040" as="geometry" />
         </mxCell>
-        <mxCell id="guard3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="Gateway.Api Tests&#xa;- RouteConfigurationTests: sai chinh ta route,&#xa;  hoac route di thang toi service nghiep vu&#xa;- ForwardingTimeoutBudgetTests: timeout Gateway&#xa;  (10s) &lt; ngan sach 3s cua BFF" vertex="1">
+        <mxCell id="guard3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="Gateway.Api Tests&#xa;- RouteConfigurationTests: sai chính tả route,&#xa;  hoặc route đi thẳng tới service nghiệp vụ&#xa;- ForwardingTimeoutBudgetTests: timeout Gateway&#xa;  (10s) &lt; ngân sách 3s của BFF" vertex="1">
           <mxGeometry height="115" width="345" x="740" y="1040" as="geometry" />
         </mxCell>
-        <mxCell id="guard4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="Bff.Api.IntegrationTests/&#xa;GeneratedContractTests&#xa;Tai lieu API sinh tu dong phai khai bao DU ca&#xa;404/502/504, khong chi thanh cong -- frontend&#xa;build LOI ngay neu hop dong lech" vertex="1">
+        <mxCell id="guard4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="Bff.Api.IntegrationTests/&#xa;GeneratedContractTests&#xa;Tài liệu API sinh tự động phải khai báo ĐỦ cả&#xa;404/502/504, không chỉ thành công — frontend&#xa;build LỖI ngay nếu hợp đồng lệch" vertex="1">
           <mxGeometry height="115" width="335" x="1095" y="1040" as="geometry" />
         </mxCell>
-        <mxCell id="guard5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="services/*/tests/*.IntegrationTests -- Testcontainers.MsSql: chay SQL Server THAT trong container, khong dung gia lap.&#xa;Test cua BFF con chay ca 4 service THAT trong bo nho de kiem tra that su goi duoc." vertex="1">
+        <mxCell id="guard5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="services/*/tests/*.IntegrationTests — Testcontainers.MsSql: chạy SQL Server THẬT trong container, không dùng giả lập.&#xa;Test của BFF còn chạy cả 4 service THẬT trong bộ nhớ để kiểm tra thật sự gọi được." vertex="1">
           <mxGeometry height="90" width="460" x="30" y="1165" as="geometry" />
         </mxCell>
-        <mxCell id="guard6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="*/tests/*.IntegrationTests/TenantEnforcementTests (1 bo / service nghiep vu)&#xa;Request KHONG co X-Tenant-Id / X-Subject-Id phai nhan loi 500, khong duoc am tham tra ve du lieu." vertex="1">
+        <mxCell id="guard6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="*/tests/*.IntegrationTests/TenantEnforcementTests (1 bộ / service nghiệp vụ)&#xa;Request KHÔNG có X-Tenant-Id / X-Subject-Id phải nhận lỗi 500, không được âm thầm trả về dữ liệu." vertex="1">
           <mxGeometry height="90" width="460" x="500" y="1165" as="geometry" />
         </mxCell>
-        <mxCell id="guard7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/ContainerConventionTests (MOI tu 005)&#xa;Moi Dockerfile phai COPY DU cac thu vien shared/* ma .csproj tham chieu -- da bat 5/6 image&#xa;khong build duoc (thieu shared/Tenancy trong Dockerfile) truoc khi sua." vertex="1">
+        <mxCell id="guard7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" value="tests/ContainerConventionTests (MỚI từ 005)&#xa;Mọi Dockerfile phải COPY ĐỦ các thư viện shared/* mà .csproj tham chiếu — đã bắt 5/6 image&#xa;không build được (thiếu shared/Tenancy trong Dockerfile) trước khi sửa." vertex="1">
           <mxGeometry height="90" width="460" x="970" y="1165" as="geometry" />
         </mxCell>
-        <mxCell id="opstitle" parent="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#666666;" value="Van hanh: 3 script + kiem tra dieu kien truoc + &quot;lam am&quot; sau khi len (moi tu 005)" vertex="1">
+        <mxCell id="opstitle" parent="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#666666;" value="Vận hành: 3 script + kiểm tra điều kiện trước + &quot;làm ấm&quot; sau khi lên (mới từ 005)" vertex="1">
           <mxGeometry height="24" width="1000" x="30" y="1275" as="geometry" />
         </mxCell>
-        <mxCell id="opsbox" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef7ee;strokeColor=#2d6a2d;fontSize=10;align=left;spacingLeft=8;" value="scripts/up.sh | up.ps1 -- kiem tra TRUOC khi khoi dong bat ky container nao: Docker da cai, Docker daemon dang chay, file .env ton tai, RAM Docker &gt;= 6GB.&#xa;Chay &quot;docker compose up --build --wait&quot;. Sau khi TAT CA bao healthy, tu goi thu 3 request qua Gateway (/bff/products, /bff/basket, /bff/orders/...) de&#xa;&quot;lam am&quot; JIT/EF Core/connection-pool -- neu thieu buoc nay, request THAT dau tien cua khach gap loi 504 (vuot ngan sach 3s cua BFF).&#xa;Day la loi THAT da gap va sua trong tinh nang 005, khong phai gia dinh.&#xa;&#xa;scripts/down.sh | down.ps1 -- dung stack, GIU du lieu (volume khong bi xoa).      scripts/reset.sh | reset.ps1 -- dung stack VA XOA sach du lieu.&#xa;Che do debug (up.sh --debug / up.ps1 -PublishInternalPorts, dua tren docker-compose.debug.yml) -- mo them cong noi bo (BFF, tung service, RabbitMQ UI) de debug." vertex="1">
+        <mxCell id="opsbox" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef7ee;strokeColor=#2d6a2d;fontSize=10;align=left;spacingLeft=8;" value="scripts/up.sh | up.ps1 — kiểm tra TRƯỚC khi khởi động bất kỳ container nào: Docker đã cài, Docker daemon đang chạy, file .env tồn tại, RAM Docker &gt;= 6GB.&#xa;Chạy &quot;docker compose up --build --wait&quot;. Sau khi TẤT CẢ báo healthy, tự gọi thử 3 request qua Gateway (/bff/products, /bff/basket, /bff/orders/...) để&#xa;&quot;làm ấm&quot; JIT/EF Core/connection-pool — nếu thiếu bước này, request THẬT đầu tiên của khách gặp lỗi 504 (vượt ngân sách 3s của BFF).&#xa;Đây là lỗi THẬT đã gặp và sửa trong tính năng 005, không phải giả định.&#xa;&#xa;scripts/down.sh | down.ps1 — dừng stack, GIỮ dữ liệu (volume không bị xoá).      scripts/reset.sh | reset.ps1 — dừng stack VÀ XOÁ sạch dữ liệu.&#xa;Chế độ debug (up.sh --debug / up.ps1 -PublishInternalPorts, dựa trên docker-compose.debug.yml) — mở thêm cổng nội bộ (BFF, từng service, RabbitMQ UI) để debug." vertex="1">
           <mxGeometry height="115" width="1390" x="30" y="1305" as="geometry" />
         </mxCell>
-        <mxCell id="e_client_gw" edge="1" parent="1" source="client" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="gw" value="HTTP :5300 (CORS: chi 5173 / 4173)">
+        <mxCell id="e_client_gw" edge="1" parent="1" source="client" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="gw" value="HTTP :5300 (CORS: chỉ 5173 / 4173)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_gw_bff" edge="1" parent="1" source="gw" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="bff" value="YARP chuyen tiep TAT CA + X-Tenant-Id + X-Subject-Id + X-Correlation-Id">
+        <mxCell id="e_gw_bff" edge="1" parent="1" source="gw" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="bff" value="YARP chuyển tiếp TẤT CẢ + X-Tenant-Id + X-Subject-Id + X-Correlation-Id">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_bff_1" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="svc2" value="1: doc gio hang / 4: xoa gio hang">
+        <mxCell id="e_bff_1" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="svc2" value="1: đọc giỏ hàng / 4: xoá giỏ hàng">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="260.03" y="490" />
@@ -231,7 +265,7 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_bff_3" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="svc3" value="3: tao don hang">
+        <mxCell id="e_bff_3" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" target="svc3" value="3: tạo đơn hàng">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1060" y="440" />
@@ -255,7 +289,7 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_mig1_svc1" edge="1" parent="1" source="mig1" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="svc1" value="docker depends_on: hoan tat">
+        <mxCell id="e_mig1_svc1" edge="1" parent="1" source="mig1" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="svc1" value="docker depends_on: hoàn tất">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e_db1" edge="1" parent="1" source="svc1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db1">
@@ -270,21 +304,21 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
         <mxCell id="e_db4" edge="1" parent="1" source="svc4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="db4">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_sd_gw" edge="1" parent="1" source="sd" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="gw" value="tham chieu thu vien (ca 6 service)">
+        <mxCell id="e_sd_gw" edge="1" parent="1" source="sd" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="gw" value="tham chiếu thư viện (cả 6 service)">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="920" y="165" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_tn_gw" edge="1" parent="1" source="tenancy" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="gw" value="tham chieu thu vien (ca 6 service)">
+        <mxCell id="e_tn_gw" edge="1" parent="1" source="tenancy" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="gw" value="tham chiếu thư viện (cả 6 service)">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1300" y="280" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e_sd_otel" edge="1" parent="1" source="sd" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="otel" value="OTLP export (ca 6 service, qua ServiceDefaults)">
+        <mxCell id="e_sd_otel" edge="1" parent="1" source="sd" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" target="otel" value="OTLP export (cả 6 service, qua ServiceDefaults)">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1005" y="40" />
@@ -293,79 +327,79 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="title2" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#a03030;" value="PHAN 2 -- CHUA XAY DUNG, MOI LA KE HOACH (Phase 2-5, xem docs/roadmap.md)" vertex="1">
+        <mxCell id="title2" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#a03030;" value="PHẦN 2 — CHƯA XÂY DỰNG, MỚI LÀ KẾ HOẠCH (Phase 2-5, xem docs/roadmap.md)" vertex="1">
           <mxGeometry height="26" width="1000" x="30" y="1440" as="geometry" />
         </mxCell>
         <mxCell id="futurebg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#cc6666;dashed=1;" value="" vertex="1">
           <mxGeometry height="130" width="1400" x="20" y="1475" as="geometry" />
         </mxCell>
-        <mxCell id="f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Identity Server that&#xa;(Duende)&#xa;(SCRUM-23, Giai&#xa;doan 3)" vertex="1">
+        <mxCell id="f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Identity Server thật&#xa;(Duende)&#xa;(SCRUM-23, Giai&#xa;đoạn 3)" vertex="1">
           <mxGeometry height="80" width="255" x="40" y="1500" as="geometry" />
         </mxCell>
-        <mxCell id="f2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Ngan cach VAT LY&#xa;theo tenant (da thu,&#xa;da chu dong huy --&#xa;xem muc 1.3)" vertex="1">
+        <mxCell id="f2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Ngăn cách VẬT LÝ&#xa;theo tenant (đã thử,&#xa;đã chủ động huỷ —&#xa;xem mục 1.3)" vertex="1">
           <mxGeometry height="80" width="255" x="320" y="1500" as="geometry" />
         </mxCell>
-        <mxCell id="f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Saga + Outbox that cho&#xa;thanh toan -- THUC SU&#xa;dung RabbitMQ dang&#xa;chay ronq (ADR-0011)" vertex="1">
+        <mxCell id="f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Saga + Outbox thật cho&#xa;thanh toán — THỰC SỰ&#xa;dùng RabbitMQ đang&#xa;chạy rỗng (ADR-0011)" vertex="1">
           <mxGeometry height="80" width="255" x="600" y="1500" as="geometry" />
         </mxCell>
-        <mxCell id="f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Logistics + Invoices&#xa;service (se dung Redis/&#xa;RabbitMQ dang chay ronq&#xa;nhung con trong)" vertex="1">
+        <mxCell id="f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Logistics + Invoices&#xa;service (sẽ dùng Redis/&#xa;RabbitMQ đang chạy rỗng&#xa;nhưng còn trống)" vertex="1">
           <mxGeometry height="80" width="255" x="880" y="1500" as="geometry" />
         </mxCell>
         <mxCell id="f5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Jenkins CI/CD,&#xa;Vault, Unleash,&#xa;Pact Broker" vertex="1">
           <mxGeometry height="80" width="240" x="1160" y="1500" as="geometry" />
         </mxCell>
-        <mxCell id="fnote" parent="1" style="text;html=1;fontSize=10;fontColor=#a03030;whiteSpace=wrap;" value="Redis va RabbitMQ DA CHAY that trong docker-compose.yml tu tinh nang 005 (ha tang san sang), nhung van CHUA co service nao ket noi vao -- nghiep vu dung toi no van la ke hoach.&#xa;Chay-toan-bo-bang-1-lenh (SCRUM-15) va Web SPA (SCRUM-14) DA chuyen len Phan 1, khong con la ke hoach nua -- viec con lai cuoi cung cua Giai doan 1 (Walking Skeleton) coi nhu da xong." vertex="1">
+        <mxCell id="fnote" parent="1" style="text;html=1;fontSize=10;fontColor=#a03030;whiteSpace=wrap;" value="Redis và RabbitMQ ĐÃ CHẠY thật trong docker-compose.yml từ tính năng 005 (hạ tầng sẵn sàng), nhưng vẫn CHƯA có service nào kết nối vào — nghiệp vụ dùng tới nó vẫn là kế hoạch.&#xa;Chạy-toàn-bộ-bằng-1-lệnh (SCRUM-15) và Web SPA (SCRUM-14) ĐÃ chuyển lên Phần 1, không còn là kế hoạch nữa — việc còn lại cuối cùng của Giai đoạn 1 (Walking Skeleton) coi như đã xong." vertex="1">
           <mxGeometry height="45" width="1360" x="35" y="1610" as="geometry" />
         </mxCell>
-        <mxCell id="lgtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=12;" value="Chu giai" vertex="1">
+        <mxCell id="lgtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=12;" value="Chú giải" vertex="1">
           <mxGeometry height="20" width="100" x="30" y="1670" as="geometry" />
         </mxCell>
         <mxCell id="lgc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1">
           <mxGeometry height="20" width="20" x="30" y="1700" as="geometry" />
         </mxCell>
-        <mxCell id="lgc1t" parent="1" style="text;html=1;fontSize=11;" value="Service nghiep vu (so huu du lieu rieng)" vertex="1">
+        <mxCell id="lgc1t" parent="1" style="text;html=1;fontSize=11;" value="Service nghiệp vụ (sở hữu dữ liệu riêng)" vertex="1">
           <mxGeometry height="20" width="300" x="55" y="1700" as="geometry" />
         </mxCell>
         <mxCell id="lgc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1">
           <mxGeometry height="20" width="20" x="30" y="1730" as="geometry" />
         </mxCell>
-        <mxCell id="lgc2t" parent="1" style="text;html=1;fontSize=11;" value="Service o bien (khong so huu du lieu)" vertex="1">
+        <mxCell id="lgc2t" parent="1" style="text;html=1;fontSize=11;" value="Service ở biên (không sở hữu dữ liệu)" vertex="1">
           <mxGeometry height="20" width="300" x="55" y="1730" as="geometry" />
         </mxCell>
         <mxCell id="lgc7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1">
           <mxGeometry height="20" width="20" x="390" y="1700" as="geometry" />
         </mxCell>
-        <mxCell id="lgc7t" parent="1" style="text;html=1;fontSize=11;" value="Giao dien web (frontend, ngoai .slnx)" vertex="1">
+        <mxCell id="lgc7t" parent="1" style="text;html=1;fontSize=11;" value="Giao diện web (frontend, ngoài .slnx)" vertex="1">
           <mxGeometry height="20" width="300" x="415" y="1700" as="geometry" />
         </mxCell>
         <mxCell id="lgc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1">
           <mxGeometry height="20" width="20" x="390" y="1730" as="geometry" />
         </mxCell>
-        <mxCell id="lgc3t" parent="1" style="text;html=1;fontSize=11;" value="Thu vien dung chung / ha tang DA dung that (OTel)" vertex="1">
+        <mxCell id="lgc3t" parent="1" style="text;html=1;fontSize=11;" value="Thư viện dùng chung / hạ tầng ĐÃ dùng thật (OTel)" vertex="1">
           <mxGeometry height="20" width="340" x="415" y="1730" as="geometry" />
         </mxCell>
         <mxCell id="lgc8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;" vertex="1">
           <mxGeometry height="20" width="20" x="770" y="1700" as="geometry" />
         </mxCell>
-        <mxCell id="lgc8t" parent="1" style="text;html=1;fontSize=11;" value="Migrator (1 lan) / ha tang chay nhung CHUA dung (Redis, RabbitMQ)" vertex="1">
+        <mxCell id="lgc8t" parent="1" style="text;html=1;fontSize=11;" value="Migrator (1 lần) / hạ tầng chạy nhưng CHƯA dùng (Redis, RabbitMQ)" vertex="1">
           <mxGeometry height="20" width="400" x="795" y="1700" as="geometry" />
         </mxCell>
         <mxCell id="lgc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1">
           <mxGeometry height="20" width="20" x="770" y="1730" as="geometry" />
         </mxCell>
-        <mxCell id="lgc4t" parent="1" style="text;html=1;fontSize=11;" value="Luoi an toan kien truc (tests) -- 7 loai" vertex="1">
+        <mxCell id="lgc4t" parent="1" style="text;html=1;fontSize=11;" value="Lưới an toàn kiến trúc (tests) — 7 loại" vertex="1">
           <mxGeometry height="20" width="330" x="795" y="1730" as="geometry" />
         </mxCell>
         <mxCell id="lgc5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1">
           <mxGeometry height="20" width="20" x="1200" y="1700" as="geometry" />
         </mxCell>
-        <mxCell id="lgc5t" parent="1" style="text;html=1;fontSize=11;" value="Co so du lieu" vertex="1">
+        <mxCell id="lgc5t" parent="1" style="text;html=1;fontSize=11;" value="Cơ sở dữ liệu" vertex="1">
           <mxGeometry height="20" width="160" x="1225" y="1700" as="geometry" />
         </mxCell>
         <mxCell id="lgc6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;" vertex="1">
           <mxGeometry height="20" width="20" x="1200" y="1730" as="geometry" />
         </mxCell>
-        <mxCell id="lgc6t" parent="1" style="text;html=1;fontSize=11;" value="Chi la ke hoach -- chua co code" vertex="1">
+        <mxCell id="lgc6t" parent="1" style="text;html=1;fontSize=11;" value="Chỉ là kế hoạch — chưa có code" vertex="1">
           <mxGeometry height="20" width="230" x="1225" y="1730" as="geometry" />
         </mxCell>
         <mxCell id="lgline1" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;fontSize=9;">
@@ -374,7 +408,7 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
             <mxPoint x="80" y="1770" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="lgline1t" parent="1" style="text;html=1;fontSize=11;" value="Goi that luc chay (HTTP / EF Core)" vertex="1">
+        <mxCell id="lgline1t" parent="1" style="text;html=1;fontSize=11;" value="Gọi thật lúc chạy (HTTP / EF Core)" vertex="1">
           <mxGeometry height="20" width="260" x="90" y="1760" as="geometry" />
         </mxCell>
         <mxCell id="lgline2" edge="1" parent="1" style="edgeStyle=none;dashed=1;html=1;endArrow=block;fontSize=9;">
@@ -383,7 +417,7 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
             <mxPoint x="450" y="1770" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="lgline2t" parent="1" style="text;html=1;fontSize=11;" value="Tham chieu thu vien / phu thuoc luc build hoac luc khoi dong (docker depends_on)" vertex="1">
+        <mxCell id="lgline2t" parent="1" style="text;html=1;fontSize=11;" value="Tham chiếu thư viện / phụ thuộc lúc build hoặc lúc khởi động (docker depends_on)" vertex="1">
           <mxGeometry height="20" width="480" x="460" y="1760" as="geometry" />
         </mxCell>
       </root>
