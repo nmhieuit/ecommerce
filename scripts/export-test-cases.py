@@ -2880,6 +2880,1078 @@ ROWS += [
 
 
 # ==========================================================================================
+# CÁCH LÀM CHO TEST CASE BỊ FAIL — viết theo góc nhìn QA
+#
+# Mỗi mô tả là một thao tác QA thực hiện được: bấm trên giao diện, gọi API, bật/tắt container,
+# hoặc sửa mã nguồn dưới máy local để tái hiện. Không đề xuất cách sửa lỗi — chỉ nêu cách làm
+# cho kỳ vọng của test không còn đúng.
+#
+# Khoá tra cứu là cặp (file nguồn, tên test gốc), đã kiểm chứng là duy nhất trên cả 249 case.
+# ==========================================================================================
+
+BREAK_HINTS: dict[tuple[str, str], str] = {}
+
+_COMPOSE = "docker compose -f docker-compose.local.yml"
+
+# Bốn service sở hữu database, giống nhau ở ba nhóm test bên dưới nên sinh bằng vòng lặp.
+_SERVICES = {
+    "baskets": {"cap": "Baskets", "api": "baskets-api", "db": "baskets-db", "port": 5188,
+                "read": "/baskets/{id bất kỳ}", "dbport": 14332},
+    "orders": {"cap": "Orders", "api": "orders-api", "db": "orders-db", "port": 5041,
+               "read": "/orders/{id bất kỳ}", "dbport": 14333},
+    "parties": {"cap": "Parties", "api": "parties-api", "db": "parties-db", "port": 5204,
+                "read": "/parties/{id bất kỳ}", "dbport": 14330},
+    "products": {"cap": "Products", "api": "products-api", "db": "products-db", "port": 5088,
+                 "read": "/products", "dbport": 14331},
+}
+
+for _name, _s in _SERVICES.items():
+    _cap, _api, _db, _port, _read = _s["cap"], _s["api"], _s["db"], _s["port"], _s["read"]
+
+    BREAK_HINTS[(f"services/{_name}/tests/{_cap}.Api.UnitTests/HealthCheckTests.cs",
+                 "HealthLive_ReturnsOk")] = (
+        f"Dừng container {_api} (`{_COMPOSE} stop {_api}`) rồi gọi GET http://localhost:{_port}/health/live "
+        f"— không nhận được phản hồi là case đỏ. Lưu ý: tắt database {_db} KHÔNG làm case này đỏ, vì "
+        f"liveness cố ý không chạm tới database."
+    )
+
+    BREAK_HINTS[(f"services/{_name}/tests/{_cap}.Api.IntegrationTests/ReadinessTests.cs",
+                 "HealthReady_ReturnsOk_WhenDatabaseReachable")] = (
+        f"Tắt database riêng của service (`{_COMPOSE} stop {_db}`) rồi gọi GET "
+        f"http://localhost:{_port}/health/ready — nhận 503 thay vì 200 là case đỏ. Bật lại {_db} để về xanh."
+    )
+
+    BREAK_HINTS[(f"services/{_name}/tests/{_cap}.Api.IntegrationTests/ReadinessTests.cs",
+                 "HealthReady_ReturnsServiceUnavailable_WhenDatabaseUnreachable")] = (
+        f"Cần làm cho readiness không phát hiện được database chết. Dưới local, sửa readiness của "
+        f"{_cap} để bỏ phần mở kết nối database (chỉ báo tiến trình còn sống), rồi tắt {_db} và gọi "
+        f"GET http://localhost:{_port}/health/ready — vẫn trả 200 là case đỏ."
+    )
+
+    BREAK_HINTS[(f"services/{_name}/tests/{_cap}.Api.IntegrationTests/ReadinessTests.cs",
+                 "HealthReady_DoesNotFallBackToAnotherServicesDatabase_WhenOwnDatabaseUnreachable")] = (
+        f"Dưới local, cấu hình {_cap} để khi database riêng hỏng thì quay sang dùng database của "
+        f"service khác, rồi tắt {_db} và gọi GET http://localhost:{_port}/health/ready — trả 200, hoặc "
+        f"nội dung phản hồi không còn nêu check 'self-database' là Unhealthy, đều là case đỏ."
+    )
+
+    BREAK_HINTS[(f"services/{_name}/tests/{_cap}.Api.IntegrationTests/TenantEnforcementTests.cs",
+                 "ResolvingTheDbContext_Throws_WhenNoTenantHasBeenResolved")] = (
+        f"Dưới local, cho {_cap} một tenant mặc định khi không phân giải được (gán sẵn giá trị lúc "
+        f"khởi tạo thay vì bắt buộc có header). Khi đó truy cập database không còn ném lỗi và case đỏ."
+    )
+
+    BREAK_HINTS[(f"services/{_name}/tests/{_cap}.Api.IntegrationTests/TenantEnforcementTests.cs",
+                 "ARequestWithoutATenant_Fails_RatherThanServingDefaultSchemaData")] = (
+        f"Gọi GET http://localhost:{_port}{_read} KHÔNG kèm header X-Tenant-Id: nếu nhận 200 kèm dữ liệu "
+        f"thay vì lỗi 500 thì case đỏ. Tái hiện bằng cách sửa {_cap} dưới local để dùng tenant mặc định "
+        f"khi thiếu header."
+    )
+
+BREAK_HINTS[("services/orders/tests/Orders.Api.IntegrationTests/TenantEnforcementTests.cs",
+             "AWriteWithoutATenant_CreatesNoOrder")] = (
+    "Đếm số đơn trong database orders (kết nối localhost,14333), gọi POST http://localhost:5041/orders "
+    "KHÔNG kèm X-Tenant-Id, rồi đếm lại. Số đơn tăng lên là case đỏ — kể cả khi API vẫn trả lỗi 500, "
+    "vì điều được canh ở đây là không có bản ghi nào được tạo."
+)
+
+# ---------------------------------------------------------------- BASKET (backend)
+
+_F = "services/baskets/tests/Baskets.Api.UnitTests/BasketLineMergeTests.cs"
+BREAK_HINTS.update({
+    (_F, "AddItem_CreatesALine_WhenTheProductIsNotInTheBasketYet"):
+        "Từ giỏ rỗng, thêm 1 Notebook rồi gọi GET http://localhost:5188/baskets/current — nếu giỏ "
+        "không có đúng 1 dòng đúng mã sản phẩm, số lượng 1, đơn giá 12.50 thì case đỏ. Dưới local, "
+        "sửa Baskets để lần thêm đầu tiên không tạo dòng nào là tái hiện được.",
+    (_F, "AddItem_IncrementsTheExistingLine_WhenTheProductIsAlreadyInTheBasket"):
+        "Thêm cùng một sản phẩm hai lần rồi xem giỏ: nếu ra 2 dòng riêng thay vì 1 dòng số lượng 2 thì "
+        "case đỏ. Dưới local, sửa Baskets để mỗi lần thêm luôn tạo dòng mới thay vì cộng dồn.",
+    (_F, "AddItem_KeepsProductsApart_WhenDifferentProductsAreAdded"):
+        "Thêm Notebook rồi thêm Apron: nếu hai sản phẩm khác nhau bị dồn vào chung một dòng thì case đỏ. "
+        "Dưới local, sửa luật gộp để nó gộp theo bất kỳ sản phẩm nào thay vì chỉ gộp khi trùng mã.",
+    (_F, "AddItem_AccumulatesQuantities_AcrossManyAdditions"):
+        "Bấm 'Thêm vào giỏ' 5 lần cho cùng một sản phẩm rồi xem giỏ: số lượng phải đúng bằng 5. Ra 1, "
+        "ra 2, hay ra 5 dòng riêng đều là case đỏ.",
+    (_F, "AddItem_KeepsTheOriginallyCapturedPrice_WhenTheCatalogPriceHasChanged"):
+        "Thêm sản phẩm vào giỏ, sau đó đổi giá sản phẩm đó trong database products (localhost,14331), "
+        "rồi thêm chính nó lần nữa — nếu dòng trong giỏ đổi sang giá mới thì case đỏ. Giá phải giữ "
+        "nguyên mức đã chốt lúc thêm lần đầu.",
+    (_F, "AddItem_Rejects_AQuantityBelowOne"):
+        "Gọi POST http://localhost:5188/baskets/current/items với quantity 0 hoặc số âm — nếu được chấp "
+        "nhận và giỏ xuất hiện dòng số lượng 0/âm thay vì bị từ chối thì case đỏ.",
+    (_F, "AddItem_Rejects_ANegativeUnitPrice"):
+        "Gọi POST http://localhost:5188/baskets/current/items với unitPrice âm (ví dụ -0.01) — nếu được "
+        "chấp nhận thay vì bị từ chối thì case đỏ.",
+})
+
+_F = "services/baskets/tests/Baskets.Api.UnitTests/BasketTotalTests.cs"
+BREAK_HINTS.update({
+    (_F, "Total_IsZero_ForAnEmptyBasket"):
+        "Xem giỏ khi chưa thêm gì: nếu tổng tiền khác 0 thì case đỏ. Dưới local, sửa phép tính tổng để "
+        "cộng thêm một khoản cố định là tái hiện được.",
+    (_F, "Total_MultipliesQuantityByUnitPrice"):
+        "Thêm 2 Notebook giá 12.50 rồi xem giỏ: tổng phải là 25.00. Nếu ra 12.50 (quên nhân số lượng) "
+        "hoặc bất kỳ con số nào khác thì case đỏ.",
+    (_F, "Total_SumsEveryLine"):
+        "Thêm 2 Notebook (12.50) và 1 Pour-Over (48.00) rồi xem giỏ: tổng phải là 73.00. Nếu chỉ tính "
+        "một dòng, hoặc bỏ sót dòng cuối, thì case đỏ.",
+    (_F, "Total_MatchesTheWalkthroughFigure"):
+        "Dựng đúng giỏ của kịch bản demo — 2 Notebook + 1 Apron — rồi xem tổng: khác 59.25 là case đỏ. "
+        "Đây là con số mọi tài liệu demo và kịch bản E2E đang trích dẫn.",
+    (_F, "Total_IsExact_ForAmountsThatFloatingPointWouldRound"):
+        "Tạo giỏ có hai dòng giá 0.10 và 0.20, xem tổng: phải đúng 0.30. Ra 0.30000000000000004 là case "
+        "đỏ — tái hiện bằng cách sửa kiểu số tiền trong Baskets từ decimal sang double dưới local.",
+    (_F, "Clear_EmptiesTheBasket_AndZeroesTheTotal"):
+        "Cho giỏ có hàng rồi gọi POST http://localhost:5188/baskets/current/clear: nếu sau đó giỏ vẫn "
+        "còn dòng, hoặc danh sách rỗng nhưng tổng tiền vẫn khác 0, thì case đỏ.",
+})
+
+_F = "services/baskets/tests/Baskets.Api.IntegrationTests/BasketEndpointsTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetBasket_ReturnsTheBasket_WhenItExists"):
+        "Tạo giỏ có 2 Notebook, lấy id của nó rồi gọi GET http://localhost:5188/baskets/{id} kèm "
+        "X-Tenant-Id — nếu trả về sai id, sai CustomerRef, thiếu danh sách dòng, hoặc tổng khác 25.00 "
+        "thì case đỏ.",
+    (_F, "GetBasket_ReturnsNotFound_WhenNoBasketHasThatId"):
+        "Gọi GET http://localhost:5188/baskets/{một GUID không tồn tại} — nếu trả 200 kèm giỏ rỗng thay "
+        "vì 404 thì case đỏ. Hai tình huống 'không có giỏ' và 'giỏ không có gì' phải phân biệt được.",
+})
+
+_F = "services/baskets/tests/Baskets.Api.IntegrationTests/ClearBasketTests.cs"
+BREAK_HINTS.update({
+    (_F, "Clear_RemovesEveryLine_ButKeepsTheBasket"):
+        "Ghi lại id giỏ, thêm hàng, gọi POST /baskets/current/clear rồi xem lại giỏ: nếu id giỏ đổi "
+        "thành id mới thì case đỏ (chứng tỏ giỏ bị xoá rồi tạo lại chứ không phải chỉ dọn hàng). Trả về "
+        "khác 204 cũng đỏ.",
+    (_F, "Clear_ReturnsConflict_WhenTheBasketIsAlreadyEmpty"):
+        "Gọi POST http://localhost:5188/baskets/current/clear khi giỏ đang rỗng — nếu trả 204 (im lặng "
+        "thành công) thay vì 409 thì case đỏ.",
+    (_F, "Clear_ReturnsConflict_OnASecondClear"):
+        "Thêm hàng, dọn giỏ (204), rồi dọn lần nữa ngay: lần thứ hai phải là 409. Nếu vẫn 204 thì case "
+        "đỏ — và đó cũng là lỗ hổng khiến bấm đặt hàng hai lần có thể tạo hai đơn.",
+    (_F, "Clear_LeavesTheBasketUsable_ForTheNextPurchase"):
+        "Sau khi dọn giỏ, thêm tiếp 3 Notebook rồi xem giỏ: phải có 1 dòng số lượng 3, tổng 37.50. Nếu "
+        "thêm không được, hoặc giỏ vẫn rỗng, thì case đỏ.",
+})
+
+_F = "services/baskets/tests/Baskets.Api.IntegrationTests/CurrentBasketTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetCurrent_ReturnsAnEmptyBasket_ForACallerWhoHasNeverAddedAnything"):
+        "Dùng một X-Subject-Id chưa từng dùng bao giờ rồi gọi GET http://localhost:5188/baskets/current "
+        "— phải nhận 200 với giỏ rỗng. Nếu trả 404 (coi 'chưa từng mua' là lỗi) thì case đỏ.",
+    (_F, "GetCurrent_ReturnsTheSameBasket_AcrossSeparateRequests"):
+        "Thêm 2 Notebook rồi gọi GET /baskets/current hai lần liên tiếp: nếu hai lần trả về id giỏ khác "
+        "nhau, hoặc lần sau mất hàng, thì case đỏ. Tương đương việc F5 trang giỏ hàng mà giỏ trống trơn.",
+    (_F, "GetCurrent_GivesDifferentShoppersDifferentBaskets"):
+        "Gọi /baskets/current với X-Subject-Id: alice, thêm hàng; rồi gọi lại với X-Subject-Id: bob — "
+        "nếu bob nhìn thấy hàng của alice, hoặc hai người ra cùng một id giỏ, thì case đỏ.",
+    (_F, "AddItem_MergesIntoTheExistingLine_WhenTheSameProductIsAddedAgain"):
+        "Gọi POST /baskets/current/items hai lần cho cùng sản phẩm rồi xem giỏ: phải là 1 dòng số lượng "
+        "2, tổng 25.00. Ra 2 dòng là case đỏ — khác với case unit ở chỗ đây kiểm tra việc gộp còn đúng "
+        "khi đi qua hai request riêng biệt và ghi xuống database thật.",
+    (_F, "AddItem_KeepsDistinctProductsOnSeparateLines"):
+        "Thêm Notebook 2 lần và Apron 1 lần: giỏ phải có 2 dòng, tổng 59.25. Ra 1 dòng hoặc 3 dòng, "
+        "hoặc tổng khác, đều là case đỏ.",
+    (_F, "AddItem_Rejects_AQuantityBelowOne"):
+        "Gọi POST http://localhost:5188/baskets/current/items với quantity 0 hoặc -3 — nhận 200 hay 500 "
+        "thay vì 400 đều là case đỏ. API phải từ chối rõ ràng là do dữ liệu gửi lên sai.",
+    (_F, "GetCurrent_Fails_WhenNoCallerWasResolved"):
+        "Gọi GET http://localhost:5188/baskets/current có X-Tenant-Id nhưng KHÔNG có X-Subject-Id — nếu "
+        "vẫn trả về một giỏ nào đó thay vì lỗi 500 thì case đỏ, vì khi đó mọi request thiếu subject sẽ "
+        "dùng chung một giỏ.",
+})
+
+# ---------------------------------------------------------------- BASKET (frontend)
+
+_F = "frontend/apps/web/tests/basket/AddItemError.test.tsx"
+BREAK_HINTS.update({
+    (_F, "adds the product when the request succeeds"):
+        "Mở tab Network, bấm 'Add to basket' trên http://localhost:4173 và xem nội dung request gửi đi — "
+        "nếu ngoài productId và quantity còn kèm cả giá thì case đỏ, vì khi đó giá là do client tự khai. "
+        "Không gửi được request nào cũng đỏ.",
+    (_F, "shows a clear error when the request fails"):
+        "Tắt baskets-api rồi bấm 'Add to basket' — nếu không hiện thông báo lỗi nào, hoặc tệ hơn là giỏ "
+        "hiển thị món vừa bấm dù server đã từ chối, thì case đỏ. Trường hợp thứ hai nguy hiểm hơn: khách "
+        "sẽ đặt hàng trong khi tin rằng đã mua được món đó.",
+    (_F, "disables itself while the addition is in flight"):
+        "Bấm 'Add to basket' liên tục thật nhanh khi mạng chậm (dùng Network throttling trong DevTools) "
+        "— nếu đếm được nhiều request hơn số lần thao tác hợp lệ thì case đỏ. Tái hiện bằng cách bỏ đoạn "
+        "vô hiệu hoá nút trong lúc đang gửi.",
+    (_F, "can be operated by keyboard"):
+        "Không dùng chuột: Tab tới nút 'Add to basket' rồi Enter — nếu không Tab tới được, hoặc Enter "
+        "không gửi request, thì case đỏ.",
+})
+
+_F = "frontend/apps/web/tests/basket/BasketView.test.tsx"
+BREAK_HINTS.update({
+    (_F, "shows each line with its name, quantity, unit price, and line total"):
+        "Thêm 2 Notebook rồi mở http://localhost:4173/basket — thiếu tên sản phẩm, thiếu cụm số lượng x "
+        "đơn giá, hoặc thiếu thành tiền của dòng, đều là case đỏ.",
+    (_F, "shows the basket total the backend reported"):
+        "Thêm 2 Notebook và 1 Apron rồi xem trang giỏ — tổng phải hiện $59.25. Case đỏ nếu con số khác, "
+        "hoặc nếu giao diện tự cộng lại thay vì hiển thị tổng server trả về (tái hiện bằng cách sửa "
+        "giao diện tự tính tổng từ các dòng — khi đó tổng có thể lệch với số tiền thực bị tính).",
+    (_F, "presents the lines as a list"):
+        "Xem cấu trúc trang giỏ trong DevTools hoặc bằng trình đọc màn hình — nếu các dòng hàng không "
+        "còn được đánh dấu là danh sách có nhãn thì case đỏ.",
+    (_F, "tells the shopper when the basket is empty"):
+        "Dọn sạch giỏ rồi mở trang giỏ hàng — nếu thấy trang trắng, hoặc hiện thông báo lỗi, thay vì "
+        "dòng chữ báo giỏ đang trống thì case đỏ. Giỏ rỗng là trạng thái bình thường, nhất là ngay sau "
+        "khi đặt hàng xong.",
+    (_F, "shows a readable error when the basket cannot be loaded"):
+        "Tắt baskets-api rồi mở trang giỏ hàng — nếu không có thông báo lỗi đọc được, hoặc có thông báo "
+        "nhưng không kèm nút 'Try again', thì case đỏ.",
+})
+
+# ---------------------------------------------------------------- GATEWAY
+
+_F = "services/gateway/tests/Gateway.Api.UnitTests/ForwardingTimeoutBudgetTests.cs"
+BREAK_HINTS.update({
+    (_F, "TheGatewaysForwardingTimeout_IsAtLeastTheBffsTotalDownstreamBudget"):
+        "Mở services/gateway/src/Gateway.Api/appsettings.json, hạ ActivityTimeout của bff-cluster xuống "
+        "dưới 3 giây (ví dụ 00:00:02) — case đỏ ngay. Hậu quả thật: gateway cắt request trong khi BFF "
+        "vẫn đang chờ hợp lệ, người dùng nhận lỗi mà log của BFF không giải thích được.",
+    (_F, "TheGatewaysForwardingTimeout_IsBounded"):
+        "Xoá hẳn dòng ActivityTimeout khỏi appsettings.json của gateway, hoặc đặt nó thành một giá trị "
+        "rất lớn (trên 1 phút) — case đỏ. Đây là case chặn tình huống 'chờ vô hạn'.",
+})
+
+_F = "services/gateway/tests/Gateway.Api.UnitTests/RouteConfigurationTests.cs"
+BREAK_HINTS.update({
+    (_F, "TheConfiguration_DefinesExactlyOneRoute_ToTheBffCluster"):
+        "Thêm một route thứ hai vào mục ReverseProxy trong appsettings.json của gateway, hoặc đổi tên "
+        "route/cluster hiện có khác 'bff-route'/'bff-cluster' — case đỏ.",
+    (_F, "TheRoute_MatchesEveryPath"):
+        "Đổi Match.Path của route từ '{**catch-all}' sang một đường dẫn cụ thể như '/bff/{**rest}' — "
+        "case đỏ. Hậu quả thật: mỗi lần BFF thêm đường dẫn mới lại phải sửa gateway.",
+    (_F, "TheConfiguration_DefinesExactlyOneCluster_WithOneDestination"):
+        "Thêm cluster thứ hai, thêm destination thứ hai vào bff-cluster, hoặc để trống địa chỉ "
+        "destination — cả ba đều làm case đỏ.",
+    (_F, "TheConfiguration_NamesNoDomainServiceAsADestination"):
+        "Thêm vào cấu hình gateway một destination trỏ thẳng tới products-api, baskets-api, orders-api "
+        "hoặc parties-api — case đỏ. Đây là case chặn việc mở đường đi tắt vòng qua BFF.",
+    (_F, "EveryRoute_ResolvesToADefinedCluster"):
+        "Sửa ClusterId của route thành một tên không tồn tại (ví dụ 'bff-cluster-2'), hoặc xoá hẳn "
+        "ClusterId — case đỏ, vì khi đó có route nhưng không dẫn đi đâu cả.",
+})
+
+_F = "services/gateway/tests/Gateway.Api.UnitTests/StubIdentityAuthenticationHandlerTests.cs"
+BREAK_HINTS.update({
+    (_F, "AuthenticateAsync_Succeeds_ForAnyRequest"):
+        "Dưới local, sửa stub identity của gateway để nó từ chối xác thực trong một điều kiện nào đó "
+        "(ví dụ khi thiếu header Authorization) — case đỏ. Giai đoạn 1 chưa có thông tin đăng nhập để "
+        "đọc, nên mọi request đều phải xác thực thành công.",
+    (_F, "AuthenticateAsync_IssuesTheConfiguredTenantClaim"):
+        "Đổi StubIdentity:TenantId trong cấu hình gateway thành giá trị khác rồi kiểm tra tenant gắn vào "
+        "request; hoặc sửa stub để không phát ra claim tenant nữa — case đỏ.",
+    (_F, "AuthenticateAsync_IssuesTheConfiguredSubjectClaim"):
+        "Sửa stub identity để chỉ phát ra tenant mà không phát ra subject — case đỏ. Hậu quả thật: mọi "
+        "endpoint theo người mua (giỏ hàng, đặt hàng) sẽ lỗi 500.",
+    (_F, "AuthenticateAsync_IgnoresTheRequest_HavingNoCredentialsToRead"):
+        "Sửa stub để nó đọc header Authorization của người gọi và đổi kết quả theo đó — case đỏ. Ở giai "
+        "đoạn 1, nội dung request không được phép ảnh hưởng tới danh tính phân giải ra.",
+    (_F, "AuthenticateAsync_Fails_WhenNoTenantIsConfigured"):
+        "Sửa stub để khi StubIdentity:TenantId bị bỏ trống thì vẫn xác thực thành công (ví dụ tự điền "
+        "một tenant mặc định) — case đỏ. Một principal không có tenant là request chưa phân giải đội lốt "
+        "đã phân giải.",
+    (_F, "AuthenticateAsync_IssuesAnIdentityNamingTheStubScheme"):
+        "Sửa stub để tạo identity không đặt tên scheme (hoặc đặt tên khác) — case đỏ. Case này giữ cho "
+        "stub vẫn là một cơ chế xác thực thật, không tụt xuống thành mẹo gắn header.",
+})
+
+_F = "services/gateway/tests/Gateway.Api.UnitTests/SubjectHeaderPropagationMiddlewareTests.cs"
+BREAK_HINTS.update({
+    (_F, "InvokeAsync_StampsTheSubjectHeader_FromTheAuthenticatedPrincipal"):
+        "Dưới local, gỡ bước gắn header X-Subject-Id ở gateway rồi mua hàng qua giao diện "
+        "http://localhost:4173 — giỏ hàng lỗi 500 vì phía dưới không biết người mua là ai. Case đỏ.",
+    (_F, "InvokeAsync_OverwritesACallerSuppliedSubject_NeverTrustsIt"):
+        "Sửa gateway để giữ lại header X-Subject-Id do client gửi lên thay vì ghi đè, rồi gọi "
+        "http://localhost:5300/bff/basket kèm 'X-Subject-Id: alice' — nếu giỏ trả về customerRef là "
+        "alice thì case đỏ, và đó là lỗ hổng cho phép xem giỏ của người khác.",
+    (_F, "InvokeAsync_RemovesTheHeader_WhenNoSubjectIsResolved"):
+        "Sửa gateway để khi không phân giải được subject thì cứ để nguyên header client gửi lên (thay vì "
+        "gỡ bỏ) — case đỏ. Đây chính là đường tuồn danh tính mà case trên đang bịt.",
+    (_F, "InvokeAsync_AlwaysCallsTheRestOfThePipeline"):
+        "Sửa gateway để chặn request ngay tại middleware khi không phân giải được subject (ví dụ trả 401 "
+        "và dừng) — case đỏ. Hậu quả thật: các endpoint không cần danh tính, như health probe, cũng bị "
+        "chặn theo.",
+})
+
+_F = "services/gateway/tests/Gateway.Api.IntegrationTests/CorrelationIdPropagationTests.cs"
+BREAK_HINTS.update({
+    (_F, "AGeneratedCorrelationId_ReachesTheBff_AndMatchesWhatTheCallerIsGiven"):
+        "Gọi http://localhost:5300/bff/products khi products-api đang tắt, so header X-Correlation-Id "
+        "trong phản hồi với trường correlationId trong nội dung lỗi — hai giá trị khác nhau là case đỏ, "
+        "vì khi đó mã tra cứu đưa cho khách không tìm được gì trong log của BFF.",
+    (_F, "ACallerSuppliedCorrelationId_IsPreservedEndToEnd"):
+        "Gọi qua gateway kèm sẵn 'X-Correlation-Id: ma-cua-toi' — nếu phản hồi trả về một mã khác do hệ "
+        "thống tự sinh thì case đỏ, vì khách hàng mất đường nối giữa log của họ và log của mình.",
+})
+
+_F = "services/gateway/tests/Gateway.Api.IntegrationTests/DownstreamUnavailableTests.cs"
+BREAK_HINTS.update({
+    (_F, "ARequest_ReturnsAClearError_WhenTheBffIsUnreachable"):
+        "Tắt bff-api (`docker compose -f docker-compose.local.yml stop bff-api`) rồi gọi "
+        "http://localhost:5300/bff/products và bấm giờ — nếu treo quá 5 giây, hoặc trả về lỗi socket "
+        "thô thay vì mã lỗi rõ ràng, thì case đỏ.",
+    (_F, "TheGatewaysOwnHealth_StaysHealthy_WhenTheBffIsUnreachable"):
+        "Tắt bff-api rồi gọi http://localhost:5300/health/live và /health/ready — nếu gateway báo không "
+        "khoẻ theo thì case đỏ. Hậu quả thật: một sự cố ở BFF làm toàn bộ gateway bị khởi động lại.",
+    (_F, "TheError_LeaksNoInternalRoutingDetail"):
+        "Tắt bff-api rồi đọc kỹ nội dung lỗi trả về từ http://localhost:5300/bff/products — nếu thấy "
+        "127.0.0.1, tên bff-cluster, bff-route hay SocketException thì case đỏ.",
+})
+
+_F = "services/gateway/tests/Gateway.Api.IntegrationTests/RoutingTests.cs"
+BREAK_HINTS.update({
+    (_F, "ARequestToTheGateway_ReachesAResponseOnlyTheBffCanProduce"):
+        "Gọi http://localhost:5300/openapi/v1.json — nếu không nhận được tài liệu OpenAPI có đường dẫn "
+        "/bff/products thì case đỏ, vì đó là bằng chứng request thật sự đi tới BFF chứ không dừng ở "
+        "gateway. Tái hiện bằng cách trỏ destination của gateway sang một địa chỉ khác.",
+    (_F, "AClientFacingRoute_IsForwardedToTheBffsHandler"):
+        "Gọi http://localhost:5300/bff/products — nhận 404 là case đỏ (nghĩa là gateway không chuyển "
+        "tiếp). Tái hiện bằng cách thu hẹp Match.Path của route để nó không còn khớp /bff/products.",
+    (_F, "TheGatewaysOwnHealthProbes_AreServedLocally_NotForwarded"):
+        "Sửa cấu hình route của gateway để /health/live và /health/ready cũng bị chuyển tiếp xuống BFF, "
+        "rồi tắt bff-api và gọi hai đường dẫn đó — không còn 200 là case đỏ.",
+})
+
+_F = "services/gateway/tests/Gateway.Api.IntegrationTests/StorefrontCorsTests.cs"
+BREAK_HINTS.update({
+    (_F, "APreflightFromTheStorefront_IsAllowed"):
+        "Xoá http://localhost:5173 và http://localhost:4173 khỏi danh sách origin được phép của gateway, "
+        "rồi gửi OPTIONS http://localhost:5300/bff/products kèm 'Origin: http://localhost:4173' — không "
+        "còn header Access-Control-Allow-Origin là case đỏ. Trên giao diện, biểu hiện là trang trắng vì "
+        "trình duyệt chặn mọi lời gọi.",
+    (_F, "APreflightFromTheStorefront_AllowsCredentials"):
+        "Sửa chính sách CORS của gateway để dùng origin dấu * hoặc bỏ phần cho phép credentials, rồi gửi "
+        "lại preflight — thiếu 'Access-Control-Allow-Credentials: true', hoặc Allow-Origin thành '*', "
+        "đều là case đỏ.",
+    (_F, "ARequestFromAnUnknownOrigin_IsNotAdmitted"):
+        "Sửa gateway để chấp nhận mọi origin, rồi gửi preflight kèm 'Origin: http://evil.example' — nếu "
+        "nhận được Access-Control-Allow-Origin thì case đỏ.",
+    (_F, "TheAllowedOrigins_ComeFromConfiguration"):
+        "Sửa gateway để danh sách origin được viết cứng trong code thay vì đọc từ cấu hình, rồi khai một "
+        "origin mới trong cấu hình và gửi preflight từ đó — không được chấp nhận là case đỏ.",
+    (_F, "ARequestWithNoOrigin_IsUntouched"):
+        "Gọi http://localhost:5300/health/live không kèm header Origin — nếu phản hồi vẫn có header "
+        "Access-Control-Allow-Origin, hoặc không còn trả 200, thì case đỏ.",
+    (_F, "EachConfiguredOrigin_IsAdmitted"):
+        "Bỏ bớt một trong hai origin đã cấu hình (5173 của dev server, 4173 của storefront container), "
+        "rồi gửi preflight từ chính origin vừa bỏ — case đỏ.",
+    (_F, "TheDevelopmentConfiguration_Admits_BothStorefrontOrigins"):
+        "Xoá hoặc sửa mục Cors trong services/gateway/src/Gateway.Api/appsettings.Development.json — "
+        "case đỏ. Case này khác các case trên ở chỗ nó đọc file cấu hình thật đã commit, chính là loại "
+        "lỗi từng lọt lưới: cơ chế thì đúng nhưng repo lại quên cấu hình.",
+})
+
+_F = "services/gateway/tests/Gateway.Api.IntegrationTests/TenantPropagationTests.cs"
+BREAK_HINTS.update({
+    (_F, "ARequestThroughTheGateway_CarriesTheResolvedTenantToTheBff"):
+        "Gỡ bước gắn header X-Tenant-Id ở gateway dưới local, rồi mua hàng qua http://localhost:4173 — "
+        "mọi màn hình lỗi vì phía dưới không phân giải được tenant. Case đỏ.",
+    (_F, "ACallerSuppliedTenant_IsOverwritten_NeverTrusted"):
+        "Sửa gateway để giữ lại X-Tenant-Id do client gửi thay vì ghi đè, rồi gọi "
+        "http://localhost:5300/bff/products kèm 'X-Tenant-Id: tenant-khac' — nếu request đi xuống mang "
+        "tenant đó thì case đỏ, và đó là lỗ hổng vượt ranh giới cô lập dữ liệu.",
+    (_F, "EveryForwardedRequest_CarriesATenant"):
+        "Sửa gateway để chỉ gắn tenant cho một số đường dẫn nhất định, rồi gọi một đường dẫn nằm ngoài "
+        "danh sách đó — request đi xuống không mang tenant là case đỏ.",
+})
+
+_F = "services/gateway/tests/Gateway.Api.IntegrationTests/UnmatchedRouteTests.cs"
+BREAK_HINTS.update({
+    (_F, "AnUnknownPath_ReturnsAClearNotFound_RatherThanHanging"):
+        "Gọi http://localhost:5300/no-such-path và bấm giờ — nếu treo lâu (trên 15 giây) hoặc trả mã "
+        "khác 404 thì case đỏ. Tái hiện bằng cách trỏ destination của gateway sang một địa chỉ không "
+        "phản hồi.",
+    (_F, "AnUnknownPathsResponse_LeaksNoInternalRoutingDetail"):
+        "Đọc nội dung phản hồi 404 của http://localhost:5300/no-such-path — nếu thấy bff-cluster, "
+        "bff-route, products-api hay số cổng 8080 thì case đỏ. Tái hiện bằng cách bật chế độ hiển thị "
+        "lỗi chi tiết cho gateway dưới local.",
+})
+
+# ---------------------------------------------------------------- ORDER (backend)
+
+_F = "services/orders/tests/Orders.Api.UnitTests/OrderTenantTests.cs"
+BREAK_HINTS.update({
+    (_F, "PlaceFrom_RecordsTheTenantItWasPlacedFor"):
+        "Đặt một đơn qua http://localhost:5300/bff/checkout rồi đọc đơn đó tại "
+        "http://localhost:5041/orders/{id} kèm X-Tenant-Id — nếu trường tenantId trống hoặc sai thì "
+        "case đỏ. Tái hiện bằng cách sửa Orders dưới local để không gán tenant khi tạo đơn.",
+    (_F, "PlaceFrom_Rejects_AnAbsentOrBlankTenant"):
+        "Sửa Orders dưới local để chấp nhận tenant rỗng (thay vì bắt buộc phải có), rồi đặt đơn không "
+        "kèm tenant — đơn được tạo với tenantId rỗng là case đỏ. Hậu quả thật: có bản ghi đơn hàng "
+        "không quy được về khách nào.",
+    (_F, "PlaceFrom_StillRejects_AnEmptyLineSet_EvenWithATenant"):
+        "Gọi POST http://localhost:5041/orders với items rỗng nhưng có đủ header tenant — nếu đơn vẫn "
+        "được tạo thì case đỏ. Case này canh việc thêm luật tenant không làm mất luật cũ.",
+})
+
+_F = "services/orders/tests/Orders.Api.UnitTests/OrderTotalTests.cs"
+BREAK_HINTS.update({
+    (_F, "PlaceFrom_MultipliesQuantityByUnitPrice"):
+        "Đặt đơn gồm 2 Notebook giá 12.50 rồi đọc lại đơn: tổng phải là 25.00. Ra 12.50 (quên nhân số "
+        "lượng) là case đỏ.",
+    (_F, "PlaceFrom_SumsEveryLine"):
+        "Đặt đơn gồm 2 Notebook và 1 Apron rồi đọc lại: tổng phải là 59.25. Nếu chỉ tính một dòng, hoặc "
+        "bỏ sót dòng cuối, thì case đỏ.",
+    (_F, "PlaceFrom_RecordsWhenTheOrderWasPlaced_AndGivesItAnIdentifier"):
+        "Đặt đơn rồi xem phản hồi: thiếu thời điểm đặt, hoặc mã đơn là GUID toàn số 0, đều là case đỏ. "
+        "Trên giao diện, biểu hiện là màn hình xác nhận không có mã đơn để đọc cho khách.",
+    (_F, "PlaceFrom_Rejects_AnEmptyLineSet"):
+        "Gọi POST http://localhost:5041/orders với danh sách items rỗng — nếu tạo ra một đơn tổng 0 thay "
+        "vì bị từ chối thì case đỏ.",
+    (_F, "PlaceFrom_Rejects_ALineWithANonPositiveQuantity"):
+        "Gọi POST http://localhost:5041/orders với một dòng số lượng 0 hoặc âm — nếu đơn vẫn được tạo "
+        "thì case đỏ.",
+    (_F, "PlaceFrom_Rejects_ALineWithANegativePrice"):
+        "Gọi POST http://localhost:5041/orders với đơn giá âm (-0.01) — nếu đơn vẫn được tạo thì case "
+        "đỏ. Hậu quả thật: đơn hàng có tổng tiền âm.",
+    (_F, "PlaceFrom_IsExact_ForAmountsThatFloatingPointWouldRound"):
+        "Đặt đơn có hai dòng giá 0.10 và 0.20, đọc lại tổng: phải đúng 0.30. Ra 0.30000000000000004 là "
+        "case đỏ — tái hiện bằng cách đổi kiểu số tiền trong Orders từ decimal sang double dưới local.",
+})
+
+_F = "services/orders/tests/Orders.Api.IntegrationTests/OrderEndpointsTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetOrder_ReturnsTheOrder_WhenItExists"):
+        "Đặt một đơn, ghi lại mã, rồi gọi GET http://localhost:5041/orders/{id} kèm X-Tenant-Id — sai "
+        "mã, sai thời điểm đặt, hoặc sai tổng tiền so với lúc tạo đều là case đỏ.",
+    (_F, "GetOrder_ReturnsTheTenantTheOrderBelongsTo"):
+        "Đọc một đơn tại http://localhost:5041/orders/{id} — nếu phản hồi không có trường tenantId, "
+        "hoặc trường đó rỗng, thì case đỏ. Đây là trường mà kịch bản demo dựa vào để chứng minh đơn "
+        "hàng thuộc đúng tenant.",
+    (_F, "GetOrder_ReturnsNotFound_WhenNoOrderHasThatId"):
+        "Gọi GET http://localhost:5041/orders/{GUID không tồn tại} — trả 200 kèm đơn rỗng, hoặc lỗi 500, "
+        "thay vì 404 đều là case đỏ.",
+})
+
+_F = "services/orders/tests/Orders.Api.IntegrationTests/PlaceOrderTests.cs"
+BREAK_HINTS.update({
+    (_F, "PlaceOrder_CreatesTheOrder_AndComputesItsTotal"):
+        "Gọi POST http://localhost:5041/orders với 2 Notebook và 1 Apron — nếu không nhận 201, hoặc tổng "
+        "trả về khác 59.25, thì case đỏ. Thử gửi kèm trường total trong body: nếu server nghe theo giá "
+        "trị đó thay vì tự tính thì cũng đỏ.",
+    (_F, "PlaceOrder_ReturnsAnIdentifier_ThatReadsBackAsTheSameOrder"):
+        "Đặt đơn rồi lấy đúng mã trong phản hồi gọi GET /orders/{id} — nếu không đọc lại được, hoặc "
+        "tổng/thời điểm khác lúc tạo, thì case đỏ. Trên giao diện, đây là tình huống mã đơn in cho "
+        "khách không tra được.",
+    (_F, "PlaceOrder_ReturnsALocationHeader_ForTheCreatedOrder"):
+        "Đặt đơn và xem header phản hồi — thiếu header Location, hoặc Location trỏ sai đường dẫn "
+        "/orders/{id}, là case đỏ.",
+    (_F, "PlaceOrder_Rejects_ARequestWithNoLines"):
+        "Gọi POST http://localhost:5041/orders với items rỗng, bỏ qua mọi kiểm tra phía giao diện — nếu "
+        "nhận 201 thay vì 400 thì case đỏ. Đây là lớp chặn cuối cùng cho tình huống đặt hàng giỏ rỗng.",
+    (_F, "PlaceOrder_Rejects_ALineWithANonPositiveQuantity"):
+        "Gọi POST http://localhost:5041/orders với quantity 0 — nhận 201 thay vì 400 là case đỏ.",
+    (_F, "PlaceOrder_Fails_WhenNoCallerWasResolved"):
+        "Gọi POST http://localhost:5041/orders có X-Tenant-Id nhưng KHÔNG có X-Subject-Id — nếu đơn vẫn "
+        "được tạo thì case đỏ, vì khi đó tồn tại đơn hàng không thuộc về ai.",
+    (_F, "PlaceOrder_PersistsTheResolvedTenant_OnTheOrderRow"):
+        "Đặt đơn rồi mở database orders (localhost,14333) xem cột TenantId của bản ghi vừa tạo — trống "
+        "hoặc sai là case đỏ. Khác case đọc qua API ở chỗ đây kiểm tra dữ liệu thật sự nằm trong "
+        "database, không phải giá trị được vang lại trong phản hồi.",
+    (_F, "PlaceOrder_IgnoresATenantNamedInTheRequestBody"):
+        "Gọi POST http://localhost:5041/orders với body cố tình thêm \"tenantId\": \"tenant-khac\" trong "
+        "khi header vẫn là contoso, rồi kiểm tra tenant của đơn vừa tạo — nếu ghi theo body thì case đỏ, "
+        "và đó là lỗ hổng cho phép người gọi tự chọn tenant cho đơn của mình.",
+})
+
+# ---------------------------------------------------------------- ORDER (frontend)
+
+_F = "frontend/apps/web/tests/checkout/Confirmation.test.tsx"
+BREAK_HINTS.update({
+    (_F, "shows the order identifier verbatim"):
+        "Mua hàng tới màn hình xác nhận trên http://localhost:4173 — nếu mã đơn bị rút gọn (kiểu "
+        "'aaaaaaaa…') hoặc không hiển thị thì case đỏ, vì khách không còn đọc và trích dẫn được mã đầy "
+        "đủ. Tái hiện bằng cách sửa màn hình xác nhận để cắt bớt mã.",
+    (_F, "shows the order total in the single Phase 1 currency"):
+        "Xem màn hình xác nhận sau khi đặt đơn 59.25 — nếu hiện '59.25' trần, thiếu ký hiệu $, hoặc "
+        "thiếu hai chữ số thập phân, thì case đỏ.",
+    (_F, "tells the shopper their order was placed"):
+        "Xem màn hình xác nhận — nếu không còn tiêu đề báo đơn đã đặt thành công thì case đỏ. Tái hiện "
+        "bằng cách đổi tiêu đề màn hình xác nhận thành một câu chung chung không nói đơn đã được đặt.",
+    (_F, "shows a nothing-to-show state when there is no order"):
+        "Gõ thẳng địa chỉ màn hình xác nhận http://localhost:4173/confirmation khi chưa đặt đơn nào — "
+        "nếu màn hình vỡ, hiện lỗi, hoặc tệ hơn là hiện một mã đơn bịa ra, thì case đỏ.",
+})
+
+_F = "frontend/apps/web/tests/checkout/DoubleSubmit.test.tsx"
+BREAK_HINTS.update({
+    (_F, "issues exactly one checkout request when clicked twice in rapid succession"):
+        "Mở tab Network của trình duyệt, bấm 'Check out' rồi bấm tiếp ngay lần nữa khi request đầu chưa "
+        "xong — nếu thấy hai request POST /bff/checkout thì case đỏ. Tái hiện bằng cách bỏ đoạn vô hiệu "
+        "hoá nút trong lúc đang gửi.",
+    (_F, "issues one request even when both clicks land before React re-renders"):
+        "Bấm hai lần thật nhanh trong cùng một khoảnh khắc (nhanh hơn tốc độ vẽ lại giao diện) — vẫn "
+        "phải chỉ một request. Đây đúng là tình huống từng tạo ra hai đơn cách nhau 6 mili giây trên "
+        "môi trường container, nên nếu chỉ dựa vào việc nút bị mờ đi thì case đỏ.",
+    (_F, "reports the created order exactly once"):
+        "Đặt hàng một lần và đếm số lần màn hình xác nhận được kích hoạt — nếu chuyển màn hình hai lần, "
+        "hoặc không chuyển lần nào dù đơn đã tạo, thì case đỏ.",
+    (_F, "shows an error and reports no order when checkout fails"):
+        "Tắt orders-api rồi bấm 'Check out' — nếu không hiện thông báo lỗi, hoặc tệ hơn là vẫn nhảy sang "
+        "màn hình xác nhận với một mã đơn không có thật, thì case đỏ.",
+})
+
+_F = "frontend/apps/web/tests/checkout/EmptyBasketBlocks.test.tsx"
+BREAK_HINTS.update({
+    (_F, "is not operable"):
+        "Mở http://localhost:4173/basket khi giỏ đang rỗng — nếu nút 'Check out' vẫn bấm được thì case "
+        "đỏ. Tái hiện bằng cách bỏ điều kiện vô hiệu hoá nút theo số lượng hàng trong giỏ.",
+    (_F, "sends no checkout request when the shopper tries anyway"):
+        "Mở tab Network, giỏ rỗng, cố bấm 'Check out' — nếu thấy bất kỳ request POST /bff/checkout nào "
+        "thì case đỏ, kể cả khi server đã từ chối bằng 409. Tiêu chí ở đây là không gửi request nào cả.",
+    (_F, "becomes operable once the basket holds something"):
+        "Thêm 1 sản phẩm vào giỏ — nếu nút 'Check out' vẫn mờ và không bấm được thì case đỏ (chặn nhầm "
+        "cả trường hợp hợp lệ).",
+})
+
+# ---------------------------------------------------------------- ORDER (E2E)
+
+_F = "frontend/apps/web/e2e/walkthrough.spec.ts"
+BREAK_HINTS.update({
+    (_F, "browse, add to basket, check out, and see the confirmation"):
+        "Chạy trọn luồng mua hàng trên http://localhost:4173 và mở sẵn Console + Network. Case đỏ nếu "
+        "bất kỳ điều nào xảy ra: hai Notebook không gộp thành một dòng, tổng khác $59.25, F5 giữa chừng "
+        "làm mất giỏ, mã đơn không đọc lại được, giỏ không rỗng sau khi đặt, có request đi tới địa chỉ "
+        "khác ngoài gateway, hoặc Console xuất hiện lỗi đỏ.",
+    (_F, "checkout is blocked, and unsent, when the basket is empty"):
+        "Mở /basket với giỏ rỗng, mở tab Network, cố bấm 'Check out' — thấy request POST /bff/checkout "
+        "là case đỏ.",
+    (_F, "checking out twice in rapid succession creates exactly one order"):
+        "Bấm 'Check out' hai lần gần như đồng thời trên trình duyệt thật, đếm số request POST "
+        "/bff/checkout trong tab Network — nhiều hơn một là case đỏ.",
+    (_F, "the whole flow can be completed using only the keyboard"):
+        "Rút chuột ra, chỉ dùng Tab và Enter để đi từ trang sản phẩm tới màn hình xác nhận. Case đỏ nếu "
+        "có điều khiển nào không Tab tới được, hoặc phần tử đang được chọn không hiện viền focus nhìn "
+        "thấy được. Tái hiện bằng cách bỏ style :focus-visible trong CSS.",
+})
+
+_F = "frontend/apps/web/demo/order-demo.spec.ts"
+BREAK_HINTS.update({
+    (_F, "one order, placed end to end, on the running stack"):
+        "Chạy ./scripts/demo.ps1 nhưng bỏ bước dọn giỏ, hoặc chạy khi stack container chưa lên hẳn — "
+        "case đỏ ngay ở bước đầu vì giỏ không rỗng. Ngoài ra case đỏ nếu tổng khác $59.25, đơn không "
+        "đọc lại được qua gateway, giỏ không rỗng sau khi đặt, hoặc 4 ảnh chụp trong docs/demo/ không "
+        "được sinh ra.",
+})
+
+# ---------------------------------------------------------------- PARTY
+
+_F = "services/parties/tests/Parties.Api.IntegrationTests/PartyEndpointsTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetParty_ReturnsTheParty_WhenItExists"):
+        "Cần có sẵn dữ liệu: chèn tay một bản ghi vào bảng Parties trong database parties "
+        "(localhost,14330), rồi gọi GET http://localhost:5204/parties/{id} kèm X-Tenant-Id — sai id hoặc "
+        "sai DisplayName so với bản ghi đã chèn là case đỏ. Lưu ý bảng này không có dữ liệu seed và "
+        "cũng không có API tạo party, nên phải chèn bằng SQL.",
+    (_F, "GetParty_ReturnsNotFound_WhenNoPartyHasThatId"):
+        "Gọi GET http://localhost:5204/parties/{GUID không tồn tại} kèm X-Tenant-Id — trả 200 kèm dữ "
+        "liệu rỗng, hoặc lỗi 500, thay vì 404 đều là case đỏ.",
+})
+
+# ---------------------------------------------------------------- PRODUCT (backend)
+
+_F = "services/products/tests/Products.Api.IntegrationTests/CatalogEndpointsTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetProducts_ReturnsEveryProduct_WithIdNameAndPrice"):
+        "Gọi GET http://localhost:5088/products kèm X-Tenant-Id và đối chiếu từng sản phẩm với bảng "
+        "Products trong database (localhost,14331) — thiếu sản phẩm, thiếu trường name hoặc price, hay "
+        "sai giá đều là case đỏ. Trên giao diện, biểu hiện là danh sách sản phẩm có ô trống.",
+    (_F, "GetProducts_ReturnsEmptyArray_WhenCatalogIsEmpty"):
+        "Xoá hết bản ghi trong bảng Products rồi gọi GET http://localhost:5088/products — nếu trả 404 "
+        "hoặc lỗi thay vì mảng rỗng thì case đỏ, vì catalog rỗng là trạng thái hợp lệ chứ không phải "
+        "sự cố.",
+})
+
+_F = "services/products/tests/Products.Api.IntegrationTests/CatalogSeedTests.cs"
+BREAK_HINTS.update({
+    (_F, "ApplyingMigrations_SeedsTheCatalog_WithTheThreeKnownProducts"):
+        "Dựng lại stack từ database trắng (`./scripts/local-down.ps1 -DiscardData` rồi "
+        "`./scripts/local-up.ps1`) và gọi GET http://localhost:5088/products — nếu thiếu bất kỳ sản "
+        "phẩm nào trong ba sản phẩm mẫu, hoặc tên/giá khác (12.50 / 48.00 / 34.25), thì case đỏ. Đó "
+        "cũng là lúc kịch bản demo và Playwright hỏng theo vì chúng chọn sản phẩm theo tên.",
+    (_F, "ApplyingMigrations_LeavesAPurchasableProduct_WithoutAnyManualSetup"):
+        "Dựng lại từ database trắng rồi mở http://localhost:4173 — nếu trang sản phẩm trống, hoặc có "
+        "sản phẩm nhưng thiếu tên / giá bằng 0, thì case đỏ. Tiêu chí là mở lên mua được ngay, không "
+        "phải nhập liệu tay.",
+    (_F, "TheSeededIdentifiers_AreStableAcrossFreshDatabases"):
+        "Ghi lại mã ba sản phẩm, dựng lại từ database trắng, rồi so mã lần nữa — nếu mã đổi sau mỗi lần "
+        "dựng thì case đỏ, vì mọi tài liệu và kịch bản test đang trỏ tới các mã cố định đó.",
+})
+
+# ---------------------------------------------------------------- PRODUCT (frontend)
+
+_F = "frontend/apps/web/tests/catalog/ProductList.test.tsx"
+BREAK_HINTS.update({
+    (_F, "lists every product with its name and price"):
+        "Mở http://localhost:4173 — nếu thiếu sản phẩm nào, hoặc giá hiện dạng thô như '48' thay vì "
+        "'$48.00', thì case đỏ. Tái hiện bằng cách bỏ bước định dạng tiền khi hiển thị.",
+    (_F, "presents the catalog as a list"):
+        "Dùng trình đọc màn hình (hoặc xem cấu trúc trong DevTools) trên trang sản phẩm — nếu danh sách "
+        "không còn được đánh dấu là list có nhãn thì case đỏ, người dùng khiếm thị mất khả năng biết "
+        "trước có bao nhiêu sản phẩm.",
+    (_F, "shows the empty state when the catalog holds nothing"):
+        "Xoá hết sản phẩm trong database rồi mở trang chủ — nếu thấy trang trắng, hoặc vòng xoay chờ "
+        "mãi không dứt, thay vì thông báo chưa có sản phẩm thì case đỏ.",
+    (_F, "shows a readable error when the backend fails"):
+        "Tắt products-api rồi mở trang chủ — nếu trang trắng, hoặc quay vòng vô tận, hoặc có thông báo "
+        "lỗi nhưng không có nút thử lại, thì case đỏ.",
+    (_F, "requests the catalog from the configured gateway origin"):
+        "Mở tab Network khi vào trang chủ — nếu thấy request đi thẳng tới cổng 5088 (products) hay bất "
+        "kỳ địa chỉ nào ngoài gateway 5300 thì case đỏ. Tái hiện bằng cách viết cứng một URL khác trong "
+        "component thay vì dùng địa chỉ đã cấu hình.",
+})
+
+_F = "frontend/apps/web/tests/catalog/EmptyCatalog.test.tsx"
+BREAK_HINTS.update({
+    (_F, "tells the shopper there is nothing to buy yet"):
+        "Xoá hết sản phẩm rồi mở trang chủ — không thấy dòng thông báo chưa có sản phẩm là case đỏ.",
+    (_F, "does not present itself as an error"):
+        "Ở trạng thái catalog rỗng, kiểm tra xem thông báo có bị đánh dấu là cảnh báo lỗi không — nếu "
+        "trình đọc màn hình đọc nó như một thông báo lỗi cắt ngang thì case đỏ, vì catalog rỗng là "
+        "chuyện bình thường chứ không phải sự cố.",
+})
+
+_F = "frontend/apps/web/tests/catalog/CatalogError.test.tsx"
+BREAK_HINTS.update({
+    (_F, "shows a readable message and announces it"):
+        "Tắt products-api rồi mở trang chủ — nếu thông báo lỗi không được đánh dấu để trình đọc màn hình "
+        "công bố, hoặc nội dung không đúng thông điệp, thì case đỏ.",
+    (_F, "offers a retry the shopper can operate"):
+        "Ở màn hình lỗi, bấm nút 'Try again' — nếu bấm không có phản ứng gì thì case đỏ.",
+    (_F, "reaches and fires retry by keyboard alone"):
+        "Ở màn hình lỗi, chỉ dùng Tab rồi Enter để kích hoạt nút thử lại — nếu không Tab tới được, hoặc "
+        "Enter không kích hoạt, thì case đỏ. Đường phục hồi sau lỗi không được chỉ dành cho chuột.",
+    (_F, "omits the retry control when no retry is possible"):
+        "Ở trạng thái lỗi không thể thử lại, nếu vẫn hiện một nút bấm vào không làm gì thì case đỏ. Tái "
+        "hiện bằng cách luôn vẽ nút thử lại bất kể có hành động phía sau hay không.",
+})
+
+# ---------------------------------------------------------------- COMMON: BFF
+
+_F = "services/bff/tests/Bff.Api.UnitTests/DownstreamServiceClientOptionsTests.cs"
+BREAK_HINTS.update({
+    (_F, "Validation_Fails_WhenBaseUrlIsMissing"):
+        "Xoá biến môi trường Services__ProductsApi__BaseUrl của bff-api trong docker-compose.local.yml "
+        "rồi khởi động lại stack — nếu BFF vẫn lên và vẫn báo healthy, chỉ hỏng khi có người gọi, thì "
+        "case đỏ. Nó phải từ chối khởi động, và thông báo phải nêu đúng tên khoá cấu hình thiếu.",
+    (_F, "Validation_Fails_WhenBaseUrlIsNotAnAbsoluteUri"):
+        "Đặt Services__ProductsApi__BaseUrl thành một đường dẫn tương đối như '/products' rồi khởi động "
+        "lại — nếu BFF khởi động bình thường thì case đỏ.",
+    (_F, "Validation_Succeeds_WhenBaseUrlIsAnAbsoluteUri"):
+        "Đặt BaseUrl thành một địa chỉ tuyệt đối hợp lệ (http://products-api:8080) — nếu BFF vẫn từ chối "
+        "khởi động thì case đỏ (chặn nhầm cấu hình đúng). Tái hiện bằng cách siết luật kiểm tra quá tay, "
+        "ví dụ bắt buộc phải là https.",
+})
+
+_F = "services/bff/tests/Bff.Api.UnitTests/ResponseMappingTests.cs"
+BREAK_HINTS.update({
+    (_F, "ProductSummary_CarriesEveryFieldFromTheDownstreamProduct"):
+        "So dữ liệu tại http://localhost:5088/products (gọi thẳng) với http://localhost:5301/bff/products "
+        "— nếu qua BFF bị mất trường, hoặc tên và giá bị tráo chỗ cho nhau, thì case đỏ. Trên giao diện, "
+        "biểu hiện là thẻ sản phẩm hiện tên ở ô giá.",
+    (_F, "BasketItem_JoinsTheProductName_AndPassesEveryOtherFieldThrough"):
+        "So một dòng giỏ tại http://localhost:5188/baskets/current với cùng dòng đó qua "
+        "http://localhost:5301/bff/basket — bản qua BFF phải có thêm trường name, các trường còn lại "
+        "giữ nguyên. Thiếu name (giao diện hiện GUID thay vì tên sản phẩm), hoặc thành tiền bị tính lại "
+        "khác đi, đều là case đỏ.",
+    (_F, "BasketItem_SurvivesAProductMissingFromTheCatalog"):
+        "Thêm một sản phẩm vào giỏ, rồi xoá chính sản phẩm đó khỏi bảng Products (localhost,14331), rồi "
+        "mở trang giỏ hàng — nếu dòng đó biến mất khỏi giỏ thì case đỏ, vì khách vẫn đang bị tính tiền "
+        "cho nó mà không thấy nó đâu. Nó phải ở lại kèm tên thay thế.",
+    (_F, "OrderResponse_CarriesEveryFieldFromTheDownstreamOrder"):
+        "So một đơn tại http://localhost:5041/orders/{id} với cùng đơn đó qua "
+        "http://localhost:5301/bff/orders/{id} — mất trường, hoặc tổng tiền và thời điểm đặt bị tráo, "
+        "là case đỏ.",
+    (_F, "OrderResponse_PreservesTheUtcKindOfThePlacedTimestamp"):
+        "Đặt đơn rồi xem thời điểm đặt hiển thị trên màn hình xác nhận — nếu lệch múi giờ so với giờ "
+        "thật thì case đỏ. Tái hiện bằng cách bỏ nhãn UTC của mốc thời gian ở bước ánh xạ trong BFF.",
+    (_F, "PartyResponse_CarriesEveryFieldFromTheDownstreamParty"):
+        "So dữ liệu party gọi thẳng http://localhost:5204/parties/{id} với qua "
+        "http://localhost:5301/bff/parties/{id} — mất id hoặc mất DisplayName là case đỏ. Cần chèn tay "
+        "một party vào database trước vì bảng này không có dữ liệu seed.",
+    (_F, "ProductSummary_PreservesPricePrecisionExactly"):
+        "Sửa giá một sản phẩm trong database thành số nhiều chữ số như 999999999999.99 hoặc 0.01, rồi "
+        "xem giá đó qua http://localhost:5301/bff/products — sai số, hoặc mất số 0 ở cuối (12.50 thành "
+        "12.5), là case đỏ. Tái hiện bằng cách đổi kiểu số tiền trong BFF từ decimal sang double.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/BasketFlowTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetBasket_ReturnsAnEmptyBasket_ForAShopperWhoHasAddedNothing"):
+        "Dọn giỏ rồi gọi http://localhost:5301/bff/basket kèm header tenant và subject — nếu trả 404 "
+        "hoặc lỗi thay vì giỏ rỗng tổng 0 thì case đỏ.",
+    (_F, "AddItem_ReturnsTheBasket_WithTheProductsNameAndResolvedPrice"):
+        "Gọi POST http://localhost:5301/bff/basket/items chỉ với productId và quantity — nếu dòng trả về "
+        "thiếu tên sản phẩm, hoặc đơn giá khác 12.50 lấy từ catalog, thì case đỏ.",
+    (_F, "AddItem_IgnoresAPriceSuppliedByTheClient"):
+        "Gọi POST /bff/basket/items kèm thêm \"unitPrice\": 0.01 trong body — nếu giỏ ghi nhận giá 0.01 "
+        "thay vì 12.50 thì case đỏ, và đó là lỗ hổng cho phép khách tự đặt giá cho mình.",
+    (_F, "AddItem_MergesIntoTheExistingLine_WhenTheSameProductIsAddedAgain"):
+        "Gọi POST /bff/basket/items hai lần cho cùng sản phẩm rồi đọc giỏ qua BFF — ra 2 dòng thay vì 1 "
+        "dòng số lượng 2, tổng 25.00, là case đỏ.",
+    (_F, "AddItem_ReturnsNotFound_WhenNoSuchProductExists"):
+        "Gọi POST /bff/basket/items với một productId ngẫu nhiên không có trong catalog — nếu trả 502 "
+        "(coi như downstream hỏng) hoặc thêm thành công thì case đỏ; phải là 404.",
+    (_F, "AddItem_Rejects_AQuantityBelowOne"):
+        "Gọi POST /bff/basket/items với quantity 0 hoặc -2 — nhận 200 hoặc 500 thay vì 400 là case đỏ.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/BasketsRouteTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetBasket_ReturnsShapedBasketFromTheBasketsService"):
+        "Tạo một giỏ rỗng, lấy id rồi gọi http://localhost:5301/bff/baskets/{id} — sai id, sai "
+        "CustomerRef, hoặc danh sách dòng không rỗng đều là case đỏ.",
+    (_F, "GetBasket_ReturnsNotFound_WhenTheBasketsServiceHasNoSuchBasket"):
+        "Gọi http://localhost:5301/bff/baskets/{GUID không tồn tại} — trả 502 hay 200 rỗng thay vì 404 "
+        "là case đỏ. Case này canh việc không lẫn lộn 'dịch vụ hỏng' với 'không có dữ liệu'.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/CheckoutTests.cs"
+BREAK_HINTS.update({
+    (_F, "Checkout_CreatesAnOrder_ForWhatIsInTheBasket"):
+        "Thêm 2 Notebook và 1 Apron rồi gọi POST http://localhost:5300/bff/checkout — không nhận 201, "
+        "hoặc tổng đơn khác 59.25, là case đỏ. Đây là con số đi qua đủ ba service.",
+    (_F, "Checkout_ReturnsAReference_ThatReadsBackAsTheSameOrder"):
+        "Đặt hàng rồi lấy mã đơn trong màn hình xác nhận gọi GET /bff/orders/{id} — không đọc lại được, "
+        "hoặc tổng khác, là case đỏ.",
+    (_F, "Checkout_EmptiesTheBasket"):
+        "Đặt hàng xong rồi mở lại trang giỏ — nếu hàng vẫn còn nguyên trong giỏ thì case đỏ. Ngoài việc "
+        "gây nhầm lẫn cho khách, đây còn là thứ khiến bấm đặt hàng lần hai tạo được đơn thứ hai.",
+    (_F, "Checkout_ReturnsConflict_WhenTheBasketIsEmpty"):
+        "Gọi POST http://localhost:5300/bff/checkout khi giỏ đang rỗng, bỏ qua giao diện — nếu tạo ra "
+        "một đơn rỗng thay vì trả 409 thì case đỏ.",
+    (_F, "Checkout_CreatesExactlyOneOrder_WhenAttemptedTwice"):
+        "Gọi POST /bff/checkout hai lần liên tiếp cho cùng một giỏ — nếu lần thứ hai cũng trả 201 thì "
+        "case đỏ: khách bị tính tiền hai lần.",
+    (_F, "Checkout_OrdersOnlyTheCallersOwnBasket"):
+        "Cho hai subject khác nhau (alice, bob) mỗi người một giỏ có hàng khác nhau, rồi cho alice đặt "
+        "hàng — nếu đơn của alice gồm cả hàng của bob, hoặc giỏ của bob bị dọn theo, thì case đỏ.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/DownstreamUnavailableTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetProducts_ReturnsBadGateway_WhenTheProductsServiceIsUnreachable"):
+        "Tắt products-api rồi gọi http://localhost:5301/bff/products và bấm giờ — nếu treo quá 5 giây, "
+        "hoặc trả 200 với dữ liệu cũ, hoặc trả 500 trần, thì case đỏ. Lưu ý dừng container thường cho "
+        "504 (hết thời gian chờ) thay vì 502 (không kết nối được); cả hai đều là câu trả lời hợp lệ.",
+    (_F, "GetProducts_ReturnsGatewayTimeout_WhenTheProductsServiceNeverAnswers"):
+        "Làm cho products-api nhận request nhưng không bao giờ trả lời (ví dụ tạm dừng container bằng "
+        "`docker compose -f docker-compose.local.yml pause products-api`) rồi gọi /bff/products — nếu "
+        "treo quá 5 giây thì case đỏ. Nhớ `unpause` sau khi thử.",
+    (_F, "ADownstreamFailure_ReturnsProblemDetailsCarryingTheCorrelationId"):
+        "Tắt products-api rồi đọc nội dung lỗi từ /bff/products — thiếu correlationId, hoặc "
+        "correlationId khác với header X-Correlation-Id của cùng phản hồi, là case đỏ. Khi đó mã tra "
+        "cứu đưa cho khách vô dụng.",
+    (_F, "ADownstreamFailure_NamesTheLogicalServiceOnly_NeverItsAddress"):
+        "Tắt products-api rồi đọc kỹ nội dung lỗi — nếu thấy tên host, chuỗi http://, tên thư viện "
+        "Polly, hay stack trace, thì case đỏ. Phải nêu được tên logic 'ProductsApi' nhưng không lộ "
+        "địa chỉ.",
+    (_F, "EveryRoute_FailsAsAProblemDetails_WhenItsDownstreamIsUnreachable"):
+        "Lần lượt tắt baskets-api, orders-api, parties-api rồi gọi route tương ứng qua BFF — route nào "
+        "trả 500 trần hoặc nội dung không phải dạng problem+json thì case đỏ. Case này bắt tình huống "
+        "một route bị quên nối vào cơ chế xử lý lỗi chung.",
+    (_F, "ADownstreamFailure_IsBoundedAndStructured_AgainstARealUnreachableHost"):
+        "Trỏ Services__ProductsApi__BaseUrl của bff-api sang một tên miền không tồn tại rồi gọi "
+        "/bff/products — case đỏ nếu treo quá 5 giây, hoặc nội dung không phải problem+json, hoặc không "
+        "nêu tên ProductsApi. Mã 502 hay 504 đều chấp nhận được.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/GeneratedContractTests.cs"
+BREAK_HINTS.update({
+    (_F, "TheDocument_DescribesEveryClientFacingRoute"):
+        "Mở http://localhost:5301/openapi/v1.json và đối chiếu với 7 đường dẫn /bff/* mà BFF thực sự "
+        "phục vụ — thiếu đường dẫn nào là case đỏ, vì mã gọi API của giao diện được sinh ra từ chính "
+        "tài liệu này nên đường dẫn thiếu sẽ không có hàm để gọi.",
+    (_F, "EveryRoute_DeclaresItsDownstreamFailureResponses"):
+        "Trong tài liệu OpenAPI, xem phần responses của từng route GET — thiếu khai báo 502 hoặc 504 là "
+        "case đỏ. Hậu quả: giao diện được sinh ra không có kiểu dữ liệu cho tình huống downstream hỏng, "
+        "dù thực tế BFF vẫn trả về những mã đó.",
+    (_F, "TheByIdRoutes_DeclareNotFound"):
+        "Xem responses của ba route theo id (baskets, orders, parties) — thiếu khai báo 404 là case đỏ, "
+        "vì giao diện sẽ coi 'không tìm thấy' như một sự cố thay vì một kết quả bình thường.",
+    (_F, "TheProductListingSchema_MatchesTheHandAuthoredContract"):
+        "Trong tài liệu OpenAPI, kiểm tra schema ProductListResponse có thuộc tính items và "
+        "ProductSummary có đủ id, name, price — thiếu bất kỳ trường nào là case đỏ.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/OrdersRouteTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetOrder_ReturnsShapedOrderFromTheOrdersService"):
+        "Đặt một đơn rồi so http://localhost:5041/orders/{id} với http://localhost:5301/bff/orders/{id} "
+        "— sai id, sai thời điểm đặt, hoặc sai tổng tiền là case đỏ.",
+    (_F, "GetOrder_ReturnsNotFound_WhenTheOrdersServiceHasNoSuchOrder"):
+        "Gọi http://localhost:5301/bff/orders/{GUID không tồn tại} — trả 502 hay 200 rỗng thay vì 404 là "
+        "case đỏ.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/PartiesRouteTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetParty_ReturnsShapedPartyFromThePartiesService"):
+        "Chèn tay một party vào database parties (localhost,14330) rồi so kết quả gọi thẳng "
+        "http://localhost:5204/parties/{id} với qua http://localhost:5301/bff/parties/{id} — sai id "
+        "hoặc mất DisplayName là case đỏ.",
+    (_F, "GetParty_ReturnsNotFound_WhenThePartiesServiceHasNoSuchParty"):
+        "Gọi http://localhost:5301/bff/parties/{GUID không tồn tại} — trả 502 hay 200 rỗng thay vì 404 "
+        "là case đỏ.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/ProductsRouteTests.cs"
+BREAK_HINTS.update({
+    (_F, "GetProducts_ReturnsShapedListingFromTheProductsService"):
+        "So từng sản phẩm giữa http://localhost:5088/products và http://localhost:5301/bff/products — "
+        "thiếu sản phẩm, sai tên, hoặc sai giá là case đỏ.",
+    (_F, "GetProducts_ReturnsEmptyItemsEnvelope_WhenTheCatalogIsEmpty"):
+        "Xoá hết sản phẩm trong database rồi gọi http://localhost:5301/bff/products — nếu trả về mảng "
+        "trần [] hoặc null thay vì đối tượng {\"items\": []} thì case đỏ, vì giao diện luôn đọc trường "
+        "items mà không kiểm tra hình dạng phản hồi.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/SubjectPropagationTests.cs"
+BREAK_HINTS.update({
+    (_F, "TheBffsOutboundCall_CarriesTheSubjectTheBffReceived"):
+        "Gọi http://localhost:5301/bff/basket kèm đủ header tenant và subject — nếu trả về lỗi 500 hoặc "
+        "502 thì case đỏ, dấu hiệu BFF nhận được subject nhưng không chuyển tiếp xuống baskets service. "
+        "Tái hiện bằng cách gỡ bước truyền header ở BFF dưới local.",
+    (_F, "TheBffsOutboundCall_CarriesNoSubject_WhenTheBffItselfHasNone"):
+        "Gọi http://localhost:5301/bff/basket chỉ có tenant, KHÔNG có subject — nếu trả về một giỏ nào "
+        "đó thay vì lỗi thì case đỏ, vì BFF đã tự bịa ra người mua mặc định.",
+})
+
+_F = "services/bff/tests/Bff.Api.IntegrationTests/TenantPropagationTests.cs"
+BREAK_HINTS.update({
+    (_F, "TheBffsOutboundCall_CarriesTheTenantTheBffReceived"):
+        "Gọi http://localhost:5301/bff/products kèm X-Tenant-Id — nếu trả 502 thì case đỏ, dấu hiệu BFF "
+        "nhận được tenant nhưng không chuyển tiếp xuống products service.",
+    (_F, "TheBffsOutboundCall_CarriesNoTenant_WhenTheBffItselfHasNone"):
+        "Gọi http://localhost:5301/bff/products KHÔNG kèm header nào — nếu trả 200 kèm danh sách sản "
+        "phẩm thì case đỏ, vì BFF đã tự điền một tenant mặc định. Kết quả đúng là thất bại rõ ràng "
+        "(502 hoặc 504).",
+})
+
+# ---------------------------------------------------------------- COMMON: Tenancy
+
+_F = "shared/Tenancy.UnitTests/CallerContextTests.cs"
+BREAK_HINTS.update({
+    (_F, "RequireSubjectId_ReturnsTheResolvedSubject_WhenOneHasBeenSet"):
+        "Gọi http://localhost:5188/baskets/current kèm 'X-Subject-Id: alice' — nếu giỏ trả về "
+        "customerRef khác alice thì case đỏ, dấu hiệu subject phân giải ra không đúng giá trị nhận được.",
+    (_F, "CallerContext_IsUnresolved_BeforeAnythingSetsIt"):
+        "Sửa Tenancy dưới local để CallerContext có sẵn một subject mặc định lúc khởi tạo — case đỏ. "
+        "Hậu quả thật: mọi request không có header vẫn được coi là của một người mua nào đó.",
+    (_F, "RequireSubjectId_Throws_WhenNoSubjectHasBeenResolved"):
+        "Gọi http://localhost:5188/baskets/current chỉ có tenant, không có subject — nếu trả về một giỏ "
+        "thay vì lỗi 500 thì case đỏ.",
+    (_F, "RequireSubjectId_Throws_WhenTheResolvedSubjectIsBlank"):
+        "Gọi http://localhost:5188/baskets/current kèm header 'X-Subject-Id:' để trống — nếu vẫn trả về "
+        "một giỏ thì case đỏ. Đây là tình huống nguy hiểm nhất: mọi request có subject rỗng sẽ dùng "
+        "chung đúng một giỏ hàng.",
+})
+
+_F = "shared/Tenancy.UnitTests/CallerContextMiddlewareTests.cs"
+BREAK_HINTS.update({
+    (_F, "InvokeAsync_ResolvesTheCallerContext_FromTheInboundHeader"):
+        "Gọi http://localhost:5188/baskets/current kèm 'X-Subject-Id: alice' rồi lại 'X-Subject-Id: bob' "
+        "— nếu hai lần ra cùng một giỏ thì case đỏ, dấu hiệu header không được đọc vào ngữ cảnh request.",
+    (_F, "InvokeAsync_LeavesTheCallerContextUnresolved_WhenTheHeaderIsAbsentOrEmpty"):
+        "Gọi lần lượt: không có header subject, có header rỗng, có header chỉ khoảng trắng — cả ba đều "
+        "phải lỗi 500. Trường hợp nào trả về giỏ là case đỏ.",
+    (_F, "InvokeAsync_PushesTheResolvedSubjectIntoTheLoggingScope"):
+        "Gọi một request có subject rồi xem log của service (`docker compose -f docker-compose.local.yml "
+        "logs baskets-api`) — nếu các dòng log của request đó không kèm SubjectId thì case đỏ, và việc "
+        "điều tra khiếu nại của một khách cụ thể trở nên bất khả thi.",
+    (_F, "InvokeAsync_PushesNoSubjectScope_WhenTheRequestIsUnresolved"):
+        "Gọi một request không có subject rồi xem log — nếu thấy SubjectId rỗng được ghi ra như thể có "
+        "người gọi thì case đỏ. Sự vắng mặt mới là tín hiệu đúng.",
+    (_F, "InvokeAsync_AlwaysCallsTheRestOfThePipeline"):
+        "Sửa middleware dưới local để chặn request ngay khi thiếu subject, rồi gọi "
+        "http://localhost:5188/health/live — nếu health probe cũng bị chặn thì case đỏ. Hậu quả thật: "
+        "mọi container bị coi là chết và khởi động lại liên tục.",
+})
+
+_F = "shared/Tenancy.UnitTests/TenantContextTests.cs"
+BREAK_HINTS.update({
+    (_F, "RequireTenantId_ReturnsTheResolvedTenant_WhenOneHasBeenSet"):
+        "Đặt một đơn rồi đọc lại tại http://localhost:5041/orders/{id} — nếu trường tenantId khác giá "
+        "trị gửi trong header X-Tenant-Id thì case đỏ.",
+    (_F, "TenantContext_IsUnresolved_BeforeAnythingSetsIt"):
+        "Sửa Tenancy dưới local để TenantContext có sẵn tenant mặc định lúc khởi tạo — case đỏ. Hậu quả "
+        "thật: request không đi qua gateway vẫn đọc được dữ liệu của tenant mặc định đó.",
+    (_F, "RequireTenantId_Throws_WhenNoTenantHasBeenResolved"):
+        "Gọi http://localhost:5088/products không kèm X-Tenant-Id — nếu trả 200 kèm catalog thay vì lỗi "
+        "500 thì case đỏ.",
+    (_F, "RequireTenantId_Throws_WhenTheResolvedTenantIsBlank"):
+        "Gọi http://localhost:5088/products kèm 'X-Tenant-Id:' để trống — nếu vẫn trả về dữ liệu thì "
+        "case đỏ. Một tenant rỗng phải bị coi là chưa phân giải, không phải một tenant tên rỗng.",
+})
+
+_F = "shared/Tenancy.UnitTests/TenantContextMiddlewareTests.cs"
+BREAK_HINTS.update({
+    (_F, "InvokeAsync_ResolvesTheTenantContext_FromTheInboundHeader"):
+        "Gọi http://localhost:5088/products kèm X-Tenant-Id hợp lệ — nếu vẫn lỗi 500 thì case đỏ, dấu "
+        "hiệu header không được đọc vào ngữ cảnh request.",
+    (_F, "InvokeAsync_LeavesTheTenantContextUnresolved_WhenTheHeaderIsAbsentOrEmpty"):
+        "Gọi lần lượt: không có header tenant, header rỗng, header chỉ khoảng trắng — cả ba đều phải "
+        "lỗi 500. Trường hợp nào trả về dữ liệu là case đỏ.",
+    (_F, "InvokeAsync_PushesTheResolvedTenantIntoTheLoggingScope"):
+        "Gọi một request có tenant rồi xem log của service — nếu các dòng log không kèm TenantId thì "
+        "case đỏ.",
+    (_F, "InvokeAsync_PushesNoTenantScope_WhenTheRequestIsUnresolved"):
+        "Gọi một request không có tenant rồi xem log — nếu thấy TenantId rỗng được ghi ra như thể request "
+        "thuộc về 'tenant rỗng' thì case đỏ.",
+    (_F, "InvokeAsync_AlwaysCallsTheRestOfThePipeline"):
+        "Sửa middleware dưới local để trả lỗi ngay khi thiếu tenant, rồi gọi "
+        "http://localhost:5088/health/live — health probe bị chặn theo là case đỏ.",
+})
+
+# ---------------------------------------------------------------- COMMON: quy ước kiến trúc
+
+_F = "tests/ContainerConventionTests/DockerfileSharedProjectTests.cs"
+BREAK_HINTS.update({
+    (_F, "EveryServiceImage_ReceivesEverySharedProject_ItCompilesAgainst"):
+        "Xoá một dòng COPY thư viện dùng chung (ví dụ shared/Tenancy) khỏi Dockerfile của một service, "
+        "rồi chạy `./scripts/local-up.ps1` — case đỏ, và image đó cũng không build được. Đây đúng là "
+        "lỗi từng làm 5/6 image hỏng mà không bài test nào phát hiện.",
+    (_F, "TheScan_Examined_EveryService"):
+        "Thêm một thư mục service thứ 7 dưới services/, hoặc xoá Dockerfile của một service hiện có — "
+        "case đỏ. Case này canh cho việc bộ quét không âm thầm bỏ sót service nào.",
+    (_F, "TheScan_Observed_SharedProjectReferences"):
+        "Sửa bộ quét dưới local để nó không nhận diện được dòng tham chiếu thư viện nào nữa — case đỏ. "
+        "Nếu không có case này, một bộ quét bị mù sẽ báo 'không có vi phạm' và trông hệt như repo sạch.",
+    (_F, "ServicesThatUseTheTenancyLibrary_CopyIt"):
+        "Xoá dòng COPY shared/Tenancy khỏi Dockerfile của baskets, bff, orders, parties hoặc products — "
+        "case đỏ và nêu đích danh service vừa bị sửa.",
+    (_F, "TheGateway_DoesNotReferenceTheTenancyLibrary"):
+        "Thêm tham chiếu shared/Tenancy vào Gateway.Api.csproj — case đỏ. Gateway là bên sinh ra header "
+        "tenant/subject chứ không đọc chúng, nên nó không được dùng thư viện đọc.",
+})
+
+_F = "tests/CrossServiceIsolation.Tests/ConnectionStringIsolationTests.cs"
+BREAK_HINTS.update({
+    (_F, "NoServiceConfiguration_NamesAnotherServicesDatabase"):
+        "Sửa appsettings của một service để chuỗi kết nối trỏ sang database của service khác (ví dụ cho "
+        "Baskets trỏ vào database orders) — case đỏ. Đây là ranh giới cấm tuyệt đối: mỗi service chỉ "
+        "được chạm database của chính nó.",
+    (_F, "Scan_ActuallyExaminesEveryServicesConfiguration"):
+        "Thêm một thư mục service thứ 7, hoặc đổi tên thư mục src/ của một service khiến bộ quét không "
+        "tìm thấy file cấu hình — case đỏ.",
+    (_F, "NoStatelessService_DeclaresAConnectionString"):
+        "Thêm một mục ConnectionStrings vào appsettings của bff hoặc gateway — case đỏ. Hai service này "
+        "không sở hữu dữ liệu nên không được cấp database, kể cả database của chính chúng.",
+    (_F, "Scan_FlagsAConfigurationThatReachesAnotherServicesDatabase"):
+        "Sửa bộ quét dưới local để nó luôn trả về 'không có vi phạm' — case đỏ. Case này dựng sẵn một "
+        "cây thư mục giả có lỗi cố ý, nên nó bắt được một bộ quét đã mất khả năng phát hiện.",
+    (_F, "Scan_AllowsAServiceToNameItsOwnDatabase"):
+        "Sửa bộ quét để nó báo lỗi cả khi service trỏ đúng database của mình — case đỏ (báo động giả). "
+        "Cặp với case trên để giữ độ nhạy của bộ quét ở đúng mức.",
+})
+
+_F = "tests/CrossServiceIsolation.Tests/TenantGatedConnectionTests.cs"
+BREAK_HINTS.update({
+    (_F, "EveryDatabaseOwningService_HasExactlyOneDbContextRegistration"):
+        "Thêm một điểm đăng ký DbContext thứ hai vào Program.cs của một service sở hữu database — case "
+        "đỏ. Nhiều cửa vào database nghĩa là nhiều chỗ phải canh, và sớm muộn có chỗ bị quên.",
+    (_F, "EveryDbContextRegistration_IsGatedOnAResolvedTenant"):
+        "Xoá lời gọi RequireTenantId() ở điểm đăng ký DbContext của một service — case đỏ. Sau đó gọi "
+        "API của service đó không kèm header tenant sẽ trả về dữ liệu thay vì lỗi, đúng lỗ hổng mà case "
+        "này chặn.",
+    (_F, "NoStatelessService_RegistersADbContext"):
+        "Thêm một đăng ký DbContext vào bff hoặc gateway — case đỏ.",
+    (_F, "Scan_ActuallyExaminesEveryServicesRegistration"):
+        "Thêm thư mục service thứ 7, hoặc đổi cấu trúc thư mục khiến bộ quét không tìm thấy Program.cs "
+        "— case đỏ.",
+    (_F, "Scan_FlagsAnUngatedRegistration"):
+        "Sửa bộ quét dưới local để nó coi mọi đăng ký DbContext là đã được canh — case đỏ, vì case này "
+        "dựng sẵn một Program.cs giả cố tình không canh.",
+    (_F, "Scan_AcceptsAGatedRegistration"):
+        "Sửa bộ quét để nó không nhận ra lời gọi RequireTenantId() hợp lệ — case đỏ (báo động giả trên "
+        "mã đúng).",
+    (_F, "Scan_DoesNotAcceptAGuardThatOnlyAppearsInAComment"):
+        "Sửa bộ quét để nó đếm cả những lần RequireTenantId xuất hiện trong dòng chú thích — case đỏ. "
+        "Nếu không, xoá cổng chặn thật mà để lại comment mô tả nó vẫn qua được kiểm tra.",
+})
+
+_F = "tests/StructureConventionTests/VerticalSliceStructureTests.cs"
+BREAK_HINTS.update({
+    (_F, "NoService_HasATopLevelTechnicalLayerFolder"):
+        "Tạo một thư mục rỗng tên Controllers, Services hoặc Repositories ngay dưới một dự án *.Api "
+        "(ví dụ `mkdir services/products/src/Products.Api/Controllers`) — case đỏ. Chỉ cần thư mục "
+        "rỗng là đủ, và vì git không theo dõi thư mục rỗng nên loại lỗi này không thấy được qua diff.",
+    (_F, "Scan_ActuallyExaminesEveryServicesApiProject"):
+        "Tạo thêm một thư mục bất kỳ dưới services/ (ví dụ `mkdir services/zzz-temp`) — case đỏ vì bộ "
+        "quét đếm được 7 service thay vì 6. Thêm service thật cũng làm đỏ, và đó là cố ý: người thêm "
+        "buộc phải vào cập nhật danh sách.",
+    (_F, "EveryService_OrganisesAtLeastOneCapabilityUnderFeatures"):
+        "Đổi tên thư mục Features của một service (ví dụ Gateway.Api/Features thành Features_x) — case "
+        "đỏ. Case này bắt tình huống ngược với case trên: service không có gì tổ chức theo nghiệp vụ.",
+    (_F, "Scan_FlagsATopLevelTechnicalLayerFolder"):
+        "Sửa bộ quét dưới local để so tên thư mục có phân biệt hoa thường — case đỏ ở đúng bộ dữ liệu "
+        "'repositories' viết thường (3 bộ kia vẫn xanh). Trên Windows tên thư mục không phân biệt hoa "
+        "thường nên bỏ sót nửa số trường hợp thật.",
+    (_F, "Scan_AllowsCapabilityFoldersAndNonLayerFolders"):
+        "Thêm một tên hợp lệ như Data vào danh sách thư mục bị cấm trong bộ quét — case đỏ (báo động "
+        "giả trên cấu trúc đúng).",
+    (_F, "Scan_AllowsATechnicalNameNestedInsideACapability"):
+        "Sửa bộ quét để soi đệ quy toàn bộ cây thư mục thay vì chỉ cấp 1 — case đỏ, vì "
+        "Features/HealthCheck/Services bị bắt oan. Tên tầng kỹ thuật nằm bên trong một nghiệp vụ là "
+        "hợp lệ.",
+})
+
+# ---------------------------------------------------------------- COMMON: frontend dùng chung
+
+_F = "frontend/apps/web/tests/shared/money.test.ts"
+BREAK_HINTS.update({
+    (_F, "formats %d as %s"):
+        "Xem giá và tổng tiền hiển thị trên giao diện — nếu thấy '12.5' thay vì '$12.50', '48' thay vì "
+        "'$48.00', hay '0' thay vì '$0.00', thì case đỏ. Tái hiện bằng cách bỏ bước định dạng tiền.",
+    (_F, "groups thousands so a large total stays readable"):
+        "Sửa giá một sản phẩm trong database lên mức hàng nghìn rồi xem giỏ — nếu tổng hiện "
+        "'$1234.50' thay vì '$1,234.50' thì case đỏ.",
+    (_F, "rounds to two decimal places"):
+        "Đặt giá sản phẩm thành số có nhiều hơn hai chữ số thập phân (12.499) rồi xem giao diện — nếu "
+        "hiện '$12.499' thì case đỏ, vì giá hiển thị sẽ không khớp với tổng tính từ nó.",
+    (_F, "keeps the sign on a negative amount"):
+        "Cho hệ thống hiển thị một số tiền âm — nếu dấu trừ bị mất và hiện '$5.00' thay vì '-$5.00' thì "
+        "case đỏ.",
+    (_F, "accepts the string form the contract also permits"):
+        "Sửa BFF dưới local để trả giá dưới dạng chuỗi ('12.50') thay vì số — nếu giao diện hiện 'NaN' "
+        "hoặc trang vỡ thì case đỏ. Hợp đồng API cho phép cả hai dạng nên giao diện phải chịu được cả hai.",
+    (_F, "refuses a value that is not an amount at all"):
+        "Sửa BFF để trả về một giá trị không phải số ở trường giá — nếu giao diện hiển thị nguyên chuỗi "
+        "rác đó như một mức giá thì case đỏ; nó phải báo lỗi rõ ràng.",
+})
+
+_F = "frontend/apps/web/tests/accessibility.test.tsx"
+BREAK_HINTS.update({
+    (_F, "offers a skip link as the first focusable element"):
+        "Mở http://localhost:4173 và nhấn Tab lần đầu tiên — nếu phần tử nhận focus không phải liên kết "
+        "'Skip to content' thì case đỏ. Người dùng bàn phím sẽ phải Tab qua toàn bộ thanh điều hướng ở "
+        "mỗi trang.",
+    (_F, "gives each screen its own document title"):
+        "Chuyển giữa trang Products và Basket, nhìn tiêu đề tab trình duyệt — nếu không đổi theo màn "
+        "hình thì case đỏ, vì mọi màn hình sẽ tự xưng cùng một tên với trình đọc màn hình.",
+    (_F, "moves focus to the new screen after navigating"):
+        "Dùng bàn phím bấm vào liên kết Basket rồi nhấn Tab tiếp — nếu focus vẫn kẹt ở thanh điều hướng "
+        "trong khi nội dung bên dưới đã đổi thì case đỏ.",
+    (_F, "does not steal focus on first render"):
+        "Mở trang lần đầu và chưa bấm gì — nếu vùng nội dung chính đã tự chiếm focus thì case đỏ, vì nó "
+        "cướp mất điểm bắt đầu của người dùng bàn phím.",
+})
+
+_F = "frontend/apps/web/tests/app.test.tsx"
+BREAK_HINTS.update({
+    (_F, "renders the landing route inside the shell"):
+        "Mở http://localhost:4173 — nếu trang trắng hoặc không có tiêu đề Products thì case đỏ. Đây là "
+        "case cơ bản nhất: vỏ ứng dụng dựng được và route mặc định hiển thị được.",
+    (_F, "exposes navigation to the shopper"):
+        "Mở trang chủ và tìm thanh điều hướng — nếu thiếu vùng điều hướng chính hoặc thiếu liên kết "
+        "Basket thì case đỏ, khách không còn đường sang trang giỏ hàng.",
+})
+
+# ==========================================================================================
 # DỰNG FILE EXCEL
 # ==========================================================================================
 
@@ -2901,14 +3973,15 @@ HEADERS = [
     "Tầng (Layer)",
     "Loại test (Test Type)",
     "Tên test gốc (Test Name)",
+    "File nguồn (Source File)",
+    "Trạng thái (Status)",
     "Điều kiện (Given)",
     "Hành động (When)",
     "Kết quả mong đợi (Then)",
-    "File nguồn (Source File)",
-    "Trạng thái (Status)",
+    "Cách làm cho test fail (QA)",
 ]
 
-COLUMN_WIDTHS = [14, 22, 34, 12, 14, 56, 50, 50, 50, 62, 14]
+COLUMN_WIDTHS = [14, 22, 34, 12, 14, 56, 62, 14, 50, 50, 50, 72]
 
 HEADER_FILL = PatternFill("solid", fgColor="1F4E78")
 HEADER_FONT = Font(bold=True, color="FFFFFF", size=11)
@@ -2952,11 +4025,12 @@ def write_feature_sheet(workbook: Workbook, feature: str, rows: list[dict[str, s
             row["layer"],
             row["type"],
             row["name"],
+            row["file"],
+            "Passed",
             row["given"],
             row["when"],
             row["then"],
-            row["file"],
-            "Passed",
+            BREAK_HINTS[(row["file"], row["name"])],
         ])
 
     style_sheet(sheet, len(rows))
@@ -2976,8 +4050,9 @@ def style_sheet(sheet, data_row_count: int) -> None:
     sheet.freeze_panes = "A2"
     sheet.auto_filter.ref = f"A1:{get_column_letter(len(HEADERS))}{data_row_count + 1}"
 
-    # Given/When/Then xuống dòng trong ô; các cột còn lại chỉ căn lề trên.
-    wrapped = {3, 6, 7, 8, 9, 10}
+    # Sub-module, tên test, đường dẫn file, Given/When/Then và cột cách làm fail đều xuống dòng
+    # trong ô; các cột còn lại chỉ căn lề trên.
+    wrapped = {3, 6, 7, 9, 10, 11, 12}
     for row in sheet.iter_rows(min_row=2, max_row=data_row_count + 1):
         for cell in row:
             cell.alignment = TOP_WRAP if cell.column in wrapped else TOP_PLAIN
@@ -2998,7 +4073,9 @@ def write_summary_sheet(workbook: Workbook, rows: list[dict[str, str]], generate
     sheet["A6"] = "Ghi chú:"
     sheet["B6"] = (
         "Tổng hợp từ source code test tại HEAD; không chạy lại test. "
-        "Một [Theory]/it.each nhiều bộ dữ liệu được tính là một test case."
+        "Một [Theory]/it.each nhiều bộ dữ liệu được tính là một test case. "
+        "Cột cuối mô tả cách làm cho case đó fail, viết theo góc nhìn QA: thao tác trên giao diện, "
+        "gọi API, bật/tắt container, hoặc sửa mã nguồn dưới máy local để tái hiện."
     )
 
     for row in range(3, 7):
@@ -3057,6 +4134,12 @@ def main() -> None:
     unknown = {row["feature"] for row in ROWS} - set(FEATURES)
     if unknown:
         raise SystemExit(f"Master feature không hợp lệ: {sorted(unknown)}")
+
+    # Thiếu một mô tả nào cũng phải dừng ngay, thay vì lặng lẽ ghi ra một ô trống.
+    missing = [(row["file"], row["name"]) for row in ROWS
+               if (row["file"], row["name"]) not in BREAK_HINTS]
+    if missing:
+        raise SystemExit(f"Thiếu mô tả cách làm fail cho {len(missing)} case: {missing[:3]}")
 
     assign_ids(ROWS)
 
