@@ -1,0 +1,20 @@
+{
+  "title": "Dựng khung (scaffold) bốn service parties / products / baskets / orders",
+  "items": {
+    "FR-001": "Hệ thống PHẢI cung cấp bốn khung service triển khai độc lập được: parties, products, baskets và orders.",
+    "FR-002": "Mỗi service trong bốn service PHẢI khởi động và hoạt động đầy đủ một cách độc lập, không đòi hỏi ba service còn lại phải đang chạy.",
+    "FR-003": "Mỗi service trong bốn service PHẢI cung cấp một điểm kiểm tra trạng thái/sức khỏe (status/health check) phản ánh việc service có thực sự phục vụ được request hay không, bao gồm cả khả năng kết nối tới kho dữ liệu của chính nó — chứ không chỉ báo rằng tiến trình đang chạy.",
+    "FR-004": "Mỗi service trong bốn service PHẢI lưu trữ dữ liệu vào một kho dữ liệu (database hoặc schema) thuộc quyền sở hữu riêng của nó — không service nào khác được phép đọc hoặc ghi vào kho đó.",
+    "FR-005": "Mã nguồn của một service KHÔNG ĐƯỢC chứa bất kỳ thông tin xác thực, chuỗi kết nối hay phụ thuộc dùng chung nào cho phép nó truy cập kho dữ liệu của service khác.",
+    "FR-006": "Mã nguồn bên trong mỗi service PHẢI được tổ chức theo tính năng/năng lực (feature/capability) thay vì theo các lớp kỹ thuật chung chung, trừ khi có một ngoại lệ được ghi nhận bằng tài liệu để biện minh cho điều đó.",
+    "US1-KB1": "Với điều kiện vừa clone mới repository, Khi lập trình viên khởi động riêng lẻ bất kỳ service nào trong bốn service, Thì service đó khởi động thành công và báo trạng thái khỏe mạnh mà không cần ba service còn lại phải đang chạy.",
+    "US1-KB2": "Với điều kiện một service đang chạy, Khi lập trình viên kiểm tra trạng thái của nó, Thì trạng thái được báo cáo phản ánh việc service có thực sự kết nối được tới kho dữ liệu riêng của nó hay không, chứ không chỉ báo tiến trình còn sống.",
+    "US2-KB1": "Với điều kiện cả bốn service đều tồn tại, Khi kiểm tra nơi lưu trữ dữ liệu của chúng, Thì mỗi service sở hữu một database/schema mà mã nguồn của bất kỳ service nào khác cũng không có chuỗi kết nối hay thông tin xác thực để truy cập.",
+    "US2-KB2": "Với điều kiện kho dữ liệu riêng của một service không truy cập được, Khi service khởi động, Thì nó không âm thầm chuyển sang dùng kho dữ liệu của service khác hoặc một kho mặc định dùng chung.",
+    "US3-KB1": "Với điều kiện xét bất kỳ service nào trong bốn service, Khi lập trình viên xem cấu trúc thư mục của nó, Thì mã nguồn được tổ chức theo tính năng/năng lực chứ không theo lớp kỹ thuật chung chung.",
+    "SC-001": "Lập trình viên có thể đi từ bước clone mới repository đến khi có một instance đang chạy và khỏe mạnh của bất kỳ service nào trong bốn service, chạy độc lập, trong vòng dưới 5 phút.",
+    "SC-002": "Cả bốn service đều báo trạng thái khỏe mạnh khi được khởi động độc lập, đạt 100% số lần, không phụ thuộc lẫn nhau.",
+    "SC-003": "Không có bất kỳ lượt truy cập dữ liệu chéo giữa các service nào thành công — được kiểm chứng bằng một bài kiểm tra lặp lại được, xác nhận không service nào chạm tới được kho dữ liệu của service khác.",
+    "SC-004": "Lập trình viên có thể tìm thấy toàn bộ mã nguồn của một tính năng/năng lực trong một service tại một chỗ duy nhất, không phải tìm rải rác qua nhiều thư mục theo lớp kỹ thuật."
+  }
+}

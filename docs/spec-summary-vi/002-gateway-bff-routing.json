@@ -1,0 +1,22 @@
+{
+  "title": "Định tuyến gateway → BFF cho products, baskets, orders và parties",
+  "items": {
+    "FR-001": "Gateway PHẢI định tuyến mọi request từ client tới đúng đích phía sau (BFF, hoặc một service mà BFF đứng trước) dựa trên đường dẫn của request, mà không đòi hỏi bên gọi phải biết cấu trúc service nội bộ.",
+    "FR-002": "BFF PHẢI cung cấp các endpoint mà SPA dùng để đọc dữ liệu product, basket, order và party; SPA PHẢI gọi các endpoint này của BFF thay vì gọi trực tiếp các service products, baskets, orders hay parties.",
+    "FR-003": "BFF PHẢI tổng hợp dữ liệu từ các service products, baskets, orders và parties khi phục vụ một request trải rộng trên nhiều service, và trả về cho bên gọi một response hợp nhất duy nhất.",
+    "FR-004": "Route liệt kê sản phẩm của BFF PHẢI chuyển tiếp (proxy) tới service products và trả về dữ liệu đã được định dạng lại.",
+    "FR-005": "BFF KHÔNG ĐƯỢC chứa nghiệp vụ nào ngoài việc tổng hợp và định dạng lại response từ các service bên dưới — không có quy tắc nghiệp vụ miền, không kiểm tra hợp lệ ngoài phạm vi hình dạng request, không lưu trữ dữ liệu.",
+    "FR-006": "Khi một service phía sau mà gateway/BFF phụ thuộc không sẵn sàng, gateway/BFF PHẢI trả về một response lỗi rõ ràng, đúng định dạng, trong một khoảng thời gian có giới hạn, thay vì treo vô thời hạn.",
+    "FR-007": "Gateway PHẢI từ chối hoặc báo lỗi rõ ràng với các request tới đường dẫn không khớp route nào đã biết, thay vì để treo.",
+    "US1-KB1": "Với điều kiện các service products, baskets, orders và parties đang chạy và kết nối được, Khi SPA gọi route liệt kê sản phẩm của BFF, Thì BFF chuyển tiếp lời gọi tới service products và trả dữ liệu đã định dạng lại cho bên gọi.",
+    "US1-KB2": "Với điều kiện một trang cần dữ liệu từ nhiều hơn một service bên dưới, Khi SPA gọi endpoint tương ứng của BFF, Thì BFF tổng hợp các response từ những service bên dưới thành một response duy nhất, thay vì bắt SPA tự gọi nhiều lần.",
+    "US1-KB3": "Với điều kiện xét mã nguồn của BFF, Khi soát xét mã nguồn đó, Thì nó chỉ chứa phần tổng hợp request và định dạng lại response — không có quy tắc miền hay nghiệp vụ nào.",
+    "US2-KB1": "Với điều kiện một request đi tới gateway, Khi request được định tuyến, Thì nó đến đúng đích phía sau mà bên gọi không phải khai báo bất cứ điều gì về cấu trúc service nội bộ.",
+    "US2-KB2": "Với điều kiện SPA đang chạy trên lớp edge đã triển khai, Khi kiểm tra lưu lượng mạng của nó, Thì không request nào nhắm thẳng vào service products, baskets, orders hay parties — mọi request đều đi qua gateway/BFF.",
+    "US3-KB1": "Với điều kiện service products đã bị dừng, Khi SPA gọi một route của BFF phụ thuộc vào service đó, Thì gateway/BFF trả về response lỗi rõ ràng trong thời gian có giới hạn thay vì treo.",
+    "SC-001": "100% request lấy dữ liệu product, basket, order và party của SPA — quan sát trên tab network — đều đi qua gateway/BFF; không có lời gọi trực tiếp nào tới service products, baskets, orders hay parties.",
+    "SC-002": "Route liệt kê sản phẩm của BFF trả về dữ liệu đúng định dạng, lấy từ service products, trong mọi lần chạy kiểm thử, không cần can thiệp thủ công.",
+    "SC-003": "Khi một service phía sau đang được phụ thuộc không sẵn sàng, bên gọi nhận được response lỗi rõ ràng trong dưới 5 giây, đạt 100% số trường hợp quan sát được, thay vì phải chờ vô thời hạn.",
+    "SC-004": "Một lượt soát xét mã nguồn (code review) BFF không tìm thấy trường hợp nào chứa nghiệp vụ ngoài phạm vi tổng hợp và định dạng lại response."
+  }
+}

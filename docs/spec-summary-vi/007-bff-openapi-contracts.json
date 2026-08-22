@@ -1,0 +1,24 @@
+{
+  "title": "Đặc tả OpenAPI cho các route của BFF và client sinh tự động",
+  "items": {
+    "FR-001": "PHẢI có một đặc tả OpenAPI cho mọi route BFF thuộc products, baskets và orders, mô tả đường dẫn, phương thức HTTP, tham số/nội dung request, hình dạng response và các mã trạng thái của route đó.",
+    "FR-002": "Đặc tả OpenAPI PHẢI được viết (hoặc cập nhật) như một phần của việc hoàn thành hiện thực một route, chứ không phải bổ sung ngược sau khi đã xong — một route KHÔNG ĐƯỢC coi là hoàn thành nếu chưa có đặc tả tương ứng và chính xác.",
+    "FR-003": "Mã nguồn API client của SPA cho các route products, baskets và orders PHẢI được sinh hoàn toàn từ các đặc tả OpenAPI; không phần nào của mã client đó được viết tay.",
+    "FR-004": "Việc sinh lại client từ một đặc tả OpenAPI đã cập nhật PHẢI cho ra kết quả khớp chính xác với những gì đặc tả mô tả, không đòi hỏi và cũng không cho phép chỉnh sửa thủ công trên các file được sinh ra.",
+    "FR-005": "Mã nguồn của SPA KHÔNG ĐƯỢC chứa lời gọi HTTP thô (ví dụ dùng trực tiếp fetch/axios) tới các endpoint products, baskets hay orders của BFF ở bên ngoài phần client được sinh tự động.",
+    "FR-006": "Client được sinh tự động PHẢI chấp nhận được các trường lạ/trường bổ sung trong response của BFF mà không phát sinh lỗi và không loại bỏ phần còn lại của response (hành vi tolerant reader).",
+    "FR-007": "Các file client được sinh tự động PHẢI phân biệt rõ ràng được với mã viết tay (ví dụ đặt ở một vị trí riêng hoặc đánh dấu rõ ràng), để người đóng góp không nhầm chúng là mã nguồn có thể sửa.",
+    "FR-008": "Quy trình sinh lại client từ các đặc tả PHẢI là một bước duy nhất, tái lập được, và mọi lập trình viên đều chạy được ở máy cục bộ.",
+    "US1-KB1": "Với điều kiện tồn tại một route BFF cho products, baskets hoặc orders, Khi lập trình viên tìm hợp đồng (contract) của route đó, Thì có một đặc tả OpenAPI cho route đó và đặc tả này mô tả chính xác hình dạng request và response của nó.",
+    "US1-KB2": "Với điều kiện lập trình viên đang thêm một route BFF mới, Khi họ hoàn tất phần hiện thực, Thì đặc tả OpenAPI tương ứng đã được viết/cập nhật như một phần của công việc đó, chứ không phải thêm vào sau như một thủ tục hình thức không ai soát xét.",
+    "US2-KB1": "Với điều kiện đặc tả OpenAPI của một route products, baskets hoặc orders thay đổi, Khi client được sinh lại, Thì API client của SPA cho route đó được sinh hoàn toàn tự động, không còn lời gọi HTTP viết tay nào cho route đó.",
+    "US2-KB2": "Với điều kiện xét các file client được sinh tự động, Khi đối chiếu chúng với đặc tả OpenAPI đã dùng để sinh ra chúng, Thì chúng khớp chính xác, không có chỉnh sửa thủ công nào chồng lên.",
+    "US2-KB3": "Với điều kiện xét mã nguồn của SPA, Khi tìm kiếm các lời gọi fetch/axios thô (hoặc tương đương) tới endpoint của BFF, Thì không tìm thấy lời gọi nào bên ngoài phần client được sinh tự động.",
+    "US3-KB1": "Với điều kiện bên tiêu thụ (SPA) nhận được một response từ BFF có chứa trường không có trong đặc tả OpenAPI tại thời điểm client được sinh ra, Khi response được phân tích, Thì client được sinh tự động không vỡ, không báo lỗi, và không bỏ mất phần còn lại của response.",
+    "SC-001": "100% các route BFF thuộc products, baskets và orders đều có một đặc tả OpenAPI tương ứng mô tả chính xác hành vi hiện tại của chúng.",
+    "SC-002": "So sánh khác biệt (diff) giữa client được sinh tự động và đặc tả OpenAPI nguồn cho thấy không có chỉnh sửa thủ công nào trên các file được sinh ra.",
+    "SC-003": "Tìm kiếm trong mã nguồn các lời gọi HTTP thô tới endpoint products/baskets/orders của BFF ở ngoài phần client được sinh tự động trả về không kết quả nào.",
+    "SC-004": "Đưa một trường không được nhận biết vào một response BFF giả lập không gây ra lỗi hay sự cố nào cho SPA trong luồng nghiệp vụ liên quan.",
+    "SC-005": "Lập trình viên có thể sinh lại toàn bộ API client của SPA từ các đặc tả đã cập nhật chỉ bằng một lệnh, trong dưới một phút."
+  }
+}

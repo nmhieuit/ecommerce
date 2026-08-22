@@ -1,0 +1,21 @@
+{
+  "title": "Định danh giả lập (stub identity) kèm ngữ cảnh tenant đã được phân giải",
+  "items": {
+    "FR-001": "Hệ thống PHẢI phân giải một định danh tenant duy nhất, đúng một lần, tại gateway, cho mọi request đi vào. Ở Phase 1, nguồn phân giải này là một định danh giả lập (stub) gán cứng chứ chưa phải identity server thật.",
+    "FR-002": "Hệ thống PHẢI truyền định danh tenant đã phân giải một cách tường minh theo chuỗi gateway → BFF → services trên mọi request, thông qua một cơ chế mà người dùng không sửa được nội dung (tuyệt đối không suy ra từ tham số query hay trường trong body).",
+    "FR-003": "Mọi service PHẢI làm cho định danh tenant đã phân giải sẵn sàng cho các handler của chính nó trước khi diễn ra bất kỳ truy cập lưu trữ nào.",
+    "FR-004": "Việc truy cập lưu trữ PHẢI yêu cầu có định danh tenant đã phân giải mới được tiếp tục; KHÔNG ĐƯỢC có tenant mặc định hay tenant dự phòng được dùng khi chưa phân giải được tenant nào.",
+    "FR-005": "Khi có nỗ lực truy cập lưu trữ mà không có định danh tenant đã phân giải, hệ thống PHẢI báo lỗi/ném ngoại lệ thay vì âm thầm thực hiện tiếp.",
+    "FR-006": "Định danh tenant PHẢI hiển thị trong log của từng chặng đối với một request nhất định, để có thể truy vết một request từ đầu đến cuối theo định danh tenant của nó.",
+    "FR-007": "Nguồn phân giải tenant PHẢI thay thế được (ví dụ bằng claim từ token thật ở giai đoạn sau) mà không cần thay đổi cách định danh tenant được truyền đi hay được cưỡng chế ở các thành phần phía sau.",
+    "FR-008": "Ở Phase 1, PHẢI phân giải được đúng một định danh tenant; nhưng cơ chế phân giải và truyền tenant KHÔNG ĐƯỢC giả định rằng sẽ mãi mãi chỉ có một tenant.",
+    "US1-KB1": "Với điều kiện một request đi vào tại gateway, Khi nó được chuyển tiếp tới BFF rồi tới một service phía sau, Thì cùng một định danh tenant tường minh được gắn kèm ở mọi chặng.",
+    "US1-KB2": "Với điều kiện có log của cùng một request tại gateway, tại BFF và tại service đã xử lý nó, Khi đối chiếu các log này, Thì định danh tenant được ghi nhận là giống hệt nhau và đều nhìn thấy được ở cả ba nơi.",
+    "US2-KB1": "Với điều kiện một handler của service được gọi mà không có ngữ cảnh tenant đã phân giải, Khi nó cố gắng chạm tới lớp lưu trữ, Thì nỗ lực đó thất bại/ném ngoại lệ chứ không âm thầm chạy tiếp với một tenant mặc định nào đó.",
+    "US2-KB2": "Với điều kiện xét toàn bộ mã nguồn, Khi soát xét mọi điểm gọi repository/lưu trữ, Thì mỗi điểm gọi đều bắt buộc phải có tham số tenant tường minh — không tồn tại điểm gọi nào thiếu tham số này.",
+    "SC-001": "100% số request được truy vết cho thấy một định danh tenant giống hệt nhau xuất hiện trong log tại gateway, tại BFF và tại service đã xử lý chúng.",
+    "SC-002": "100% các nỗ lực truy cập lưu trữ mà không có định danh tenant đã phân giải đều thất bại, không có trường hợp nào âm thầm thành công, trên mọi service nghiệp vụ.",
+    "SC-003": "Một lượt quét toàn bộ repository không tìm thấy điểm gọi lưu trữ nào không bắt buộc tham số tenant tường minh.",
+    "SC-004": "Việc thay nguồn phân giải tenant bằng claim do identity server thật cấp chỉ chạm vào bước phân giải — không cần thay đổi gì ở định tuyến của gateway, ở việc truyền header, hay ở cơ chế chặn truy cập lưu trữ của bất kỳ service nào."
+  }
+}
