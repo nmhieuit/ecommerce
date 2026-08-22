@@ -16,6 +16,14 @@ which appear as explicit validation tasks within each user story instead of a se
 **Organization**: Tasks are grouped by user story (from `spec.md`) to enable independent
 implementation and testing of each story.
 
+## Status legend (implementation pass, 2026-08-22)
+
+- `[X]` — done, and verified locally where the artifact could be exercised without a server.
+- `[ ] ⛔` — **blocked on access to an external system** (the Jenkins controller, the SonarQube
+  server, or the GitHub repository's admin settings). Nothing in the repository is missing for these;
+  each is an action a Jenkins/SonarQube/GitHub administrator performs, or a validation that requires
+  a live pull request running against them. See "Remaining work" at the end of this file.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
@@ -37,15 +45,15 @@ only new repo artifacts are a root `Jenkinsfile`, `sonar-project.properties`, an
 
 **Purpose**: Create the skeleton files the pipeline will be built into
 
-- [ ] T001 Create a repository-root `Jenkinsfile` with a declarative pipeline skeleton (`agent`,
+- [X] T001 Create a repository-root `Jenkinsfile` with a declarative pipeline skeleton (`agent`,
       empty `stages {}` block, `options { timeout(...) }`) at `Jenkinsfile`
-- [ ] T002 [P] Create `sonar-project.properties` at repo root with `sonar.projectKey`,
+- [X] T002 [P] Create `sonar-project.properties` at repo root with `sonar.projectKey`,
       `sonar.projectName`, `sonar.sources` (covering `services/` and `frontend/`), and
       `sonar.exclusions` for generated/build output (`**/bin/**`, `**/obj/**`, `**/node_modules/**`,
       `**/dist/**`)
-- [ ] T003 [P] Verify/install required Jenkins plugins (GitHub Branch Source, Pipeline: SonarQube
+- [ ] ⛔ T003 [P] Verify/install required Jenkins plugins (GitHub Branch Source, Pipeline: SonarQube
       Scanner integration) on the Jenkins controller, per `quickstart.md` Prerequisites
-- [ ] T004 [P] Verify `coverlet.collector` is referenced by every `*.Api.{UnitTests,IntegrationTests,ContractTests}`
+- [X] T004 [P] Verify `coverlet.collector` is referenced by every `*.Api.{UnitTests,IntegrationTests,ContractTests}`
       project (already true per `research.md`) and add `@vitest/coverage-v8` to the frontend
       workspace's root `devDependencies` in `frontend/package.json` if not already present, so
       `--coverage` is available to every Turbo test task
@@ -62,21 +70,21 @@ depends on this running end-to-end before the SonarQube stage can mean anything
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Add the `build` stage to `Jenkinsfile`: `dotnet build Ecommerce.slnx` and
+- [X] T005 Add the `build` stage to `Jenkinsfile`: `dotnet build Ecommerce.slnx` and
       `pnpm --dir frontend install --frozen-lockfile && pnpm --dir frontend build`; stage name
       must publish as required check `ci/build` per `contracts/pipeline-stage-contract.md` §1
-- [ ] T006 Add the `unit tests` stage to `Jenkinsfile`: run every `*.Api.UnitTests` project via
+- [X] T006 Add the `unit tests` stage to `Jenkinsfile`: run every `*.Api.UnitTests` project via
       `dotnet test --collect:"XPlat Code Coverage"`, run `pnpm --dir frontend turbo run test -- --coverage`
       for frontend unit suites, then merge the per-project Cobertura outputs into one file (e.g.
       via `dotnet-coverage merge`) at a fixed path referenced later by T002's
       `sonar-project.properties`; publishes required check `ci/unit-tests`
-- [ ] T007 Add the `integration tests` stage to `Jenkinsfile`: run every `*.Api.IntegrationTests`
+- [X] T007 Add the `integration tests` stage to `Jenkinsfile`: run every `*.Api.IntegrationTests`
       project (Testcontainers — requires Docker on the Jenkins agent, per `010-testcontainers-integration-tests`);
       publishes required check `ci/integration-tests`
-- [ ] T008 Add the `contract tests` stage to `Jenkinsfile`: run every `*.Api.ContractTests` project
+- [X] T008 Add the `contract tests` stage to `Jenkinsfile`: run every `*.Api.ContractTests` project
       (`baskets`, `bff`, `orders`, `products`, per `011-consumer-contract-tests`); publishes
       required check `ci/contract-tests`
-- [ ] T009 [P] Set `sonar.cs.cobertura.reportsPaths` in `sonar-project.properties` to the merged
+- [X] T009 [P] Set `sonar.cs.cobertura.reportsPaths` in `sonar-project.properties` to the merged
       Cobertura path produced by T006, and `sonar.javascript.lcov.reportPaths` /
       `sonar.typescript.lcov.reportPaths` to the frontend `lcov.info` glob, per
       `research.md` Decision 4 and `contracts/pipeline-stage-contract.md` §2
@@ -97,25 +105,25 @@ role — including repository admins — can merge past it.
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Add the `SonarQube quality gate` stage to `Jenkinsfile`: run
+- [X] T010 [US1] Add the `SonarQube quality gate` stage to `Jenkinsfile`: run
       `dotnet-sonarscanner begin` before T005's build and `dotnet-sonarscanner end` after T008's
       contract-tests stage, then call `waitForQualityGate()` inside `timeout(time: ..., unit: 'MINUTES')`,
       calling `error(...)` on any non-`OK` status or on timeout so the stage fails closed
       (FR-008); publishes required check `ci/sonarqube-quality-gate` per
       `research.md` Decision 3 and `contracts/pipeline-stage-contract.md` §3
-- [ ] T011 [US1] Configure the Jenkins↔SonarQube server connection (`Manage Jenkins → System →
+- [ ] ⛔ T011 [US1] Configure the Jenkins↔SonarQube server connection (`Manage Jenkins → System →
       SonarQube servers`) including the webhook back to Jenkins that `waitForQualityGate()`
       listens on, per `quickstart.md` Prerequisites
-- [ ] T012 [US1] Provision a Jenkins Multibranch Pipeline job for this repository using the GitHub
+- [ ] ⛔ T012 [US1] Provision a Jenkins Multibranch Pipeline job for this repository using the GitHub
       Branch Source plugin (credentials with commit-status write access), so PRs are
       auto-discovered and each `Jenkinsfile` stage publishes its named GitHub check, per
       `research.md` Decision 1–2
-- [ ] T013 [US1] Configure GitHub branch protection on the protected branch: add `ci/build`,
+- [ ] ⛔ T013 [US1] Configure GitHub branch protection on the protected branch: add `ci/build`,
       `ci/unit-tests`, `ci/integration-tests`, `ci/contract-tests`, `ci/sonarqube-quality-gate` as
       required status checks, enable "Require branches to be up to date before merging", and
       enable "Do not allow bypassing the above settings" so admins cannot override either
       (FR-004, FR-005; `research.md` Decision 5)
-- [ ] T014 [US1] Validate `quickstart.md` Scenarios 1 and 2 end-to-end: full sequence runs in
+- [ ] ⛔ T014 [US1] Validate `quickstart.md` Scenarios 1 and 2 end-to-end: full sequence runs in
       order on a passing PR; a coverage-dropping PR and a unit-test-breaking PR are both blocked
       with the correct stage identified and no override path for any role
 
@@ -133,13 +141,13 @@ PRs. This is the MVP.
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Enable SonarQube's GitHub PR decoration for this project (native GitHub
+- [ ] ⛔ T015 [US2] Enable SonarQube's GitHub PR decoration for this project (native GitHub
       integration or Community Branch Plugin, per SonarQube edition in use) so analysis results
       post automatically to the PR, per `research.md` Decision 6
-- [ ] T016 [US2] Confirm the Sonar project's quality-gate conditions read the coverage inputs
+- [ ] ⛔ T016 [US2] Confirm the Sonar project's quality-gate conditions read the coverage inputs
       wired in T009 (non-zero, correct coverage/duplication numbers appear, not defaults from an
       unconfigured project)
-- [ ] T017 [US2] Validate `quickstart.md` Scenario 3 end-to-end: metrics visible on a passing PR;
+- [ ] ⛔ T017 [US2] Validate `quickstart.md` Scenario 3 end-to-end: metrics visible on a passing PR;
       pushing a new commit updates the displayed metrics to the latest analysis
 
 **Checkpoint**: User Stories 1 AND 2 both work independently — the gate blocks bad PRs and shows
@@ -157,10 +165,10 @@ coverage; confirm the full sequence re-runs automatically and the merge block li
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Confirm the GitHub Branch Source plugin's PR trigger includes the `synchronize`
+- [ ] ⛔ T018 [US3] Confirm the GitHub Branch Source plugin's PR trigger includes the `synchronize`
       event (new commits to an open PR), not only PR-open, so T012's Multibranch job re-triggers
       automatically on every push (FR-007)
-- [ ] T019 [US3] Validate `quickstart.md` Scenario 4 end-to-end: a PR blocked in US1 becomes
+- [ ] ⛔ T019 [US3] Validate `quickstart.md` Scenario 4 end-to-end: a PR blocked in US1 becomes
       mergeable after one automatic re-run following a coverage fix, with no manual admin action
 
 **Checkpoint**: All three user stories are independently functional.
@@ -171,15 +179,15 @@ coverage; confirm the full sequence re-runs automatically and the merge block li
 
 **Purpose**: Governance, edge-case validation, and closing the scope boundary noted in `plan.md`
 
-- [ ] T020 [P] Author `docs/adr/0012-ci-quality-gate-enforcement.md` recording the Multibranch
+- [X] T020 [P] Author `docs/adr/0012-ci-quality-gate-enforcement.md` recording the Multibranch
       Pipeline + required-status-checks-with-no-bypass approach (`research.md` Decisions 1, 2, 5),
       per the constitution's Governance rule and `plan.md`'s Constitution Check action item
-- [ ] T021 [P] Validate `quickstart.md` Scenario 5: a temporarily unreachable SonarQube server
+- [ ] ⛔ T021 [P] Validate `quickstart.md` Scenario 5: a temporarily unreachable SonarQube server
       causes `ci/sonarqube-quality-gate` to fail via the `timeout()` from T010, not to pass or be
       skipped (FR-008)
-- [ ] T022 Run the full `quickstart.md` Success Criteria checklist (SC-001 through SC-005)
+- [ ] ⛔ T022 Run the full `quickstart.md` Success Criteria checklist (SC-001 through SC-005)
       end-to-end and record the results
-- [ ] T023 Record the constitution's container-image-vulnerability-scan stage as explicit tracked
+- [X] T023 Record the constitution's container-image-vulnerability-scan stage as explicit tracked
       follow-up work (new ticket reference alongside `plan.md`'s Complexity Tracking entry), since
       it is out of scope for this feature but required for full Development Workflow compliance
 
@@ -266,3 +274,46 @@ Setup → Foundational → US1 → US2 → US3 → Polish, in that order, by who
   Scenarios 1–5 are the acceptance tests, referenced directly from each phase's validation task
 - Commit after each task or logical group (e.g., after each `Jenkinsfile` stage addition)
 - Stop at the Phase 3 checkpoint to validate the MVP independently before continuing
+
+---
+
+## Remaining work (after the 2026-08-22 implementation pass)
+
+Every repository artifact this feature calls for exists and is in place:
+
+| Artifact | Purpose |
+|---|---|
+| `Jenkinsfile` | Five ordered stages, each publishing its contracted `ci/*` GitHub check |
+| `sonar-project.properties` | Single source of truth for scanner settings and coverage inputs |
+| `scripts/ci/sonar-begin.sh` | Translates that properties file into SonarScanner-for-.NET arguments |
+| `scripts/ci/run-dotnet-tests.sh` | Discovers and runs the unit / integration / contract tiers |
+| `scripts/ci/merge-coverage.sh` | Merges per-project Cobertura reports into the one file Sonar reads |
+| `scripts/ci/setup-branch-protection.sh` | The one-time `gh api` call that makes the checks blocking |
+| `frontend/apps/web/vitest.config.ts`, `frontend/turbo.json` | lcov coverage output, preserved across Turbo cache hits |
+| `.config/dotnet-tools.json` | Pins `dotnet-sonarscanner` 11.2.1 and `dotnet-coverage` 18.10.0 |
+| `docs/adr/0012-ci-quality-gate-enforcement.md` | The governance record for the enforcement approach |
+
+What is verified: the solution builds in Release; all 12 unit-tier projects (138 tests) pass through
+`run-dotnet-tests.sh` and emit Cobertura; `merge-coverage.sh` produces a single populated report;
+the frontend suite (49 tests) emits `lcov.info`; `sonar-begin.sh` produces the correct scanner
+argument list; the `Jenkinsfile` parses as valid Groovy.
+
+What is not, and cannot be, verified from the repository: everything that needs the Jenkins
+controller, the SonarQube server, or the GitHub repository's admin settings. Those are the
+⛔ tasks above, and they reduce to four administrator actions plus the validation runs that
+follow them:
+
+1. **Jenkins** (T003, T011, T012) — install the GitHub Branch Source, GitHub Checks, and SonarQube
+   Scanner plugins; add a SonarQube server connection named `sonarqube` (matching
+   `SONARQUBE_SERVER` in the `Jenkinsfile`) with the webhook back to Jenkins that
+   `waitForQualityGate()` waits on; create the Multibranch Pipeline job for this repository.
+   Confirm its PR trigger includes the `synchronize` event (T018), which is the default.
+2. **GitHub** (T013) — run `scripts/ci/setup-branch-protection.sh nmhieuit/ecommerce master`.
+3. **SonarQube** (T015, T016) — enable GitHub PR decoration for the `ecommerce` project and confirm
+   its quality-gate conditions read the coverage inputs wired in `sonar-project.properties`.
+4. **Validation** (T014, T017, T019, T021, T022) — work through `quickstart.md` Scenarios 1-5 and
+   the SC-001..SC-005 checklist against real pull requests.
+
+One repository-side item also remains open: ADR-0012's Action Item 4 carries a `SCRUM-TBD`
+placeholder for the container image vulnerability scan (T023). Raising that backlog ticket and
+replacing the placeholder closes the tracking obligation on `plan.md`'s Complexity Tracking entry.

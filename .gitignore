@@ -16,6 +16,10 @@ obj/
 .idea/
 *.iml
 
+# SonarScanner working directories (spec 012-sonarqube-quality-gate)
+.sonarqube/
+.scannerwork/
+
 # Test / coverage output
 [Tt]est[Rr]esult*/
 *.trx

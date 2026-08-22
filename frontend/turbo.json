@@ -28,7 +28,10 @@
     "lint": {},
 
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      // A cache hit must restore the lcov report too, or a cached test task would starve the
+      // SonarQube coverage input (spec 012-sonarqube-quality-gate).
+      "outputs": ["coverage/**"]
     },
 
     "size": {

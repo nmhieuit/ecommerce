@@ -144,3 +144,12 @@ changes are introduced. GitHub branch protection configuration itself is not a r
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|---------------------------------------|
 | Constitution's PR gate names build → unit → integration → contract → SonarQube → **container image vulnerability scan**; this feature stops before the vulnerability scan. | SCRUM-22's own acceptance criteria and test scenarios scope the gate to build→unit→integration→contract→SonarQube only; bundling an unscoped vulnerability-scan stage into this ticket would expand its boundary beyond what was requested and risks shipping an under-specified scan step (tooling, severity thresholds, and image registry integration are undefined). | Deferring the vulnerability scan to a separate, explicitly-scoped follow-up ticket was preferred over guessing its requirements here. This is a time-bounded deviation: the vulnerability-scan stage MUST be added as a follow-up before this feature can be considered a complete implementation of the constitution's Development Workflow section — tracked as an open item in this plan, not closed silently. |
+
+### Follow-up tracking (added during implementation, T023)
+
+The deferred container image vulnerability scan is recorded as **Action Item 4 in
+[ADR-0012](../../docs/adr/0012-ci-quality-gate-enforcement.md)**, which states plainly that this
+pipeline implements five of the constitution's six mandated gates. That ADR action item is the
+durable tracking record; it carries a `SCRUM-TBD` placeholder because the backlog ticket itself has
+not been raised yet. Raising that ticket and replacing the placeholder with its key is the one
+remaining step to close this deviation's tracking obligation.
