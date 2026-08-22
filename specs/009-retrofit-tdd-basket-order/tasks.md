@@ -36,7 +36,7 @@ new file at `docs/engineering/test-first-commits.md`.
 **Purpose**: Confirm the starting state is clean before any revert-and-confirm-red step touches
 production code.
 
-- [ ] T001 Run `dotnet build Ecommerce.slnx` from the repo root and confirm the solution — including
+- [X] T001 Run `dotnet build Ecommerce.slnx` from the repo root and confirm the solution — including
       `services/baskets` and `services/orders` — builds cleanly before any audit work begins
 
 **Checkpoint**: Baseline build is green. Safe to proceed to user story verification.
@@ -64,10 +64,10 @@ dedup) each have a unit test that fails when the rule is reverted (spec SC-001, 
 
 ### Implementation for User Story 1
 
-- [ ] T002 [P] [US1] Run `dotnet test services/baskets/tests/Baskets.Api.UnitTests --filter FullyQualifiedName~BasketLineMergeTests` and confirm every case passes — baseline evidence for FR-001–003
-- [ ] T003 [US1] Revert-and-confirm-red for FR-001 (quantity floor) in `services/baskets/src/Baskets.Api/Data/Basket.cs`: comment out `ArgumentOutOfRangeException.ThrowIfLessThan(quantity, 1);` in `AddItem`, run `dotnet test services/baskets/tests/Baskets.Api.UnitTests --filter AddItem_Rejects_AQuantityBelowOne`, confirm it fails, then `git checkout -- services/baskets/src/Baskets.Api/Data/Basket.cs` and re-run to confirm green again (quickstart.md Scenario 2)
-- [ ] T004 [US1] Revert-and-confirm-red for FR-002 (price stability) in `services/baskets/src/Baskets.Api/Data/Basket.cs`: in the merge branch of `AddItem`, temporarily add `existing.UnitPrice = unitPrice;`, run `dotnet test services/baskets/tests/Baskets.Api.UnitTests --filter AddItem_KeepsTheOriginallyCapturedPrice_WhenTheCatalogPriceHasChanged`, confirm it fails, revert with `git checkout -- services/baskets/src/Baskets.Api/Data/Basket.cs`, confirm green again
-- [ ] T005 [US1] Revert-and-confirm-red for FR-003 (line dedup) in `services/baskets/src/Baskets.Api/Data/Basket.cs`: remove the `existing is not null` branch in `AddItem` so every call appends a new line, run `dotnet test services/baskets/tests/Baskets.Api.UnitTests --filter AddItem_IncrementsTheExistingLine_WhenTheProductIsAlreadyInTheBasket`, confirm it fails, revert with `git checkout -- services/baskets/src/Baskets.Api/Data/Basket.cs`, confirm green again
+- [X] T002 [P] [US1] Run `dotnet test services/baskets/tests/Baskets.Api.UnitTests --filter FullyQualifiedName~BasketLineMergeTests` and confirm every case passes — baseline evidence for FR-001–003
+- [X] T003 [US1] Revert-and-confirm-red for FR-001 (quantity floor) in `services/baskets/src/Baskets.Api/Data/Basket.cs`: comment out `ArgumentOutOfRangeException.ThrowIfLessThan(quantity, 1);` in `AddItem`, run `dotnet test services/baskets/tests/Baskets.Api.UnitTests --filter AddItem_Rejects_AQuantityBelowOne`, confirm it fails, then `git checkout -- services/baskets/src/Baskets.Api/Data/Basket.cs` and re-run to confirm green again (quickstart.md Scenario 2)
+- [X] T004 [US1] Revert-and-confirm-red for FR-002 (price stability) in `services/baskets/src/Baskets.Api/Data/Basket.cs`: in the merge branch of `AddItem`, temporarily add `existing.UnitPrice = unitPrice;`, run `dotnet test services/baskets/tests/Baskets.Api.UnitTests --filter AddItem_KeepsTheOriginallyCapturedPrice_WhenTheCatalogPriceHasChanged`, confirm it fails, revert with `git checkout -- services/baskets/src/Baskets.Api/Data/Basket.cs`, confirm green again
+- [X] T005 [US1] Revert-and-confirm-red for FR-003 (line dedup) in `services/baskets/src/Baskets.Api/Data/Basket.cs`: remove the `existing is not null` branch in `AddItem` so every call appends a new line, run `dotnet test services/baskets/tests/Baskets.Api.UnitTests --filter AddItem_IncrementsTheExistingLine_WhenTheProductIsAlreadyInTheBasket`, confirm it fails, revert with `git checkout -- services/baskets/src/Baskets.Api/Data/Basket.cs`, confirm green again
 
 **Checkpoint**: FR-001–003 are provably tested and provably regression-catching. User Story 1 is
 independently complete.
@@ -87,11 +87,11 @@ each reversion must fail exactly one named test.
 
 ### Implementation for User Story 2
 
-- [ ] T006 [P] [US2] Run `dotnet test services/orders/tests/Orders.Api.UnitTests --filter FullyQualifiedName~OrderTotalTests` and confirm every case passes — baseline evidence for FR-004–006
-- [ ] T007 [P] [US2] Run `dotnet test services/orders/tests/Orders.Api.IntegrationTests --filter PlaceOrder_Rejects_ARequestWithNoLines` (requires Docker for the SQL Server Testcontainer) and confirm it passes — the HTTP-layer half of the empty-basket rejection (Jira Test Scenario 3)
-- [ ] T008 [US2] Revert-and-confirm-red for FR-004 (empty-order rejection) in `services/orders/src/Orders.Api/Data/Order.cs`: comment out the `if (lines.Count == 0)` block in `PlaceFrom`, run `dotnet test services/orders/tests/Orders.Api.UnitTests --filter PlaceFrom_Rejects_AnEmptyLineSet`, confirm it fails, revert with `git checkout -- services/orders/src/Orders.Api/Data/Order.cs`, confirm green again (quickstart.md Scenario 2 and Scenario 3)
-- [ ] T009 [US2] Revert-and-confirm-red for FR-005 (invalid-line rejection) in `services/orders/src/Orders.Api/Data/Order.cs`: comment out the per-line `ArgumentOutOfRangeException.ThrowIfLessThan`/`ThrowIfNegative` checks in `PlaceFrom`, run `dotnet test services/orders/tests/Orders.Api.UnitTests --filter PlaceFrom_Rejects_ALineWithANonPositiveQuantity`, confirm it fails, revert with `git checkout -- services/orders/src/Orders.Api/Data/Order.cs`, confirm green again
-- [ ] T010 [US2] Revert-and-confirm-red for FR-006 (computed total) in `services/orders/src/Orders.Api/Data/Order.cs`: replace `Total = lines.Sum(line => line.Quantity * line.UnitPrice),` with a hardcoded value in `PlaceFrom`, run `dotnet test services/orders/tests/Orders.Api.UnitTests --filter PlaceFrom_SumsEveryLine`, confirm it fails, revert with `git checkout -- services/orders/src/Orders.Api/Data/Order.cs`, confirm green again
+- [X] T006 [P] [US2] Run `dotnet test services/orders/tests/Orders.Api.UnitTests --filter FullyQualifiedName~OrderTotalTests` and confirm every case passes — baseline evidence for FR-004–006
+- [X] T007 [P] [US2] Run `dotnet test services/orders/tests/Orders.Api.IntegrationTests --filter PlaceOrder_Rejects_ARequestWithNoLines` (requires Docker for the SQL Server Testcontainer) and confirm it passes — the HTTP-layer half of the empty-basket rejection (Jira Test Scenario 3)
+- [X] T008 [US2] Revert-and-confirm-red for FR-004 (empty-order rejection) in `services/orders/src/Orders.Api/Data/Order.cs`: comment out the `if (lines.Count == 0)` block in `PlaceFrom`, run `dotnet test services/orders/tests/Orders.Api.UnitTests --filter PlaceFrom_Rejects_AnEmptyLineSet`, confirm it fails, revert with `git checkout -- services/orders/src/Orders.Api/Data/Order.cs`, confirm green again (quickstart.md Scenario 2 and Scenario 3)
+- [X] T009 [US2] Revert-and-confirm-red for FR-005 (invalid-line rejection) in `services/orders/src/Orders.Api/Data/Order.cs`: comment out the per-line `ArgumentOutOfRangeException.ThrowIfLessThan`/`ThrowIfNegative` checks in `PlaceFrom`, run `dotnet test services/orders/tests/Orders.Api.UnitTests --filter PlaceFrom_Rejects_ALineWithANonPositiveQuantity`, confirm it fails, revert with `git checkout -- services/orders/src/Orders.Api/Data/Order.cs`, confirm green again
+- [X] T010 [US2] Revert-and-confirm-red for FR-006 (computed total) in `services/orders/src/Orders.Api/Data/Order.cs`: replace `Total = lines.Sum(line => line.Quantity * line.UnitPrice),` with a hardcoded value in `PlaceFrom`, run `dotnet test services/orders/tests/Orders.Api.UnitTests --filter PlaceFrom_SumsEveryLine`, confirm it fails, revert with `git checkout -- services/orders/src/Orders.Api/Data/Order.cs`, confirm green again
 
 **Checkpoint**: FR-004–006 are provably tested and provably regression-catching; the empty-basket
 rejection is confirmed at both the domain and HTTP layers. User Stories 1 and 2 are both
@@ -111,8 +111,8 @@ rule plus the audit procedure.
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Run the commit-history audit from `quickstart.md` Scenario 1 — `git log --oneline --follow` against `services/baskets/src/Baskets.Api/Data/Basket.cs`, `services/baskets/tests/Baskets.Api.UnitTests/BasketLineMergeTests.cs`, `services/orders/src/Orders.Api/Data/Order.cs`, and `services/orders/tests/Orders.Api.UnitTests/OrderTotalTests.cs` — and confirm the result matches [research.md](./research.md) Decision 2 (implementation and tests bundled together in commits `1bc77a6`, `c99783c`, `b3873b5`, not separated by days)
-- [ ] T012 [US3] Write `docs/engineering/test-first-commits.md`: state the going-forward rule (a commit touching basket-pricing or order-creation logic must be preceded or accompanied by a failing test that the change makes pass, and must never arrive as a same-day-or-later "add tests" follow-up commit), include the `git log --follow` audit commands from T011 as the verification procedure, and link to this feature's [quickstart.md](./quickstart.md) for the full validation walkthrough (depends on T011; per [research.md](./research.md) Decision 3)
+- [X] T011 [US3] Run the commit-history audit from `quickstart.md` Scenario 1 — `git log --oneline --follow` against `services/baskets/src/Baskets.Api/Data/Basket.cs`, `services/baskets/tests/Baskets.Api.UnitTests/BasketLineMergeTests.cs`, `services/orders/src/Orders.Api/Data/Order.cs`, and `services/orders/tests/Orders.Api.UnitTests/OrderTotalTests.cs` — and confirm the result matches [research.md](./research.md) Decision 2 (implementation and tests bundled together in commits `1bc77a6`, `c99783c`, `b3873b5`, not separated by days)
+- [X] T012 [US3] Write `docs/engineering/test-first-commits.md`: state the going-forward rule (a commit touching basket-pricing or order-creation logic must be preceded or accompanied by a failing test that the change makes pass, and must never arrive as a same-day-or-later "add tests" follow-up commit), include the `git log --follow` audit commands from T011 as the verification procedure, and link to this feature's [quickstart.md](./quickstart.md) for the full validation walkthrough (depends on T011; per [research.md](./research.md) Decision 3)
 
 **Checkpoint**: The commit-discipline rule and its audit procedure are written down and
 discoverable. All three user stories are now independently complete.
@@ -124,9 +124,9 @@ discoverable. All three user stories are now independently complete.
 **Purpose**: Final confirmation that nothing was left modified and every success criterion holds
 end to end.
 
-- [ ] T013 Run `dotnet test services/baskets/tests/Baskets.Api.UnitTests`, `services/orders/tests/Orders.Api.UnitTests`, `services/baskets/tests/Baskets.Api.IntegrationTests`, and `services/orders/tests/Orders.Api.IntegrationTests` together and confirm all green — proves every revert-and-restore step in Phases 3–4 left production code exactly as it was
-- [ ] T014 [P] Run `git status` and `git diff` at the repo root and confirm the only changes in the working tree are `docs/engineering/test-first-commits.md` and this feature's own `specs/009-retrofit-tdd-basket-order/` artifacts — no stray edits survive from the revert-and-confirm-red steps
-- [ ] T015 Walk through [quickstart.md](./quickstart.md) top to bottom exactly as written and confirm Scenarios 1–3 all produce their documented expected results, closing SC-001 through SC-004
+- [X] T013 Run `dotnet test services/baskets/tests/Baskets.Api.UnitTests`, `services/orders/tests/Orders.Api.UnitTests`, `services/baskets/tests/Baskets.Api.IntegrationTests`, and `services/orders/tests/Orders.Api.IntegrationTests` together and confirm all green — proves every revert-and-restore step in Phases 3–4 left production code exactly as it was
+- [X] T014 [P] Run `git status` and `git diff` at the repo root and confirm the only changes in the working tree are `docs/engineering/test-first-commits.md` and this feature's own `specs/009-retrofit-tdd-basket-order/` artifacts — no stray edits survive from the revert-and-confirm-red steps
+- [X] T015 Walk through [quickstart.md](./quickstart.md) top to bottom exactly as written and confirm Scenarios 1–3 all produce their documented expected results, closing SC-001 through SC-004
 
 ---
 
