@@ -117,4 +117,27 @@ describe('ProductList', () => {
     expect(requested).toHaveLength(1);
     expect(requested[0]).toBe(`${GATEWAY_ORIGIN}/bff/products`);
   });
+
+  /**
+   * Spec FR-006 / SC-004, and constitution Principle II: "Consumers MUST tolerate unknown fields."
+   * The BFF can add a field to `ProductSummary` — a `sku`, say — and deploy it before the SPA's
+   * client has been regenerated. The shopper must still see the catalog when that happens, because
+   * the alternative is a storefront that goes blank the moment the backend ships ahead of it.
+   */
+  it('renders products carrying a field the client does not know about', async () => {
+    respondWithProducts([
+      {
+        id: '9f8d6b1e-0001-4000-8000-000000000004',
+        name: 'Enamel Camp Mug',
+        price: 18,
+        sku: 'MUG-ENAMEL-01',
+      },
+    ]);
+
+    renderWithQueryClient(<ProductList />);
+
+    expect(await screen.findByText('Enamel Camp Mug')).toBeInTheDocument();
+    expect(screen.getByText('$18.00')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

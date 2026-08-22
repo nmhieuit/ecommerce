@@ -143,4 +143,36 @@ describe('BasketView', () => {
     expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
+
+  /**
+   * Spec FR-006 / SC-004, and constitution Principle II: "Consumers MUST tolerate unknown fields."
+   * A line the backend has enriched — with a backorder date the client has never heard of — must
+   * not cost the shopper the basket. Mocked through `server.use` directly rather than
+   * `respondWithBasket`, because the point of the case is a body the declared `BasketBody` shape
+   * does not describe.
+   */
+  it('renders the basket when a line carries a field the client does not know about', async () => {
+    server.use(
+      http.get(`${GATEWAY_ORIGIN}/bff/basket`, () =>
+        HttpResponse.json({
+          id: 'b1b1b1b1-0000-4000-8000-000000000001',
+          customerRef: 'phase1-stub-user',
+          items: [{ ...notebookLine, backorderedUntilUtc: '2026-09-01T00:00:00Z' }, apronLine],
+          total: 59.25,
+        }),
+      ),
+    );
+
+    renderWithQueryClient(<BasketView />);
+
+    expect(await screen.findByText('Field Notes Notebook')).toBeInTheDocument();
+    expect(screen.getByText('Linen Apron')).toBeInTheDocument();
+
+    // Unambiguous without scoping: no other figure on screen is $25.00 (the enriched line's total)
+    // or $59.25 (the basket's).
+    expect(screen.getByText(/quantity:\s*2\s*×\s*\$12\.50/i)).toBeInTheDocument();
+    expect(screen.getByText('$25.00')).toBeInTheDocument();
+    expect(screen.getByText('$59.25')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

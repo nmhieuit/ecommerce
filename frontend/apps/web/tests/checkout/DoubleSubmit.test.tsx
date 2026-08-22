@@ -7,6 +7,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { configureApiClient } from '@ecommerce/api-client';
 import { createQueryClient } from '@/app/queryClient';
 import { CheckoutButton } from '@/features/checkout/CheckoutButton';
+import type { PlacedOrder } from '@/features/checkout/PlacedOrder';
 import { server } from '../msw/server';
 
 /**
@@ -142,5 +143,48 @@ describe('CheckoutButton double submission', () => {
 
     expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(confirmations).toHaveLength(0);
+  });
+
+  /**
+   * Spec FR-006 / SC-004, and constitution Principle II: "Consumers MUST tolerate unknown fields."
+   * An order confirmation the backend has grown a field on — an estimated delivery date, say —
+   * must still complete the checkout and still carry the three fields the confirmation screen
+   * reads. Asserted here rather than in `Confirmation.test.tsx` because this is the file that
+   * exercises the real checkout round trip; `Confirmation` itself is handed a hardcoded prop and
+   * never parses a response.
+   */
+  it('completes checkout when the order carries a field the client does not know about', async () => {
+    const confirmations: PlacedOrder[] = [];
+
+    server.use(
+      http.post(`${GATEWAY_ORIGIN}/bff/checkout`, () =>
+        HttpResponse.json(
+          {
+            id: 'aaaaaaaa-0000-4000-8000-000000000002',
+            placedAtUtc: '2026-08-16T12:00:00Z',
+            total: 12.5,
+            estimatedDeliveryUtc: '2026-08-20T12:00:00Z',
+          },
+          { status: 201 },
+        ),
+      ),
+    );
+
+    renderWithQueryClient(
+      <CheckoutButton itemCount={1} onCheckedOut={(order) => confirmations.push(order)} />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /check out/i }));
+
+    await waitFor(() => expect(confirmations).toHaveLength(1));
+
+    // toMatchObject, not toEqual: the unknown field surviving alongside the known ones is the
+    // tolerant-reader behaviour, not a defect to assert against.
+    expect(confirmations[0]).toMatchObject({
+      id: 'aaaaaaaa-0000-4000-8000-000000000002',
+      placedAtUtc: '2026-08-16T12:00:00Z',
+      total: 12.5,
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

@@ -34,8 +34,8 @@ Existing web-application monorepo (no new structure): `frontend/apps/web/`,
 **Purpose**: Confirm the local toolchain is ready. No new dependencies or scaffolding — everything
 needed already exists in the repo.
 
-- [ ] T001 [P] Install/verify frontend workspace dependencies: run `pnpm install` from `frontend/`
-- [ ] T002 [P] Verify the BFF builds cleanly: run `dotnet build services/bff/src/Bff.Api`
+- [X] T001 [P] Install/verify frontend workspace dependencies: run `pnpm install` from `frontend/`
+- [X] T002 [P] Verify the BFF builds cleanly: run `dotnet build services/bff/src/Bff.Api`
 
 ---
 
@@ -46,7 +46,7 @@ verification steps depend on it.
 
 **⚠️ CRITICAL**: Complete before starting the User Story 1 or User Story 2 phases below.
 
-- [ ] T003 Start the BFF locally in Development mode: `dotnet run --project services/bff/src/Bff.Api` (listens on `http://localhost:5301`, publishing its OpenAPI document at `http://localhost:5301/openapi/v1.json`)
+- [X] T003 Start the BFF locally in Development mode: `dotnet run --project services/bff/src/Bff.Api` (listens on `http://localhost:5301`, publishing its OpenAPI document at `http://localhost:5301/openapi/v1.json`)
 
 **Checkpoint**: BFF running locally with its OpenAPI document reachable — User Stories 1 and 2 can
 now be verified. User Story 3 does not depend on this (it uses MSW mocks) and can proceed in
@@ -65,9 +65,9 @@ paths/shapes against each route file's `.Produces<T>()` / `.ProducesProblem(...)
 
 ### Verification for User Story 1
 
-- [ ] T004 [P] [US1] Verify OpenAPI accuracy for products routes: compare `http://localhost:5301/openapi/v1.json`'s `/bff/products` entry against `services/bff/src/Bff.Api/Features/Products/ProductsEndpoints.cs`
-- [ ] T005 [P] [US1] Verify OpenAPI accuracy for baskets routes: compare `http://localhost:5301/openapi/v1.json`'s `/bff/basket*` entries against `services/bff/src/Bff.Api/Features/Baskets/BasketsEndpoints.cs`
-- [ ] T006 [P] [US1] Verify OpenAPI accuracy for orders routes: compare `http://localhost:5301/openapi/v1.json`'s `/bff/orders*` entry against `services/bff/src/Bff.Api/Features/Orders/OrdersEndpoints.cs`
+- [X] T004 [P] [US1] Verify OpenAPI accuracy for products routes: compare `http://localhost:5301/openapi/v1.json`'s `/bff/products` entry against `services/bff/src/Bff.Api/Features/Products/ProductsEndpoints.cs`
+- [X] T005 [P] [US1] Verify OpenAPI accuracy for baskets routes: compare `http://localhost:5301/openapi/v1.json`'s `/bff/basket*` entries against `services/bff/src/Bff.Api/Features/Baskets/BasketsEndpoints.cs`
+- [X] T006 [P] [US1] Verify OpenAPI accuracy for orders routes: compare `http://localhost:5301/openapi/v1.json`'s `/bff/orders*` entry against `services/bff/src/Bff.Api/Features/Orders/OrdersEndpoints.cs`
 
 **Checkpoint**: SC-001 confirmed independently for all three domain areas. If any discrepancy is
 found in T004-T006, it is a real defect (a route missing `.Produces<T>()` or similar) — file it and
@@ -86,9 +86,9 @@ time a full regeneration.
 
 ### Verification for User Story 2
 
-- [ ] T007 [US2] Run `pnpm --filter @ecommerce/api-client verify-generated` from `frontend/` and confirm it exits 0 (SC-002, SC-003 — fails on any drift or uncommitted generated output)
-- [ ] T008 [US2] Search the SPA for raw HTTP calls: `grep -rE "fetch\(|axios\(" frontend/apps/web/src` and confirm zero matches call BFF endpoints outside `@ecommerce/api-client` (SC-003)
-- [ ] T009 [US2] Time a full client regeneration: `time pnpm --filter @ecommerce/api-client generate` from `frontend/` and confirm it is a single command completing in under one minute (SC-005)
+- [X] T007 [US2] Run `pnpm --filter @ecommerce/api-client verify-generated` from `frontend/` and confirm it exits 0 (SC-002, SC-003 — fails on any drift or uncommitted generated output)
+- [X] T008 [US2] Search the SPA for raw HTTP calls: `grep -rE "fetch\(|axios\(" frontend/apps/web/src` and confirm zero matches call BFF endpoints outside `@ecommerce/api-client` (SC-003)
+- [X] T009 [US2] Time a full client regeneration: `time pnpm --filter @ecommerce/api-client generate` from `frontend/` and confirm it is a single command completing in under one minute (SC-005)
 
 **Checkpoint**: SC-002, SC-003, and SC-005 confirmed. If T007 or T008 fails, that is a real defect
 (drifted/uncommitted generated code, or a hand-written call slipped in) — fix it before proceeding.
@@ -105,10 +105,10 @@ field the client doesn't know about (spec FR-006, SC-004) — this is the one ge
 
 ### Implementation for User Story 3
 
-- [ ] T010 [P] [US3] Add a tolerant-reader test case to `frontend/apps/web/tests/catalog/ProductList.test.tsx`: mock `GET /bff/products` with an item containing an extra unrecognized field (e.g. `sku`) and assert the product still renders with its name and price
-- [ ] T011 [P] [US3] Add a tolerant-reader test case to `frontend/apps/web/tests/basket/BasketView.test.tsx`: mock `GET /bff/basket` with a response containing an extra unrecognized field (e.g. on a line item) and assert the basket still renders its items and total correctly
-- [ ] T012 [P] [US3] Add a tolerant-reader test case to `frontend/apps/web/tests/checkout/DoubleSubmit.test.tsx`: mock `POST /bff/checkout` with a response containing an extra unrecognized field alongside `id`/`placedAtUtc`/`total`, and assert `CheckoutButton` still completes successfully and hands the expected order fields to `onCheckedOut` (this is the file that already exercises the real checkout round trip that produces the data `Confirmation` renders — `Confirmation.test.tsx` itself only tests the presentational component with a hardcoded prop, so it can't exercise response parsing)
-- [ ] T013 [US3] Run the three new cases: `pnpm --filter @ecommerce/web test -- ProductList BasketView DoubleSubmit` from `frontend/` and confirm all pass (SC-004)
+- [X] T010 [P] [US3] Add a tolerant-reader test case to `frontend/apps/web/tests/catalog/ProductList.test.tsx`: mock `GET /bff/products` with an item containing an extra unrecognized field (e.g. `sku`) and assert the product still renders with its name and price
+- [X] T011 [P] [US3] Add a tolerant-reader test case to `frontend/apps/web/tests/basket/BasketView.test.tsx`: mock `GET /bff/basket` with a response containing an extra unrecognized field (e.g. on a line item) and assert the basket still renders its items and total correctly
+- [X] T012 [P] [US3] Add a tolerant-reader test case to `frontend/apps/web/tests/checkout/DoubleSubmit.test.tsx`: mock `POST /bff/checkout` with a response containing an extra unrecognized field alongside `id`/`placedAtUtc`/`total`, and assert `CheckoutButton` still completes successfully and hands the expected order fields to `onCheckedOut` (this is the file that already exercises the real checkout round trip that produces the data `Confirmation` renders — `Confirmation.test.tsx` itself only tests the presentational component with a hardcoded prop, so it can't exercise response parsing)
+- [X] T013 [US3] Run the three new cases: `pnpm --filter @ecommerce/web test -- ProductList BasketView DoubleSubmit` from `frontend/` and confirm all pass (SC-004)
 
 **Checkpoint**: SC-004 confirmed for all three domain areas. All three user stories are now
 independently verified/complete.
@@ -119,8 +119,8 @@ independently verified/complete.
 
 **Purpose**: Final confirmation that nothing regressed and the spec's quickstart holds end to end.
 
-- [ ] T014 Run the full frontend test suite: `pnpm --filter @ecommerce/web test` from `frontend/` and confirm no regressions from the new test cases
-- [ ] T015 Walk through [quickstart.md](./quickstart.md) top to bottom and confirm every success criterion (SC-001 through SC-005) passes as documented
+- [X] T014 Run the full frontend test suite: `pnpm --filter @ecommerce/web test` from `frontend/` and confirm no regressions from the new test cases
+- [X] T015 Walk through [quickstart.md](./quickstart.md) top to bottom and confirm every success criterion (SC-001 through SC-005) passes as documented
 
 ---
 

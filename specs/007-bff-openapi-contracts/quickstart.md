@@ -51,13 +51,17 @@ Run the three new tolerant-reader test cases added by this feature:
 
 ```bash
 cd frontend
-pnpm --filter @ecommerce/web test -- ProductList BasketView Confirmation
+pnpm --filter @ecommerce/web test -- ProductList BasketView DoubleSubmit
 ```
 
 Each of `tests/catalog/ProductList.test.tsx`, `tests/basket/BasketView.test.tsx`, and
-`tests/checkout/Confirmation.test.tsx` includes a case that mocks a BFF response containing an
+`tests/checkout/DoubleSubmit.test.tsx` includes a case that mocks a BFF response containing an
 extra, unrecognized field and asserts the component still renders its expected content. Expect all
 to pass.
+
+The orders case lives in `DoubleSubmit.test.tsx` rather than `Confirmation.test.tsx` because that
+is the file exercising the real checkout round trip that parses the response; `Confirmation` is a
+presentational component handed a hardcoded prop, so it never parses a BFF response at all.
 
 ## SC-005 — single-command client regeneration, under one minute
 
