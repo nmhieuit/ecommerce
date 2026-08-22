@@ -56,6 +56,16 @@
          so the patched version wins regardless of what the transitive minimum declares. -->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.14.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
+    <!-- 010-testcontainers-integration-tests: Redis and RabbitMQ Testcontainers fixtures.
+         All Testcontainers.* packages ship in lockstep from the same repo, so these are pinned to
+         the same 4.14.0 already used by Testcontainers.MsSql above (research.md Decision 1). -->
+    <PackageVersion Include="Testcontainers.Redis" Version="4.14.0" />
+    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.14.0" />
+    <!-- Smoke-test clients for the fixtures above, referenced only by
+         shared/IntegrationTestSupport.Tests — never by a service's runtime code (research.md
+         Decision 2; spec.md FR-009: no production caching/messaging dependency is introduced). -->
+    <PackageVersion Include="StackExchange.Redis" Version="3.1.31" />
+    <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
 
     <!-- JSON Schema 2020-12 validation, test-only. Referenced solely by
          shared/EventContracts.UnitTests to prove a serialized event instance satisfies its

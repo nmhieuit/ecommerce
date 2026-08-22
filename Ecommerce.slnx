@@ -51,6 +51,8 @@
   <Folder Name="/shared/">
     <Project Path="shared/EventContracts/EventContracts.csproj" />
     <Project Path="shared/EventContracts.UnitTests/EventContracts.UnitTests.csproj" />
+    <Project Path="shared/IntegrationTestSupport/IntegrationTestSupport.csproj" />
+    <Project Path="shared/IntegrationTestSupport.Tests/IntegrationTestSupport.Tests.csproj" />
     <Project Path="shared/ServiceDefaults/ServiceDefaults.csproj" />
     <Project Path="shared/Tenancy/Tenancy.csproj" />
     <Project Path="shared/Tenancy.UnitTests/Tenancy.UnitTests.csproj" />

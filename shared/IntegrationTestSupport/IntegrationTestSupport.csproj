@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reusable Testcontainers fixtures (010-testcontainers-integration-tests) — any service's
+         integration test project can reference this once it adopts Redis caching or RabbitMQ
+         messaging, mirroring the existing per-service SqlServerFixture shape without duplicating
+         it (research.md Decision 3). -->
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Testcontainers.RabbitMq" />
+    <!-- Xunit.IAsyncLifetime is the fixture contract every consumer's test collection expects,
+         matching the existing per-service SqlServerFixture shape — a compile-time xUnit dependency
+         here is intentional, not a leftover. -->
+    <PackageReference Include="xunit" />
+  </ItemGroup>
+
+</Project>
