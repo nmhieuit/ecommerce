@@ -49,6 +49,8 @@
     <Project Path="services/products/tests/Products.Api.UnitTests/Products.Api.UnitTests.csproj" />
   </Folder>
   <Folder Name="/shared/">
+    <Project Path="shared/EventContracts/EventContracts.csproj" />
+    <Project Path="shared/EventContracts.UnitTests/EventContracts.UnitTests.csproj" />
     <Project Path="shared/ServiceDefaults/ServiceDefaults.csproj" />
     <Project Path="shared/Tenancy/Tenancy.csproj" />
     <Project Path="shared/Tenancy.UnitTests/Tenancy.UnitTests.csproj" />

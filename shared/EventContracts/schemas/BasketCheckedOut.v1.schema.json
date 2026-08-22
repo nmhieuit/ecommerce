@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ecommerce.internal/events/BasketCheckedOut.v1.schema.json",
+  "title": "BasketCheckedOutV1",
+  "description": "A basket has been checked out and cleared as part of a successful order placement. Version 1. Immutable once committed: any change to this event's shape ships as BasketCheckedOut.v2.schema.json, never as an edit to this file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "occurredAtUtc",
+    "basketId",
+    "customerRef",
+    "tenantId",
+    "correlationId",
+    "items",
+    "total"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier of this event instance, so a consumer can deduplicate a redelivered message."
+    },
+    "occurredAtUtc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the basket was cleared as part of checkout, in UTC."
+    },
+    "basketId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Maps to Basket.Id."
+    },
+    "customerRef": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Maps to Basket.CustomerRef, the caller's resolved subject id."
+    },
+    "tenantId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The tenant the basket belongs to. Required here even though BasketResponse does not yet surface it: the contract is authored ahead of the publisher that will satisfy it."
+    },
+    "correlationId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The correlation id generated at the edge and threaded through the checkout request."
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The lines that were checked out. Checkout of an empty basket is rejected upstream, so in practice there is always at least one.",
+      "items": {
+        "$ref": "#/$defs/basketLineItemV1"
+      }
+    },
+    "total": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Maps to Basket.Total."
+    }
+  },
+  "$defs": {
+    "basketLineItemV1": {
+      "type": "object",
+      "title": "BasketLineItemV1",
+      "description": "A single checked-out line. Not independently versioned: it changes only when BasketCheckedOutV1 does.",
+      "required": [
+        "productId",
+        "quantity",
+        "unitPrice",
+        "lineTotal"
+      ],
+      "properties": {
+        "productId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unitPrice": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lineTotal": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maps to BasketLineItemResponse.LineTotal. Money arithmetic stays in the owning service, never recomputed by a consumer."
+        }
+      }
+    }
+  }
+}

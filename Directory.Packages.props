@@ -56,6 +56,13 @@
          so the patched version wins regardless of what the transitive minimum declares. -->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.14.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
+
+    <!-- JSON Schema 2020-12 validation, test-only. Referenced solely by
+         shared/EventContracts.UnitTests to prove a serialized event instance satisfies its
+         published schema (008-versioned-event-schemas research.md Decision 2). It is deliberately
+         NOT referenced by shared/EventContracts itself: runtime schema validation is not part of
+         this platform's safety net (ADR-0005), so no service ever takes a dependency on it. -->
+    <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
   </ItemGroup>
 
 </Project>

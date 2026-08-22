@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.ecommerce.internal/events/OrderPlaced.v1.schema.json",
+  "title": "OrderPlacedV1",
+  "description": "An order has been placed. Version 1. Immutable once committed: any change to this event's shape ships as OrderPlaced.v2.schema.json, never as an edit to this file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "occurredAtUtc",
+    "orderId",
+    "tenantId",
+    "correlationId",
+    "total",
+    "lines"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier of this event instance, distinct from orderId, so a consumer can deduplicate a redelivered message."
+    },
+    "occurredAtUtc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the order was placed, in UTC. Maps to Order.PlacedAtUtc."
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Maps to Order.Id."
+    },
+    "tenantId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The tenant the order belongs to. Required here even though the read model's TenantId is nullable: the contract is authored ahead of the publisher that will satisfy it."
+    },
+    "correlationId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The correlation id generated at the edge and threaded through the request that created the order."
+    },
+    "total": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Maps to Order.Total. Computed by Orders, never by a caller."
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The order's lines. An order cannot exist with zero lines.",
+      "items": {
+        "$ref": "#/$defs/orderLineV1"
+      }
+    }
+  },
+  "$defs": {
+    "orderLineV1": {
+      "type": "object",
+      "title": "OrderLineV1",
+      "description": "A single ordered line. Not independently versioned: it changes only when OrderPlacedV1 does.",
+      "required": [
+        "productId",
+        "quantity",
+        "unitPrice"
+      ],
+      "properties": {
+        "productId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unitPrice": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
