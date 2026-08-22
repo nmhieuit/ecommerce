@@ -1,0 +1,305 @@
+{
+  "consumer": {
+    "name": "bff"
+  },
+  "interactions": [
+    {
+      "description": "a request for the caller's current basket",
+      "providerStates": [
+        {
+          "name": "a basket holding one item exists for the caller",
+          "params": {
+            "customerRef": "pact-shopper"
+          }
+        }
+      ],
+      "request": {
+        "headers": {
+          "X-Subject-Id": "pact-shopper",
+          "X-Tenant-Id": "contoso"
+        },
+        "method": "GET",
+        "path": "/baskets/current"
+      },
+      "response": {
+        "body": {
+          "customerRef": "pact-shopper",
+          "id": "2b7c1f5a-0002-4000-8000-000000000001",
+          "items": [
+            {
+              "lineTotal": 25.0,
+              "productId": "9f8d6b1e-0001-4000-8000-000000000001",
+              "quantity": 2,
+              "unitPrice": 12.5
+            }
+          ],
+          "total": 25.0
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.customerRef": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                }
+              ]
+            },
+            "$.items": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type",
+                  "min": 1
+                }
+              ]
+            },
+            "$.items[*].lineTotal": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            },
+            "$.items[*].productId": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                }
+              ]
+            },
+            "$.items[*].quantity": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "integer"
+                }
+              ]
+            },
+            "$.items[*].unitPrice": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            },
+            "$.total": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            }
+          }
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request to add an item to the caller's current basket",
+      "providerStates": [
+        {
+          "name": "an empty basket exists for the caller",
+          "params": {
+            "customerRef": "pact-shopper-empty"
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "productId": "9f8d6b1e-0001-4000-8000-000000000001",
+          "quantity": 2,
+          "unitPrice": 12.5
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Subject-Id": "pact-shopper-empty",
+          "X-Tenant-Id": "contoso"
+        },
+        "method": "POST",
+        "path": "/baskets/current/items"
+      },
+      "response": {
+        "body": {
+          "customerRef": "pact-shopper",
+          "id": "2b7c1f5a-0002-4000-8000-000000000001",
+          "items": [
+            {
+              "lineTotal": 25.0,
+              "productId": "9f8d6b1e-0001-4000-8000-000000000001",
+              "quantity": 2,
+              "unitPrice": 12.5
+            }
+          ],
+          "total": 25.0
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.customerRef": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                }
+              ]
+            },
+            "$.items": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type",
+                  "min": 1
+                }
+              ]
+            },
+            "$.items[*].lineTotal": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            },
+            "$.items[*].productId": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                }
+              ]
+            },
+            "$.items[*].quantity": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "integer"
+                }
+              ]
+            },
+            "$.items[*].unitPrice": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            },
+            "$.total": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            }
+          }
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request to clear the caller's current basket",
+      "providerStates": [
+        {
+          "name": "a basket holding one item exists for the caller",
+          "params": {
+            "customerRef": "pact-shopper"
+          }
+        }
+      ],
+      "request": {
+        "headers": {
+          "X-Subject-Id": "pact-shopper",
+          "X-Tenant-Id": "contoso"
+        },
+        "method": "POST",
+        "path": "/baskets/current/clear"
+      },
+      "response": {
+        "status": 204
+      }
+    },
+    {
+      "description": "a request to clear a basket that is already empty",
+      "providerStates": [
+        {
+          "name": "an empty basket exists for the caller",
+          "params": {
+            "customerRef": "pact-shopper-empty"
+          }
+        }
+      ],
+      "request": {
+        "headers": {
+          "X-Subject-Id": "pact-shopper-empty",
+          "X-Tenant-Id": "contoso"
+        },
+        "method": "POST",
+        "path": "/baskets/current/clear"
+      },
+      "response": {
+        "body": {
+          "error": "The basket is already empty."
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.error": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          }
+        },
+        "status": 409
+      }
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.4.27",
+      "models": "1.2.8"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "baskets"
+  }
+}

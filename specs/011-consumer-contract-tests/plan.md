@@ -34,9 +34,11 @@ existing `*.Api.IntegrationTests` project shape (`Directory.Packages.props`-mana
 `ProjectReference` to the service's own `*.Api` project)
 
 **Target Platform**: Local developer machines and Jenkins CI — contract tests run in-process
-(`WebApplicationFactory`-hosted provider, or a directly-invoked payload builder for the event pilot);
-no Docker/Testcontainers dependency, since Pact verification exercises the service's own code path,
-not a live network peer
+(`WebApplicationFactory`-hosted provider, or a directly-invoked payload builder for the event pilot).
+The three HTTP provider suites do need a Docker daemon for their SQL Server fixture: each service's
+`DbContext` is gated on a resolved tenant and registered against SQL Server, so an in-process host
+still needs a real database to answer a route (research.md Decision 5, as amended during
+implementation). The event pilot needs neither.
 
 **Project Type**: Backend test infrastructure inside the existing multi-project .NET solution
 (`Ecommerce.slnx`) — no new runnable service, no frontend impact

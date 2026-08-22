@@ -8,8 +8,14 @@ verifying them, and proving each success criterion in spec.md.
 ## Prerequisites
 
 - .NET 10 SDK
-- No database, broker, or container dependency — contract tests host each service in-process via
-  `WebApplicationFactory` (research.md Decision 5) and read/write local Pact JSON files only.
+- A running Docker daemon, for the three HTTP **provider** suites only. They host the service
+  in-process via `WebApplicationFactory`, but each service's `DbContext` is registered against SQL
+  Server behind a tenant gate, so a real database is needed for a route to answer at all — the same
+  `SqlServerFixture`/Testcontainers pattern the `*.Api.IntegrationTests` suites use
+  (research.md Decision 5, as amended).
+- Nothing beyond the SDK for the consumer-side pacts or for the `BasketCheckedOut` event pilot:
+  those read and write local Pact JSON only, and the event pilot calls the payload mapper directly
+  with no host, no database, and no broker.
 
 ## Generate the consumer-side pacts
 
@@ -57,12 +63,26 @@ with no need to open any service's source code.
 
 ## SC-004 — removing a required contract test is caught
 
-Delete `services/products/tests/Products.Api.ContractTests/ProductsProviderPactTests.cs` (or the
-whole project) and run the PR's contract-test build step. If the step is wired to enumerate the
-`pacts/` directory and require a passing verification test per file, expect it to fail, naming the
-missing boundary. If no such automated gate exists yet, this is the documented manual-review item
-from spec.md FR-009 — a reviewer checks the four-row boundary table against the PR's changed test
-projects.
+Delete (or rename) `services/products/tests/Products.Api.ContractTests/ProductsProviderPactTests.cs`
+and run the coverage suite:
+
+```bash
+dotnet test tests/ContractCoverageTests
+```
+
+Expect `AllThinSliceBoundaries_HaveAPactFileAndAVerificationTest` to fail naming the boundary and
+the path, like this — then restore the file and re-run to confirm it passes again:
+
+```text
+CoverageViolation { Boundary = BFF-products,
+  MissingPath = services/products/tests/Products.Api.ContractTests/ProductsProviderPactTests.cs,
+  Reason = has a pact but no provider-side test reading it — 'products' would build green while
+           the expectation went unchecked }
+```
+
+The gate is automated, so FR-009 needs no manual-review fallback. It checks both halves: a boundary
+with no committed pact fails the same way, because an expectation nobody recorded and an expectation
+nobody verifies are equally uncovered.
 
 ## Adding coverage to a boundary outside this thin slice
 

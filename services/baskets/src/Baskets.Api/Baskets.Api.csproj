@@ -3,6 +3,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\shared\ServiceDefaults\ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\..\..\shared\Tenancy\Tenancy.csproj" />
+    <!-- The published event contracts this service builds its checkout payload from
+         (008-versioned-event-schemas). Referenced, not copied: a service that redeclared the
+         shape would be free to drift from the schema consumers verify against. -->
+    <ProjectReference Include="..\..\..\..\shared\EventContracts\EventContracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

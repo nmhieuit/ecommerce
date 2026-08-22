@@ -51,6 +51,11 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
+    <!-- Consumer-driven contract testing (ADR-0006; 011-consumer-contract-tests research.md
+         Decision 1). Referenced only by the *.Api.ContractTests projects: it ships both the
+         HTTP-pact DSL the BFF-facing boundaries use and the message-pact DSL the BasketCheckedOut
+         event pilot uses, so no service's runtime code ever takes a dependency on it. -->
+    <PackageVersion Include="PactNet" Version="5.0.1" />
     <!-- 4.0.0 pulls in SSH.NET 2023.0.0, which carries a known high-severity advisory
          (GHSA-q939-rpr3-3284). Bumping Testcontainers.MsSql and pinning SSH.NET directly
          so the patched version wins regardless of what the transitive minimum declares. -->

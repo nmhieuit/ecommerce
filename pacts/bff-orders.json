@@ -1,0 +1,141 @@
+{
+  "consumer": {
+    "name": "bff"
+  },
+  "interactions": [
+    {
+      "description": "a request for an order by id",
+      "providerStates": [
+        {
+          "name": "an order exists",
+          "params": {
+            "orderId": "7c2e0d44-0003-4000-8000-000000000001"
+          }
+        }
+      ],
+      "request": {
+        "headers": {
+          "X-Subject-Id": "pact-shopper",
+          "X-Tenant-Id": "contoso"
+        },
+        "method": "GET",
+        "path": "/orders/7c2e0d44-0003-4000-8000-000000000001"
+      },
+      "response": {
+        "body": {
+          "id": "7c2e0d44-0003-4000-8000-000000000001",
+          "placedAtUtc": "2026-08-22T10:15:30.1234567Z",
+          "total": 25.0
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                }
+              ]
+            },
+            "$.placedAtUtc": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?$"
+                }
+              ]
+            },
+            "$.total": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            }
+          }
+        },
+        "status": 200
+      }
+    },
+    {
+      "description": "a request to place an order",
+      "request": {
+        "body": {
+          "items": [
+            {
+              "productId": "9f8d6b1e-0001-4000-8000-000000000001",
+              "quantity": 2,
+              "unitPrice": 12.5
+            }
+          ]
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "X-Subject-Id": "pact-shopper",
+          "X-Tenant-Id": "contoso"
+        },
+        "method": "POST",
+        "path": "/orders"
+      },
+      "response": {
+        "body": {
+          "id": "7c2e0d44-0003-4000-8000-000000000001",
+          "placedAtUtc": "2026-08-22T10:15:30.1234567Z",
+          "total": 25.0
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                }
+              ]
+            },
+            "$.placedAtUtc": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?$"
+                }
+              ]
+            },
+            "$.total": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            }
+          }
+        },
+        "status": 201
+      }
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.4.27",
+      "models": "1.2.8"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "orders"
+  }
+}

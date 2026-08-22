@@ -1,5 +1,5 @@
 # Build context is the REPOSITORY ROOT, not this folder — the project needs the solution-level
-# Directory.*.props and the shared ServiceDefaults project it references (Principle VII):
+# Directory.*.props and the shared projects it references (Principle VII):
 #
 #   docker build -f services/baskets/src/Baskets.Api/Dockerfile -t baskets-api .
 #
@@ -16,11 +16,15 @@ WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY shared/ServiceDefaults/ServiceDefaults.csproj shared/ServiceDefaults/
 COPY shared/Tenancy/Tenancy.csproj shared/Tenancy/
+# Referenced since 011-consumer-contract-tests, for the BasketCheckedOut payload this service
+# constructs at checkout (shared/EventContracts).
+COPY shared/EventContracts/EventContracts.csproj shared/EventContracts/
 COPY services/baskets/src/Baskets.Api/Baskets.Api.csproj services/baskets/src/Baskets.Api/
 RUN dotnet restore services/baskets/src/Baskets.Api/Baskets.Api.csproj
 
 COPY shared/ServiceDefaults/ shared/ServiceDefaults/
 COPY shared/Tenancy/ shared/Tenancy/
+COPY shared/EventContracts/ shared/EventContracts/
 COPY services/baskets/src/Baskets.Api/ services/baskets/src/Baskets.Api/
 RUN dotnet publish services/baskets/src/Baskets.Api/Baskets.Api.csproj \
     --configuration Release --no-restore --output /app/publish

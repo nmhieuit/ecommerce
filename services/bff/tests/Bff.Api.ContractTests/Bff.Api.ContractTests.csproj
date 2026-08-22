@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- The consumer side of every BFF-facing HTTP boundary. Pact's mock provider stands in for the
+       downstream service here, so this project needs no host and no database — it only needs the
+       BFF's own downstream client types, which are what define the shape being claimed. -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="PactNet" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Referenced so the pacts are written against the very records the BFF deserialises into
+       (ProductResource, BasketResource, OrderResource) rather than a copy that can drift. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Bff.Api\Bff.Api.csproj" />
+  </ItemGroup>
+
+</Project>

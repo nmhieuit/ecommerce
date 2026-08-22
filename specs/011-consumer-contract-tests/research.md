@@ -107,3 +107,17 @@ behavior; a contract test proves response *shape* against a documented expectati
 `WebApplicationFactory` is sufficient for, and reserving Testcontainers for cases that need it keeps
 contract-test runtime fast enough to run on every build (FR-005/FR-006 require this to happen in the
 producer's own build, not a separate slow pipeline stage).
+
+**Amended during implementation**: the "no Testcontainers/Docker dependency" half of this decision
+did not survive contact with the services. Each of `products`, `baskets`, and `orders` registers its
+`DbContext` against SQL Server behind a `RequireTenantId()` gate, so an in-process host still needs a
+real database to answer a route at all, and the constitution's Principle III rules out substituting
+an in-memory provider for one. The three HTTP provider suites therefore use the same
+`SqlServerFixture`/Testcontainers pattern their `*.Api.IntegrationTests` siblings already use.
+
+What *did* hold is the part that mattered: the service under test is hosted in-process rather than
+containerized, so verification exercises the real handler rather than a deployed artifact. The event
+pilot needs no database and no host at all — it calls `BasketCheckedOutMapper.ToEvent` directly, as
+Decision 3 describes — so `Baskets.Api.ContractTests`' message verification runs without Docker even
+though its HTTP sibling does not. The practical cost is that provider verification requires a Docker
+daemon, the same prerequisite the integration suites already impose.
