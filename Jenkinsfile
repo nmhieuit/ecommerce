@@ -100,8 +100,13 @@ pipeline {
                 sh 'dotnet restore "$SOLUTION"'
                 sh 'dotnet build "$SOLUTION" --configuration Release --no-restore'
                 sh 'corepack enable pnpm'
-                sh 'pnpm --dir frontend install --frozen-lockfile'
-                sh 'pnpm --dir frontend build'
+                // `cd` rather than `pnpm --dir frontend ...`: the latter mis-parses when the
+                // command itself isn't a pnpm builtin (observed: `pnpm --dir frontend turbo run
+                // test` failed with "ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL Command \"frontend\" not
+                // found" in the unit-tests stage below), and running from inside frontend/ is also
+                // what lets Corepack resolve frontend/package.json's pinned pnpm version by cwd.
+                sh 'cd frontend && pnpm install --frozen-lockfile'
+                sh 'cd frontend && pnpm build'
             }
             post {
                 success { checkPassed(env.CHECK_BUILD, 'Solution and frontend workspace built.') }
@@ -113,7 +118,7 @@ pipeline {
             steps {
                 checkStarted(env.CHECK_UNIT)
                 sh 'scripts/ci/run-dotnet-tests.sh unit'
-                sh 'pnpm --dir frontend turbo run test -- --coverage'
+                sh 'cd frontend && pnpm turbo run test -- --coverage'
                 sh 'scripts/ci/merge-coverage.sh'
             }
             post {

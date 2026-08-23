@@ -187,6 +187,31 @@ a quality gate result, and reports it back to Jenkins without a connection or au
       builds by webhook. The Multibranch job must use SCM polling (or the job must live on a
       reachable controller). Publishing checks works regardless, since that direction is outbound
       from Jenkins.
+
+      **Resolved, 2026-08-23 third pass — this was never a fixable permission gap.** The repository
+      owner generated a fresh fine-grained PAT and, together, we opened
+      `github.com/settings/personal-access-tokens/<id>` → Add permissions → searched "Checks":
+      **no such permission exists to grant**, on any fine-grained PAT. This matches GitHub's actual
+      model: the Checks API (what `publishChecks`/`github-checks` uses) is authorizable only by a
+      GitHub App installation — never by a personal access token, classic or fine-grained. No amount
+      of re-scoping, regenerating, or reissuing a PAT could ever have closed this gap; the earlier
+      notes above framing it as "reissue with Checks: write" were chasing a permission that does not
+      exist for this credential type.
+
+      Fixed at the architecture level instead of the credential level: switched `Jenkinsfile`'s
+      `checkStarted`/`checkPassed`/`checkFailed` from `publishChecks` (Checks API) to `githubNotify`
+      (classic commit-status API, from the **`pipeline-githubnotify-step`** plugin — not the base
+      `github` plugin, which was tried first and installed cleanly but does not itself expose the
+      step; confirmed by grepping its `.jpi` for any workflow/step class and finding none). The
+      already-granted **Commit statuses: Read and write** permission on the existing PAT is exactly
+      what commit statuses need — no new token, no new permission, nothing to reissue. Classic
+      branch protection's required-status-checks list matches by context/check name regardless of
+      which API produced it, so `ci/build` etc. are unaffected.
+
+      Also fixed while getting a build to actually complete: `pnpm --dir frontend turbo run test --
+      --coverage` failed with `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL Command "frontend" not found` —
+      pnpm's `--dir` flag mis-parses when the following command isn't a pnpm builtin. Changed all
+      three `pnpm --dir frontend ...` invocations to `cd frontend && pnpm ...`.
 - [ ] ⛔ T015 [US1] Validate: trigger a manual build (or open a real PR) against the local Jenkins
       job and confirm the `sonarqube quality gate` stage reaches SonarQube and gets back a real
       `OK`/`ERROR` result rather than a connection or authentication error (spec.md User Story 1
@@ -350,10 +375,17 @@ without ever executing it.
       --version` → `9.15.9`; `dotnet`/`node`/`docker` versions unaffected; the Jenkins job and both
       credentials (`sonarqube-token`, `github-pat`) survived the recreation (named volume, not
       wiped).
-- [ ] ⛔ T031 Re-run the pipeline on `feat/012-sonarqube-quality-gate` and confirm it reaches the
-      `sonarqube quality gate` stage. Toolchain is now confirmed correct (T033); the only remaining
-      blocker is T014's token gaining `Checks: write` — without it no `ci/*` check is published, so
-      branch protection can never be satisfied no matter how far the build gets.
+- [X] T034 Switched status reporting from `publishChecks` to `githubNotify` and fixed a second
+      pnpm invocation bug found by actually running builds #5 and #6 (see T014's third-pass note for
+      the full diagnosis). Installed `pipeline-githubnotify-step` (the plugin that actually provides
+      the step — `github` alone does not). Verified against build #6: `githubNotify` no longer
+      throws `NoSuchMethodError`; `ci/build` and `ci/unit-tests` both post real commit statuses;
+      build #6's own failure was the pnpm `--dir` bug, fixed immediately after and awaiting the next
+      build (T031) to confirm end-to-end.
+- [ ] T031 Re-run the pipeline on `feat/012-sonarqube-quality-gate` and confirm it reaches the
+      `sonarqube quality gate` stage. Toolchain is confirmed correct (T033) and status reporting no
+      longer depends on a permission no PAT can hold (T034) — this is now a plain validation run,
+      not blocked on any credential.
 
 ---
 
