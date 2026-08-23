@@ -150,7 +150,7 @@ a quality gate result, and reports it back to Jenkins without a connection or au
       the **token itself** third, not a credential id — passing an id there stores the literal
       string as the token and fails authentication in a way that looks like a bad token. Use the
       nine-argument form, which is what the script does.
-- [ ] ⛔ T014 [US1] Generate a GitHub Personal Access Token (or GitHub App) with commit-status/checks
+- [X] T014 [US1] Generate a GitHub Personal Access Token (or GitHub App) with commit-status/checks
       write access for `nmhieuit/ecommerce`, add it as Jenkins credentials, and provision a Jenkins
       Multibranch Pipeline job using the GitHub Branch Source plugin so PRs are auto-discovered and
       each `Jenkinsfile` stage publishes its named GitHub check (research.md Decision 1–2).
