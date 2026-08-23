@@ -55,6 +55,12 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     DOTNET_NOLOGO=1 \
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 
+# Git refuses to operate on a repository owned by another user ("fatal: not in a git directory"),
+# and a workspace created by an earlier container as the jenkins user is exactly that once this
+# image runs as root. The build workspace is disposable CI scratch space, not somewhere an
+# ownership boundary is protecting anything, so the check is waived for it.
+RUN git config --global --add safe.directory '*'
+
 # Deliberately staying root for the local stack: the mounted Docker socket is root-owned on
 # Docker Desktop, and the alternative (matching the host's docker group id into the image) is not
 # portable across the machines this stack is meant to run on. A production controller must not do

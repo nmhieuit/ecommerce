@@ -329,6 +329,11 @@ without ever executing it.
 - [X] T030 Mount the host Docker socket into the controller in `docker-compose.ci.yml`. The
       integration tier runs Testcontainers (spec 010) and there was no `/var/run/docker.sock` in
       the container at all, so that stage could never have passed even with a .NET SDK present.
+- [X] T032 Mark `scripts/ci/*.sh` executable in git (`100644` → `100755`). All four were committed
+      non-executable while the `Jenkinsfile` invokes them directly as commands
+      (`sh 'scripts/ci/sonar-begin.sh'` and six more), so every one of those seven calls would have
+      failed with "Permission denied" — at the first stage, on any agent, regardless of toolchain.
+      Caught by listing the mode inside a real checkout rather than by reading the file.
 - [ ] ⛔ T031 Re-run the pipeline on `feat/012-sonarqube-quality-gate` and confirm it reaches the
       `sonarqube quality gate` stage. Blocked on T014's token gaining `Checks: write` — without it
       no `ci/*` check is published, so branch protection can never be satisfied no matter how far
