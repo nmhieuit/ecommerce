@@ -165,9 +165,23 @@ a quality gate result, and reports it back to Jenkins without a connection or au
       solve a one-repository problem is the wrong trade. The owner is issuing a fine-grained PAT
       scoped to `nmhieuit/ecommerce` with `Checks: write` + `Contents: read` instead.
 
-      Once that token exists, the credential half can follow the same as-code pattern as T013:
-      drop the token into `.ci-secrets/` and add a companion init script beside
-      `docker/ci/jenkins-init/10-sonarqube-server.groovy`, rather than clicking through the UI.
+      **Progress, 2026-08-23 second pass.** A fine-grained PAT was supplied and the Jenkins half is
+      now built as code — `docker/ci/jenkins-init/20-github-credential.groovy` creates the
+      credential and `30-multibranch-job.groovy` provisions the Multibranch job over
+      `nmhieuit/ecommerce`, polling every 5 minutes. This is proven working: the job scanned the
+      repository, discovered `feat/012-sonarqube-quality-gate` (the only branch carrying a
+      `Jenkinsfile`), cloned it with the credential, and started build #1.
+
+      **Still blocked on one token permission.** The supplied PAT grants Contents:read,
+      Pull requests:read and Commit statuses:write, but **not Checks:write**. Verified two ways —
+      a direct `POST /check-runs` returns `Resource not accessible by personal access token`, and
+      after a real pipeline run the branch head carries **zero** check-runs. The `Jenkinsfile`
+      reports through `publishChecks` (the Checks API), so as granted the token cannot satisfy a
+      single one of the five required checks. Fix: reissue the token with
+      **Checks → Read and write**, write it to `.ci-secrets/github-pat`, restart the container.
+
+      (An earlier note here claimed Contents:read was also missing. That was wrong: the 404 came
+      from `Jenkinsfile` not existing on `master`, not from a permission. Contents:read works.)
 
       Note for the local stack: GitHub cannot reach `localhost:8080`, so PR events will not trigger
       builds by webhook. The Multibranch job must use SCM polling (or the job must live on a
@@ -291,6 +305,34 @@ coverage; confirm the full sequence re-runs automatically and the merge block li
       mergeable after one automatic re-run following a coverage fix, with no manual admin action
 
 **Checkpoint**: All four user stories are independently functional.
+
+---
+
+## Phase 6a: Agent toolchain (discovered 2026-08-23, second pass)
+
+**Purpose**: Give the pipeline a machine that can actually run it. Found by running the pipeline
+for the first time rather than by inspection — every previous pass reasoned about the `Jenkinsfile`
+without ever executing it.
+
+- [X] T029 Build a Jenkins image carrying the toolchain the `Jenkinsfile` header already declares
+      (`docker/ci/jenkins/Dockerfile`, new): .NET 10 SDK, Node 22 with corepack enabled, and the
+      Docker CLI. The stock `jenkins/jenkins:lts-jdk17` ships only `git` and a JDK, so build #1 of
+      the first discovered branch died on its very first command:
+
+      ```
+      + dotnet tool restore
+      script.sh.copy: 1: dotnet: not found
+      ```
+
+      and every later stage reported `Stage "..." skipped due to earlier failure(s)`. Verified
+      absent before the fix: `dotnet`, `node`, `npm`, `corepack`, `pnpm`, `docker` — all NOT FOUND.
+- [X] T030 Mount the host Docker socket into the controller in `docker-compose.ci.yml`. The
+      integration tier runs Testcontainers (spec 010) and there was no `/var/run/docker.sock` in
+      the container at all, so that stage could never have passed even with a .NET SDK present.
+- [ ] ⛔ T031 Re-run the pipeline on `feat/012-sonarqube-quality-gate` and confirm it reaches the
+      `sonarqube quality gate` stage. Blocked on T014's token gaining `Checks: write` — without it
+      no `ci/*` check is published, so branch protection can never be satisfied no matter how far
+      the build gets.
 
 ---
 

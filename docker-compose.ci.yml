@@ -21,7 +21,11 @@ volumes:
 
 services:
   jenkins:
-    image: jenkins/jenkins:lts-jdk17
+    # Built, not pulled: the stock image has no .NET SDK, no Node and no Docker CLI, so every
+    # pipeline stage failed on its first command. See docker/ci/jenkins/Dockerfile.
+    build:
+      context: ./docker/ci/jenkins
+    image: ecomerce-ci-jenkins:local
     ports:
       - "8080:8080"
       - "50000:50000"
@@ -33,6 +37,9 @@ services:
       # Real tokens, gitignored. Mounted read-only so the init script can read them and nothing
       # in a build can write them.
       - ./.ci-secrets:/run/ci-secrets:ro
+      # The host's Docker daemon, for the Testcontainers-based integration tier (spec 010).
+      # Builds run on the controller in this local stack, so the controller is what needs it.
+      - /var/run/docker.sock:/var/run/docker.sock
     networks: [ci-backbone]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]
