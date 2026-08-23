@@ -79,6 +79,13 @@ services:
       # sysctl change (262144) not worth making just to run a local/dev SonarQube in Docker Desktop.
       # Do not carry this into a real deployment.
       SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+      # Community Edition has no official GitHub PR decoration (ADR-0012 amendment, T019) — the
+      # community-maintained Branch Plugin adds it via a javaagent that patches the web/CE
+      # processes at startup; it does nothing just sitting in extensions/plugins. The plugin jar
+      # itself lives in the sonarqube-extensions volume (persists across recreation); these two
+      # opts are what actually activate it, so they belong in compose, not typed into the UI.
+      SONAR_WEB_JAVAADDITIONALOPTS: "-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-26.5.0.jar=web"
+      SONAR_CE_JAVAADDITIONALOPTS: "-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-26.5.0.jar=ce"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"' || exit 1"]
       interval: 10s

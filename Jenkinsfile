@@ -157,7 +157,7 @@ pipeline {
             steps {
                 script {
                     withSonarQubeEnv(env.SONARQUBE_SERVER) {
-                        sh 'dotnet sonarscanner end'
+                        sh 'scripts/ci/sonar-end.sh'
                     }
 
                     // The scanner exits successfully once analysis is *uploaded*; the gate is
