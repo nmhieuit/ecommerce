@@ -47,7 +47,15 @@ RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
 
 # corepack ships with Node 22 but is opt-in; the Jenkinsfile calls `corepack enable pnpm`, and
 # the frontend workspace pins its pnpm version in package.json.
-RUN corepack enable
+#
+# `corepack enable` alone is not enough: the Jenkinsfile invokes `pnpm --dir frontend ...` from the
+# repo root, which has no package.json of its own, so Corepack has nothing there to read a
+# "packageManager" pin from and resolves to whatever it last fetched (observed: latest, 11.22.0)
+# instead of frontend/package.json's pinned 9.15.9 — then pnpm itself refuses to run, since
+# Corepack invoked a version that does not match the project's pin. Pre-activating the exact pinned
+# version here removes the ambiguity regardless of which directory a later `pnpm` call runs from.
+RUN corepack enable \
+    && corepack prepare pnpm@9.15.9 --activate
 
 # Telemetry off and first-run experience skipped: both write to the home directory on first
 # invocation and add noise to every build log.

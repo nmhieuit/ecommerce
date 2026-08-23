@@ -334,10 +334,26 @@ without ever executing it.
       (`sh 'scripts/ci/sonar-begin.sh'` and six more), so every one of those seven calls would have
       failed with "Permission denied" — at the first stage, on any agent, regardless of toolchain.
       Caught by listing the mode inside a real checkout rather than by reading the file.
+- [X] T033 Fixed a second toolchain bug found by actually running build #4 after T029-T032 landed:
+      `dotnet build` passed (0 errors), but `pnpm --dir frontend install --frozen-lockfile` failed —
+      ```
+      [ERROR] This project is configured to use 9.15.9 of pnpm. Your current pnpm is v11.22.0.
+      Corepack invoked pnpm with this version, and pnpm does not switch versions when running under
+      corepack.
+      ```
+      Root cause: `pnpm --dir frontend ...` runs from the repo root, which has no `package.json` of
+      its own, so Corepack has nothing there to read a `packageManager` pin from at invocation time
+      and resolves to whatever it last fetched instead of `frontend/package.json`'s pinned
+      `pnpm@9.15.9`. Fixed in `docker/ci/jenkins/Dockerfile` by pre-activating the exact pinned
+      version (`corepack prepare pnpm@9.15.9 --activate`) so resolution no longer depends on cwd.
+      Verified after rebuild + container recreation: `docker exec ecomerce-ci-jenkins-1 pnpm
+      --version` → `9.15.9`; `dotnet`/`node`/`docker` versions unaffected; the Jenkins job and both
+      credentials (`sonarqube-token`, `github-pat`) survived the recreation (named volume, not
+      wiped).
 - [ ] ⛔ T031 Re-run the pipeline on `feat/012-sonarqube-quality-gate` and confirm it reaches the
-      `sonarqube quality gate` stage. Blocked on T014's token gaining `Checks: write` — without it
-      no `ci/*` check is published, so branch protection can never be satisfied no matter how far
-      the build gets.
+      `sonarqube quality gate` stage. Toolchain is now confirmed correct (T033); the only remaining
+      blocker is T014's token gaining `Checks: write` — without it no `ci/*` check is published, so
+      branch protection can never be satisfied no matter how far the build gets.
 
 ---
 

@@ -14,19 +14,28 @@
 // Agent requirements: a POSIX shell, the .NET 10 SDK, Node 22 with corepack, and a working Docker
 // daemon (the integration tier runs Testcontainers — spec 010).
 
-// Publishing the checks explicitly, rather than relying on Jenkins' own stage-name statuses, is
-// what pins the names branch protection matches on. Requires the GitHub Checks plugin and an SCM
-// source that can post checks (the multibranch job's GitHub Branch Source credentials).
+// Publishing statuses explicitly, rather than relying on Jenkins' own stage-name statuses, is what
+// pins the names branch protection matches on.
+//
+// Uses the classic commit-status API (githubNotify, from the `github` plugin) rather than the
+// newer Checks API (publishChecks, from `github-checks`): the Checks API can only be authorized by
+// a GitHub App installation, never by any personal access token — classic or fine-grained.
+// Confirmed directly against this repo's token-permission UI: "Checks" does not appear as a
+// grantable permission for a fine-grained PAT at all ("No items available" when searched), so no
+// amount of re-scoping a PAT credential could ever have satisfied publishChecks. Commit statuses
+// need only "Commit statuses: Read and write", which the existing PAT already has. Classic branch
+// protection's required-status-checks list matches on context string regardless of whether it came
+// from the Checks API or the status API, so the five names below are unaffected.
 void checkStarted(String name) {
-    publishChecks name: name, status: 'IN_PROGRESS', summary: "${name} is running"
+    githubNotify context: name, status: 'PENDING', description: "${name} is running", credentialsId: env.GITHUB_CREDENTIALS
 }
 
 void checkPassed(String name, String summary) {
-    publishChecks name: name, status: 'COMPLETED', conclusion: 'SUCCESS', summary: summary
+    githubNotify context: name, status: 'SUCCESS', description: summary, credentialsId: env.GITHUB_CREDENTIALS
 }
 
 void checkFailed(String name, String summary) {
-    publishChecks name: name, status: 'COMPLETED', conclusion: 'FAILURE', summary: summary
+    githubNotify context: name, status: 'FAILURE', description: summary, credentialsId: env.GITHUB_CREDENTIALS
 }
 
 pipeline {
@@ -53,6 +62,9 @@ pipeline {
         // Name of the SonarQube server installation configured under
         // Manage Jenkins -> System -> SonarQube servers. Must match, or withSonarQubeEnv fails.
         SONARQUBE_SERVER = 'sonarqube'
+
+        // Credential githubNotify authenticates commit-status writes with — see docker/ci/jenkins-init/20-github-credential.groovy.
+        GITHUB_CREDENTIALS = 'github-pat'
 
         // Required status check names — see contracts/pipeline-stage-contract.md §1.
         CHECK_BUILD = 'ci/build'
