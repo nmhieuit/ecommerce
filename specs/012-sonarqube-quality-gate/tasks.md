@@ -153,8 +153,26 @@ a quality gate result, and reports it back to Jenkins without a connection or au
 - [ ] ⛔ T014 [US1] Generate a GitHub Personal Access Token (or GitHub App) with commit-status/checks
       write access for `nmhieuit/ecommerce`, add it as Jenkins credentials, and provision a Jenkins
       Multibranch Pipeline job using the GitHub Branch Source plugin so PRs are auto-discovered and
-      each `Jenkinsfile` stage publishes its named GitHub check (research.md Decision 1–2) —
-      requires pasting a real secret, so it is a human action
+      each `Jenkinsfile` stage publishes its named GitHub check (research.md Decision 1–2).
+
+      **This is now the single task blocking everything else.** Branch protection (T017) is live
+      and requires five checks that only this job can publish, so until it exists `master` accepts
+      no merges at all.
+
+      Deliberately left to a human, and the owner chose this: an OAuth token with `repo`, `gist`
+      and `workflow` scope across *every* repository was available in this machine's Git Credential
+      Manager and could have been reused, but handing Jenkins blanket access to all repositories to
+      solve a one-repository problem is the wrong trade. The owner is issuing a fine-grained PAT
+      scoped to `nmhieuit/ecommerce` with `Checks: write` + `Contents: read` instead.
+
+      Once that token exists, the credential half can follow the same as-code pattern as T013:
+      drop the token into `.ci-secrets/` and add a companion init script beside
+      `docker/ci/jenkins-init/10-sonarqube-server.groovy`, rather than clicking through the UI.
+
+      Note for the local stack: GitHub cannot reach `localhost:8080`, so PR events will not trigger
+      builds by webhook. The Multibranch job must use SCM polling (or the job must live on a
+      reachable controller). Publishing checks works regardless, since that direction is outbound
+      from Jenkins.
 - [ ] ⛔ T015 [US1] Validate: trigger a manual build (or open a real PR) against the local Jenkins
       job and confirm the `sonarqube quality gate` stage reaches SonarQube and gets back a real
       `OK`/`ERROR` result rather than a connection or authentication error (spec.md User Story 1
@@ -183,36 +201,45 @@ role — including repository admins — can merge past it.
       calling `error(...)` on any non-`OK` status or on timeout so the stage fails closed
       (FR-011); publishes required check `ci/sonarqube-quality-gate` per
       `research.md` Decision 3 and `contracts/pipeline-stage-contract.md` §3
-- [ ] ⛔ T017 [US2] **Blocked by the GitHub plan, not by credentials.** The earlier note on this
-      task said it needed "an authenticated `gh` CLI session"; that diagnosis was wrong. Tested
-      directly against the API on 2026-08-23 with an admin-scoped token for `nmhieuit`:
+- [X] T017 [US2] **Applied and verified.** The earlier note on this task claimed it needed "an
+      authenticated `gh` CLI session"; that was a misdiagnosis. Tested directly against the API
+      with an admin-scoped token, both mechanisms refused on plan grounds, not auth grounds:
 
       ```
-      GET  /repos/nmhieuit/ecommerce/branches/master/protection  -> 403
+      GET /repos/nmhieuit/ecommerce/branches/master/protection -> 403
       {"message": "Upgrade to GitHub Pro or make this repository public to enable this feature."}
-      GET  /repos/nmhieuit/ecommerce/rulesets                    -> 403
+      GET /repos/nmhieuit/ecommerce/rulesets                   -> 403
       ```
 
-      GitHub does not offer protected branches — or their newer replacement, repository rulesets —
-      on a **private** repository on the free plan. Authentication is not the obstacle: an admin
-      token receives the same 403, so no amount of human credential entry unblocks this. The
-      repository is private with a single collaborator (`nmhieuit`) and zero open PRs.
+      GitHub offers neither protected branches nor rulesets on a private repository on the free
+      plan, so no amount of credential entry could have unblocked this. Presented the three real
+      options (make public / upgrade to Pro / accept an advisory-only pipeline); the repository
+      owner chose to **make the repository public**, which was done after scanning all 68 commits
+      of history for committed credentials — the only matches were
+      `Change_Me_Local_Dev_Only!` (a localhost dev placeholder) and `Password=wrong` (a
+      deliberately invalid value in `ReadinessTests`), both benign.
 
-      This blocks the feature's central mechanism. FR-008 requires merges to be governed by branch
-      protection with no bypass, and the "Merge Block" entity in `spec.md` is defined as GitHub's
-      required-status-checks mechanism. Until one of the following is chosen, the pipeline can
-      report checks but nothing can enforce them:
+      Protection then applied to `master` and confirmed by reading it back:
 
-      1. **Make `nmhieuit/ecommerce` public** — branch protection becomes available at no cost.
-      2. **Upgrade the account to GitHub Pro** — keeps the repository private.
-      3. **Accept an advisory-only pipeline** — checks are visible but not blocking; this does not
-         satisfy FR-008 and would need `spec.md` amended to say so honestly.
+      | Setting | Value |
+      |---|---|
+      | Required checks | `ci/build`, `ci/unit-tests`, `ci/integration-tests`, `ci/contract-tests`, `ci/sonarqube-quality-gate` |
+      | Strict (up to date before merge) | true |
+      | `enforce_admins` (no bypass, any role) | true |
+      | Required approving reviews | 0 — see the rationale in `scripts/ci/setup-branch-protection.sh` |
+      | Force pushes / deletions | disabled |
 
-      `scripts/ci/setup-branch-protection.sh` now preflights this and exits with that explanation
-      instead of surfacing a bare 403. Its `required_approving_review_count` was also lowered from
-      1 to 0: this repository has one collaborator, GitHub forbids self-approval, and requiring an
-      approval would have made every PR permanently unmergeable regardless of CI — a lockout, not
-      a gate.
+      Proven live rather than assumed: a direct `git push` to `master` was rejected with
+      `GH006: Protected branch update failed — Changes must be made through a pull request —
+      5 of 5 required status checks are expected`. That is FR-008 working.
+
+      **Consequence, and it is a real one:** `master` is now ungovernable by direct push, and no
+      PR can merge either, because nothing publishes those five checks until T014 creates the
+      Multibranch job. This session's three commits therefore sit on
+      `origin/feat/012-sonarqube-quality-gate` rather than on `master`. Pushing them required
+      either weakening the protection just applied or using a branch; the branch was chosen so
+      that no control was taken back down. They merge once T014 closes.
+
 - [ ] ⛔ T018 [US2] Validate `quickstart.md` Scenarios 1 and 2 end-to-end: full sequence runs in
       order on a passing PR; a coverage-dropping PR and a unit-test-breaking PR are both blocked
       with the correct stage identified and no override path for any role
@@ -409,30 +436,40 @@ and confirmed via direct inspection of `github.com/nmhieuit/ecommerce/settings` 
 is private, its default branch is `master`, and it currently has zero branch protection rules and
 zero webhooks configured.
 
-What is not, and cannot be, automated from here — every one of these requires typing a real secret
-into a form, which FR-015 and this session's operating rules both treat as a human action, never an
-automated one:
+### Second pass, 2026-08-23 (later the same day)
 
-1. **SonarQube** (T012) — first-login password change and project/token creation on
-   `http://localhost:9000`.
-2. **Jenkins↔SonarQube** (T013) — pasting that SonarQube token into
-   `Manage Jenkins → System → SonarQube servers`, plus the webhook URL.
-3. **Jenkins↔GitHub** (T014) — generating a GitHub PAT/App and pasting it into a new Jenkins
-   credential, then creating the Multibranch Pipeline job.
-4. **GitHub branch protection** (T017) — either running `scripts/ci/setup-branch-protection.sh`
-   with an authenticated `gh` session, or configuring the same five required checks by hand at
-   `github.com/nmhieuit/ecommerce/settings/branches`.
-5. **PR decoration licensing** (T019) — installing the Branch Plugin or confirming a Developer
-   Edition license.
-6. **Validation** (T015, T018, T021, T022, T023, T025, T026) — work through `quickstart.md`
-   Scenarios 1-5 and the SC-001..SC-009 checklist against real pull requests once 1-4 are done.
-7. **Production backend** (T028) — the Kubernetes/Ansible-provisioned SonarQube instance the spec's
-   Edge Cases describe; today's local Docker Desktop instance is a development stand-in, not that.
+Three things the first pass recorded as "human only" turned out not to be, and one thing it
+recorded as a credentials problem turned out to be something else entirely:
 
-A companion document, `docs/github-jenkins-sonarqube-setup.md`, gives the exact screens, field
-values, and commands for steps 1–5 above, generated from this session's inspection of the live
-GitHub repository and the freshly started local Jenkins/SonarQube containers.
+- **T012 and T013 are done.** FR-015 says a session holding sufficient access must *perform* a step
+  rather than hand it off. Admin API access to the local SonarQube instance was sufficient, so the
+  Sonar project, its analysis token, and the webhook back to Jenkins now exist; Jenkins' side is
+  wired by `docker/ci/jenkins-init/10-sonarqube-server.groovy` and verified end to end
+  (`/api/authentication/validate` returns 200 from inside the Jenkins container using the stored
+  credential).
+- **T017's blocker was never authentication.** Branch protection and rulesets are unavailable on a
+  private repository on GitHub's free plan; an admin token gets 403 either way. Once the owner
+  chose to make the repository public, protection applied cleanly and was proven live by a rejected
+  push.
+- **The gate is now genuinely closed, which has stranded `master`.** Nothing publishes the five
+  required checks until T014 exists, so no merge can happen. This pass's commits live on
+  `origin/feat/012-sonarqube-quality-gate`.
 
-One repository-side item also remains open: ADR-0012's Action Item 4 carries a `SCRUM-TBD`
-placeholder for the container image vulnerability scan (T027). Raising that backlog ticket and
-replacing the placeholder closes the tracking obligation on `plan.md`'s Complexity Tracking entry.
+What remains genuinely human, or genuinely out of scope:
+
+1. **SonarQube admin password** (T012 remainder) — still `admin`/`admin` on the local instance.
+   Only the operator should know that value, and the pipeline does not need it: analysis
+   authenticates with the project token, not the admin account.
+2. **Jenkins↔GitHub** (T014) — the fine-grained PAT and the Multibranch Pipeline job. This is the
+   critical path; everything below waits on it.
+3. **PR decoration licensing** (T019) — Community Edition has no official PR decoration; either
+   install the community Branch Plugin or use Developer Edition.
+4. **Validation** (T015, T018, T021, T022, T023, T025, T026) — `quickstart.md` Scenarios 1-5 and
+   the SC-001..SC-009 checklist, against real pull requests, once T014 lands.
+5. **Production backend** (T028) — the Kubernetes/Ansible-provisioned SonarQube the spec's Edge
+   Cases describe. Today's Docker Desktop instance is a development stand-in.
+6. **ADR-0012 Action Item 4** (T027) — the `SCRUM-TBD` placeholder for the container image
+   vulnerability scan still needs a real backlog ticket id.
+
+`docs/github-jenkins-sonarqube-setup.md` carries the step-by-step screens for items 1-3; its
+branch-protection section is now superseded by the applied protection recorded under T017.
