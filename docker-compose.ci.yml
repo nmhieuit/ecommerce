@@ -1,0 +1,57 @@
+# Local Jenkins + SonarQube, for exercising the CI pipeline in Jenkinsfile against a real
+# SonarQube quality gate before either is provisioned for real (specs/012-sonarqube-quality-gate).
+#
+# Separate project name and compose file from docker-compose.yml (the application stack) — these
+# are CI tooling, not part of the platform being built, and should be started/stopped independently.
+#
+#   docker compose -f docker-compose.ci.yml up -d
+#   docker compose -f docker-compose.ci.yml down        # stop, keep data
+#   docker compose -f docker-compose.ci.yml down -v     # stop and wipe Jenkins/SonarQube state
+name: ecomerce-ci
+
+networks:
+  ci-backbone:
+    driver: bridge
+
+volumes:
+  jenkins-data:
+  sonarqube-data:
+  sonarqube-extensions:
+  sonarqube-logs:
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+    networks: [ci-backbone]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  sonarqube:
+    image: sonarqube:community
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-extensions:/opt/sonarqube/extensions
+      - sonarqube-logs:/opt/sonarqube/logs
+    networks: [ci-backbone]
+    environment:
+      # Skips the Elasticsearch vm.max_map_count host-kernel check, which normally requires a host
+      # sysctl change (262144) not worth making just to run a local/dev SonarQube in Docker Desktop.
+      # Do not carry this into a real deployment.
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s

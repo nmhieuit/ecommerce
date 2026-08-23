@@ -1,0 +1,24 @@
+{
+  "title": "Bổ sung ngược TDD cho tính giá giỏ hàng và tạo đơn hàng",
+  "items": {
+    "FR-001": "Logic tính giá giỏ hàng PHẢI từ chối việc thêm một dòng hàng có số lượng nhỏ hơn một.",
+    "FR-002": "Logic tính giá giỏ hàng PHẢI giữ lại đơn giá ban đầu của một dòng hàng khi cùng sản phẩm đó được thêm lại, kể cả khi giá cung cấp ở lần thêm sau khác đi.",
+    "FR-003": "Logic tính giá giỏ hàng PHẢI gộp lần thêm lặp lại của cùng một sản phẩm vào số lượng của dòng hàng đã có, thay vì tạo ra dòng thứ hai cho sản phẩm đó.",
+    "FR-004": "Logic tạo đơn hàng PHẢI từ chối việc đặt một đơn hàng không có dòng hàng nào.",
+    "FR-005": "Logic tạo đơn hàng PHẢI từ chối việc đặt một đơn hàng có chứa dòng hàng với số lượng nhỏ hơn một hoặc đơn giá âm.",
+    "FR-006": "Logic tạo đơn hàng PHẢI tự tính tổng tiền của đơn hàng từ các dòng hàng của nó, thay vì chấp nhận tổng tiền do bên gọi cung cấp.",
+    "FR-007": "Mỗi yêu cầu từ FR-001 đến FR-006 PHẢI được chứng minh bằng một unit test thất bại khi quy tắc tương ứng bị gỡ bỏ hoặc bị làm suy yếu.",
+    "FR-008": "Mọi commit đưa vào hoặc thay đổi logic tính giá giỏ hàng hay tạo đơn hàng trong đợt làm này PHẢI có, trong lịch sử commit, một commit test đi trước hoặc đi kèm — commit test đó thất bại khi chưa có thay đổi và thành công khi đã có thay đổi.",
+    "US1-KB1": "Với điều kiện giỏ hàng chưa có dòng nào cho một sản phẩm, Khi thêm một dòng hàng với số lượng bằng không (hoặc âm), Thì lần thêm đó bị từ chối và có một unit test khẳng định việc từ chối này.",
+    "US1-KB2": "Với điều kiện giỏ hàng đã có một dòng cho một sản phẩm với đơn giá ban đầu của nó, Khi cùng sản phẩm đó được thêm lại sau khi giá trong danh mục đã thay đổi, Thì đơn giá của dòng hàng đã có được giữ nguyên và có một unit test khẳng định giá ban đầu được bảo toàn.",
+    "US1-KB3": "Với điều kiện giỏ hàng đã có một dòng cho một sản phẩm, Khi cùng sản phẩm đó được thêm lại với số lượng khác, Thì số lượng của dòng hàng đã có tăng thêm đúng lượng mới thay vì tạo ra dòng thứ hai, và có một unit test khẳng định không tồn tại dòng trùng lặp.",
+    "US2-KB1": "Với điều kiện không có dòng hàng nào, Khi đặt một đơn hàng ở tầng miền nghiệp vụ (domain layer), Thì nỗ lực đó bị từ chối và có một unit test khẳng định việc từ chối này.",
+    "US2-KB2": "Với điều kiện có một hoặc nhiều dòng hàng hợp lệ, Khi đặt một đơn hàng, Thì tổng tiền của đơn hàng thu được bằng tổng của tích số lượng nhân đơn giá từng dòng, do logic tạo đơn hàng tự tính chứ không phải do bên gọi cung cấp, và có một unit test khẳng định điều này.",
+    "US2-KB3": "Với điều kiện có một dòng hàng với số lượng không hợp lệ hoặc đơn giá âm, Khi đặt một đơn hàng, Thì nỗ lực đó bị từ chối và có một unit test khẳng định việc từ chối này.",
+    "US3-KB1": "Với điều kiện xét lịch sử commit của đợt làm này, Khi người soát xét kiểm tra từng commit có động tới logic tính giá giỏ hàng hoặc tạo đơn hàng, Thì mọi commit như vậy đều có một commit test thất bại đi trước hoặc đi kèm.",
+    "SC-001": "100% các quy tắc tính giá giỏ hàng và tạo đơn hàng được nêu tên trong đặc tả này (FR-001 đến FR-006) đều có một bài kiểm thử tự động đang chạy đạt, và bài kiểm thử đó thất bại khi quy tắc bị hoàn tác.",
+    "SC-002": "100% các commit động tới logic tính giá giỏ hàng hoặc tạo đơn hàng trong đợt làm này đều cho thấy một thay đổi về test được đưa vào cùng lúc hoặc trước thay đổi hiện thực, xác nhận được chỉ bằng một lượt rà lịch sử commit.",
+    "SC-003": "Nỗ lực đặt đơn hàng từ một giỏ hàng rỗng bị từ chối ở 100% số trường hợp và chứng minh được là đã có kiểm thử tự động bao phủ, không cần bước kiểm chứng thủ công nào.",
+    "SC-004": "Bộ kiểm thử tự động cho phần tính giá giỏ hàng và tạo đơn hàng sẽ thất bại ngay lập tức nếu hành vi trước khi bổ sung ngược của Phase 1 (thiếu chặn số lượng tối thiểu, thiếu quy tắc ổn định giá, hoặc chấp nhận đơn hàng từ giỏ rỗng) bị đưa trở lại."
+  }
+}

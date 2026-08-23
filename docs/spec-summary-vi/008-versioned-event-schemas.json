@@ -1,0 +1,25 @@
+{
+  "title": "Schema sự kiện có đánh phiên bản — OrderPlaced, BasketCheckedOut",
+  "items": {
+    "FR-001": "Schema có đánh phiên bản của OrderPlaced và BasketCheckedOut PHẢI được định nghĩa tại một vị trí hợp đồng (contracts) dùng chung, chứ không nằm trực tiếp trong service phát ra chúng.",
+    "FR-002": "Mỗi phiên bản schema sự kiện PHẢI mang một định danh phiên bản tường minh, không gây nhập nhằng, để bên phát và bên tiêu thụ dùng nó phân biệt với các phiên bản khác của cùng sự kiện.",
+    "FR-003": "Một thay đổi phá vỡ tương thích trên schema sự kiện đã công bố (thêm trường bắt buộc, bỏ trường, đổi kiểu dữ liệu/ngữ nghĩa của trường) PHẢI được phát hành dưới dạng một phiên bản mới tường minh, thay vì sửa đổi trực tiếp phiên bản hiện có.",
+    "FR-004": "Khi một phiên bản mới của schema sự kiện được đưa ra để thay thế một thay đổi phá vỡ tương thích, phiên bản trước đó PHẢI vẫn được định nghĩa và vẫn hoạt động trong suốt một khung thời gian ngưng dùng (deprecation window) đã ghi trong tài liệu.",
+    "FR-005": "Khung thời gian ngưng dùng và các điều kiện để được phép gỡ bỏ một phiên bản schema đã bị thay thế PHẢI được ghi thành tài liệu ngay cạnh chính schema đó.",
+    "FR-006": "PHẢI có một bước kiểm tra tính tương thích để kiểm chứng các thay đổi schema của OrderPlaced và BasketCheckedOut, và bước này PHẢI báo lỗi khi một thay đổi phá vỡ tương thích được thực hiện mà không kèm phiên bản mới tương ứng.",
+    "FR-007": "Các bên tiêu thụ OrderPlaced và BasketCheckedOut KHÔNG ĐƯỢC lỗi khi giải mã (deserialization) trong trường hợp một thể hiện sự kiện chứa những trường không có trong hiểu biết schema của bên tiêu thụ đó.",
+    "FR-008": "Mỗi schema sự kiện PHẢI có tài liệu mô tả các trường của nó, trường nào bắt buộc và trường nào tùy chọn, cùng lịch sử phiên bản, ở dạng tìm thấy được từ vị trí hợp đồng dùng chung.",
+    "FR-009": "Một sự kiện OrderPlaced do service phát hành tạo ra PHẢI kiểm chứng hợp lệ thành công so với schema đã công bố của nó.",
+    "US1-KB1": "Với điều kiện xét schema sự kiện OrderPlaced hoặc BasketCheckedOut, Khi lập trình viên tìm nơi nó được định nghĩa, Thì nó nằm ở vị trí hợp đồng dùng chung, chứ không nằm trực tiếp trong service phát hành.",
+    "US1-KB2": "Với điều kiện một service phát hành phát ra OrderPlaced hoặc BasketCheckedOut, Khi soát xét mã nguồn của service đó, Thì nó tham chiếu tới định nghĩa schema dùng chung chứ không sao chép lặp lại định nghĩa trường/kiểu dữ liệu ở nội bộ.",
+    "US2-KB1": "Với điều kiện một thay đổi schema của OrderPlaced hoặc BasketCheckedOut là phá vỡ tương thích (ví dụ thêm trường bắt buộc, bỏ trường, hoặc đổi kiểu dữ liệu của trường), Khi thay đổi đó được phát hành, Thì nó mang một phiên bản mới tường minh và phiên bản trước vẫn tiếp tục hoạt động trong khung thời gian ngưng dùng đã ghi trong tài liệu.",
+    "US2-KB2": "Với điều kiện lập trình viên thêm một trường bắt buộc mới vào schema mà không đưa ra phiên bản mới, Khi thay đổi được kiểm chứng, Thì bước kiểm tra tính tương thích báo lỗi và chặn thay đổi đó.",
+    "US2-KB3": "Với điều kiện một phiên bản schema đã bị thay thế và đang nằm trong khung thời gian ngưng dùng, Khi một bên tiêu thụ vẫn được xây dựng theo phiên bản đó xử lý một sự kiện, Thì nó tiếp tục hoạt động đúng như tài liệu mô tả.",
+    "US3-KB1": "Với điều kiện một bên tiêu thụ nhận được sự kiện OrderPlaced hoặc BasketCheckedOut chứa các trường mà bên tiêu thụ đó không biết, Khi sự kiện được giải mã, Thì việc giải mã không thất bại và các trường mà bên tiêu thụ nhận biết được vẫn dùng được bình thường.",
+    "US3-KB2": "Với điều kiện một sự kiện OrderPlaced được phát hành và được kiểm chứng, Khi đối chiếu nó với schema đã công bố của nó, Thì nó kiểm chứng hợp lệ thành công.",
+    "SC-001": "100% các định nghĩa schema của OrderPlaced và BasketCheckedOut nằm tại vị trí hợp đồng dùng chung, không còn định nghĩa schema nội tuyến/trùng lặp nào sót lại trong các service phát hành.",
+    "SC-002": "Một thay đổi phá vỡ tương thích đưa vào OrderPlaced hoặc BasketCheckedOut mà không kèm phiên bản mới đều bị bước kiểm tra tính tương thích bắt được trước khi merge, ở 100% số trường hợp đã kiểm thử.",
+    "SC-003": "Một bên tiêu thụ được xây dựng theo phiên bản schema cũ vẫn xử lý thành công một phiên bản mới hơn chỉ bổ sung thêm trường của cùng sự kiện, không có lỗi giải mã nào, trên mọi kịch bản đã kiểm thử.",
+    "SC-004": "Lập trình viên có thể tìm được phiên bản hiện hành, các phiên bản cũ còn được hỗ trợ, và khung thời gian ngưng dùng của OrderPlaced hoặc BasketCheckedOut hoàn toàn từ vị trí hợp đồng dùng chung, không phải đọc mã nguồn của service khác."
+  }
+}

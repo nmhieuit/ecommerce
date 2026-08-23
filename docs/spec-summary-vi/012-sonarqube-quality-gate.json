@@ -1,0 +1,27 @@
+{
+  "title": "Cổng chất lượng SonarQube làm rào chặn merge",
+  "items": {
+    "FR-001": "Với mọi pull request nhắm vào một nhánh được bảo vệ, pipeline PHẢI thực thi các chặng build, unit test, integration test, contract test và cổng chất lượng SonarQube, đúng theo thứ tự đó.",
+    "FR-002": "Pipeline PHẢI dừng lại trước chặng SonarQube nếu bất kỳ chặng trước đó (build, unit test, integration test, contract test) thất bại, và PHẢI báo chặng bị lỗi đó là lý do chặn ngay trên PR.",
+    "FR-003": "Hệ thống PHẢI báo một trạng thái cổng chất lượng duy nhất (đạt/không đạt) cho mỗi commit đầu (head commit) của PR, suy ra từ cấu hình cổng chất lượng SonarQube hiện hành (ngưỡng độ bao phủ, ngưỡng trùng lặp mã, các quy tắc về lỗi blocker/critical mới).",
+    "FR-004": "Hệ thống PHẢI chặn việc merge mọi PR có trạng thái cổng chất lượng không đạt, bất kể vai trò hay mức quyền của người thực hiện merge, và KHÔNG ĐƯỢC cung cấp bất kỳ cơ chế ghi đè, đi vòng hay nút \"cứ merge\" nào cho một cổng đang không đạt.",
+    "FR-005": "Việc merge PHẢI được kiểm soát bằng branch protection của GitHub trên các nhánh được bảo vệ, với cổng chất lượng SonarQube (cùng các chặng build/unit/integration/contract đứng trước) được cấu hình là các required status check, và bật tùy chọn \"Do not allow bypassing the above settings\" để ngay cả quản trị viên repository cũng không thể merge vượt qua một check đang lỗi hoặc đang chờ. Nếu GitHub từng để lộ một đường ghi đè còn sót nằm ngoài thiết lập này, mọi lần ghi đè như vậy PHẢI được ghi lại trong nhật ký kiểm toán, gồm người thực hiện, PR, mốc thời gian và lý do đã nêu.",
+    "FR-006": "Khi cổng chất lượng đạt, hệ thống PHẢI hiển thị tỷ lệ phần trăm độ bao phủ, tỷ lệ phần trăm trùng lặp mã và số lượng code smell mới của phần thay đổi được phân tích, ngay trên chính PR (không bắt người dùng phải chuyển sang một dashboard SonarQube riêng mới xem được phần tóm tắt).",
+    "FR-007": "Hệ thống PHẢI tự động chạy lại toàn bộ chuỗi chặng mỗi khi có commit mới được đẩy lên một PR đang được đánh giá, và PHẢI cập nhật trạng thái chặn merge của PR theo lượt chạy mới nhất chứ không theo lượt chạy trước đó.",
+    "FR-008": "Hệ thống PHẢI coi việc không kết nối được hoặc không hoàn tất được phân tích SonarQube (quá thời gian chờ, lỗi dịch vụ) là kết quả không đạt/bị chặn, chứ không phải là một check bị bỏ qua hay đã đạt.",
+    "FR-009": "Các ngưỡng và quy tắc của cổng chất lượng PHẢI được định nghĩa trong một quality profile/quality gate SonarQube duy nhất được quản lý tập trung, thay vì cấu hình riêng theo từng repository, từng PR hay từng lập trình viên.",
+    "FR-010": "Hệ thống PHẢI lưu giữ hồ sơ kết quả pipeline theo từng chặng và kết quả cổng chất lượng của mỗi PR, ít nhất trong suốt thời gian PR còn mở, phục vụ mục đích kiểm toán và xử lý sự cố.",
+    "US1-KB1": "Với điều kiện một PR được mở nhắm vào nhánh được bảo vệ, Khi pipeline chạy, Thì nó thực thi build → unit test → integration test → contract test → cổng chất lượng SonarQube đúng theo trình tự đó, và trạng thái đạt/không đạt của từng chặng đều nhìn thấy được trên PR.",
+    "US1-KB2": "Với điều kiện cổng chất lượng SonarQube không đạt (độ bao phủ dưới ngưỡng, có lỗi blocker/critical mới, hoặc trùng lặp mã vượt mức), Khi có người cố merge PR, Thì thao tác merge bị chặn và không vai trò nào có sẵn cơ chế ghi đè để merge.",
+    "US1-KB3": "Với điều kiện một chặng trước đó (build, unit test, integration test hoặc contract test) thất bại, Khi pipeline chạy tiếp, Thì chặng SonarQube không chạy và PR bị chặn tại chặng đã lỗi, với chặng đó được chỉ rõ là nguyên nhân.",
+    "US2-KB1": "Với điều kiện cổng chất lượng SonarQube đạt, Khi người soát xét xem trạng thái của PR, Thì độ bao phủ, mức trùng lặp và số lượng code smell của phần mã đã thay đổi đều nhìn thấy được trực tiếp trên PR.",
+    "US2-KB2": "Với điều kiện cổng chất lượng đã chạy ít nhất một lần cho một PR, Khi có commit mới được đẩy lên, Thì các chỉ số hiển thị được cập nhật theo lượt phân tích mới nhất chứ không phải theo lượt chạy đã cũ.",
+    "US3-KB1": "Với điều kiện một PR đang bị chặn do cổng chất lượng không đạt, Khi lập trình viên đẩy lên một commit xử lý được vấn đề gốc, Thì toàn bộ chuỗi pipeline tự động chạy lại và trạng thái merge của PR được cập nhật ngay khi lượt phân tích mới hoàn tất.",
+    "US3-KB2": "Với điều kiện lượt chạy lại vượt qua cổng chất lượng, Khi lập trình viên kiểm tra PR, Thì rào chặn merge được gỡ bỏ mà không cần thêm bước phê duyệt thủ công nào ngoài chính sách soát xét sẵn có.",
+    "SC-001": "100% các PR được mở nhắm vào nhánh được bảo vệ đều hiển thị một trạng thái cổng chất lượng đạt/không đạt duy nhất, suy ra từ trọn chuỗi build → unit → integration → contract → SonarQube, trước khi được phép merge.",
+    "SC-002": "Có 0 PR với cổng chất lượng không đạt được merge vào nhánh được bảo vệ, xét trên mọi vai trò, trong bất kỳ chu kỳ kiểm toán 90 ngày nào.",
+    "SC-003": "Người soát xét nhìn thấy được độ bao phủ, mức trùng lặp và số lượng code smell trực tiếp trên một PR đã đạt cổng chất lượng mà không phải rời khỏi màn hình PR, với 100% số PR đã merge.",
+    "SC-004": "Một PR chỉ bị chặn vì sụt giảm độ bao phủ/chất lượng sẽ merge được sau đúng một lượt chạy pipeline (không cần can thiệp thủ công), kể từ khi vấn đề mã nguồn gốc rễ được sửa và đẩy lên.",
+    "SC-005": "Mọi nỗ lực đi vòng hay ghi đè trên một PR đang bị chặn hoặc là bất khả thi về mặt kỹ thuật, hoặc tạo ra một bản ghi kiểm toán ngay trong cùng lượt chạy pipeline, đạt 100% số lần."
+  }
+}

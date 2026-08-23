@@ -2,123 +2,90 @@
 
 *Viết cho: quản lý không trực tiếp code .NET. Mục tiêu: hiểu codebase hiện tại đang có gì, các phần liên hệ với nhau ra sao, và vì sao nó được thiết kế như vậy — không cần đọc code.*
 
-*Cập nhật lần cuối: sau khi hoàn thành tính năng `006-e2e-order-demo` (SCRUM-16) — repo giờ có một **tài liệu chính thức đóng Giai đoạn 1**, [`docs/demo-phase-1.md`](demo-phase-1.md), kèm ảnh chụp thật từ một lượt chạy demo. Đây không còn là suy luận của người viết tài liệu này nữa — có nguồn trích dẫn trực tiếp từ repo.*
+*Cập nhật lần cuối: sau khi hoàn thành 6 tính năng thuộc **Giai đoạn 2 — Kỷ luật hợp đồng & kiểm thử** (SCRUM-17 đến SCRUM-22). **5/6 hạng mục đã xong thật**; hạng mục cuối (CI/CD + SonarQube) đã viết xong toàn bộ code/script nhưng **chưa thực sự chạy** — còn thiếu vài bước bật hệ thống bên ngoài (không phải thiếu code). Xem Mục 1.10 và Mục 5.*
 
 ---
 
 ## Điều quan trọng nhất cần biết trước khi đọc tiếp
 
-Đây **không phải** một hệ thống thương mại điện tử đang chạy production. Theo [`docs/roadmap.md`](roadmap.md), đây là **dự án luyện tập cá nhân (solo)** để một người thực hành đầy đủ vòng đời phần mềm.
+Đây **không phải** một hệ thống thương mại điện tử đang chạy production. Theo [`docs/roadmap.md`](roadmap.md), đây là **dự án luyện tập cá nhân (solo)**, đang triển khai theo 5 giai đoạn.
 
-**Giai đoạn 1 (Walking Skeleton) nay có bằng chứng đóng chính thức, không phải suy luận.** Tài liệu [`docs/demo-phase-1.md`](demo-phase-1.md) — sản phẩm của tính năng `006-e2e-order-demo` — có một bảng đối chiếu từng hạng mục của Giai đoạn 1 (SCRUM-10 đến SCRUM-16) với bằng chứng cụ thể, đều đánh dấu **"Evidenced" (đã có bằng chứng)**:
+**Giai đoạn 1 (Walking Skeleton)** đã có bằng chứng đóng chính thức từ lần cập nhật trước ([`docs/demo-phase-1.md`](demo-phase-1.md)). **Giai đoạn 2 (Contract & Test Discipline, SCRUM-17→22)** nay đã **gần như xong** — 5/6 hạng mục hoàn thành thật, 1 hạng mục còn dang dở nhưng đã "sẵn sàng bấm nút":
 
-| Hạng mục Giai đoạn 1 | Trạng thái | Bằng chứng |
-|---|---|---|
-| SCRUM-10 — Phạm vi lát cắt mỏng | Evidenced | Luồng demo đúng là lát cắt đó |
-| SCRUM-11 — Dựng vỏ 4 service | Evidenced | Cả 4 service phục vụ lượt chạy này |
-| SCRUM-12 — Định danh giả lập + tenant thật | Evidenced | Gắn tenant vào đơn hàng + từ chối khi thiếu tenant |
-| SCRUM-13 — Gateway → BFF | Evidenced | Cả Gateway và BFF phục vụ lượt chạy |
-| SCRUM-14 — Giao diện tối thiểu | Evidenced | 4 ảnh chụp màn hình |
-| SCRUM-15 — Chạy toàn bộ bằng 1 lệnh | Evidenced | Khởi động sạch từ đầu trong 2 phút 48 giây |
-| SCRUM-16 — Demo đặt 1 đơn hàng đầu-cuối | Evidenced | Chính tài liệu này |
+| Hạng mục Giai đoạn 2 | Trạng thái |
+|---|---|
+| SCRUM-17 — Hợp đồng OpenAPI cho BFF | **Xong** (đã có sẵn từ trước, tính năng này chỉ xác nhận + gia cố) |
+| SCRUM-18 — Schema sự kiện có phiên bản | **Xong phần định nghĩa** — chưa có ai thực sự publish/consume |
+| SCRUM-19 — Retrofit TDD cho giỏ hàng/đơn hàng | **Xong** — kiểm chứng lại logic cũ, không sửa gì, không thấy lỗi |
+| SCRUM-20 — Test tích hợp qua Testcontainers (SQL/Redis/RabbitMQ) | **Xong phần hạ tầng test** — Redis/RabbitMQ vẫn chưa có code sản phẩm nào gọi tới |
+| SCRUM-21 — Contract test theo hướng người tiêu dùng | **Xong** — dùng Pact thật, không dùng Pact Broker |
+| SCRUM-22 — Cổng chất lượng SonarQube trong CI | **Viết xong code/script (12/25 nhiệm vụ)** — 13 nhiệm vụ còn lại đều là thao tác của quản trị viên trên hệ thống ngoài repo (bật Jenkins, bật SonarQube server, bật branch protection trên GitHub), **không phải thiếu code** |
 
-Tài liệu này **cũng tự liệt kê rõ những gì KHÔNG được chứng minh** (Mục 5 bên dưới) — một cách làm minh bạch đáng ghi nhận, không phải "vẽ" bức tranh hoàn hảo.
-
-Trong repo có **hai tầng thông tin** dễ nhầm lẫn với nhau:
-
-| Tầng | Là gì | Đã có code chưa? |
-|---|---|---|
-| **Bản thiết kế mục tiêu** (`docs/system-design.md`, `docs/adr/`, `.specify/memory/constitution.md`) | Kiến trúc đầy đủ dự kiến: Identity Server thật, message queue (saga/outbox), phân vùng dữ liệu vật lý theo tenant, CI/CD | **Một phần nhỏ** |
-| **Codebase thực tế hôm nay** | 6 service .NET + 1 giao diện web, dựng bằng một lệnh, **có bằng chứng chạy được đầu-cuối kèm ảnh chụp** | **Có**, và là toàn bộ những gì tài liệu này mô tả |
-
-**Sáu tính năng đã hoàn thành theo đúng quy trình đặc tả**, mỗi tính năng gần như 100% nhiệm vụ: `001` đến `005` (xem các bản cập nhật trước), và mới nhất **`006-e2e-order-demo`** (**41/42** — mục còn lại là một thao tác thủ công của con người: đính kèm video lên Jira, không phải việc kỹ thuật còn thiếu).
+Không có dòng nào trong repo tự tuyên bố "Giai đoạn 2 đã xong" — bảng trên là do tôi tổng hợp lại từ `tasks.md` của từng tính năng, không phải trích dẫn nguyên văn như bảng "Evidenced" của Giai đoạn 1.
 
 ---
 
 ## 1. Giải thích codebase hiện tại
 
-### 1.1–1.7 (không đổi so với bản trước)
+### 1.1–1.9 (không đổi so với bản trước)
 
-Kiến trúc tổng thể (24 dự án .NET, 1 workspace frontend), 6 service .NET + giao diện web, luồng mua hàng, cơ chế tenant/người gọi giả lập, và cách chạy toàn bộ bằng một lệnh — giữ nguyên như lần cập nhật trước (tính năng `005`). Xem lại các mục tương ứng nếu cần chi tiết.
+Kiến trúc tổng thể, 6 service .NET + giao diện web, luồng mua hàng, cơ chế tenant/người gọi giả lập, cách chạy toàn bộ bằng một lệnh, và chế độ demo — giữ nguyên như các lần cập nhật trước.
 
-**Một điều chỉnh nhỏ cần cập nhật ở Mục 1.3 (dữ liệu):** bảng `Order` giờ có thêm cột `TenantId` (kiểu chuỗi, cho phép null, thêm bằng migration mở-rộng-không-phá-vỡ — không có dữ liệu cũ nào bị ảnh hưởng). Đây **chỉ là cột ghi nhận/hiển thị** "đơn hàng này thuộc tenant nào", server tự gán từ tenant đã xác định, client không thể tự khai. Chính code còn ghi chú rõ ràng: *"Đây là bằng chứng của việc gán nhãn, không phải cơ chế cách ly."* Cơ chế thực sự ngăn truy cập chéo tenant vẫn là chốt chặn ở `Program.cs` như trước — **cột này không thay đổi gì về việc ngăn cách vật lý dữ liệu theo tenant, khoảng nợ đó vẫn còn nguyên** (xem Mục 5).
+**Điều chỉnh số liệu:** [`Ecommerce.slnx`](../Ecommerce.slnx) giờ liệt kê **33 dự án con** (tăng từ 24), do 6 tính năng mới thêm 9 dự án: 1 thư viện định nghĩa sự kiện (`shared/EventContracts` + `EventContracts.UnitTests`), 1 thư viện hạ tầng test cho Redis/RabbitMQ (`shared/IntegrationTestSupport` + `.Tests`), 4 dự án contract-test theo Pact (`Bff/Products/Baskets/Orders.Api.ContractTests`), và 1 dự án kiểm tra độ phủ hợp đồng (`tests/ContractCoverageTests`). `dotnet build` toàn bộ: **vẫn sạch, 0 lỗi, 0 cảnh báo** (33/33 dự án).
 
-### 1.8 Dựng toàn bộ hệ thống bằng một lệnh (không đổi — xem bản cập nhật trước)
+### 1.10 Sáu tính năng Giai đoạn 2 — phần lớn là "kiểm chứng/chuẩn bị", không phải "thêm tính năng chạy được"
 
-### 1.9 Chế độ "demo" — bằng chứng chạy được, có thể lặp lại (mới — tính năng `006`)
+Đây là điều quan trọng cần hiểu đúng: khác với Giai đoạn 1 (mỗi tính năng đều làm hệ thống *chạy được thêm một việc mới*), phần lớn 6 tính năng Giai đoạn 2 **không thay đổi hành vi hệ thống khi chạy thật** — chúng chứng minh code cũ đã đủ tốt, hoặc chuẩn bị sẵn nền móng cho việc tương lai. Đây là việc làm đúng đắn và cần thiết, chỉ là không nên hiểu nhầm thành "hệ thống làm được nhiều việc hơn".
 
-Ngoài lệnh chạy bình thường (Mục 1.8), giờ có thêm **một lệnh riêng, tách biệt hoàn toàn**, chỉ để tạo bằng chứng:
+- **SCRUM-17 (`007-bff-openapi-contracts`)**: mã gọi API tự sinh cho frontend (qua Orval) **đã có sẵn từ tính năng `004`/`005`**. Tính năng này chỉ xác nhận lại toàn bộ chuỗi đó vẫn đúng, và thêm 3 bài test frontend mới kiểm tra "người đọc khoan dung" — tức là khi BFF trả về thêm một trường lạ, giao diện vẫn hiển thị đúng, không bị vỡ. **Không có code sản phẩm mới nào.**
 
-```
-cp .env.example .env      # nếu chưa có
-./scripts/demo.ps1         # hoặc ./scripts/demo.sh
-```
+- **SCRUM-18 (`008-versioned-event-schemas`)**: định nghĩa chính thức 2 schema sự kiện `OrderPlaced` và `BasketCheckedOut` (theo chuẩn JSON Schema, đúng như ADR-0005 đã chọn), đặt tại một vị trí dùng chung mới: `shared/EventContracts`. Có cơ chế tự động **chặn build nếu ai đó sửa trực tiếp một schema đã công bố** thay vì tạo phiên bản mới (`SchemaImmutabilityTests` — so khớp mã băm SHA-256 của file schema với một giá trị đã chốt). Nhưng chính tài liệu của tính năng này ghi rõ: *"Chưa có gì tham chiếu tới các schema này. Chưa có broker nào tồn tại... việc nối dây RabbitMQ + MassTransit và publish qua outbox là việc của SCRUM-31."* — nói cách khác, đây là **bản thiết kế hợp đồng cho tương lai**, chưa có ai gửi hay nhận sự kiện thật.
 
-Lệnh này tự động: dựng hệ thống ở "chế độ demo", xoá giỏ hàng cho sạch, điều khiển một trình duyệt thật đi qua đúng luồng mua hàng (duyệt → thêm giỏ → thanh toán → xác nhận), đọc lại đơn hàng từ service Orders để đối chiếu, kiểm tra xem cả 5 thành phần (Gateway, BFF, 4 service nghiệp vụ) có thực sự phục vụ lượt chạy hay không (bằng cách soi log theo dõi), rồi in ra một bản tóm tắt kèm việc so sánh với lần chạy trước để chứng minh **có thể lặp lại, không phải may mắn một lần**. Đo được: chạy lại trên hệ thống đã bật sẵn mất **10 giây**; dựng lại từ đầu (xoá sạch dữ liệu) mất **2 phút 48 giây**.
+- **SCRUM-19 (`009-retrofit-tdd-basket-order`)**: không sửa bất kỳ dòng code sản phẩm nào. Cách làm: với từng "chốt an toàn" đã có sẵn trong logic tính giá giỏ hàng/tạo đơn hàng (ví dụ chặn số lượng âm, chặn đơn hàng rỗng), **cố tình phá vỡ nó tạm thời**, xác nhận bài test tương ứng báo đỏ, rồi khôi phục lại nguyên trạng và xác nhận báo xanh trở lại. Kết quả: **không tìm thấy lỗi nào** — một cách kiểm chứng khắt khe rằng logic cũ thực sự được test bảo vệ, không phải "trông có vẻ đúng".
 
-**"Chế độ demo" là một lớp phủ hẹp, chủ động bật, không phải mặc định.** Nó chỉ khác lệnh chạy bình thường ở đúng 2 điều: mở thêm 2 cổng nội bộ (Orders, Baskets) để lệnh demo tự gọi vào kiểm tra, và tăng mức chi tiết log của bộ thu thập theo dõi. **Không đổi bất kỳ hành vi nghiệp vụ, không tắt xác thực, không bỏ qua bước nào** — file cấu hình demo tự ghi chú: *"Thứ được trình diễn phải là hệ thống chạy như bình thường, không phải một hệ thống được cấu hình lại để trình diễn cho đẹp."* Lệnh chạy bình thường (`scripts/up.sh`) hoàn toàn không biết tới file cấu hình demo này.
+- **SCRUM-20 (`010-testcontainers-integration-tests`)**: thêm hạ tầng test dùng container **Redis và RabbitMQ thật** (trước đây chỉ có SQL Server thật trong test), để sẵn sàng cho lúc nào đó có code thật cần dùng tới. Nhưng — đúng như chính tài liệu tính năng ghi lại — **không có code sản phẩm nào gọi tới Redis/RabbitMQ**, y hệt tình trạng đã ghi nhận từ tính năng `005`. Container Redis/RabbitMQ trong `docker-compose.yml` vẫn đang "chạy không" theo đúng nghĩa đen.
 
-**Kết quả cụ thể đã ghi lại:** giỏ hàng gồm 2 sổ tay + 1 tạp dề → thanh toán → tổng **$59.25**; gọi thẳng vào service Orders **không kèm** thông tin tenant → bị từ chối (đúng như thiết kế); gọi lại **có** tenant `contoso` → thành công, đơn hàng đọc lại khớp. Bốn ảnh chụp màn hình của lượt chạy này (`docs/demo/01-catalog.png` đến `04-basket-empty.png`) đã được lưu thẳng trong repo làm bằng chứng lâu dài; video đầy đủ **không** lưu trong repo (tránh phình dung lượng theo thời gian) mà đính kèm vào Jira SCRUM-16.
+- **SCRUM-21 (`011-consumer-contract-tests`)**: đây là tính năng có ý nghĩa thực chất nhất trong 6 tính năng — dùng công cụ **Pact thật** (`PactNet`, đúng công cụ đã chọn từ ADR-0006) để kiểm tra 4 "ranh giới hợp đồng": BFF↔Products, BFF↔Baskets, BFF↔Orders, và một ranh giới thử nghiệm cho sự kiện Orders↔Baskets (`BasketCheckedOut`, dù chưa ai publish/consume thật — chỉ là "hợp đồng đã có sẵn để việc nối dây sau này không phải định nghĩa lại từ đầu"). Điểm khác so với bản thiết kế mục tiêu: ADR-0006 chọn dùng thêm một **Pact Broker** riêng để lưu trữ và theo dõi hợp đồng tập trung — **hiện chưa có Broker nào chạy**, các file hợp đồng (`pacts/*.json`) chỉ được lưu thẳng trong repo.
+
+- **SCRUM-22 (`012-sonarqube-quality-gate`)**: xem chi tiết riêng ở Mục 1.11 vì đây là hạng mục lớn nhất và chưa hoàn tất.
+
+### 1.11 CI/CD + cổng chất lượng SonarQube — đã viết xong, chưa thực sự bật (mới, chưa hoàn tất)
+
+Đây là lần đầu tiên repo có **cấu hình CI/CD thật** — trước đây hoàn toàn không có gì (không `Jenkinsfile`, không `.github/workflows`). Giờ đã có:
+
+- **`Jenkinsfile`** (184 dòng, ở gốc repo) — một pipeline khai báo thật, đủ 5 bước theo đúng thứ tự: bắt đầu phân tích SonarQube → build (cả .NET lẫn frontend) → unit test → integration test (dùng Testcontainers) → contract test → **cổng chất lượng SonarQube** (chờ tối đa 15 phút, **chặn cứng nếu kết quả không phải "OK"**).
+- Các script hỗ trợ (`scripts/ci/*.sh`), công cụ đã ghim phiên bản (`dotnet-sonarscanner`, `dotnet-coverage`), và file cấu hình `sonar-project.properties` — đều đã tồn tại và dùng được.
+- Một quyết định kiến trúc mới, [`docs/adr/0012-ci-quality-gate-enforcement.md`](adr/0012-ci-quality-gate-enforcement.md), ghi lại rõ ràng lý do và cách làm.
+
+**Nhưng — và đây là điểm quan trọng nhất — chưa có gì THỰC SỰ chạy.** `tasks.md` của tính năng này có hệ thống đánh dấu riêng: `[X]` = đã xong và tự kiểm chứng được trên máy; **`[ ] ⛔` = bị chặn vì cần quyền truy cập vào một hệ thống bên ngoài repo**. Cả **13 nhiệm vụ còn lại đều mang dấu ⛔** — không phải vì thiếu ai viết code, mà vì cần một quản trị viên thực hiện các bước ngoài repo: cài đặt Jenkins + kết nối tới SonarQube server thật, tạo pipeline job trên Jenkins, và **bật quy tắc bảo vệ nhánh (branch protection) trên GitHub** để pipeline thực sự trở thành điều kiện bắt buộc trước khi merge.
+
+**Nói thẳng: hôm nay, chưa có gì ngăn được việc merge code mà không qua kiểm tra nào cả** — pipeline đã sẵn sàng "cắm điện là chạy", nhưng chưa ai cắm điện.
 
 ---
 
 ## 2. Các dự án/component và cách chúng phụ thuộc lẫn nhau
 
-Không đổi so với bản trước — tính năng `006` **không thêm dự án .NET mới** (vẫn 24 dự án), chỉ mở rộng `Orders.Api` (thêm cột `TenantId`) và thêm bộ script/spec demo nằm ngoài `.slnx`. Bảy "lưới an toàn kiến trúc" tự động (Mục 2.6 bản trước) không đổi.
+Không đổi về cấu trúc lõi (6 service, Gateway, BFF, 2 thư viện tenant/log cũ) so với các bản trước. Bổ sung 3 nhóm dự án mới từ Giai đoạn 2 (Mục 1.10–1.11): `shared/EventContracts` (định nghĩa sự kiện, chưa ai dùng), `shared/IntegrationTestSupport` (hạ tầng test Redis/RabbitMQ, chưa service nào gọi), và 5 dự án contract-test theo Pact (`*.ContractTests` + `ContractCoverageTests`) — tất cả đều là dự án **kiểm thử/định nghĩa**, không phải service chạy thật, và không được service nào tham chiếu ngược lại.
 
 ---
 
 ## 3. Mục đích từng phần + các tình huống thực tế được giải quyết
 
-### 3.1 Mục đích từng dự án/thành phần (không đổi — xem bản cập nhật trước)
+### 3.1–3.2 (không đổi — thêm 2 tình huống mới)
 
-Bảng mục đích từng dự án giữ nguyên như bản cập nhật cho tính năng `005`; tính năng `006` không thêm dự án nào.
+Giữ nguyên 12 tình huống đã liệt kê ở các bản cập nhật trước, bổ sung:
 
-### 3.2 Mười hai tình huống thật mà giải pháp này giải quyết
+**13) "Không tìm thấy lỗi" cũng là một kết quả có giá trị, nếu cách kiểm chứng đủ khắt khe.**
+Tính năng `009` không sửa một dòng code sản phẩm nào — nhưng không phải vì làm qua loa. Cách làm (cố tình phá vỡ từng chốt an toàn, xác nhận test báo đỏ, rồi khôi phục) chứng minh được rằng logic tính giá giỏ hàng và tạo đơn hàng **thực sự** được test bảo vệ, chứ không chỉ "nhìn có vẻ ổn". Đây là sự khác biệt giữa "không ai tìm ra lỗi vì không ai kiểm tra kỹ" và "đã kiểm tra kỹ và không có lỗi" — quản lý nên phân biệt được hai điều này khi nghe báo cáo "test đều pass".
 
-*Mười tình huống đầu đã có từ các bản cập nhật trước, nay chép lại đầy đủ để đọc được một mạch mà không phải lần theo lịch sử tài liệu. Hai tình huống cuối là mới, đến từ tính năng `006`.*
-
-**1) Ngăn rò rỉ/đè dữ liệu chéo giữa các bộ phận nghiệp vụ, trước khi nó xảy ra.**
-Một lập trình viên copy-paste nhầm file cấu hình khiến service Baskets trỏ sang CSDL của Orders. Ở đây build **thất bại ngay**, trước khi code được merge — bắt lỗi ở khâu *sở hữu*, không đợi đến khâu *sử dụng*.
-
-**2) Phát hiện sự cố hạ tầng tự động, không cần con người theo dõi 24/7.**
-`/health/ready` thật sự thử mở kết nối tới CSDL; `/health/live` **cố tình không** kiểm tra CSDL, để một sự cố CSDL 30 giây không biến thành sự cố ứng dụng 5 phút do bị khởi động lại hàng loạt.
-
-**3) Giữ chất lượng kiến trúc ổn định khi thời gian trôi qua, không phụ thuộc trí nhớ một người.**
-Các bài test kiến trúc biến quy ước tổ chức code thành điều kiện bắt buộc để build thành công.
-
-**4) Một service chết không kéo sập cả hệ thống.**
-Không có ngân sách thời gian, mặc định .NET chờ tới 100 giây mỗi lời gọi — một service treo có thể làm BFF cạn luồng xử lý và ngừng trả lời **mọi thứ**, kể cả phần không liên quan. Với ngân sách 3 giây hiện tại, người gọi luôn nhận lỗi rõ ràng trong vài giây, các phần khác vẫn chạy bình thường.
-
-**5) Lỗi có mã tra cứu, thay vì "hệ thống đang bận, vui lòng thử lại".**
-Một mã theo dõi (`X-Correlation-Id`) lần được toàn bộ hành trình của request qua cả ba tầng trong hệ thống ghi log — không có nó, điều tra một khiếu nại cụ thể gần như bất khả thi trong hệ phân tán.
-
-**6) Đội frontend không thể vô tình bỏ sót trường hợp lỗi.**
-Tài liệu API sinh tự động từng chỉ khai báo trường hợp thành công; đã sửa để bắt buộc khai báo cả 404/502/504, và có test canh để không lệch trở lại — quan trọng vì mã nguồn giao diện dự kiến sẽ được sinh tự động từ chính tài liệu này.
-
-**7) "Quên xác định đang phục vụ ai" biến thành lỗi ồn ào ngay lập tức, không phải rò rỉ dữ liệu âm thầm.**
-Nếu một script nội bộ, một lần debug thủ công, hay một tính năng tương lai gọi thẳng vào service nghiệp vụ mà bỏ qua Gateway (nên thiếu header `X-Tenant-Id`), hệ thống **dừng cứng với lỗi 500** thay vì âm thầm trả lời bằng dữ liệu của tenant mặc định nào đó. Vì toàn hệ thống chỉ có đúng một điểm khởi tạo kết nối CSDL cho mỗi service, và điểm đó bắt buộc phải xác định tenant trước — không có đường vòng nào để tính năng mới lỡ quên bước này mà vẫn chạy được. *Từ tính năng `004`, điều này áp dụng cho cả tenant lẫn người gọi cụ thể (`X-Subject-Id`), không chỉ riêng tenant.*
-
-**8) Thanh toán trùng lặp do bấm nhầm/mạng chậm không tạo ra hai đơn hàng.**
-Một tình huống rất thật trong thương mại điện tử: khách hàng bấm "Thanh toán", mạng chậm, khách sốt ruột bấm thêm lần nữa. Vì bước đầu tiên của thanh toán luôn kiểm tra giỏ hàng có còn hàng không, và giỏ đã bị xoá ngay sau lần thanh toán thành công đầu tiên, lần bấm thứ hai tự động nhận lỗi rõ ràng (409 — "giỏ hàng trống") thay vì tạo ra đơn hàng thứ hai và tính tiền hai lần. Không cần viết thêm cơ chế "chống trùng lặp" riêng — tác dụng phụ tự nhiên của đúng thứ tự các bước.
-
-**9) "Test đều xanh" không có nghĩa là "chạy được" — cho tới khi có ai thực sự thử đóng gói.**
-Trong nhiều tháng, toàn bộ 96+ bài test của hệ thống đều báo xanh, `dotnet build` luôn sạch — nhưng **5 trên 6 Dockerfile thực ra không build được**, vì thiếu một dòng copy thư viện dùng chung. Không có bài test .NET nào từng phát hiện ra, đơn giản vì không có bài test .NET nào từng thử build container. Chỉ khi tính năng `005` thực sự cần chạy container thật, lỗi mới lộ ra — và ngay khi lộ ra, đã được biến thành một bài test tự động (`ContainerConventionTests`) để không bao giờ tái diễn âm thầm. Bài học quản lý: "test xanh" chỉ chứng minh những gì test đó *có kiểm tra*, không hơn.
-
-**10) Một lỗi chỉ xuất hiện khi thử lại nhiều lần, không xuất hiện ở lần chạy đầu tiên — và cách duy nhất tìm ra nó là chủ động thử lại nhiều lần.**
-Cách kiểm tra "CSDL đã sẵn sàng chưa" tưởng như đơn giản (hỏi server có phản hồi không) thực ra **sai trong khoảng 40% trường hợp** khi khởi động lại: server phản hồi trước khi từng database bên trong phục hồi xong, dẫn tới lỗi ngẫu nhiên "database đã tồn tại". Nếu chỉ thử một lần rồi kết luận "chạy được", lỗi này sẽ ngủ yên và một ngày nào đó xuất hiện ngẫu nhiên trong tay người dùng thật, không cách nào lặp lại để điều tra. Chỉ vì tính năng `005` chủ động yêu cầu thử "10 lần dừng-bật liên tiếp" thay vì "chạy một lần cho có", lỗi mới lộ diện đủ để sửa tận gốc.
-
-**11) Muốn có bằng chứng "hệ thống chạy được", đừng chỉ nói — hãy tự động hoá việc chứng minh, và chứng minh nhiều lần chứ không phải một lần.**
-Rất nhiều dự án phần mềm tuyên bố "đã xong giai đoạn 1" chỉ bằng lời hoặc một buổi demo trực tiếp không ai ghi lại — khi cần xác minh lại 3 tháng sau thì không còn gì để kiểm chứng. Ở đây, "bằng chứng" được biến thành một lệnh chạy lại được bất cứ lúc nào, tự so sánh với lần chạy trước để chứng minh không phải một lần trùng hợp may mắn, và để lại dấu vết cụ thể (ảnh chụp) trong chính repo — bất kỳ ai, kể cả người không kỹ thuật, đều xem lại được `docs/demo-phase-1.md` mà không cần chạy gì.
-
-**12) Công cụ đo lường không được làm thay đổi thứ đang được đo.**
-Khi cần "chế độ demo" để mở thêm cổng và tăng log phục vụ việc kiểm chứng, có một cám dỗ tự nhiên là tiện thể "dọn dẹp" luôn — tắt bớt kiểm tra, nới lỏng vài thứ để demo chạy mượt hơn. Đội phát triển chủ động tránh cám dỗ này: chế độ demo chỉ được phép khác đúng 2 điều nhỏ so với hệ thống chạy thật, và có ghi chú thẳng trong code lý do tại sao — vì nếu demo chạy trên một hệ thống đã bị "làm màu", bằng chứng thu được sẽ không còn đáng tin cho bất kỳ ai đọc lại sau này.
+**14) Một hệ thống CI/CD "đã viết xong" và một hệ thống CI/CD "đang bảo vệ nhánh chính" là hai việc khác nhau — và khoảng cách giữa chúng thường là quyền quản trị, không phải kỹ thuật.**
+`Jenkinsfile` và toàn bộ script hỗ trợ đã sẵn sàng, đã được xác minh chạy đúng trên máy cá nhân. Nhưng để nó thực sự **chặn được merge**, cần ba hành động của quản trị viên nằm ngoài phạm vi một lập trình viên tự làm được: cấp quyền kết nối Jenkins↔SonarQube, tạo pipeline job, và bật branch protection trên GitHub. Đây là một điểm nghẽn kiểu tổ chức (ai có quyền bấm nút), không phải điểm nghẽn kỹ thuật — quản lý nên lưu ý loại điểm nghẽn này thường bị bỏ sót khi ước tính "còn bao lâu nữa xong".
 
 ---
 
 ## 4. Sơ đồ kiến trúc hiện tại (dùng được với draw.io)
 
-Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dưới (viền đứt màu đỏ) là những gì vẫn chỉ nằm trên giấy — nay được đối chiếu trực tiếp với danh sách "chưa chứng minh" chính thức trong `docs/demo-phase-1.md` (Mục 5 bên dưới), không còn là suy đoán riêng của tài liệu này.
+Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dưới đã được **đổi tên** để tránh nhầm với "Giai đoạn 2" thật của roadmap (vốn nay đã gần xong) — nay gọi là "chưa xây dựng, thuộc Giai đoạn 3-5".
 
 > **Lưu ý phân biệt:** repo có sẵn 3 sơ đồ khác ở [`docs/system-design.md`](system-design.md) — nhưng chúng vẽ **kiến trúc mục tiêu đầy đủ**, không phải trạng thái hiện tại.
 
@@ -132,11 +99,11 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
 ```xml
 <mxfile host="Electron" agent="5.0">
   <diagram id="current-state-005" name="Trạng thái hiện tại — sau 005">
-    <mxGraphModel dx="3279" dy="737" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1820" math="0" shadow="0">
+    <mxGraphModel dx="3279" dy="737" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="2060" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#2d6a2d;" value="PHẦN 1 — ĐÃ CÓ TRONG CODE HÔM NAY (24 dự án .NET + 1 workspace frontend; 1 LỆNH DUY NHẤT chạy toàn bộ stack; xem docs/demo-phase-1.md để có bằng chứng Giai đoạn 1 đã xong)" vertex="1">
+        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#2d6a2d;" value="PHẦN 1 — ĐÃ CÓ TRONG CODE HÔM NAY (33 dự án .NET + 1 workspace frontend; 1 LỆNH DUY NHẤT chạy toàn bộ stack; xem docs/demo-phase-1.md để có bằng chứng Giai đoạn 1 đã xong)" vertex="1">
           <mxGeometry height="26" width="1450" x="30" as="geometry" />
         </mxCell>
         <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="Storefront (frontend/apps/web)&#xa;CÁCH 1 — 1 lệnh, docker (mới từ 005): container nginx, cổng 4173,&#xa;  từ Dockerfile riêng, CHỈ gọi Gateway qua cổng 5300&#xa;CÁCH 2 — dev thủ công: pnpm dev, Vite, cổng 5173&#xa;3 màn hình: Sản phẩm (/) - Giỏ hàng (/basket) - Xác nhận (/confirmation)" vertex="1">
@@ -184,7 +151,7 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
         <mxCell id="svc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Baskets.Api&#xa;Cổng 5188 (chỉ mở trong chế độ debug)&#xa;Giỏ hàng của người gọi (CustomerRef)&#xa;+ /health/live, /health/ready&#xa;Bảng: Basket (Total tính tại chỗ) + BasketLineItem&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="380" y="610" as="geometry" />
         </mxCell>
-        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Orders.Api&#xa;Cổng 5041 (chỉ mở trong chế độ debug, hoặc chế độ demo)&#xa;Tạo đơn hàng từ dòng giỏ hàng; đọc lại theo id&#xa;+ /health/live, /health/ready&#xa;Bảng: Order (Id, PlacedAtUtc, Total, MỚI: TenantId — chỉ là&#xa;NHÃN, không phải ngăn cách vật lý, xem Phần 2)&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
+        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Orders.Api&#xa;Cổng 5041 (chỉ mở trong chế độ debug, hoặc chế độ demo)&#xa;Tạo đơn hàng từ dòng giỏ hàng; đọc lại theo id&#xa;+ /health/live, /health/ready&#xa;Bảng: Order (Id, PlacedAtUtc, Total, TenantId — chỉ là&#xa;NHÃN, không phải ngăn cách vật lý, xem mục 1.3)&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="730" y="610" as="geometry" />
         </mxCell>
         <mxCell id="svc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Parties.Api&#xa;Cổng 5204 (chỉ mở trong chế độ debug)&#xa;GET /parties/{id}&#xa;+ /health/live, /health/ready&#xa;Bảng: Party (Id, DisplayName)&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
@@ -217,7 +184,7 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
         <mxCell id="redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="Redis&#xa;Chạy và có healthcheck, nhưng CHƯA có&#xa;service nào kết nối vào (có chủ đích,&#xa;xem FR-017 của tính năng 005)" vertex="1">
           <mxGeometry height="80" width="440" x="500" y="910" as="geometry" />
         </mxCell>
-        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="RabbitMQ&#xa;Chạy và có healthcheck, nhưng CHƯA có&#xa;service nào kết nối vào — dành cho&#xa;saga/outbox tương lai (xem Phần 2)" vertex="1">
+        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="RabbitMQ&#xa;Chạy và có healthcheck, nhưng CHƯA có&#xa;service nào kết nối vào — có hạ tầng&#xa;test thật từ 010, vẫn chưa có code&#xa;sản phẩm nào gọi tới" vertex="1">
           <mxGeometry height="80" width="440" x="960" y="910" as="geometry" />
         </mxCell>
         <mxCell id="guardtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#666666;" value="&#39;Lưới an toàn&#39; kiến trúc tự động — chạy như bài test mỗi lần build, FAIL build khi bị vi phạm (7 loại)" vertex="1">
@@ -327,98 +294,128 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="title2" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#a03030;" value="PHẦN 2 — CHƯA XÂY DỰNG, MỚI LÀ KẾ HOẠCH (Phase 2-5, xem docs/roadmap.md)" vertex="1">
-          <mxGeometry height="26" width="1000" x="30" y="1440" as="geometry" />
+        <mxCell id="title2" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#2d6a2d;" value="GIAI ĐOẠN 2 CỦA ROADMAP — KỶ LUẬT HỢP ĐỒNG &amp; KIỂM THỬ (SCRUM-17..22) — 5/6 ĐÃ XONG THẬT, 1 (SCRUM-22) ĐÃ VIẾT XONG CODE NHƯNG CHƯA BẬT" vertex="1">
+          <mxGeometry height="26" width="1400" x="30" y="1440" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="SCRUM-17 (007)&#xa;Hợp đồng OpenAPI cho BFF&#xa;ĐÃ XONG — đã có sẵn từ trước (Orval),&#xa;007 chỉ xác nhận + thêm 3 test&#xa;&quot;người đọc khoan dung&quot; ở frontend" vertex="1">
+          <mxGeometry height="140" width="220" x="30" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="SCRUM-18 (008)&#xa;Schema sự kiện có phiên bản&#xa;(OrderPlaced, BasketCheckedOut)&#xa;ĐÃ ĐỊNH NGHĨA xong (shared/&#xa;EventContracts), NHƯNG chưa có&#xa;ai publish/consume thật" vertex="1">
+          <mxGeometry height="140" width="220" x="256" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="SCRUM-19 (009)&#xa;Retrofit TDD cho giá giỏ hàng&#xa;+ tạo đơn hàng&#xa;ĐÃ KIỂM CHỨNG bằng cách phá rồi&#xa;phục hồi code — KHÔNG sửa gì,&#xa;không tìm thấy lỗi nào" vertex="1">
+          <mxGeometry height="140" width="220" x="482" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="SCRUM-20 (010)&#xa;Test tích hợp qua Testcontainers&#xa;(SQL Server + Redis + RabbitMQ)&#xa;ĐÃ CÓ hạ tầng test THẬT cho Redis/&#xa;RabbitMQ, nhưng KHÔNG có code sản&#xa;phẩm nào gọi tới (vẫn nhàn rỗi)" vertex="1">
+          <mxGeometry height="140" width="220" x="708" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="SCRUM-21 (011)&#xa;Contract test theo hướng người tiêu dùng&#xa;Dùng PactNet thật, 4 ranh giới&#xa;(BFF↔3 service, Orders↔Baskets&#xa;qua event) — file .json lưu ngay&#xa;trong repo, KHÔNG có Pact Broker" vertex="1">
+          <mxGeometry height="140" width="220" x="934" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6b3;strokeColor=#bf9000;dashed=1;fontColor=#7f6000;fontSize=9;" value="SCRUM-22 (012)&#xa;Jenkins + SonarQube quality gate&#xa;ĐÃ VIẾT XONG code/script (Jenkinsfile,&#xa;12/25 nhiệm vụ) — 13 nhiệm vụ còn lại&#xa;CẦN quản trị viên bật Jenkins/SonarQube&#xa;thật + bật branch protection GitHub" vertex="1">
+          <mxGeometry height="140" width="240" x="1160" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2note" parent="1" style="text;html=1;fontSize=10;fontColor=#2d6a2d;whiteSpace=wrap;" value="Khác với Giai đoạn 1: phần lớn 6 hạng mục này KHÔNG làm hệ thống chạy được thêm việc gì mới — chúng chứng minh code cũ đủ vững (009), hoặc chuẩn bị sẵn hợp đồng cho tương lai (008, 010, 011) mà chưa nối dây thật. Hôm nay CHƯA có gì ngăn được việc merge code mà không qua kiểm tra nào — Jenkinsfile đã sẵn sàng &quot;cắm điện là chạy&quot;, nhưng chưa ai cắm điện (SCRUM-22)." vertex="1">
+          <mxGeometry height="45" width="1390" x="30" y="1622" as="geometry" />
+        </mxCell>
+        <mxCell id="title3" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#a03030;" value="CHƯA XÂY DỰNG — thuộc Giai đoạn 3-5 của roadmap (xem docs/roadmap.md)" vertex="1">
+          <mxGeometry height="26" width="1000" x="30" y="1685" as="geometry" />
         </mxCell>
         <mxCell id="futurebg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#cc6666;dashed=1;" value="" vertex="1">
-          <mxGeometry height="130" width="1400" x="20" y="1475" as="geometry" />
+          <mxGeometry height="130" width="1400" x="20" y="1720" as="geometry" />
         </mxCell>
         <mxCell id="f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Identity Server thật&#xa;(Duende)&#xa;(SCRUM-23, Giai&#xa;đoạn 3)" vertex="1">
-          <mxGeometry height="80" width="255" x="40" y="1500" as="geometry" />
+          <mxGeometry height="80" width="255" x="40" y="1745" as="geometry" />
         </mxCell>
         <mxCell id="f2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Ngăn cách VẬT LÝ&#xa;theo tenant (đã thử,&#xa;đã chủ động huỷ —&#xa;xem mục 1.3)" vertex="1">
-          <mxGeometry height="80" width="255" x="320" y="1500" as="geometry" />
+          <mxGeometry height="80" width="255" x="320" y="1745" as="geometry" />
         </mxCell>
-        <mxCell id="f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Saga + Outbox thật cho&#xa;thanh toán — THỰC SỰ&#xa;dùng RabbitMQ đang&#xa;chạy rỗng (ADR-0011)" vertex="1">
-          <mxGeometry height="80" width="255" x="600" y="1500" as="geometry" />
+        <mxCell id="f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Nối dây Saga+Outbox&#xa;thật (SCRUM-31) — đã&#xa;có sẵn schema (008) +&#xa;hợp đồng Pact (011)" vertex="1">
+          <mxGeometry height="80" width="255" x="600" y="1745" as="geometry" />
         </mxCell>
-        <mxCell id="f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Logistics + Invoices&#xa;service (sẽ dùng Redis/&#xa;RabbitMQ đang chạy rỗng&#xa;nhưng còn trống)" vertex="1">
-          <mxGeometry height="80" width="255" x="880" y="1500" as="geometry" />
+        <mxCell id="f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Logistics + Invoices&#xa;service (sẽ dùng Redis/&#xa;RabbitMQ đang chạy&#xa;nhưng còn trống)" vertex="1">
+          <mxGeometry height="80" width="255" x="880" y="1745" as="geometry" />
         </mxCell>
-        <mxCell id="f5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Jenkins CI/CD,&#xa;Vault, Unleash,&#xa;Pact Broker" vertex="1">
-          <mxGeometry height="80" width="240" x="1160" y="1500" as="geometry" />
+        <mxCell id="f5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Bật Jenkins/SonarQube&#xa;thật + branch protection;&#xa;Vault, Unleash,&#xa;Pact Broker" vertex="1">
+          <mxGeometry height="80" width="240" x="1160" y="1745" as="geometry" />
         </mxCell>
-        <mxCell id="fnote" parent="1" style="text;html=1;fontSize=10;fontColor=#a03030;whiteSpace=wrap;" value="Redis và RabbitMQ ĐÃ CHẠY thật trong docker-compose.yml từ tính năng 005 (hạ tầng sẵn sàng), nhưng vẫn CHƯA có service nào kết nối vào — nghiệp vụ dùng tới nó vẫn là kế hoạch.&#xa;Chạy-toàn-bộ-bằng-1-lệnh (SCRUM-15) và Web SPA (SCRUM-14) ĐÃ chuyển lên Phần 1, không còn là kế hoạch nữa — việc còn lại cuối cùng của Giai đoạn 1 (Walking Skeleton) coi như đã xong." vertex="1">
-          <mxGeometry height="45" width="1360" x="35" y="1610" as="geometry" />
+        <mxCell id="fnote" parent="1" style="text;html=1;fontSize=10;fontColor=#a03030;whiteSpace=wrap;" value="Web SPA (SCRUM-14), chạy-toàn-bộ-bằng-1-lệnh (SCRUM-15), và toàn bộ Giai đoạn 2 (SCRUM-17..21) ĐÃ chuyển lên các phần trên, không còn là kế hoạch nữa. SCRUM-22 nằm ở trạng thái trung gian — xem hộp màu vàng bên trên." vertex="1">
+          <mxGeometry height="35" width="1360" x="35" y="1855" as="geometry" />
         </mxCell>
         <mxCell id="lgtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=12;" value="Chú giải" vertex="1">
-          <mxGeometry height="20" width="100" x="30" y="1670" as="geometry" />
+          <mxGeometry height="20" width="100" x="30" y="1905" as="geometry" />
         </mxCell>
         <mxCell id="lgc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1">
-          <mxGeometry height="20" width="20" x="30" y="1700" as="geometry" />
+          <mxGeometry height="20" width="20" x="30" y="1935" as="geometry" />
         </mxCell>
-        <mxCell id="lgc1t" parent="1" style="text;html=1;fontSize=11;" value="Service nghiệp vụ (sở hữu dữ liệu riêng)" vertex="1">
-          <mxGeometry height="20" width="300" x="55" y="1700" as="geometry" />
+        <mxCell id="lgc1t" parent="1" style="text;html=1;fontSize=11;" value="Service nghiệp vụ / hạng mục Giai đoạn 2 đã xong thật" vertex="1">
+          <mxGeometry height="20" width="360" x="55" y="1935" as="geometry" />
         </mxCell>
         <mxCell id="lgc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1">
-          <mxGeometry height="20" width="20" x="30" y="1730" as="geometry" />
+          <mxGeometry height="20" width="20" x="30" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc2t" parent="1" style="text;html=1;fontSize=11;" value="Service ở biên (không sở hữu dữ liệu)" vertex="1">
-          <mxGeometry height="20" width="300" x="55" y="1730" as="geometry" />
+          <mxGeometry height="20" width="300" x="55" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1">
-          <mxGeometry height="20" width="20" x="390" y="1700" as="geometry" />
+          <mxGeometry height="20" width="20" x="430" y="1935" as="geometry" />
         </mxCell>
         <mxCell id="lgc7t" parent="1" style="text;html=1;fontSize=11;" value="Giao diện web (frontend, ngoài .slnx)" vertex="1">
-          <mxGeometry height="20" width="300" x="415" y="1700" as="geometry" />
+          <mxGeometry height="20" width="300" x="455" y="1935" as="geometry" />
         </mxCell>
         <mxCell id="lgc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1">
-          <mxGeometry height="20" width="20" x="390" y="1730" as="geometry" />
+          <mxGeometry height="20" width="20" x="430" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc3t" parent="1" style="text;html=1;fontSize=11;" value="Thư viện dùng chung / hạ tầng ĐÃ dùng thật (OTel)" vertex="1">
-          <mxGeometry height="20" width="340" x="415" y="1730" as="geometry" />
+          <mxGeometry height="20" width="340" x="455" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;" vertex="1">
-          <mxGeometry height="20" width="20" x="770" y="1700" as="geometry" />
+          <mxGeometry height="20" width="20" x="810" y="1935" as="geometry" />
         </mxCell>
-        <mxCell id="lgc8t" parent="1" style="text;html=1;fontSize=11;" value="Migrator (1 lần) / hạ tầng chạy nhưng CHƯA dùng (Redis, RabbitMQ)" vertex="1">
-          <mxGeometry height="20" width="400" x="795" y="1700" as="geometry" />
+        <mxCell id="lgc8t" parent="1" style="text;html=1;fontSize=11;" value="Đã tồn tại (migrator, schema, test-fixture) nhưng CHƯA nối dây/CHƯA dùng thật" vertex="1">
+          <mxGeometry height="20" width="420" x="835" y="1935" as="geometry" />
         </mxCell>
         <mxCell id="lgc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1">
-          <mxGeometry height="20" width="20" x="770" y="1730" as="geometry" />
+          <mxGeometry height="20" width="20" x="810" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc4t" parent="1" style="text;html=1;fontSize=11;" value="Lưới an toàn kiến trúc (tests) — 7 loại" vertex="1">
-          <mxGeometry height="20" width="330" x="795" y="1730" as="geometry" />
+          <mxGeometry height="20" width="330" x="835" y="1965" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6b3;strokeColor=#bf9000;dashed=1;" vertex="1">
+          <mxGeometry height="20" width="20" x="1210" y="1965" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc9t" parent="1" style="text;html=1;fontSize=11;" value="Code/script đã viết, CHƯA bật hạ tầng ngoài" vertex="1">
+          <mxGeometry height="20" width="260" x="1235" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1">
-          <mxGeometry height="20" width="20" x="1200" y="1700" as="geometry" />
+          <mxGeometry height="20" width="20" x="30" y="1995" as="geometry" />
         </mxCell>
         <mxCell id="lgc5t" parent="1" style="text;html=1;fontSize=11;" value="Cơ sở dữ liệu" vertex="1">
-          <mxGeometry height="20" width="160" x="1225" y="1700" as="geometry" />
+          <mxGeometry height="20" width="160" x="55" y="1995" as="geometry" />
         </mxCell>
         <mxCell id="lgc6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;" vertex="1">
-          <mxGeometry height="20" width="20" x="1200" y="1730" as="geometry" />
+          <mxGeometry height="20" width="20" x="260" y="1995" as="geometry" />
         </mxCell>
-        <mxCell id="lgc6t" parent="1" style="text;html=1;fontSize=11;" value="Chỉ là kế hoạch — chưa có code" vertex="1">
-          <mxGeometry height="20" width="230" x="1225" y="1730" as="geometry" />
+        <mxCell id="lgc6t" parent="1" style="text;html=1;fontSize=11;" value="Chỉ là kế hoạch — chưa có code (Giai đoạn 3-5)" vertex="1">
+          <mxGeometry height="20" width="330" x="285" y="1995" as="geometry" />
         </mxCell>
         <mxCell id="lgline1" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;fontSize=9;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="30" y="1770" as="sourcePoint" />
-            <mxPoint x="80" y="1770" as="targetPoint" />
+            <mxPoint x="650" y="2005" as="sourcePoint" />
+            <mxPoint x="700" y="2005" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="lgline1t" parent="1" style="text;html=1;fontSize=11;" value="Gọi thật lúc chạy (HTTP / EF Core)" vertex="1">
-          <mxGeometry height="20" width="260" x="90" y="1760" as="geometry" />
+          <mxGeometry height="20" width="260" x="710" y="1995" as="geometry" />
         </mxCell>
         <mxCell id="lgline2" edge="1" parent="1" style="edgeStyle=none;dashed=1;html=1;endArrow=block;fontSize=9;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="400" y="1770" as="sourcePoint" />
-            <mxPoint x="450" y="1770" as="targetPoint" />
+            <mxPoint x="1000" y="2005" as="sourcePoint" />
+            <mxPoint x="1050" y="2005" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="lgline2t" parent="1" style="text;html=1;fontSize=11;" value="Tham chiếu thư viện / phụ thuộc lúc build hoặc lúc khởi động (docker depends_on)" vertex="1">
-          <mxGeometry height="20" width="480" x="460" y="1760" as="geometry" />
+          <mxGeometry height="20" width="440" x="1060" y="1995" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
@@ -428,28 +425,29 @@ Sơ đồ vẽ **đúng những gì đang có trong code hôm nay**. Phần dư�
 
 ---
 
-## 5. Rủi ro và việc còn treo — nay trích dẫn trực tiếp từ `docs/demo-phase-1.md`
+## 5. Rủi ro và việc còn treo
 
-Điểm khác biệt lớn nhất của lần cập nhật này: danh sách dưới đây không còn là đánh giá riêng của tài liệu quản lý này nữa — nó **trích trực tiếp** từ mục "những gì demo KHÔNG chứng minh" mà chính đội phát triển tự viết ra và công khai trong repo.
+**1) [MỚI] CI/CD đã viết xong nhưng chưa bảo vệ được gì.** Xem chi tiết Mục 1.11. Đây là rủi ro **quy trình**, không phải rủi ro code: bất kỳ ai cũng có thể merge code hôm nay mà không qua bất kỳ kiểm tra tự động nào, dù toàn bộ công cụ đã sẵn sàng. Cần 3 hành động của quản trị viên (không phải lập trình viên) để kích hoạt thật.
 
-**1) Ngăn cách vật lý dữ liệu theo tenant — "khoản nợ không ai nhận."** Nguyên văn từ `docs/demo-phase-1.md`: *"Đây là khoản nợ chưa ai nhận trách nhiệm. Việc ngăn cách theo schema-per-tenant được yêu cầu bởi hiến chương dự án (Nguyên tắc V) và chưa tồn tại. Đã được ghi nhận là một khoảng trống bởi tính năng `004` và `005`, và ghi nhận lại lần nữa ở đây... Nó cần một hạng mục công việc riêng."* Cột `TenantId` mới thêm vào bảng Order (Mục 1.3) **không** giải quyết việc này — chỉ là ghi nhãn, không phải cách ly.
+**2) Ngăn cách vật lý dữ liệu theo tenant — vẫn "chưa ai nhận trách nhiệm".** Không đổi từ các bản trước, không có tính năng nào trong 6 tính năng vừa xong chạm tới việc này.
 
-**2) Chưa có cơ chế sự kiện/outbox/saga.** Nguyên văn: *"Chưa có gì publish sự kiện nào cả; thanh toán vẫn là điều phối đồng bộ."* Gắn với SCRUM-18, SCRUM-31.
+**3) Chưa có cơ chế saga/bù trừ hoặc outbox cho thanh toán — nhưng nay đã có "bản vẽ hợp đồng" sẵn sàng.** Trước đây hoàn toàn chưa có gì; nay tính năng `008` đã định nghĩa sẵn schema sự kiện `OrderPlaced`/`BasketCheckedOut`, và tính năng `011` đã có sẵn hợp đồng Pact cho luồng này — **nhưng vẫn chưa có RabbitMQ/MassTransit nào thực sự publish hay consume**. Khoảng cách để hoàn thành việc này (SCRUM-31) đã ngắn lại đáng kể so với trước, vì phần "định nghĩa hợp đồng" khó nhất đã xong.
 
-**3) Hợp đồng API được viết ra nhưng chưa phải "luật" của quá trình build.** Nguyên văn: *"Hợp đồng đã được viết nhưng chưa phải là thẩm quyền của build."* Gắn với SCRUM-17, SCRUM-21.
+**4) Redis và RabbitMQ vẫn chạy không, dù nay có thêm hạ tầng test cho chúng.** Tính năng `010` thêm được khả năng viết test thật với Redis/RabbitMQ thật trong container — nhưng bản thân service vẫn chưa gọi tới chúng ở đâu cả.
 
-**4) Chưa có xác thực/định danh thật, chưa có hạ tầng theo dõi (telemetry) đích thực, chưa có ngân sách hiệu năng được đo đạc, và bản thân việc "chạy demo được" chưa được biến thành một cổng kiểm soát chất lượng tự động (quality gate). Cũng chưa triển khai lên Kubernetes.** Đây đều là các hạng mục demo tự liệt kê rõ là "cố tình không chứng minh", không phải bị bỏ sót do quên.
+**5) Chưa có Pact Broker.** Hợp đồng Pact hiện lưu file trực tiếp trong repo (`pacts/*.json`), không có nơi lưu trữ/theo dõi tập trung như ADR-0006 đã chọn ban đầu.
 
-**5) Chưa có CI/CD.** Không đổi từ các bản trước — mọi kiểm tra (kể cả lệnh demo) vẫn chạy thủ công.
+**6) Chưa có xác thực/phân quyền thật, chưa có ngăn cách vật lý dữ liệu.** Không đổi — thuộc Giai đoạn 3.
 
-**6) Vài ghi chú trạng thái trong tài liệu đặc tả bị lỗi thời (không ảnh hưởng chức năng).** Một khuôn mẫu lặp lại: `spec.md` của tính năng `006` (và các tính năng trước) vẫn ghi dòng trạng thái đầu file là "Draft" dù `tasks.md` xác nhận gần như hoàn thành 100%.
+**7) Vài ghi chú trạng thái trong tài liệu đặc tả bị lỗi thời (không ảnh hưởng chức năng).** Khuôn mẫu lặp lại: cả 6 `spec.md` của các tính năng vừa xong vẫn ghi "Draft" dù `tasks.md` đã hoàn thành gần như 100%.
 
 ---
 
 ## Tổng kết ngắn cho quản lý
 
-- **Giai đoạn 1 (Walking Skeleton) giờ có bằng chứng đóng chính thức, có thể xem lại bất cứ lúc nào** — không còn là lời khẳng định suông. `docs/demo-phase-1.md` đối chiếu từng hạng mục SCRUM-10 đến SCRUM-16 với bằng chứng cụ thể (ảnh chụp, số liệu đo được, log thật), và tự công khai luôn cả những gì **chưa** chứng minh được — một cách làm minh bạch nên ghi nhận.
-- Sáu tính năng đã hoàn thành đúng quy trình đặc tả: dựng vỏ service, nối Gateway/BFF, định danh + tenant giả lập, giao diện mua hàng đầu-cuối, chạy toàn bộ bằng một lệnh, và giờ là bằng chứng demo đầu-cuối chính thức.
-- Codebase vẫn = **24 dự án .NET** (build sạch) + **1 workspace frontend độc lập**. Tính năng `006` không thêm dự án mới, chỉ thêm 1 cột ghi nhãn tenant vào bảng Order và một bộ script demo tách biệt, an toàn (không đổi hành vi hệ thống mặc định).
-- **Ba khoản nợ kỹ thuật lớn nhất vẫn còn nguyên, và nay được chính đội phát triển gọi thẳng là "chưa ai nhận trách nhiệm"**: ngăn cách vật lý dữ liệu theo tenant, cơ chế saga/outbox cho thanh toán, và hợp đồng API chưa là điều kiện bắt buộc của build. Đây là các mục nên đưa vào thảo luận ưu tiên cho Giai đoạn 2.
-- Việc đọc hiểu tiến độ nên dựa trực tiếp vào [`docs/demo-phase-1.md`](demo-phase-1.md) (bằng chứng cụ thể nhất hiện có) và [`docs/roadmap.md`](roadmap.md), hơn là dựa vào độ dày tài liệu thiết kế trong `docs/`.
+- **Giai đoạn 2 của roadmap (Kỷ luật hợp đồng & kiểm thử) gần như hoàn tất: 5/6 hạng mục xong thật, 1 hạng mục (CI/CD) đã viết xong toàn bộ code nhưng chưa được bật lên vì cần quyền quản trị bên ngoài repo.**
+- Điều quan trọng cần quản lý hiểu đúng: phần lớn công sức của Giai đoạn 2 **không làm hệ thống chạy được thêm việc gì mới** — mà là chứng minh phần đã có đủ vững chắc (retrofit TDD không tìm thấy lỗi), và chuẩn bị sẵn nền móng hợp đồng cho việc tương lai (schema sự kiện, contract test) mà chưa nối dây thật.
+- Codebase = **33 dự án .NET** (build sạch) + **1 workspace frontend độc lập**, tăng từ 24 dự án do 6 tính năng mới.
+- **Việc cần ưu tiên nhất lúc này không phải là code, mà là quyền quản trị**: cần ai đó có quyền trên Jenkins/SonarQube/GitHub thực hiện 3 bước bật CI/CD thật — nếu không, mọi công sức viết pipeline sẽ chỉ nằm im.
+- Ba khoản nợ kỹ thuật lớn từ các bản trước vẫn còn nguyên: ngăn cách vật lý dữ liệu theo tenant, saga/outbox cho thanh toán (nay đã có bản thiết kế hợp đồng, chỉ còn thiếu nối dây), và xác thực thật.
+- Việc đọc hiểu tiến độ nên dựa vào [`docs/roadmap.md`](roadmap.md) và trạng thái `[X]`/`[ ]`/`[ ] ⛔` trong từng `specs/*/tasks.md`.

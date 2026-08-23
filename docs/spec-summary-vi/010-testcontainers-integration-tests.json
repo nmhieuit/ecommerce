@@ -1,0 +1,27 @@
+{
+  "title": "Hạ tầng kiểm thử tích hợp bằng Testcontainers",
+  "items": {
+    "FR-001": "Các bộ kiểm thử tích hợp của baskets, orders, parties và products PHẢI tiếp tục chạy trên một container SQL Server thật thông qua Testcontainers, chứ không dùng provider chạy trong bộ nhớ hay provider giả lập.",
+    "FR-002": "Với mỗi service được rà soát, PHẢI chứng minh được có ít nhất một bài kiểm thử tích hợp thất bại khi một ràng buộc SQL thật mà nó phụ thuộc bị gỡ bỏ, và đạt trở lại khi ràng buộc được khôi phục — qua đó chứng minh bài kiểm thử thực sự chạy trên engine thật.",
+    "FR-003": "PHẢI có một fixture Redis dùng lại được cho Testcontainers, để bất kỳ project kiểm thử nào cũng dùng được nó nhằm khởi động một container Redis thật và lấy được thông tin kết nối tới container đó.",
+    "FR-004": "PHẢI có một fixture RabbitMQ dùng lại được cho Testcontainers, để bất kỳ project kiểm thử nào cũng dùng được nó nhằm khởi động một container RabbitMQ thật và lấy được thông tin kết nối tới container đó.",
+    "FR-005": "PHẢI có ít nhất một bài kiểm thử chứng minh fixture Redis kết nối tới được (thực hiện một thao tác đọc/ghi thật trên container đã khởi động).",
+    "FR-006": "PHẢI có ít nhất một bài kiểm thử chứng minh fixture RabbitMQ kết nối tới được (thực hiện một kết nối thật tới container đã khởi động).",
+    "FR-007": "Khi bất kỳ container nào trong ba container (SQL Server, Redis, RabbitMQ) không đạt trạng thái khỏe mạnh trong lúc khởi động fixture, lượt chạy kiểm thử PHẢI thất bại kèm thông báo lỗi chỉ rõ container nào hỏng, thay vì âm thầm bỏ qua các bài kiểm thử phụ thuộc.",
+    "FR-008": "PHẢI có ít nhất một bài kiểm thử chứng minh rằng việc giết container RabbitMQ giữa chừng khiến bài kiểm thử bị ảnh hưởng thất bại trong một khoảng thời gian có giới hạn, thay vì treo vô thời hạn.",
+    "FR-009": "Feature này KHÔNG ĐƯỢC đưa vào hành vi caching hay messaging mới ở môi trường chạy thật — không mã nguồn runtime của service nào bắt đầu phụ thuộc vào Redis hay RabbitMQ vì feature này. Chỉ bổ sung hạ tầng phục vụ kiểm thử.",
+    "US1-KB1": "Với điều kiện bộ kiểm thử tích hợp của một service được rà soát đang chạy, Khi nó khởi động, Thì một container SQL Server thật nhìn thấy được trong docker ps trong suốt thời gian chạy.",
+    "US1-KB2": "Với điều kiện chủ ý đưa vào một vi phạm ràng buộc SQL thật, Khi bộ kiểm thử tích hợp chạy, Thì bài kiểm thử liên quan thất bại vì engine thật đã từ chối thao tác, và đạt trở lại khi vi phạm được hoàn tác.",
+    "US1-KB3": "Với điều kiện container SQL Server không đạt trạng thái khỏe mạnh lúc khởi động, Khi bộ kiểm thử chạy, Thì lượt chạy thất bại kèm thông báo lỗi rõ ràng chỉ đích danh container đó, thay vì âm thầm bỏ qua các bài kiểm thử bị ảnh hưởng.",
+    "US2-KB1": "Với điều kiện một project kiểm thử tham chiếu tới fixture Redis, Khi bộ kiểm thử khởi động, Thì một container Redis thật được khởi động và kết nối tới được bằng thông tin kết nối mà fixture cung cấp.",
+    "US2-KB2": "Với điều kiện container Redis không đạt trạng thái khỏe mạnh lúc khởi động, Khi bộ kiểm thử chạy, Thì lượt chạy thất bại kèm thông báo lỗi rõ ràng chỉ đích danh container đó, thay vì âm thầm bỏ qua các bài kiểm thử bị ảnh hưởng.",
+    "US3-KB1": "Với điều kiện một project kiểm thử tham chiếu tới fixture RabbitMQ, Khi bộ kiểm thử khởi động, Thì một container RabbitMQ thật được khởi động và kết nối tới được bằng thông tin kết nối mà fixture cung cấp.",
+    "US3-KB2": "Với điều kiện container RabbitMQ không đạt trạng thái khỏe mạnh lúc khởi động, Khi bộ kiểm thử chạy, Thì lượt chạy thất bại kèm thông báo lỗi rõ ràng chỉ đích danh container đó, thay vì âm thầm bỏ qua các bài kiểm thử bị ảnh hưởng.",
+    "US3-KB3": "Với điều kiện một bài kiểm thử đang kết nối tới container RabbitMQ đang chạy, Khi container bị giết giữa chừng, Thì bài kiểm thử thất bại trong khoảng thời gian có giới hạn thay vì treo vô thời hạn.",
+    "SC-001": "QA có thể chạy trọn bộ kiểm thử tích hợp ở máy cục bộ và quan sát thấy cả ba container SQL Server, Redis và RabbitMQ đều hiện diện trong docker ps trong suốt lượt chạy.",
+    "SC-002": "Một vi phạm ràng buộc SQL được chủ ý đưa vào đều bị một bài kiểm thử tích hợp bắt được 100% số lần đưa vào, trên mọi service được rà soát.",
+    "SC-003": "Nếu bất kỳ container nào trong ba container không đạt trạng thái khỏe mạnh, lượt chạy bộ kiểm thử thất bại và báo tên container bị hỏng — không có trường hợp nào âm thầm bỏ qua.",
+    "SC-004": "Một container RabbitMQ bị giết giữa chừng khiến bài kiểm thử bị ảnh hưởng thất bại trong vòng 30 giây thay vì treo vô thời hạn.",
+    "SC-005": "Một feature trong tương lai bổ sung caching bằng Redis hay phát sự kiện qua RabbitMQ cho một service có thể dùng lại fixture Redis hoặc RabbitMQ của feature này mà không phải sửa đổi chúng."
+  }
+}

@@ -1,7 +1,7 @@
 # Specification Quality Checklist: SonarQube Quality Gate as a Merge Blocker
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-08-22
+**Created**: 2026-08-22 (re-validated 2026-08-23 after merging in 013-sonarqube-backend-selection)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,7 +31,15 @@
 
 ## Notes
 
-- FR-005 names GitHub branch protection because the spec is explicitly platform-scoped per the
-  user's clarification answer; this is a stated dependency (which host is used), not an
-  implementation-detail leak into a technology-agnostic requirement.
-- All items pass. Ready for `/speckit-clarify` (optional) or `/speckit-plan`.
+- FR-005/FR-008/FR-009 name specific products/settings (self-hosted SonarQube vs. SonarCloud,
+  GitHub branch protection, Community vs. Developer Edition licensing) because the spec's own scope
+  is choosing and connecting a named backend — this is a stated dependency of the decision itself,
+  carried over from the now-superseded `013-sonarqube-backend-selection` spec, not an
+  implementation-detail leak into an otherwise technology-agnostic requirement.
+- This merge did not reopen the backend-selection clarification (self-hosted SonarQube, Community
+  Edition + community Branch Plugin) — it was already resolved with the user in `013` and is carried
+  forward here as a settled fact per FR-005/FR-009.
+- All items pass. Ready for `/speckit-plan` (a fresh planning pass is needed since the scope grew;
+  the existing `012/plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, and
+  `tasks.md` reflect the pre-merge, pipeline-only scope and should be regenerated/extended to cover
+  backend provisioning and connection).

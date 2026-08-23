@@ -1,10 +1,10 @@
 <mxfile host="Electron" agent="5.0">
   <diagram id="current-state-005" name="Trạng thái hiện tại — sau 005">
-    <mxGraphModel dx="3279" dy="737" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1820" math="0" shadow="0">
+    <mxGraphModel dx="3279" dy="737" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="2060" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#2d6a2d;" value="PHẦN 1 — ĐÃ CÓ TRONG CODE HÔM NAY (24 dự án .NET + 1 workspace frontend; 1 LỆNH DUY NHẤT chạy toàn bộ stack; xem docs/demo-phase-1.md để có bằng chứng Giai đoạn 1 đã xong)" vertex="1">
+        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#2d6a2d;" value="PHẦN 1 — ĐÃ CÓ TRONG CODE HÔM NAY (33 dự án .NET + 1 workspace frontend; 1 LỆNH DUY NHẤT chạy toàn bộ stack; xem docs/demo-phase-1.md để có bằng chứng Giai đoạn 1 đã xong)" vertex="1">
           <mxGeometry height="26" width="1450" x="30" as="geometry" />
         </mxCell>
         <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="Storefront (frontend/apps/web)&#xa;CÁCH 1 — 1 lệnh, docker (mới từ 005): container nginx, cổng 4173,&#xa;  từ Dockerfile riêng, CHỈ gọi Gateway qua cổng 5300&#xa;CÁCH 2 — dev thủ công: pnpm dev, Vite, cổng 5173&#xa;3 màn hình: Sản phẩm (/) - Giỏ hàng (/basket) - Xác nhận (/confirmation)" vertex="1">
@@ -52,7 +52,7 @@
         <mxCell id="svc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Baskets.Api&#xa;Cổng 5188 (chỉ mở trong chế độ debug)&#xa;Giỏ hàng của người gọi (CustomerRef)&#xa;+ /health/live, /health/ready&#xa;Bảng: Basket (Total tính tại chỗ) + BasketLineItem&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="380" y="610" as="geometry" />
         </mxCell>
-        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Orders.Api&#xa;Cổng 5041 (chỉ mở trong chế độ debug, hoặc chế độ demo)&#xa;Tạo đơn hàng từ dòng giỏ hàng; đọc lại theo id&#xa;+ /health/live, /health/ready&#xa;Bảng: Order (Id, PlacedAtUtc, Total, MỚI: TenantId — chỉ là&#xa;NHÃN, không phải ngăn cách vật lý, xem Phần 2)&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
+        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Orders.Api&#xa;Cổng 5041 (chỉ mở trong chế độ debug, hoặc chế độ demo)&#xa;Tạo đơn hàng từ dòng giỏ hàng; đọc lại theo id&#xa;+ /health/live, /health/ready&#xa;Bảng: Order (Id, PlacedAtUtc, Total, TenantId — chỉ là&#xa;NHÃN, không phải ngăn cách vật lý, xem mục 1.3)&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
           <mxGeometry height="140" width="320" x="730" y="610" as="geometry" />
         </mxCell>
         <mxCell id="svc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Parties.Api&#xa;Cổng 5204 (chỉ mở trong chế độ debug)&#xa;GET /parties/{id}&#xa;+ /health/live, /health/ready&#xa;Bảng: Party (Id, DisplayName)&#xa;Chặn CSDL nếu thiếu X-Tenant-Id / X-Subject-Id" vertex="1">
@@ -85,7 +85,7 @@
         <mxCell id="redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="Redis&#xa;Chạy và có healthcheck, nhưng CHƯA có&#xa;service nào kết nối vào (có chủ đích,&#xa;xem FR-017 của tính năng 005)" vertex="1">
           <mxGeometry height="80" width="440" x="500" y="910" as="geometry" />
         </mxCell>
-        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="RabbitMQ&#xa;Chạy và có healthcheck, nhưng CHƯA có&#xa;service nào kết nối vào — dành cho&#xa;saga/outbox tương lai (xem Phần 2)" vertex="1">
+        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;" value="RabbitMQ&#xa;Chạy và có healthcheck, nhưng CHƯA có&#xa;service nào kết nối vào — có hạ tầng&#xa;test thật từ 010, vẫn chưa có code&#xa;sản phẩm nào gọi tới" vertex="1">
           <mxGeometry height="80" width="440" x="960" y="910" as="geometry" />
         </mxCell>
         <mxCell id="guardtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#666666;" value="&#39;Lưới an toàn&#39; kiến trúc tự động — chạy như bài test mỗi lần build, FAIL build khi bị vi phạm (7 loại)" vertex="1">
@@ -195,98 +195,128 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="title2" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#a03030;" value="PHẦN 2 — CHƯA XÂY DỰNG, MỚI LÀ KẾ HOẠCH (Phase 2-5, xem docs/roadmap.md)" vertex="1">
-          <mxGeometry height="26" width="1000" x="30" y="1440" as="geometry" />
+        <mxCell id="title2" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#2d6a2d;" value="GIAI ĐOẠN 2 CỦA ROADMAP — KỶ LUẬT HỢP ĐỒNG &amp; KIỂM THỬ (SCRUM-17..22) — 5/6 ĐÃ XONG THẬT, 1 (SCRUM-22) ĐÃ VIẾT XONG CODE NHƯNG CHƯA BẬT" vertex="1">
+          <mxGeometry height="26" width="1400" x="30" y="1440" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="SCRUM-17 (007)&#xa;Hợp đồng OpenAPI cho BFF&#xa;ĐÃ XONG — đã có sẵn từ trước (Orval),&#xa;007 chỉ xác nhận + thêm 3 test&#xa;&quot;người đọc khoan dung&quot; ở frontend" vertex="1">
+          <mxGeometry height="140" width="220" x="30" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="SCRUM-18 (008)&#xa;Schema sự kiện có phiên bản&#xa;(OrderPlaced, BasketCheckedOut)&#xa;ĐÃ ĐỊNH NGHĨA xong (shared/&#xa;EventContracts), NHƯNG chưa có&#xa;ai publish/consume thật" vertex="1">
+          <mxGeometry height="140" width="220" x="256" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="SCRUM-19 (009)&#xa;Retrofit TDD cho giá giỏ hàng&#xa;+ tạo đơn hàng&#xa;ĐÃ KIỂM CHỨNG bằng cách phá rồi&#xa;phục hồi code — KHÔNG sửa gì,&#xa;không tìm thấy lỗi nào" vertex="1">
+          <mxGeometry height="140" width="220" x="482" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=9;" value="SCRUM-20 (010)&#xa;Test tích hợp qua Testcontainers&#xa;(SQL Server + Redis + RabbitMQ)&#xa;ĐÃ CÓ hạ tầng test THẬT cho Redis/&#xa;RabbitMQ, nhưng KHÔNG có code sản&#xa;phẩm nào gọi tới (vẫn nhàn rỗi)" vertex="1">
+          <mxGeometry height="140" width="220" x="708" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="SCRUM-21 (011)&#xa;Contract test theo hướng người tiêu dùng&#xa;Dùng PactNet thật, 4 ranh giới&#xa;(BFF↔3 service, Orders↔Baskets&#xa;qua event) — file .json lưu ngay&#xa;trong repo, KHÔNG có Pact Broker" vertex="1">
+          <mxGeometry height="140" width="220" x="934" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2s6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6b3;strokeColor=#bf9000;dashed=1;fontColor=#7f6000;fontSize=9;" value="SCRUM-22 (012)&#xa;Jenkins + SonarQube quality gate&#xa;ĐÃ VIẾT XONG code/script (Jenkinsfile,&#xa;12/25 nhiệm vụ) — 13 nhiệm vụ còn lại&#xa;CẦN quản trị viên bật Jenkins/SonarQube&#xa;thật + bật branch protection GitHub" vertex="1">
+          <mxGeometry height="140" width="240" x="1160" y="1475" as="geometry" />
+        </mxCell>
+        <mxCell id="p2note" parent="1" style="text;html=1;fontSize=10;fontColor=#2d6a2d;whiteSpace=wrap;" value="Khác với Giai đoạn 1: phần lớn 6 hạng mục này KHÔNG làm hệ thống chạy được thêm việc gì mới — chúng chứng minh code cũ đủ vững (009), hoặc chuẩn bị sẵn hợp đồng cho tương lai (008, 010, 011) mà chưa nối dây thật. Hôm nay CHƯA có gì ngăn được việc merge code mà không qua kiểm tra nào — Jenkinsfile đã sẵn sàng &quot;cắm điện là chạy&quot;, nhưng chưa ai cắm điện (SCRUM-22)." vertex="1">
+          <mxGeometry height="45" width="1390" x="30" y="1622" as="geometry" />
+        </mxCell>
+        <mxCell id="title3" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#a03030;" value="CHƯA XÂY DỰNG — thuộc Giai đoạn 3-5 của roadmap (xem docs/roadmap.md)" vertex="1">
+          <mxGeometry height="26" width="1000" x="30" y="1685" as="geometry" />
         </mxCell>
         <mxCell id="futurebg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#cc6666;dashed=1;" value="" vertex="1">
-          <mxGeometry height="130" width="1400" x="20" y="1475" as="geometry" />
+          <mxGeometry height="130" width="1400" x="20" y="1720" as="geometry" />
         </mxCell>
         <mxCell id="f1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Identity Server thật&#xa;(Duende)&#xa;(SCRUM-23, Giai&#xa;đoạn 3)" vertex="1">
-          <mxGeometry height="80" width="255" x="40" y="1500" as="geometry" />
+          <mxGeometry height="80" width="255" x="40" y="1745" as="geometry" />
         </mxCell>
         <mxCell id="f2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Ngăn cách VẬT LÝ&#xa;theo tenant (đã thử,&#xa;đã chủ động huỷ —&#xa;xem mục 1.3)" vertex="1">
-          <mxGeometry height="80" width="255" x="320" y="1500" as="geometry" />
+          <mxGeometry height="80" width="255" x="320" y="1745" as="geometry" />
         </mxCell>
-        <mxCell id="f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Saga + Outbox thật cho&#xa;thanh toán — THỰC SỰ&#xa;dùng RabbitMQ đang&#xa;chạy rỗng (ADR-0011)" vertex="1">
-          <mxGeometry height="80" width="255" x="600" y="1500" as="geometry" />
+        <mxCell id="f3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Nối dây Saga+Outbox&#xa;thật (SCRUM-31) — đã&#xa;có sẵn schema (008) +&#xa;hợp đồng Pact (011)" vertex="1">
+          <mxGeometry height="80" width="255" x="600" y="1745" as="geometry" />
         </mxCell>
-        <mxCell id="f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Logistics + Invoices&#xa;service (sẽ dùng Redis/&#xa;RabbitMQ đang chạy rỗng&#xa;nhưng còn trống)" vertex="1">
-          <mxGeometry height="80" width="255" x="880" y="1500" as="geometry" />
+        <mxCell id="f4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Logistics + Invoices&#xa;service (sẽ dùng Redis/&#xa;RabbitMQ đang chạy&#xa;nhưng còn trống)" vertex="1">
+          <mxGeometry height="80" width="255" x="880" y="1745" as="geometry" />
         </mxCell>
-        <mxCell id="f5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Jenkins CI/CD,&#xa;Vault, Unleash,&#xa;Pact Broker" vertex="1">
-          <mxGeometry height="80" width="240" x="1160" y="1500" as="geometry" />
+        <mxCell id="f5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;fontColor=#a03030;fontSize=10;" value="Bật Jenkins/SonarQube&#xa;thật + branch protection;&#xa;Vault, Unleash,&#xa;Pact Broker" vertex="1">
+          <mxGeometry height="80" width="240" x="1160" y="1745" as="geometry" />
         </mxCell>
-        <mxCell id="fnote" parent="1" style="text;html=1;fontSize=10;fontColor=#a03030;whiteSpace=wrap;" value="Redis và RabbitMQ ĐÃ CHẠY thật trong docker-compose.yml từ tính năng 005 (hạ tầng sẵn sàng), nhưng vẫn CHƯA có service nào kết nối vào — nghiệp vụ dùng tới nó vẫn là kế hoạch.&#xa;Chạy-toàn-bộ-bằng-1-lệnh (SCRUM-15) và Web SPA (SCRUM-14) ĐÃ chuyển lên Phần 1, không còn là kế hoạch nữa — việc còn lại cuối cùng của Giai đoạn 1 (Walking Skeleton) coi như đã xong." vertex="1">
-          <mxGeometry height="45" width="1360" x="35" y="1610" as="geometry" />
+        <mxCell id="fnote" parent="1" style="text;html=1;fontSize=10;fontColor=#a03030;whiteSpace=wrap;" value="Web SPA (SCRUM-14), chạy-toàn-bộ-bằng-1-lệnh (SCRUM-15), và toàn bộ Giai đoạn 2 (SCRUM-17..21) ĐÃ chuyển lên các phần trên, không còn là kế hoạch nữa. SCRUM-22 nằm ở trạng thái trung gian — xem hộp màu vàng bên trên." vertex="1">
+          <mxGeometry height="35" width="1360" x="35" y="1855" as="geometry" />
         </mxCell>
         <mxCell id="lgtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=12;" value="Chú giải" vertex="1">
-          <mxGeometry height="20" width="100" x="30" y="1670" as="geometry" />
+          <mxGeometry height="20" width="100" x="30" y="1905" as="geometry" />
         </mxCell>
         <mxCell id="lgc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1">
-          <mxGeometry height="20" width="20" x="30" y="1700" as="geometry" />
+          <mxGeometry height="20" width="20" x="30" y="1935" as="geometry" />
         </mxCell>
-        <mxCell id="lgc1t" parent="1" style="text;html=1;fontSize=11;" value="Service nghiệp vụ (sở hữu dữ liệu riêng)" vertex="1">
-          <mxGeometry height="20" width="300" x="55" y="1700" as="geometry" />
+        <mxCell id="lgc1t" parent="1" style="text;html=1;fontSize=11;" value="Service nghiệp vụ / hạng mục Giai đoạn 2 đã xong thật" vertex="1">
+          <mxGeometry height="20" width="360" x="55" y="1935" as="geometry" />
         </mxCell>
         <mxCell id="lgc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1">
-          <mxGeometry height="20" width="20" x="30" y="1730" as="geometry" />
+          <mxGeometry height="20" width="20" x="30" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc2t" parent="1" style="text;html=1;fontSize=11;" value="Service ở biên (không sở hữu dữ liệu)" vertex="1">
-          <mxGeometry height="20" width="300" x="55" y="1730" as="geometry" />
+          <mxGeometry height="20" width="300" x="55" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1">
-          <mxGeometry height="20" width="20" x="390" y="1700" as="geometry" />
+          <mxGeometry height="20" width="20" x="430" y="1935" as="geometry" />
         </mxCell>
         <mxCell id="lgc7t" parent="1" style="text;html=1;fontSize=11;" value="Giao diện web (frontend, ngoài .slnx)" vertex="1">
-          <mxGeometry height="20" width="300" x="415" y="1700" as="geometry" />
+          <mxGeometry height="20" width="300" x="455" y="1935" as="geometry" />
         </mxCell>
         <mxCell id="lgc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1">
-          <mxGeometry height="20" width="20" x="390" y="1730" as="geometry" />
+          <mxGeometry height="20" width="20" x="430" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc3t" parent="1" style="text;html=1;fontSize=11;" value="Thư viện dùng chung / hạ tầng ĐÃ dùng thật (OTel)" vertex="1">
-          <mxGeometry height="20" width="340" x="415" y="1730" as="geometry" />
+          <mxGeometry height="20" width="340" x="455" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;" vertex="1">
-          <mxGeometry height="20" width="20" x="770" y="1700" as="geometry" />
+          <mxGeometry height="20" width="20" x="810" y="1935" as="geometry" />
         </mxCell>
-        <mxCell id="lgc8t" parent="1" style="text;html=1;fontSize=11;" value="Migrator (1 lần) / hạ tầng chạy nhưng CHƯA dùng (Redis, RabbitMQ)" vertex="1">
-          <mxGeometry height="20" width="400" x="795" y="1700" as="geometry" />
+        <mxCell id="lgc8t" parent="1" style="text;html=1;fontSize=11;" value="Đã tồn tại (migrator, schema, test-fixture) nhưng CHƯA nối dây/CHƯA dùng thật" vertex="1">
+          <mxGeometry height="20" width="420" x="835" y="1935" as="geometry" />
         </mxCell>
         <mxCell id="lgc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1">
-          <mxGeometry height="20" width="20" x="770" y="1730" as="geometry" />
+          <mxGeometry height="20" width="20" x="810" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc4t" parent="1" style="text;html=1;fontSize=11;" value="Lưới an toàn kiến trúc (tests) — 7 loại" vertex="1">
-          <mxGeometry height="20" width="330" x="795" y="1730" as="geometry" />
+          <mxGeometry height="20" width="330" x="835" y="1965" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6b3;strokeColor=#bf9000;dashed=1;" vertex="1">
+          <mxGeometry height="20" width="20" x="1210" y="1965" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc9t" parent="1" style="text;html=1;fontSize=11;" value="Code/script đã viết, CHƯA bật hạ tầng ngoài" vertex="1">
+          <mxGeometry height="20" width="260" x="1235" y="1965" as="geometry" />
         </mxCell>
         <mxCell id="lgc5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1">
-          <mxGeometry height="20" width="20" x="1200" y="1700" as="geometry" />
+          <mxGeometry height="20" width="20" x="30" y="1995" as="geometry" />
         </mxCell>
         <mxCell id="lgc5t" parent="1" style="text;html=1;fontSize=11;" value="Cơ sở dữ liệu" vertex="1">
-          <mxGeometry height="20" width="160" x="1225" y="1700" as="geometry" />
+          <mxGeometry height="20" width="160" x="55" y="1995" as="geometry" />
         </mxCell>
         <mxCell id="lgc6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc6666;dashed=1;" vertex="1">
-          <mxGeometry height="20" width="20" x="1200" y="1730" as="geometry" />
+          <mxGeometry height="20" width="20" x="260" y="1995" as="geometry" />
         </mxCell>
-        <mxCell id="lgc6t" parent="1" style="text;html=1;fontSize=11;" value="Chỉ là kế hoạch — chưa có code" vertex="1">
-          <mxGeometry height="20" width="230" x="1225" y="1730" as="geometry" />
+        <mxCell id="lgc6t" parent="1" style="text;html=1;fontSize=11;" value="Chỉ là kế hoạch — chưa có code (Giai đoạn 3-5)" vertex="1">
+          <mxGeometry height="20" width="330" x="285" y="1995" as="geometry" />
         </mxCell>
         <mxCell id="lgline1" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;fontSize=9;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="30" y="1770" as="sourcePoint" />
-            <mxPoint x="80" y="1770" as="targetPoint" />
+            <mxPoint x="650" y="2005" as="sourcePoint" />
+            <mxPoint x="700" y="2005" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="lgline1t" parent="1" style="text;html=1;fontSize=11;" value="Gọi thật lúc chạy (HTTP / EF Core)" vertex="1">
-          <mxGeometry height="20" width="260" x="90" y="1760" as="geometry" />
+          <mxGeometry height="20" width="260" x="710" y="1995" as="geometry" />
         </mxCell>
         <mxCell id="lgline2" edge="1" parent="1" style="edgeStyle=none;dashed=1;html=1;endArrow=block;fontSize=9;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="400" y="1770" as="sourcePoint" />
-            <mxPoint x="450" y="1770" as="targetPoint" />
+            <mxPoint x="1000" y="2005" as="sourcePoint" />
+            <mxPoint x="1050" y="2005" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="lgline2t" parent="1" style="text;html=1;fontSize=11;" value="Tham chiếu thư viện / phụ thuộc lúc build hoặc lúc khởi động (docker depends_on)" vertex="1">
-          <mxGeometry height="20" width="480" x="460" y="1760" as="geometry" />
+          <mxGeometry height="20" width="440" x="1060" y="1995" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

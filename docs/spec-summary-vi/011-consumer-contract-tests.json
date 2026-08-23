@@ -1,0 +1,26 @@
+{
+  "title": "Kiểm thử hợp đồng do bên tiêu thụ dẫn dắt trên các ranh giới BFF/service",
+  "items": {
+    "FR-001": "Service products PHẢI kiểm chứng các response HTTP thật của nó gửi cho BFF so với những kỳ vọng đã được ghi thành tài liệu của BFF với tư cách bên tiêu thụ, ngay trong chính build của service products.",
+    "FR-002": "Service baskets PHẢI kiểm chứng các response HTTP thật của nó gửi cho BFF so với những kỳ vọng đã được ghi thành tài liệu của BFF với tư cách bên tiêu thụ, ngay trong chính build của service baskets.",
+    "FR-003": "Service orders PHẢI kiểm chứng các response HTTP thật của nó gửi cho BFF so với những kỳ vọng đã được ghi thành tài liệu của BFF với tư cách bên tiêu thụ, ngay trong chính build của service orders.",
+    "FR-004": "Service phát hành sự kiện tích hợp được chọn thí điểm PHẢI kiểm chứng nội dung sự kiện (payload) mà nó dựng ra so với những kỳ vọng đã được ghi thành tài liệu của service tiêu thụ, ngay trong chính build của service phát hành.",
+    "FR-005": "Khi response thật của một bên sản xuất (hoặc payload sự kiện của một bên phát hành) lệch khỏi kỳ vọng đã ghi trong tài liệu của bên tiêu thụ, chính build của bên sản xuất (hoặc bên phát hành) PHẢI thất bại — lỗi này KHÔNG ĐƯỢC chỉ lộ ra ở build của bên tiêu thụ phía sau hoặc muộn hơn.",
+    "FR-006": "Việc kiểm chứng hợp đồng PHẢI chạy trên hành vi thật của bên sản xuất (một response HTTP thật, hoặc một payload sự kiện thật được dựng ra), chứ không phải trên một bản thay thế do người duy trì thủ công.",
+    "FR-007": "Một trường được thêm vào mà bên tiêu thụ không dùng đến KHÔNG ĐƯỢC làm bài kiểm thử hợp đồng thất bại, nhất quán với quy tắc tolerant reader của nền tảng.",
+    "FR-008": "Toàn bộ tập ranh giới HTTP và ranh giới sự kiện trong lát cắt mỏng (BFF↔products, BFF↔baskets, BFF↔orders, và cặp bên sản xuất↔bên tiêu thụ của sự kiện thí điểm) PHẢI liệt kê được và đối chiếu chéo được với tập các bài kiểm thử hợp đồng hiện có.",
+    "FR-009": "Một ranh giới trong lát cắt mỏng còn thiếu bài kiểm thử hợp đồng bắt buộc PHẢI phát hiện được — bằng một bước kiểm tra độ bao phủ tự động ở nơi đã có, hoặc được ghi thành mục rà soát thủ công ở nơi chưa có.",
+    "US1-KB1": "Với điều kiện đã có tài liệu ghi kỳ vọng của BFF đối với response của service products, Khi chính build của service products chạy, Thì nó kiểm chứng các response thật của mình so với những kỳ vọng đó và làm hỏng build nếu có sai lệch.",
+    "US1-KB2": "Với điều kiện đã có tài liệu ghi kỳ vọng của BFF đối với response của service baskets, Khi chính build của service baskets chạy, Thì nó kiểm chứng các response thật của mình so với những kỳ vọng đó và làm hỏng build nếu có sai lệch.",
+    "US1-KB3": "Với điều kiện đã có tài liệu ghi kỳ vọng của BFF đối với response của service orders, Khi chính build của service orders chạy, Thì nó kiểm chứng các response thật của mình so với những kỳ vọng đó và làm hỏng build nếu có sai lệch.",
+    "US1-KB4": "Với điều kiện một bên sản xuất thay đổi hình dạng response theo kiểu phá vỡ tương thích, Khi build của nó chạy, Thì bài kiểm thử hợp đồng thất bại trước khi thay đổi kịp được merge.",
+    "US2-KB1": "Với điều kiện đã có tài liệu ghi kỳ vọng của một service tiêu thụ đối với một sự kiện tích hợp được phát hành, Khi chính build của service phát hành chạy, Thì nó kiểm chứng payload sự kiện mà nó sẽ phát ra so với những kỳ vọng đó và làm hỏng build nếu có sai lệch.",
+    "US2-KB2": "Với điều kiện một service phát hành thay đổi hình dạng của một sự kiện theo kiểu phá vỡ tương thích, Khi build của nó chạy, Thì bài kiểm thử hợp đồng thất bại trước khi thay đổi kịp được merge.",
+    "US3-KB1": "Với điều kiện xét bốn ranh giới trong lát cắt mỏng (BFF↔products, BFF↔baskets, BFF↔orders, và cặp bên sản xuất↔bên tiêu thụ của sự kiện thí điểm), Khi có người liệt kê chúng ra, Thì mỗi ranh giới đều có một bài kiểm thử hợp đồng tương ứng, tìm được mà không cần đọc phần bên trong của service.",
+    "US3-KB2": "Với điều kiện một bài kiểm thử hợp đồng bắt buộc bị gỡ bỏ, Khi bước kiểm tra độ bao phủ chạy (cổng kiểm soát tự động) hoặc khi người soát xét thực hiện bước kiểm tra thủ công tương đương (nếu chưa có cổng tự động), Thì lỗ hổng đó bị phát hiện trước khi merge.",
+    "SC-001": "100% bốn ranh giới trong lát cắt mỏng (BFF↔products, BFF↔baskets, BFF↔orders, và cặp bên sản xuất↔bên tiêu thụ của sự kiện thí điểm) đều có một bài kiểm thử hợp đồng đi kèm.",
+    "SC-002": "Khi hình dạng dữ liệu của một bên sản xuất hoặc bên phát hành phá vỡ một kỳ vọng đã ghi trong tài liệu của bên tiêu thụ, chính build của bên sản xuất hoặc bên phát hành đó thất bại ngay trong cùng lượt build, ở 100% số trường hợp đã kiểm thử trên cả bốn ranh giới — không bao giờ chỉ thất bại ở build của bên tiêu thụ phía sau.",
+    "SC-003": "Người soát xét có thể xác định ranh giới nào trong bốn ranh giới của lát cắt mỏng đã có kiểm thử hợp đồng bao phủ trong dưới 5 phút, chỉ dựa vào bản kiểm kê các bài kiểm thử hợp đồng, không phải đọc mã nguồn của service.",
+    "SC-004": "Việc gỡ bỏ một bài kiểm thử hợp đồng bắt buộc của một ranh giới đã được bao phủ đều bị phát hiện trước khi merge — hoặc do một cổng kiểm soát tự động báo lỗi, hoặc do một bước rà soát thủ công đã ghi trong tài liệu — ở 100% số trường hợp."
+  }
+}

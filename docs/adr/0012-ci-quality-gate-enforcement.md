@@ -137,3 +137,36 @@ scanner arguments and the properties file stays the single source of truth.
 4. [ ] SCRUM-TBD: add the constitution's container image vulnerability scan as a sixth stage and a
        sixth required check; until then this pipeline implements five of the six mandated gates
        (see `specs/012-sonarqube-quality-gate/plan.md` Complexity Tracking)
+
+## Amendment (2026-08-23): Analysis backend decision (FR-005, FR-009, FR-014)
+
+`spec.md` was extended to fold in a previously separate decision — which analysis backend the
+`ci/sonarqube-quality-gate` check above actually reports to — because a gate wired to nothing is not
+yet enforcing anything. This section is that decision record.
+
+**Decision: self-hosted SonarQube (Community Edition), not SonarCloud.**
+
+| Dimension | Self-hosted SonarQube | SonarCloud (SaaS) |
+|---|---|---|
+| Recurring cost | None (Community Edition) beyond hosting compute | Paid tier required for a **private** repository |
+| Hosting/maintenance burden | Platform owns upgrades, backups, and uptime — consistent with every other component in this repo, which runs self-hosted on Kubernetes via Ansible | None — vendor-operated |
+| Source metadata exposure | Stays inside the internal network | Source metadata leaves the internal network to a third party |
+| GitHub PR decoration | **Not included** in Community Edition; requires the community-maintained Branch Plugin (unofficial, reinstalled on every SonarQube upgrade) or a paid Developer Edition license | Included natively at every tier |
+
+**Rationale**: `nmhieuit/ecommerce` is a private repository, so SonarCloud's no-cost tier does not
+apply — the recurring SaaS cost was the deciding factor against it, on a platform whose stated
+pattern (constitution, ADRs 0001/0008/0010) is self-hosting everything. The trade-off accepted in
+exchange is licensing: Community Edition has no official PR decoration, so this pipeline either
+runs the community Branch Plugin or accepts that metrics live on the SonarQube server without being
+decorated onto the PR until that plugin is installed and verified (FR-009). This is recorded here
+rather than assumed silently, per FR-009.
+
+**Provisioning status as of 2026-08-23**: no self-hosted SonarQube instance existed anywhere for
+this repository before this date. A local instance (SonarQube Community Edition + Jenkins LTS) was
+stood up in Docker Desktop via `docker-compose.ci.yml` at the repository root, to unblock wiring the
+Jenkins↔SonarQube connection and the GitHub credential/webhook configuration described in
+`quickstart.md`. This is a **development instance**, not the production deployment implied by the
+spec's Edge Cases (a Kubernetes workload with its own database, provisioned via the platform's
+existing Ansible pattern) — standing up that production instance remains a separate follow-up
+tracked against FR-006. The local instance is sufficient to validate the Jenkins↔SonarQube↔GitHub
+wiring end-to-end; it is not itself the "provisioned instance" FR-006 describes for production use.
