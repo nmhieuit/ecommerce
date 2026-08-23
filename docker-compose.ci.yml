@@ -40,6 +40,23 @@ services:
       # The host's Docker daemon, for the Testcontainers-based integration tier (spec 010).
       # Builds run on the controller in this local stack, so the controller is what needs it.
       - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Testcontainers' Ryuk resource-reaper container failed to initialize under this Docker-
+      # outside-of-Docker setup (Jenkins runs in a container sharing the *host's* Docker socket, so
+      # sibling containers Ryuk itself spawns are not reachable back from inside the Jenkins
+      # container the way they would be from the host) — observed as every Testcontainers-based
+      # integration test failing with `ResourceReaperException: Initialization has been cancelled`.
+      # Disabling Ryuk is the documented workaround for exactly this topology; it only means
+      # containers a crashed run leaves behind aren't auto-cleaned, which is acceptable for a local,
+      # disposable dev stack (not a choice to carry into a production Jenkins agent).
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+      # Same Docker-outside-of-Docker cause, different symptom: once Ryuk stopped blocking startup,
+      # SQL Server containers Testcontainers spins up still could not be *connected to* — the
+      # client computed `localhost:<mapped-port>`, which is only correct when the process and the
+      # Docker daemon share a network namespace (the normal same-host case). Here the daemon is the
+      # Docker Desktop host's, one hop away from the Jenkins container, so the reachable address is
+      # `host.docker.internal`, not `localhost`.
+      TESTCONTAINERS_HOST_OVERRIDE: "host.docker.internal"
     networks: [ci-backbone]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]

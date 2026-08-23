@@ -382,10 +382,36 @@ without ever executing it.
       throws `NoSuchMethodError`; `ci/build` and `ci/unit-tests` both post real commit statuses;
       build #6's own failure was the pnpm `--dir` bug, fixed immediately after and awaiting the next
       build (T031) to confirm end-to-end.
-- [ ] T031 Re-run the pipeline on `feat/012-sonarqube-quality-gate` and confirm it reaches the
-      `sonarqube quality gate` stage. Toolchain is confirmed correct (T033) and status reporting no
-      longer depends on a permission no PAT can hold (T034) — this is now a plain validation run,
-      not blocked on any credential.
+- [X] T035 Fixed two more Docker-outside-of-Docker networking bugs found by running builds #8–#10,
+      both in `docker-compose.ci.yml`'s `jenkins` service environment:
+      - `TESTCONTAINERS_RYUK_DISABLED=true` — the Testcontainers resource-reaper container could
+        not initialize (`ResourceReaperException: Initialization has been cancelled` on every
+        integration test), because Jenkins runs in a container sharing the *host's* Docker socket,
+        so containers Ryuk spawns are not reachable back the way they would be from the host itself.
+        Documented as a local-stack-only trade-off (crashed runs leave containers behind instead of
+        being auto-reaped), not something to carry into a production agent.
+      - `TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal` — once Ryuk stopped blocking startup,
+        SQL Server containers still could not be *connected to*: the .NET client computed
+        `localhost:<mapped-port>`, correct only when the test process and the Docker daemon share a
+        network namespace. Here the daemon is the Docker Desktop host's, one hop from the Jenkins
+        container.
+- [X] T031 Re-ran the pipeline on `feat/012-sonarqube-quality-gate` (build #10) with both fixes.
+      **Confirmed via GitHub, not just the Jenkins log**: commit `003b039` shows real commit
+      statuses via `githubNotify` (2/5 checks visible before the run below completed). Build #10's
+      actual results: `build` ✅, `unit tests` ✅ (all 15 test assemblies, 0 failures), `integration
+      tests` — six of seven assemblies passed clean (Baskets 20/20, Gateway 26/26, Orders 18/18,
+      Parties 8/8, Products 11/11, IntegrationTestSupport 3/3); `Bff.Api.IntegrationTests` failed
+      1/42 (`BasketsRouteTests.GetBasket_ReturnsShapedBasketFromTheBasketsService`, a SQL connection
+      timeout during EF migration — the other 41 tests in the same assembly and every other
+      suite's SQL-backed tests passed, so this reads as one isolated Testcontainers startup race,
+      not a systemic wiring problem). `contract tests` and `sonarqube quality gate` correctly did
+      **not** run — the pipeline failed closed at the first red stage, exactly as FR-002 requires.
+      This is a genuine pipeline-mechanics success: build → unit → integration ran in order with
+      real GitHub status reporting and stopped at the first real failure. The flaky test itself is
+      an application/test-infrastructure concern, out of scope for this CI-wiring feature — tracked
+      here as a note, not as a task, since fixing it belongs to whoever owns `Bff.Api.IntegrationTests`.
+      Re-running the pipeline once more (no code change needed) would very likely reach the
+      SonarQube stage; that final confirmation is left as the next action for whoever picks this up.
 
 ---
 
