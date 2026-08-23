@@ -27,6 +27,12 @@ services:
       - "50000:50000"
     volumes:
       - jenkins-data:/var/jenkins_home
+      # Groovy init scripts run on every controller start, so the SonarQube server connection
+      # survives `down -v` instead of having to be re-entered through the UI (T013).
+      - ./docker/ci/jenkins-init:/var/jenkins_home/init.groovy.d:ro
+      # Real tokens, gitignored. Mounted read-only so the init script can read them and nothing
+      # in a build can write them.
+      - ./.ci-secrets:/run/ci-secrets:ro
     networks: [ci-backbone]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]
