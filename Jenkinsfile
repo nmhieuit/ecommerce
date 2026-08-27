@@ -101,7 +101,13 @@ pipeline {
             steps {
                 checkStarted(env.CHECK_UNIT)
                 sh 'scripts/ci/run-dotnet-tests.sh unit'
-                sh 'pnpm --dir frontend turbo run test -- --coverage'
+                // `pnpm --dir frontend test -- --coverage` (the `build` script's own pattern) does
+                // NOT work here: the frontend `test` script is itself `turbo run test`, so pnpm's
+                // single `--` only appends `--coverage` to `turbo run test`, and turbo has no such
+                // flag of its own — it needs a second `--` to forward `--coverage` to the
+                // underlying vitest command. `pnpm exec turbo` runs the binary directly with the
+                // args given, verbatim, avoiding that double-`--` nesting problem.
+                sh 'pnpm --dir frontend exec turbo run test -- --coverage'
                 sh 'scripts/ci/merge-coverage.sh'
             }
             post {
