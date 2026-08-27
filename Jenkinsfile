@@ -146,7 +146,12 @@ pipeline {
             steps {
                 script {
                     withSonarQubeEnv(env.SONARQUBE_SERVER) {
-                        sh 'dotnet sonarscanner end'
+                        // sonar-begin.sh passes the token explicitly as /d:sonar.token=...
+                        // (research.md Decision 3's `begin`/`end` split). SonarScanner for .NET
+                        // requires the same credential on both calls — "end" does not remember
+                        // `begin`'s command-line arguments — so it must be passed again here, not
+                        // left to `withSonarQubeEnv`'s environment injection alone.
+                        sh 'dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN:-$SONAR_AUTH_TOKEN}"'
                     }
 
                     // The scanner exits successfully once analysis is *uploaded*; the gate is
