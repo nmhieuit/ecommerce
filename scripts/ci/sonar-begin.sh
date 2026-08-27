@@ -4,10 +4,12 @@
 #   scripts/ci/sonar-begin.sh
 #
 # SonarScanner for .NET takes its settings as `/d:` command-line arguments and — unlike the generic
-# CLI scanner — does not read sonar-project.properties. Rather than splitting scanner settings
+# CLI scanner — does not read a properties file of its own. Rather than splitting scanner settings
 # between a properties file and the Jenkinsfile, this translates the committed
-# sonar-project.properties into scanner arguments, keeping that file the single source of truth
-# (see its header comment).
+# sonar-scanner.properties into scanner arguments, keeping that file the single source of truth
+# (see its header comment). That file is deliberately not named `sonar-project.properties` —
+# SonarScanner for .NET 11.x hard-fails post-processing if a file with that reserved name exists
+# anywhere under the analyzed root.
 #
 # Expects SONAR_HOST_URL and SONAR_TOKEN in the environment; Jenkins' `withSonarQubeEnv` block
 # supplies both (SONAR_AUTH_TOKEN is accepted as the older name). Pull-request parameters come from
@@ -18,7 +20,7 @@ set -eu
 REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$REPO_ROOT"
 
-PROPS="${SONAR_PROPERTIES:-sonar-project.properties}"
+PROPS="${SONAR_PROPERTIES:-sonar-scanner.properties}"
 [ -f "$PROPS" ] || { echo "Missing ${PROPS}" >&2; exit 1; }
 
 set -- begin
