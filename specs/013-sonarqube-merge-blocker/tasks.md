@@ -64,13 +64,13 @@ kịch bản xác nhận trong `quickstart.md`.
 **Mục đích**: Sửa các tham chiếu đường dẫn đã lỗi thời trỏ tới spec cũ đã bị xoá; không ảnh hưởng
 tới việc pipeline có chạy được hay không.
 
-- [ ] T001 [P] Cập nhật comment đầu file `Jenkinsfile` (dòng 1–13): đổi tham chiếu
+- [X] T001 [P] Cập nhật comment đầu file `Jenkinsfile` (dòng 1–13): đổi tham chiếu
       `specs/012-sonarqube-quality-gate/contracts/pipeline-stage-contract.md` thành
       `specs/013-sonarqube-merge-blocker/contracts/pipeline-stage-contract.md`
-- [ ] T002 [P] Cập nhật comment trong `scripts/ci/setup-branch-protection.sh` (dòng ~21): đổi tham
+- [X] T002 [P] Cập nhật comment trong `scripts/ci/setup-branch-protection.sh` (dòng ~21): đổi tham
       chiếu `specs/012-sonarqube-quality-gate/contracts/pipeline-stage-contract.md` thành
       `specs/013-sonarqube-merge-blocker/contracts/pipeline-stage-contract.md`
-- [ ] T003 [P] Thêm một mục "Amendment (2026-08-27)" vào
+- [X] T003 [P] Thêm một mục "Amendment (2026-08-27)" vào
       `docs/adr/0012-ci-quality-gate-enforcement.md` ghi nhận: (a) branch protection bị chặn bởi
       giới hạn gói GitHub private/miễn phí và khuyến nghị nâng cấp GitHub Pro (research.md Decision
       7 của spec 013), (b) SonarQube Community Branch Plugin thực tế đã được cài đặt và nạp thành

@@ -1,10 +1,10 @@
 #!/usr/bin/env groovy
 
-// CI pipeline for the ecommerce monorepo (spec 012-sonarqube-quality-gate).
+// CI pipeline for the ecommerce monorepo (spec 013-sonarqube-merge-blocker).
 //
 // Five ordered stages — build, unit tests, integration tests, contract tests, SonarQube quality
 // gate — each publishing its own GitHub check under the exact name required by
-// specs/012-sonarqube-quality-gate/contracts/pipeline-stage-contract.md §1. Branch protection on
+// specs/013-sonarqube-merge-blocker/contracts/pipeline-stage-contract.md §1. Branch protection on
 // the protected branch lists those five names as required status checks with bypassing disabled,
 // so a failing stage blocks merge for every role (FR-004/FR-005).
 //

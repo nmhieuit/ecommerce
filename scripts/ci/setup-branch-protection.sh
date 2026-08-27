@@ -18,7 +18,7 @@
 # stack to manage one repository's settings would be disproportionate (research.md Decision 5).
 # This script is the documented, repeatable form of that one-time action, and it is the only
 # reason the five stage names in the Jenkinsfile are load-bearing —
-# specs/012-sonarqube-quality-gate/contracts/pipeline-stage-contract.md §1 is the shared list.
+# specs/013-sonarqube-merge-blocker/contracts/pipeline-stage-contract.md §1 is the shared list.
 #
 # `enforce_admins: true` is the setting that removes the override path for every role, including
 # repository admins. Without it the pipeline is advisory, not a gate.

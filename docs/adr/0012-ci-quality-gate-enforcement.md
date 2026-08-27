@@ -170,3 +170,44 @@ spec's Edge Cases (a Kubernetes workload with its own database, provisioned via 
 existing Ansible pattern) — standing up that production instance remains a separate follow-up
 tracked against FR-006. The local instance is sufficient to validate the Jenkins↔SonarQube↔GitHub
 wiring end-to-end; it is not itself the "provisioned instance" FR-006 describes for production use.
+
+## Amendment (2026-08-27): Branch protection is blocked by the GitHub plan, not by configuration
+
+Re-verified while planning `specs/013-sonarqube-merge-blocker` (the successor spec to
+`012-sonarqube-quality-gate`, which was deleted after this ADR's decision had already shipped as
+working pipeline code). Two things changed since the amendment above, one for the worse and one for
+the better.
+
+**The PR-decoration gap above is closed.** Direct inspection of the running local SonarQube
+instance confirms the SonarQube Community Branch Plugin is installed
+(`sonarqube-extensions/plugins/sonarqube-community-branch-plugin-26.5.0.jar`) and loaded
+(`web.log`: `Loaded core extensions: Community Branch Plugin`). The "runs the community Branch
+Plugin or accepts undecorated metrics" choice from the 2026-08-23 amendment has been made in
+practice: the community plugin, at no recurring cost, consistent with the rest of this decision.
+
+**Branch protection — the mechanism this whole ADR is about — cannot currently be enabled at all.**
+`scripts/ci/setup-branch-protection.sh`, run against `nmhieuit/ecommerce`, receives HTTP 403
+"Upgrade to GitHub Pro or make this repository public to enable this feature" for both classic
+branch protection and the newer repository ruleset API, regardless of the token's admin rights. This
+is a **GitHub plan limitation**, not a bug in the script or a permissions problem: GitHub does not
+offer protected branches on a private repository on the free plan, for any account. Until this is
+resolved, `enforce_admins` — "the one switch that literally removes the override path the
+constitution forbids" (Decision, above) — cannot be turned on, and the five `ci/*` checks this ADR
+describes remain advisory, exactly the outcome Option A was chosen to avoid.
+
+**Recommendation: upgrade the account to GitHub Pro, keep the repository private.** Making the
+repository public would also clear the 403, but it reopens the cost trade-off this ADR already
+settled in the amendment above — SonarCloud's no-cost tier was rejected specifically because
+`nmhieuit/ecommerce` is private, and self-hosting was chosen to preserve that privacy at no
+recurring cost. Trading privacy away to get a *different* free tier working would undo that
+decision for a smaller saving (GitHub Pro is a low, flat, per-seat fee) than the SaaS cost it was
+originally avoiding. This is a paid, account-level change: per this environment's operating rules,
+an automated session does not purchase services or alter account/billing settings, so upgrading the
+plan and re-running `scripts/ci/setup-branch-protection.sh nmhieuit/ecommerce master` is recorded
+here as the exact remaining step for the repository owner, not performed by this session.
+
+Until that upgrade happens, this ADR's "Decision" section describes the pipeline's *intended*
+enforcement, verified to work end-to-end against the local Jenkins/SonarQube instance, but not yet
+a real merge blocker on `github.com/nmhieuit/ecommerce`. See
+`specs/013-sonarqube-merge-blocker/research.md` (Decision 7) and `tasks.md` (T008–T009) for the
+tracked follow-through.
