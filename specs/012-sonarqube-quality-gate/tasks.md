@@ -415,6 +415,44 @@ without ever executing it.
 
 ---
 
+## Phase 6b: Defects the pipeline caught (2026-08-27)
+
+**Purpose**: Record what running the gate for real surfaced. This is the feature delivering its
+intended value — none of these were visible from reading the code.
+
+- [X] T035 Provider pact verification failed on CI while passing locally, with
+      `error sending request for url (.../_pact/provider-states)`. Pact allows each provider-state
+      callback only a short budget and the first `MigrateAsync` against a cold SQL Server container
+      exceeds it, so the state endpoint never answers in time. Fixed by migrating once before
+      `Verify()` and raising the per-request budget. Locally re-verified: products 1/1, baskets 2/2,
+      orders 2/2.
+- [X] T036 The local CI stack had no restart policy, and SonarQube had been OOM-killed (exit 137)
+      34 hours before. Compose DNS only resolves running containers, so the scanner died on
+      `Name or service not known (sonarqube:9000)` — a failure that reads like a pipeline defect
+      rather than a container that quietly died overnight. `restart: unless-stopped` on both
+      services.
+- [ ] ⛔ T037 **Product defect, not a test defect — needs a decision.**
+      `Bff.Api.IntegrationTests.CheckoutTests.Checkout_OrdersOnlyTheCallersOwnBasket` failed on CI
+      with `Expected: 12.50 / Actual: 25.00` — exactly double — after a single
+      `AddAsync(quantity: 1)`. It passed on the previous run, so it is load-dependent.
+
+      Cause: `DownstreamClientRegistrationExtensions` applies `AddStandardResilienceHandler` with
+      `MaxRetryAttempts = 2` to every downstream client, including `BasketsApiClient`. Its
+      `POST /baskets/current/items` is **not idempotent** — it calls `Basket.AddItem`, which
+      increments quantity on an existing line. Under load the first attempt hits the attempt
+      timeout, the pipeline retries, and the item is added twice. A real shopper on a slow network
+      gets quantities they did not ask for; nothing about this is confined to tests.
+
+      Out of scope for this feature to fix unilaterally — it changes runtime failure behaviour for
+      every POST the BFF makes. Two candidate directions, both needing a decision:
+
+      1. Stop retrying non-idempotent methods (narrow the resilience pipeline to GET, or set
+         `Retry.ShouldHandle` accordingly). Simple, and loses retry protection for POSTs.
+      2. Make the write idempotent (a client-supplied request key the baskets service de-duplicates
+         on). Correct, and more work — it touches the baskets contract.
+
+---
+
 ## Phase 7: Polish & Cross-Cutting Concerns
 
 **Purpose**: Governance, edge-case validation, and closing the scope boundary noted in `plan.md`
