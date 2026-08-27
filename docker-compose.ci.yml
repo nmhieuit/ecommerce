@@ -26,6 +26,12 @@ services:
     build:
       context: ./docker/ci/jenkins
     image: ecomerce-ci-jenkins:local
+    # The stack is long-lived local infrastructure, and a stopped SonarQube does not fail loudly:
+    # compose DNS simply stops resolving the name, so the next build dies with
+    # "Name or service not known (sonarqube:9000)" that reads like a pipeline bug rather than a
+    # container that was OOM-killed (exit 137) hours earlier. Restarting on its own removes that
+    # whole class of confusing failure.
+    restart: unless-stopped
     ports:
       - "8080:8080"
       - "50000:50000"
@@ -67,6 +73,12 @@ services:
 
   sonarqube:
     image: sonarqube:community
+    # The stack is long-lived local infrastructure, and a stopped SonarQube does not fail loudly:
+    # compose DNS simply stops resolving the name, so the next build dies with
+    # "Name or service not known (sonarqube:9000)" that reads like a pipeline bug rather than a
+    # container that was OOM-killed (exit 137) hours earlier. Restarting on its own removes that
+    # whole class of confusing failure.
+    restart: unless-stopped
     ports:
       - "9000:9000"
     volumes:
