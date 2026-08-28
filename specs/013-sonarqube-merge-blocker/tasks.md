@@ -105,14 +105,22 @@ công — không có gì trong Phase 3 trở đi có thể xác nhận được 
       xong (chưa xác nhận trực tiếp): kiểm tra lại ngày 2026-08-27 cho thấy `admin`/`admin` không
       còn hợp lệ, tức mật khẩu đã được đổi (bởi bạn hoặc một phiên làm việc khác); không có gì cần
       làm thêm ở đây trừ khi bạn muốn xác nhận lại giá trị hiện tại
-- [ ] T007 Sau khi T004 (xong) và T005 hoàn tất, kích hoạt lại một lượt chạy trên job `ecommerce` (push một
+- [X] T007 Sau khi T004 (xong) và T005 hoàn tất, kích hoạt lại một lượt chạy trên job `ecommerce` (push một
       commit nhỏ vào `master` hoặc bấm "Scan Multibranch Pipeline Now" trong Jenkins) và xác nhận cả
       năm check `ci/build`, `ci/unit-tests`, `ci/integration-tests`, `ci/contract-tests`,
       `ci/sonarqube-quality-gate` chạy xong và báo cáo về GitHub — đây là điều kiện bắt buộc để
       branch protection (Phase 3) có thể liệt kê được các check đó ("GitHub chỉ có thể yêu cầu
-      những check nó đã từng thấy")
+      những check nó đã từng thấy"). **Xong**: build #5 trên job `ecommerce` (commit `a534daa`)
+      hoàn tất `Finished: SUCCESS` với cả 5 stage chạy hết và "SonarQube quality gate passed.";
+      GitHub đã được thông báo kết quả. Quá trình chạy T007 phát hiện và cần sửa thêm hai lỗi thật
+      không nằm trong danh sách task ban đầu: (1) `pnpm --dir frontend turbo run test -- --coverage`
+      không forward được `--coverage` qua turbo (sửa bằng `pnpm exec turbo`, commit `6847b79`); (2)
+      `dotnet sonarscanner end` thiếu token xác thực so với `begin` (commit `8b71115`); (3)
+      SonarScanner for .NET 11.x từ chối chạy nếu có file tên `sonar-project.properties` trong repo
+      — đã đổi tên thành `sonar-scanner.properties` (commit `483b273` + `a534daa`).
 
-**Checkpoint**: Một lượt chạy pipeline đầy đủ, thành công, đã được GitHub ghi nhận cho `master`.
+**Checkpoint**: ✅ Một lượt chạy pipeline đầy đủ, thành công (build #5), đã được GitHub ghi nhận cho
+`master`. Phase 2 (Foundational) hoàn tất — sẵn sàng cho Phase 3 (User Story 1).
 
 ---
 
@@ -124,21 +132,45 @@ có đường vòng.
 **Kiểm thử độc lập**: Mở một PR cố tình làm giảm coverage dưới ngưỡng; xác nhận PR bị chặn merge kể
 cả khi thử merge bằng tài khoản admin.
 
-### Triển khai cho User Story 1
+### Chế độ chạy nhanh tạm thời (TEMP — Jenkinsfile `CI_FAST_ITERATION`)
+
+Để lặp lại T008–T011 nhanh hơn (mỗi lần mở PR thử không phải chờ Testcontainers + phân tích Sonar
+đầy đủ), `Jenkinsfile` (commit `1f3f042`) hiện có biến `CI_FAST_ITERATION=true`, dùng `when` để bỏ
+qua nội dung thật của 3 stage: `sonarqube: begin analysis`, `integration tests`, `contract tests`,
+`sonarqube quality gate`. `build` và `unit tests` vẫn chạy thật. Tên 5 required check không đổi;
+khi bị bỏ qua, check tương ứng ở trạng thái "pending" trên GitHub (không tự pass), nên PR vẫn không
+mergeable trong lúc này — không làm suy yếu branch protection.
+
+**⚠️ BẮT BUỘC trước khi coi Phase 3 hoàn tất**: đặt `CI_FAST_ITERATION = 'false'` (hoặc xoá dòng đó)
+trong `Jenkinsfile`, chạy lại một lượt pipeline đầy đủ, thật, rồi mới xác nhận T010/T011 — chưa làm
+việc này thì T010/T011 dưới đây KHÔNG được đánh dấu xong dù có kết quả gì trong lúc chạy chế độ nhanh.
+
+**Đã xác nhận hoạt động đúng** (build #6, commit `1f3f042`): 3 stage nặng bị bỏ qua đúng như thiết
+kế (`skipped due to when conditional`), build + unit tests vẫn chạy thật, `Finished: SUCCESS` sau
+~2.2 phút — so với ~12.7 phút của lượt chạy đầy đủ (build #5). Việc thiếu `gh` CLI (xem T009) khiến
+chưa thể kiểm chứng phần "check nào đang bị bỏ qua thì PR vẫn không mergeable" bằng branch protection
+thật; điều đó tách biệt với việc xác nhận cơ chế `when` hoạt động đúng, đã xong ở bước này.
 
 - [ ] T008 [US1] Nâng cấp gói GitHub cho `nmhieuit/ecommerce` lên GitHub Pro (giữ private) —
       **quyết định chi phí/tài khoản, chủ repository phải tự thực hiện**; không thể tự động hoá
       trong phiên làm việc này (research.md Decision 7). Không có bước này, `gh api
       repos/.../branches/master/protection` sẽ tiếp tục trả về HTTP 403 như đã xác nhận trước đây.
-- [ ] T009 [US1] Sau T007 và T008, chạy `scripts/ci/setup-branch-protection.sh nmhieuit/ecommerce
-      master` với quyền admin repo, xác nhận cả năm check được liệt kê là required và
-      `enforce_admins.enabled = true` (lệnh xác nhận có sẵn ở cuối script)
-- [ ] T010 [US1] Xác nhận Kịch bản 1 và Kịch bản 2 của `quickstart.md`: một PR đạt thì merge khả
-      dụng sau khi `ci/sonarqube-quality-gate` thành công; một PR có unit test hỏng hoặc coverage
-      dưới ngưỡng thì bị chặn merge và không vai trò nào (kể cả admin) có tuỳ chọn "merge bất chấp"
-- [ ] T011 [P] [US1] Xác nhận Kịch bản 5 của `quickstart.md`: trỏ tạm URL SonarQube của pipeline tới
-      một địa chỉ không phản hồi, xác nhận `ci/sonarqube-quality-gate` báo thất bại sau đúng 15 phút
-      (không phải thành công, không phải bị bỏ qua)
+- [ ] T009 [US1] ⛔ **Chặn — thiếu GitHub CLI (`gh`)**: không tìm thấy `gh` ở bất kỳ đâu trên máy
+      này (kiểm tra cả Git Bash và PowerShell), nên `scripts/ci/setup-branch-protection.sh` — vốn
+      bọc `gh api` — chưa thể tự chạy được trong phiên này, kể cả sau khi T008 xong. Cần một trong
+      hai: (a) bạn tự cài `gh` (`winget install --id GitHub.cli`) rồi chạy
+      `gh auth login && scripts/ci/setup-branch-protection.sh nmhieuit/ecommerce master`, hoặc (b)
+      báo tôi để cài `gh` giúp (thao tác cài phần mềm — sẽ xin xác nhận trước khi làm). Sau khi T008
+      và bước này xong, xác nhận cả năm check được liệt kê là required và
+      `enforce_admins.enabled = true` (lệnh xác nhận có sẵn ở cuối script).
+- [ ] T010 [US1] (cần chạy với `CI_FAST_ITERATION=false`) Xác nhận Kịch bản 1 và Kịch bản 2 của
+      `quickstart.md`: một PR đạt thì merge khả dụng sau khi `ci/sonarqube-quality-gate` thành
+      công; một PR có unit test hỏng hoặc coverage dưới ngưỡng thì bị chặn merge và không vai trò
+      nào (kể cả admin) có tuỳ chọn "merge bất chấp"
+- [ ] T011 [P] [US1] (cần chạy với `CI_FAST_ITERATION=false`) Xác nhận Kịch bản 5 của
+      `quickstart.md`: trỏ tạm URL SonarQube của pipeline tới một địa chỉ không phản hồi, xác nhận
+      `ci/sonarqube-quality-gate` báo thất bại sau đúng 15 phút (không phải thành công, không phải
+      bị bỏ qua)
 
 **Checkpoint**: Tại đây, User Story 1 đã hoạt động đầy đủ và có thể kiểm thử độc lập.
 
