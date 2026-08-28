@@ -125,6 +125,18 @@ Việc công khai repo để có branch protection miễn phí sẽ mâu thuẫn
 đặt tài khoản thay người dùng). Chủ repository cần tự nâng cấp gói, sau đó chạy lại
 `scripts/ci/setup-branch-protection.sh nmhieuit/ecommerce master`.
 
+**Cập nhật (2026-08-27, quyết định thực tế đã chọn)**: chủ repository đã chọn phương án **chuyển
+`nmhieuit/ecommerce` sang công khai (public)** thay vì nâng cấp GitHub Pro — xác nhận trực tiếp qua
+trình duyệt: trang repo hiển thị nhãn "Public", và `Settings → Branches` không còn báo lỗi nâng cấp
+gói, nút "Add classic branch protection rule" khả dụng bình thường. Đây là phương án đã bị liệt kê
+là "bác bỏ" ở trên (vì mâu thuẫn với lý do chọn SonarQube self-hosted thay SonarCloud trong ADR-0012
+— lý do đó dựa trên giả định repo private). Ghi nhận trung thực: chủ repository đã cân nhắc lại và
+chấp nhận đánh đổi ngược — công khai mã nguồn để có branch protection miễn phí — thay vì trả phí
+GitHub Pro để giữ private. Hệ quả kéo theo (ghi nhận, không phải việc cần làm ngay): tiền đề "repo
+private nên SonarCloud không có gói miễn phí" của ADR-0012 amendment (2026-08-23) không còn đúng;
+nếu muốn, việc chọn lại giữa self-hosted SonarQube và SonarCloud (miễn phí cho repo public) có thể
+xem lại như một quyết định riêng trong tương lai — nằm ngoài phạm vi Phase 3 hiện tại.
+
 ### Quyết định 8: Cơ chế hiển thị chỉ số trên PR — SonarQube Community Branch Plugin
 
 **Vấn đề**: SonarQube Community Edition (đã chọn ở ADR-0012 amendment vì miễn phí) không có PR

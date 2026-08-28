@@ -151,18 +151,26 @@ kế (`skipped due to when conditional`), build + unit tests vẫn chạy thật
 chưa thể kiểm chứng phần "check nào đang bị bỏ qua thì PR vẫn không mergeable" bằng branch protection
 thật; điều đó tách biệt với việc xác nhận cơ chế `when` hoạt động đúng, đã xong ở bước này.
 
-- [ ] T008 [US1] Nâng cấp gói GitHub cho `nmhieuit/ecommerce` lên GitHub Pro (giữ private) —
-      **quyết định chi phí/tài khoản, chủ repository phải tự thực hiện**; không thể tự động hoá
-      trong phiên làm việc này (research.md Decision 7). Không có bước này, `gh api
-      repos/.../branches/master/protection` sẽ tiếp tục trả về HTTP 403 như đã xác nhận trước đây.
+- [X] T008 [US1] ~~Nâng cấp gói GitHub lên GitHub Pro~~ — **thay đổi phương án**: chủ repository đã
+      chọn chuyển `nmhieuit/ecommerce` sang **công khai (Public)** thay vì trả phí GitHub Pro. Xác
+      nhận qua trình duyệt (Chrome MCP) ngày 2026-08-27: trang repo hiển thị nhãn "Public",
+      `Settings → Branches` không còn báo lỗi nâng cấp gói — nút "Add classic branch protection
+      rule" khả dụng bình thường. Ghi nhận đổi hướng này ở research.md Decision 7 (cập nhật) và
+      plan.md Complexity Tracking. Rào cản gốc (HTTP 403 trên repo private/miễn phí) đã hết.
 - [ ] T009 [US1] ⛔ **Chặn — thiếu GitHub CLI (`gh`)**: không tìm thấy `gh` ở bất kỳ đâu trên máy
       này (kiểm tra cả Git Bash và PowerShell), nên `scripts/ci/setup-branch-protection.sh` — vốn
-      bọc `gh api` — chưa thể tự chạy được trong phiên này, kể cả sau khi T008 xong. Cần một trong
-      hai: (a) bạn tự cài `gh` (`winget install --id GitHub.cli`) rồi chạy
-      `gh auth login && scripts/ci/setup-branch-protection.sh nmhieuit/ecommerce master`, hoặc (b)
-      báo tôi để cài `gh` giúp (thao tác cài phần mềm — sẽ xin xác nhận trước khi làm). Sau khi T008
-      và bước này xong, xác nhận cả năm check được liệt kê là required và
-      `enforce_admins.enabled = true` (lệnh xác nhận có sẵn ở cuối script).
+      bọc `gh api` — chưa thể tự chạy được trong phiên này, dù T008 đã xong (repo đã public, không
+      còn 403). Do repo giờ là public, có thể làm bằng một trong ba cách: (a) bạn tự cài `gh`
+      (`winget install --id GitHub.cli`) rồi chạy
+      `gh auth login && scripts/ci/setup-branch-protection.sh nmhieuit/ecommerce master`; (b) báo
+      tôi cài `gh` giúp (thao tác cài phần mềm — sẽ xin xác nhận trước); hoặc (c) cấu hình trực
+      tiếp qua giao diện web `github.com/nmhieuit/ecommerce/settings/branches` → "Add classic
+      branch protection rule" trên nhánh `master`, liệt kê đủ 5 check
+      (`ci/build`, `ci/unit-tests`, `ci/integration-tests`, `ci/contract-tests`,
+      `ci/sonarqube-quality-gate`) và bật "Do not allow bypassing the above settings" — nội dung
+      tương đương những gì script làm qua API, có thể thao tác qua trình duyệt đã mở sẵn (sẽ xin
+      xác nhận trước khi bấm lưu vì đây là thay đổi cấu hình repo thật). Sau khi xong, xác nhận cả
+      năm check được liệt kê là required và tuỳ chọn bypass bị tắt.
 - [ ] T010 [US1] (cần chạy với `CI_FAST_ITERATION=false`) Xác nhận Kịch bản 1 và Kịch bản 2 của
       `quickstart.md`: một PR đạt thì merge khả dụng sau khi `ci/sonarqube-quality-gate` thành
       công; một PR có unit test hỏng hoặc coverage dưới ngưỡng thì bị chặn merge và không vai trò
