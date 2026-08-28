@@ -157,20 +157,18 @@ thật; điều đó tách biệt với việc xác nhận cơ chế `when` ho�
       `Settings → Branches` không còn báo lỗi nâng cấp gói — nút "Add classic branch protection
       rule" khả dụng bình thường. Ghi nhận đổi hướng này ở research.md Decision 7 (cập nhật) và
       plan.md Complexity Tracking. Rào cản gốc (HTTP 403 trên repo private/miễn phí) đã hết.
-- [ ] T009 [US1] ⛔ **Chặn — thiếu GitHub CLI (`gh`)**: không tìm thấy `gh` ở bất kỳ đâu trên máy
-      này (kiểm tra cả Git Bash và PowerShell), nên `scripts/ci/setup-branch-protection.sh` — vốn
-      bọc `gh api` — chưa thể tự chạy được trong phiên này, dù T008 đã xong (repo đã public, không
-      còn 403). Do repo giờ là public, có thể làm bằng một trong ba cách: (a) bạn tự cài `gh`
-      (`winget install --id GitHub.cli`) rồi chạy
-      `gh auth login && scripts/ci/setup-branch-protection.sh nmhieuit/ecommerce master`; (b) báo
-      tôi cài `gh` giúp (thao tác cài phần mềm — sẽ xin xác nhận trước); hoặc (c) cấu hình trực
-      tiếp qua giao diện web `github.com/nmhieuit/ecommerce/settings/branches` → "Add classic
-      branch protection rule" trên nhánh `master`, liệt kê đủ 5 check
-      (`ci/build`, `ci/unit-tests`, `ci/integration-tests`, `ci/contract-tests`,
-      `ci/sonarqube-quality-gate`) và bật "Do not allow bypassing the above settings" — nội dung
-      tương đương những gì script làm qua API, có thể thao tác qua trình duyệt đã mở sẵn (sẽ xin
-      xác nhận trước khi bấm lưu vì đây là thay đổi cấu hình repo thật). Sau khi xong, xác nhận cả
-      năm check được liệt kê là required và tuỳ chọn bypass bị tắt.
+- [X] T009 [US1] Áp branch protection cho `master` qua giao diện web (không dùng `gh` — vẫn chưa
+      cài trên máy này) tại `github.com/nmhieuit/ecommerce/settings/branch_protection_rules/82386976`.
+      Lần lưu đầu tiên (nút "Create") chỉ lưu đúng các tuỳ chọn boolean (Require a pull request,
+      Require status checks, Require branches up to date, Require conversation resolution, Do not
+      allow bypassing) nhưng **danh sách 5 required status check bị lưu rỗng** — phát hiện khi đọc
+      lại trang bằng Chrome MCP ("No required checks" / "No checks have been added"), tức branch
+      protection ban đầu KHÔNG chặn gì cả dù các cờ trông có vẻ đúng. Đã sửa: mở lại rule ở chế độ
+      Edit, thêm lại đủ 5 check (`ci/build`, `ci/unit-tests`, `ci/integration-tests`,
+      `ci/contract-tests`, `ci/sonarqube-quality-gate`), bạn tự bấm "Save changes". **Xác nhận lại
+      sau khi reload trang**: cả 5 check hiện đúng trong "Status checks that are required", "Do not
+      allow bypassing the above settings" đã bật. FR-003 (không đường vòng) giờ có cơ chế thật đứng
+      sau.
 - [ ] T010 [US1] (cần chạy với `CI_FAST_ITERATION=false`) Xác nhận Kịch bản 1 và Kịch bản 2 của
       `quickstart.md`: một PR đạt thì merge khả dụng sau khi `ci/sonarqube-quality-gate` thành
       công; một PR có unit test hỏng hoặc coverage dưới ngưỡng thì bị chặn merge và không vai trò
