@@ -27,18 +27,27 @@
 // ============================================================================================
 
 // Publishing the checks explicitly, rather than relying on Jenkins' own stage-name statuses, is
-// what pins the names branch protection matches on. Requires the GitHub Checks plugin and an SCM
-// source that can post checks (the multibranch job's GitHub Branch Source credentials).
+// what pins the names branch protection matches on.
+//
+// FIX (2026-08-28, verified against the real GitHub API): this used to call `publishChecks`
+// (Checks API, github-checks plugin). GitHub's Checks API rejects personal access tokens outright
+// — `POST /repos/.../check-runs` with this job's PAT returns 403 "Resource not accessible by
+// personal access token"; only a GitHub App installation token can create check runs. The
+// classic commit-status endpoint (`POST /repos/.../statuses/:sha`) has no such restriction and
+// returned 201 with the same token. `githubNotify` (GitHub plugin) uses that Status API, so it
+// works with the PAT already configured for this job — and GitHub's required-status-checks list
+// matches on `context` the same way regardless of which API produced it, so the five names below
+// still work as required checks with no branch-protection change needed.
 void checkStarted(String name) {
-    publishChecks name: name, status: 'IN_PROGRESS', summary: "${name} is running"
+    githubNotify context: name, description: "${name} is running", status: 'PENDING'
 }
 
 void checkPassed(String name, String summary) {
-    publishChecks name: name, status: 'COMPLETED', conclusion: 'SUCCESS', summary: summary
+    githubNotify context: name, description: summary, status: 'SUCCESS'
 }
 
 void checkFailed(String name, String summary) {
-    publishChecks name: name, status: 'COMPLETED', conclusion: 'FAILURE', summary: summary
+    githubNotify context: name, description: summary, status: 'FAILURE'
 }
 
 pipeline {
