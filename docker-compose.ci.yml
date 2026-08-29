@@ -55,6 +55,19 @@ services:
       # sysctl change (262144) not worth making just to run a local/dev SonarQube in Docker Desktop.
       # Do not carry this into a real deployment.
       SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+      # Required by the SonarQube Community Branch Plugin (research.md Decision 8): without this
+      # Java agent, the plugin's ServerExtensionInstaller refuses to load ("did not detect agent
+      # modifications") and the whole server aborts startup — this is not just a missing-feature
+      # case, it is a hard crash. This was previously set out-of-band (never persisted here), so a
+      # plain `docker compose down`/`up` silently dropped it and broke SonarQube entirely. The path
+      # is relative to SONARQUBE_HOME and must match the jar's actual filename/version in the
+      # sonarqube-extensions volume (see `docker run --rm -v ecomerce-ci_sonarqube-extensions:/data
+      # busybox ls /data/plugins/` to check after a plugin upgrade).
+      # The plugin instruments each SonarQube JVM component separately — web alone is not enough;
+      # Compute Engine (which actually processes analysis reports and computes gate results) needs
+      # its own agent too, or the server aborts startup the same way for that component instead.
+      SONAR_WEB_JAVAADDITIONALOPTS: "-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-26.5.0.jar=web"
+      SONAR_CE_JAVAADDITIONALOPTS: "-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-26.5.0.jar=ce"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"' || exit 1"]
       interval: 10s
