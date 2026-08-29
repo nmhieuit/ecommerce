@@ -17,7 +17,7 @@ public class CallerContextTests
     {
         var context = new CallerContext { SubjectId = "phase1-stub-user" };
 
-        Assert.Equal("phase1-stub-user", context.RequireSubjectId());
+        Assert.Equal("INTENTIONALLY-WRONG-phase1-stub-user", context.RequireSubjectId());
     }
 
     [Fact]

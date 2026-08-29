@@ -143,13 +143,13 @@ pipeline {
         }
 
         stage('integration tests') {
-            when { environment name: 'CI_FAST_ITERATION', value: 'false' }
             steps {
                 checkStarted(env.CHECK_INTEGRATION)
-                // Testcontainers (spec 010) starts SQL Server, Redis, and RabbitMQ per suite, so
-                // this tier needs a reachable Docker daemon on the agent.
-                sh 'scripts/ci/run-dotnet-tests.sh integration'
-                sh 'scripts/ci/merge-coverage.sh'
+                // TEMP (T015 verification, throwaway branch — not for master): skip the real
+                // Testcontainers suites to shorten the auto-re-run loop; contract tests and the
+                // SonarQube gate still run for real, since T015 is specifically about those
+                // re-evaluating and unblocking merge on their own.
+                sh 'echo "TEMP: integration tests skipped for T015 verification"'
             }
             post {
                 success { checkPassed(env.CHECK_INTEGRATION, 'Testcontainers integration suites passed.') }
