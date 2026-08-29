@@ -169,10 +169,38 @@ thật; điều đó tách biệt với việc xác nhận cơ chế `when` ho�
       sau khi reload trang**: cả 5 check hiện đúng trong "Status checks that are required", "Do not
       allow bypassing the above settings" đã bật. FR-003 (không đường vòng) giờ có cơ chế thật đứng
       sau.
-- [ ] T010 [US1] (cần chạy với `CI_FAST_ITERATION=false`) Xác nhận Kịch bản 1 và Kịch bản 2 của
-      `quickstart.md`: một PR đạt thì merge khả dụng sau khi `ci/sonarqube-quality-gate` thành
-      công; một PR có unit test hỏng hoặc coverage dưới ngưỡng thì bị chặn merge và không vai trò
-      nào (kể cả admin) có tuỳ chọn "merge bất chấp"
+- [X] T010 [US1] Xác nhận Kịch bản 1 và Kịch bản 2 của `quickstart.md` bằng PR thật trên GitHub
+      (`CI_FAST_ITERATION=false`).
+
+      Quá trình xác nhận phát hiện và sửa thêm 2 lỗi thật không nằm trong danh sách ban đầu:
+      1. **`publishChecks` (Checks API) không bao giờ hoạt động với PAT**: xác nhận trực tiếp qua
+         `curl POST /check-runs` → HTTP 403 "Resource not accessible by personal access token" —
+         GitHub chỉ cho phép GitHub App tạo check run, không cho PAT. Toàn bộ 5 check
+         (`ci/build`...) publish qua `publishChecks` trước đó không hề lên GitHub thật, dù Jenkins
+         không báo lỗi gì. Đã sửa: đổi `checkStarted/checkPassed/checkFailed` sang dùng
+         `githubNotify` (Status API — `curl POST /statuses/:sha` trả 201 với cùng PAT, xác nhận
+         hoạt động), commit `b41d7f6`.
+      2. **Chiến lược PR discovery build merge-ref thay vì head-ref**: `OriginPullRequestDiscoveryTrait
+         strategyId=1` khiến Jenkins build commit merge-với-master, nhưng GitHub tính required
+         checks theo commit HEAD của PR — nên check dù publish đúng vẫn mãi mãi ở trạng thái
+         "pending". Đổi sang
+         `strategyId=2` ("The current pull request revision") qua Jenkins UI (bạn tự đổi) để
+         Jenkins build đúng commit mà GitHub theo dõi. (`strategyId=3` — build cả hai — được thử
+         trước nhưng gây tranh chấp tài nguyên Docker giữa hai lượt chạy song song, dẫn tới một
+         integration test bị timeout kết nối SQL Server; quay lại `strategyId=2` giải quyết dứt
+         điểm.)
+
+      **Kịch bản 1 (PR đạt → merge khả dụng)**: xác nhận trên
+      [PR #2](https://github.com/nmhieuit/ecommerce/pull/2) — sau khi sửa xong hai lỗi trên,
+      trạng thái "Ready to merge — All checks have passed (7 successful checks)"; đã merge vào
+      `master` (commit `17f4a71`).
+
+      **Kịch bản 2 (PR không đạt → chặn merge, không đường vòng)**: xác nhận trên
+      [PR #3](https://github.com/nmhieuit/ecommerce/pull/3) (nhánh tạm
+      `test/verify-merge-blocked`, cố tình sửa sai một assertion) — `ci/unit-tests` báo thất bại
+      đúng lý do, nút "Merge pull request" bị vô hiệu hoá (xám), **không có bất kỳ tuỳ chọn merge
+      bất chấp/bypass nào hiển thị** dù đang đăng nhập bằng chính tài khoản chủ repo. PR #3 đã
+      đóng (không merge), nhánh tạm đã xoá cả local và remote.
 - [ ] T011 [P] [US1] (cần chạy với `CI_FAST_ITERATION=false`) Xác nhận Kịch bản 5 của
       `quickstart.md`: trỏ tạm URL SonarQube của pipeline tới một địa chỉ không phản hồi, xác nhận
       `ci/sonarqube-quality-gate` báo thất bại sau đúng 15 phút (không phải thành công, không phải

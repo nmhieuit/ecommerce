@@ -211,3 +211,41 @@ enforcement, verified to work end-to-end against the local Jenkins/SonarQube ins
 a real merge blocker on `github.com/nmhieuit/ecommerce`. See
 `specs/013-sonarqube-merge-blocker/research.md` (Decision 7) and `tasks.md` (T008–T009) for the
 tracked follow-through.
+
+## Amendment (2026-08-29): the repository went public instead, and two enforcement bugs surfaced on real PRs
+
+The repository owner resolved the amendment above by making `nmhieuit/ecommerce` **public** rather
+than upgrading to GitHub Pro — the opposite of this ADR's recommendation, accepted knowingly (see
+`specs/013-sonarqube-merge-blocker/research.md` Decision 7 update). Branch protection with
+`enforce_admins`-equivalent ("Do not allow bypassing the above settings") is now live on `master`.
+
+Turning it on against real pull requests immediately surfaced two bugs in the "Decision" section's
+design, neither visible against the local instance alone because that testing never went through
+GitHub's actual required-status-check evaluation:
+
+1. **`publishChecks` (Checks API) cannot authenticate with a personal access token, at all.**
+   `POST /repos/.../check-runs` with this job's PAT returns HTTP 403 "Resource not accessible by
+   personal access token" — confirmed directly against the API, not inferred. GitHub restricts
+   check-run creation to GitHub App installation tokens. Every `checkStarted`/`checkPassed`/
+   `checkFailed` call in the `Jenkinsfile` had been silently failing since this ADR's pipeline was
+   first built; Jenkins never surfaced an error, and the five `ci/*` checks never reached GitHub on
+   any commit, ever. The classic Status API (`POST /repos/.../statuses/:sha`) has no such
+   restriction — confirmed with the same token, HTTP 201 — so the three functions now call
+   `githubNotify` (GitHub plugin) instead of `publishChecks` (github-checks plugin). Required-check
+   matching is by `context` name regardless of which API produced it, so no branch-protection
+   change was needed, only the Jenkinsfile.
+2. **PR discovery was building the merge-ref commit, not the PR's head commit.**
+   `OriginPullRequestDiscoveryTrait strategyId=1` ("merging the pull request with the current
+   target branch") means Jenkins tests and reports against a synthetic merge commit that GitHub's
+   required-status-check evaluation for that PR never looks at — it watches the PR's actual head
+   SHA. Checks landed successfully (once bug 1 was fixed) but on the wrong commit, so they sat
+   "Expected — Waiting for status to be reported" forever. Changed to `strategyId=2` ("the current
+   pull request revision"). `strategyId=3` (both) was tried first and rejected: building the merge
+   ref and the head ref concurrently on this single-host Jenkins agent starved a Testcontainers SQL
+   Server startup in one of the two parallel runs, failing an unrelated integration test.
+
+Both fixes are Jenkins/Jenkinsfile-only; no branch protection settings changed. Validated against
+two real pull requests: nmhieuit/ecommerce#2 (all five checks green, merged) and #3 (a deliberately
+broken unit test — `ci/unit-tests` failed with the real reason, "Merge pull request" was disabled,
+and no bypass control appeared anywhere on the PR, even for the repository owner). See
+`specs/013-sonarqube-merge-blocker/tasks.md` T010 for the full trace.
