@@ -183,6 +183,9 @@ pipeline {
                         sh 'dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN:-$SONAR_AUTH_TOKEN}"'
                     }
 
+                    // TEMP (T011 verification, throwaway branch — not for master): 5 instead of 15
+                    // minutes, purely so this manual test doesn't take a quarter hour to observe.
+                    //
                     // The scanner exits successfully once analysis is *uploaded*; the gate is
                     // computed afterwards on the server. waitForQualityGate blocks on SonarQube's
                     // webhook for the real verdict (research.md Decision 3).
@@ -190,7 +193,7 @@ pipeline {
                     // FR-008 — fail closed: an unreachable or slow SonarQube server must not let a
                     // PR through. The timeout aborts the stage rather than waiting forever, and
                     // any non-OK status is turned into an explicit failure.
-                    timeout(time: 15, unit: 'MINUTES') {
+                    timeout(time: 5, unit: 'MINUTES') {
                         def qualityGate = waitForQualityGate abortPipeline: false
                         if (qualityGate.status != 'OK') {
                             error("SonarQube quality gate failed with status '${qualityGate.status}'.")
