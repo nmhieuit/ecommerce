@@ -201,10 +201,36 @@ thật; điều đó tách biệt với việc xác nhận cơ chế `when` ho�
       đúng lý do, nút "Merge pull request" bị vô hiệu hoá (xám), **không có bất kỳ tuỳ chọn merge
       bất chấp/bypass nào hiển thị** dù đang đăng nhập bằng chính tài khoản chủ repo. PR #3 đã
       đóng (không merge), nhánh tạm đã xoá cả local và remote.
-- [ ] T011 [P] [US1] (cần chạy với `CI_FAST_ITERATION=false`) Xác nhận Kịch bản 5 của
-      `quickstart.md`: trỏ tạm URL SonarQube của pipeline tới một địa chỉ không phản hồi, xác nhận
-      `ci/sonarqube-quality-gate` báo thất bại sau đúng 15 phút (không phải thành công, không phải
-      bị bỏ qua)
+- [X] T011 [P] [US1] Xác nhận Kịch bản 5 của `quickstart.md` (fail-closed khi SonarQube không phản
+      hồi) trên nhánh dùng-xong-xoá `test/verify-sonarqube-fail-closed` (PR #5, không merge) —
+      giảm tạm `timeout(time: 15, unit: 'MINUTES')` xuống 5 phút chỉ trên nhánh đó để rút ngắn thời
+      gian quan sát, không đụng tới giá trị 15 phút trên `master`.
+
+      Hai lần thử đầu bị "hụt" theo hướng nguy hiểm hơn — **tưởng fail-closed nhưng thực ra
+      false-pass**: dừng hẳn container SonarQube (lần 1) rồi ngắt Jenkins khỏi network `ci-backbone`
+      ngay sau "ANALYSIS SUCCESSFUL" (lần 2) đều cho kết quả `Finished: SUCCESS` chỉ sau 30-60 giây
+      — vì webhook báo kết quả gate đã kịp gửi tới Jenkins trước khi hành động chặn có hiệu lực (bộ
+      phân tích nhỏ, SonarQube xử lý và gửi webhook trong vài giây, nhanh hơn phản ứng thủ công).
+      Cách chặn dứt điểm, không còn phụ thuộc thời điểm: ghi đè `/etc/hosts` **bên trong container
+      SonarQube** (`docker exec -u root ecomerce-ci-sonarqube-1`) để tên "jenkins" trỏ về
+      `127.0.0.1` — chỉ chặn một chiều SonarQube→Jenkins (webhook), không ảnh hưởng chiều
+      Jenkins→SonarQube (nên `dotnet sonarscanner end` vẫn tải phân tích lên thành công bình
+      thường). Thiết lập trước khi build chạy nên không còn phải canh đúng thời điểm.
+
+      **Kết quả**: `Timeout set to expire in 5 min 0 sec` lúc 12:55:15 UTC →
+      `Cancelling nested steps due to timeout` lúc 13:00:14 UTC (đúng ~5 phút) → `Finished: ABORTED`.
+      Trên GitHub, `ci/sonarqube-quality-gate` báo **failing**: "SonarQube quality gate did not
+      pass — see the analysis on the SonarQube server." — đúng thông điệp từ `checkFailed` trong
+      khối `post { unsuccessful {...} }`. 4 check còn lại (build/unit/integration/contract) vẫn
+      pass, nhưng PR vẫn bị chặn vì `ci/sonarqube-quality-gate` là required. Đáng chú ý: bot
+      SonarQube Community Branch Plugin báo riêng "Quality Gate passed" (phân tích thật sự đạt) —
+      nhưng pipeline của chúng ta vẫn đúng đắn từ chối cho qua vì *chúng ta* chưa từng nhận được
+      xác nhận đó — đúng tinh thần fail-closed của FR-008 (thà chặn nhầm một PR tốt còn hơn để lọt
+      một PR không được xác minh).
+
+      Dọn dẹp sau test: gỡ dòng ghi đè trong `/etc/hosts` của container SonarQube, xác nhận lại
+      Jenkins vẫn nằm trong network `ci-backbone`, cả hai container khoẻ mạnh trở lại. PR #5 đã
+      đóng (tự động, do xoá nhánh), không merge — `master` không có bất kỳ thay đổi timeout nào.
 
 **Checkpoint**: Tại đây, User Story 1 đã hoạt động đầy đủ và có thể kiểm thử độc lập.
 
