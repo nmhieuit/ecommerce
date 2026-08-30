@@ -37,8 +37,17 @@ RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
     && rm /tmp/dotnet-install.sh \
     && ln -s "${DOTNET_ROOT}/dotnet" /usr/local/bin/dotnet
 
+# COREPACK_HOME must live outside /var/jenkins_home: that path is a named Docker volume, mounted
+# over whatever the image ships there, so anything baked in under it at build time is invisible at
+# runtime. It also must not depend on $HOME resolving the same way at build and run time — this RUN
+# executes as root (HOME=/root) but Jenkins actually runs as the jenkins user (HOME=/var/jenkins_home,
+# again the volume). Without a fixed COREPACK_HOME, the pin below is written to a cache the running
+# container never reads, corepack finds no prepared version at runtime, and it silently fetches
+# whatever is latest instead of the pinned 9.15.9 (see frontend/package.json's "packageManager").
+ENV COREPACK_HOME=/opt/corepack-cache
 RUN corepack enable \
-    && corepack prepare pnpm@9.15.9 --activate
+    && corepack prepare pnpm@9.15.9 --activate \
+    && chmod -R a+rX "${COREPACK_HOME}"
 
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 ENV DOTNET_NOLOGO=1
