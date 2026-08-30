@@ -21,7 +21,14 @@ volumes:
 
 services:
   jenkins:
-    image: jenkins/jenkins:lts-jdk17
+    # Built, not pulled: the Jenkinsfile's agent requirements (.NET 10 SDK, Node 22 + pnpm, the
+    # Docker CLI, git) previously existed only as a manually-built, untagged local image — silently
+    # lost ("dotnet: not found") the moment the container was recreated from a plain
+    # `jenkins/jenkins:lts-jdk17`. See docker/ci/jenkins.Dockerfile for how it was reconstructed.
+    build:
+      context: .
+      dockerfile: docker/ci/jenkins.Dockerfile
+    image: ecomerce-ci-jenkins:local
     ports:
       - "8080:8080"
       - "50000:50000"
