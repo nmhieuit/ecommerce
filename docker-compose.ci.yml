@@ -40,6 +40,16 @@ services:
       # Real tokens, gitignored. Mounted read-only so the init script can read them and nothing
       # in a build can write them.
       - ./.ci-secrets:/run/ci-secrets:ro
+      # Docker-outside-of-Docker: the contract/integration tiers spin up Testcontainers (spec 010),
+      # which need a real Docker daemon. The Jenkinsfile agent already has the Docker CLI
+      # (docker/ci/jenkins.Dockerfile); this mount gives it something to talk to — the host daemon
+      # itself, not a nested one.
+      - /var/run/docker.sock:/var/run/docker.sock
+    # The socket is owned by root:root, mode 660, on the Docker host; the jenkins user (uid 1000)
+    # has no other way to reach it. Adding it to the root group (gid 0) is the standard
+    # docker-outside-of-docker workaround for a non-root Jenkins image.
+    group_add:
+      - "0"
     networks: [ci-backbone]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]
