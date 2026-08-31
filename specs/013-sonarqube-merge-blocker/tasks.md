@@ -237,11 +237,15 @@ không cần rời trang.
 - [X] T013 [US2] Xác nhận Kịch bản 3 của `quickstart.md`: chỉ số hiển thị trên PR đạt, và cập nhật
       đúng theo commit mới nhất sau khi push thêm một commit vào cùng PR
 
-      Commit này (thêm dòng T012/T013 vào `tasks.md`) chính là commit thứ hai được push vào
-      [PR #9](https://github.com/nmhieuit/ecommerce/pull/9) sau commit mở PR ban đầu — dùng để kích
-      hoạt build #2 và xác nhận decoration của SonarQube tự cập nhật theo SHA mới (không phải giữ
-      nguyên comment cũ của SHA trước). Kết quả xác nhận sau khi build #2 chạy xong: xem ghi chú bổ
-      sung bên dưới sau khi commit này được push.
+      Commit trước (thêm dòng T012/T013 vào `tasks.md`) là commit thứ hai được push vào
+      [PR #9](https://github.com/nmhieuit/ecommerce/pull/9), kích hoạt build #2 (job `PR-9`,
+      `SUCCESS`, phân tích SHA `e2bf6dc`). Xác nhận qua `GET .../issues/9/comments`: **chỉ có đúng
+      một** comment decoration của `sonarqube-ecommerce-nmhieuit[bot]` tồn tại tại mọi thời điểm —
+      plugin xoá comment cũ (lúc `2026-08-31T04:10:53Z`, ứng với build #1/SHA lúc mở PR) và đăng
+      comment mới (lúc `2026-08-31T04:30:07Z`, ứng với build #2/SHA `e2bf6dc`), không phải sửa tại
+      chỗ và cũng không giữ đồng thời hai comment. Số liệu trong comment mới đổi thật theo commit
+      mới: coverage ước tính sau merge tăng từ 79.30% (build #1) lên 79.40% (build #2) — chứng minh
+      đây là một lượt phân tích mới, không phải bản sao/cache của comment cũ.
 
 **Checkpoint**: User Story 1 và 2 đều hoạt động độc lập.
 
