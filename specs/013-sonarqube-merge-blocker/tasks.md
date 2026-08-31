@@ -241,14 +241,88 @@ không có thao tác thủ công nào khác.
 
 ### Triển khai cho User Story 3
 
-- [ ] T014 [P] [US3] Xác nhận trong cấu hình job `ecommerce` (Branch Sources → GitHub → Behaviors)
+- [X] T014 [P] [US3] Xác nhận trong cấu hình job `ecommerce` (Branch Sources → GitHub → Behaviors)
       rằng "Discover pull requests from origin" đang bật, và commit mới push vào một PR đang mở
       khiến Jenkins tự tái quét/tái chạy mà không cần bấm "Scan Now" thủ công (cấu hình
       `repoOwner=nmhieuit`, `repository=ecommerce`, `credentialsId=github-pat` đã xác nhận đúng
       trong `config.xml` của job)
-- [ ] T015 [US3] Xác nhận Kịch bản 4 của `quickstart.md`: từ một PR đang bị chặn (Phase 3), push một
+
+      Xác nhận trên nhánh tạm `test/verify-auto-reeval`: push 9 commit liên tiếp (không thao tác
+      "Scan Now" thủ công lần nào) — mỗi lần Jenkins tự phát hiện SHA mới và tự tạo build mới trong
+      job `test-verify-auto-reeval.bskoq6`, nguyên nhân build (`build.xml`) luôn ghi
+      `jenkins.branch.BranchIndexingCause` (quét định kỳ), không phải cause thủ công. Sau đó mở
+      [PR #6](https://github.com/nmhieuit/ecommerce/pull/6) từ chính nhánh này (cùng repo, không
+      phải fork): ở lượt quét định kỳ kế tiếp, Jenkins tự thay job nhánh bằng job `PR-6` (hành vi
+      đúng của github-branch-source khi một nhánh cùng-repo được phát hiện đã có PR mở — không giữ
+      đồng thời hai job build trùng SHA). Push thêm 1 commit vào PR #6 → `PR-6` build #1 tự chạy
+      ngay (cũng `BranchIndexingCause`), không có thao tác thủ công nào khác. Xác nhận cấu hình
+      `repoOwner=nmhieuit`, `repository=ecommerce`, `credentialsId=github-pat` không đổi từ T010.
+- [X] T015 [US3] Xác nhận Kịch bản 4 của `quickstart.md`: từ một PR đang bị chặn (Phase 3), push một
       commit khôi phục coverage; xác nhận toàn bộ năm stage tự chạy lại và merge được mở khoá ngay
       khi `ci/sonarqube-quality-gate` thành công, không cần can thiệp thủ công
+
+      Theo yêu cầu rõ ràng của người dùng ("tạm bỏ qua integration test để tiết kiệm thời gian"),
+      stage `integration tests` trên nhánh tạm `test/verify-auto-reeval` được thay bằng một lệnh
+      `echo` giả lập — **chỉ trên nhánh tạm này, không đụng đến `Jenkinsfile` trên `master`** — để
+      rút ngắn vòng lặp thử lại; stage `contract tests` và `sonarqube quality gate` vẫn chạy thật
+      100%, vì chính hai stage đó là đối tượng T015 cần chứng minh tự đánh giá lại.
+
+      Vòng lặp thử lại phát hiện và sửa thêm **4 lỗi hạ tầng thật**, không nằm trong danh sách ban
+      đầu — tất cả đã commit trên nhánh `fix/sonarqube-community-plugin-agent` (đang chờ mở PR vào
+      `master`, xem ghi chú cuối mục này):
+
+      1. **Cache của corepack bị "khuất" sau khi container Jenkins được tạo lại**: Dockerfile chạy
+         `corepack prepare pnpm@9.15.9 --activate` khi còn là `root` (HOME=`/root`), nhưng Jenkins
+         chạy thật với user `jenkins` (HOME=`/var/jenkins_home` — một named volume). Ở runtime,
+         corepack không thấy phiên bản đã pin, tự tải "latest" (11.24.0), làm mọi lệnh `pnpm` thất
+         bại vì lệch với `packageManager: "pnpm@9.15.9"` trong `frontend/package.json`. Sửa: đặt
+         `ENV COREPACK_HOME=/opt/corepack-cache` (nằm ngoài volume, không phụ thuộc user/HOME) —
+         commit `dfeefcc`.
+      2. **Không có Docker daemon cho Testcontainers**: stage `contract tests` (spec 010) cần
+         Testcontainers, nhưng container Jenkins tuy có sẵn Docker CLI (từ `jenkins.Dockerfile`)
+         lại không có gì để nói chuyện cùng — mọi test dùng Testcontainers báo lỗi
+         `DockerUnavailableException`. Sửa: mount `/var/run/docker.sock` (docker-outside-of-docker)
+         và thêm user `jenkins` vào group `root` (socket là `root:root`, mode 660) — commit
+         `c351bd9` (đã xin xác nhận người dùng trước khi thực hiện vì đây là hành động cấp quyền
+         tương đương root cho container).
+      3. **Ryuk (container dọn rác của Testcontainers) không bắt tay ngược được**: sau khi có
+         Docker daemon, test vẫn lỗi `ResourceReaperException: Initialization has been cancelled` —
+         Ryuk cần một kết nối TCP ngược về tiến trình test, chỉ hoạt động khi tiến trình test và
+         daemon dùng chung network namespace; ở đây Jenkins chỉ dùng chung *daemon* (qua socket
+         mount) còn Ryuk lại là container anh em trên một đường mạng khác. Sửa theo đúng khuyến
+         nghị chính thức của Testcontainers cho kịch bản sibling-container này:
+         `TESTCONTAINERS_RYUK_DISABLED=true` — commit `c6bf4ca`.
+      4. **Testcontainers trỏ nhầm `localhost` thay vì host Docker Desktop thật**: dù daemon đã
+         chạy, `pact_verifier` báo `error sending request for url (http://127.0.0.1:PORT/...)` —
+         Testcontainers-dotnet mặc định coi container vừa tạo (SQL Server...) là truy cập được qua
+         `localhost:<port-published>`, đúng khi tiến trình test và daemon chung máy, nhưng ở đây
+         daemon thật sự là máy ảo của Docker Desktop nên các port đó không tồn tại trong loopback
+         của container Jenkins. Sửa: `TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal` (tên DNS
+         cố định của Docker Desktop, xác nhận resolve được từ trong container qua
+         `getent hosts host.docker.internal`) — commit `3416d32`.
+
+      Ngoài 4 lỗi hạ tầng trên, còn gặp 2 lần thất bại không do lỗi hạ tầng (không cần sửa gì, chỉ
+      thử lại là qua): một lần `SocketTimeoutException` khi `githubNotify` gọi `api.github.com`
+      (mạng chập chờn tức thời), và một lần `Baskets.Api.ContractTests` thất bại đúng ở lệnh gọi
+      HTTP *đầu tiên* tới TestServer (race lúc khởi động nguội) — cả `Orders`/`Products` chạy cùng
+      điều kiện hạ tầng đã qua ngay từ lần đó nên không coi là lỗi hệ thống.
+
+      **Kết quả cuối**: build #18 trên nhánh `test-verify-auto-reeval.bskoq6` — `SUCCESS`, đủ 5
+      required check `success` trên GitHub (`ci/build`, `ci/unit-tests`, `ci/integration-tests`
+      [stub theo yêu cầu], `ci/contract-tests`, `ci/sonarqube-quality-gate` — 4/5 chạy thật, gate
+      SonarQube thật sự "SonarQube quality gate passed."). Sau khi mở PR #6 và push thêm 1 commit,
+      `PR-6` build #1 cũng `SUCCESS`; xác nhận qua API GitHub PR #6 có
+      `"mergeable": true, "mergeable_state": "clean"` — merge được mở khoá tự động, không có bất kỳ
+      thao tác thủ công nào ngoài việc push các commit sửa lỗi.
+
+      **Việc còn lại (không thuộc phạm vi T014/T015 nhưng phát sinh từ đó)**: 4 lỗi hạ tầng thật ở
+      trên hiện chỉ nằm trên nhánh `fix/sonarqube-community-plugin-agent` (đã push lên GitHub, chưa
+      mở PR) — cần mở PR vào `master` và merge trước khi coi hạ tầng CI cục bộ là ổn định lâu dài,
+      vì môi trường Jenkins hiện tại (đã áp dụng trực tiếp qua `docker compose up -d jenkins`) sẽ
+      mất các sửa này nếu ai đó tái tạo container từ `docker-compose.ci.yml` trên `master` mà chưa
+      merge. Nhánh tạm `test/verify-auto-reeval` và PR #6 sẽ được đóng/xoá sau khi tài liệu này
+      được merge — không merge nhánh này vào `master` vì nó chứa lịch sử "cố tình phá rồi sửa" một
+      unit test và một stage bị stub, cả hai đều không thuộc về `master`.
 
 **Checkpoint**: Cả ba user story đều hoạt động độc lập.
 
