@@ -227,6 +227,9 @@ không cần rời trang.
 - [ ] T013 [US2] Xác nhận Kịch bản 3 của `quickstart.md`: chỉ số hiển thị trên PR đạt, và cập nhật
       đúng theo commit mới nhất sau khi push thêm một commit vào cùng PR
 
+      (đang xác minh qua chính PR chứa thay đổi này — commit đầu tiên để mở PR, commit thứ hai để
+      xác nhận decoration cập nhật theo SHA mới)
+
 **Checkpoint**: User Story 1 và 2 đều hoạt động độc lập.
 
 ---
