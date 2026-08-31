@@ -60,6 +60,17 @@ services:
       # still torn down at the end of each test run via IAsyncLifetime, just without Ryuk's
       # ambient-failure safety net.
       TESTCONTAINERS_RYUK_DISABLED: "true"
+      # Testcontainers-dotnet assumes the Docker daemon and the test process share a network
+      # namespace, so it addresses spun-up containers (SQL Server, etc.) as localhost:<published-port>.
+      # That assumption breaks here: docker.sock points at Docker Desktop's VM, so published ports
+      # actually live on the VM's network stack, not inside this container's own loopback — the app
+      # under test binds fine, but the pact verifier's provider-state calls to
+      # http://127.0.0.1:<port>/_pact/provider-states, and the app's own connections to its
+      # Testcontainers-backed dependencies, land on nothing. host.docker.internal is Docker Desktop's
+      # standing DNS name for that VM, reachable from every container on it (confirmed via
+      # `getent hosts host.docker.internal` inside this container), so pointing Testcontainers at it
+      # instead of localhost makes those published ports reachable again.
+      TESTCONTAINERS_HOST_OVERRIDE: "host.docker.internal"
     networks: [ci-backbone]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]
