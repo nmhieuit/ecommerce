@@ -50,6 +50,16 @@ services:
     # docker-outside-of-docker workaround for a non-root Jenkins image.
     group_add:
       - "0"
+    environment:
+      # Testcontainers' Ryuk reaper container needs a reverse TCP handshake back to the test
+      # process. That works when the test process and the Docker daemon share a network namespace;
+      # here the Jenkins container only shares the daemon (docker-outside-of-docker, socket-mounted)
+      # and Ryuk's container is a sibling on a different network path, so the handshake times out
+      # with "ResourceReaperException: Initialization has been cancelled." Testcontainers' own docs
+      # recommend disabling Ryuk in exactly this sibling-container CI setup; test containers are
+      # still torn down at the end of each test run via IAsyncLifetime, just without Ryuk's
+      # ambient-failure safety net.
+      TESTCONTAINERS_RYUK_DISABLED: "true"
     networks: [ci-backbone]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]
