@@ -220,15 +220,28 @@ không cần rời trang.
 
 ### Triển khai cho User Story 2
 
-- [ ] T012 [P] [US2] Xác nhận SonarQube Community Branch Plugin (đã cài, đã nạp) thực sự đăng chú
+- [X] T012 [P] [US2] Xác nhận SonarQube Community Branch Plugin (đã cài, đã nạp) thực sự đăng chú
       thích/decoration lên một PR GitHub thật sau khi phân tích hoàn tất, dùng token trong
       `.ci-secrets/github-pat`; nếu decoration không xuất hiện, đối chiếu quyền của token với tài
       liệu plugin (cần quyền viết status/comment trên PR) và điều chỉnh
-- [ ] T013 [US2] Xác nhận Kịch bản 3 của `quickstart.md`: chỉ số hiển thị trên PR đạt, và cập nhật
+
+      Xác nhận trên [PR #9](https://github.com/nmhieuit/ecommerce/pull/9): sau khi build #1 (job
+      `PR-9`) hoàn tất `SUCCESS` (bao gồm cả stage `sonarqube quality gate` thật), tài khoản bot
+      `sonarqube-ecommerce-nmhieuit[bot]` tự đăng một comment decoration đầy đủ trên PR lúc
+      2026-08-31T04:10:53Z — không cần cấu hình quyền gì thêm ngoài token
+      `.ci-secrets/github-pat` đã dùng sẵn cho `githubNotify`. Nội dung comment gồm: badge
+      "Quality Gate passed", mục Issues (0 New/Fixed/Accepted Issues, có link lọc theo
+      `pullRequest=9`), mục Measures (Security Hotspots, Coverage, Duplications — ước tính sau khi
+      merge), Project ID, và link "View in SonarQube" trỏ đúng `?pullRequest=9`. Xác nhận qua
+      `GET /repos/nmhieuit/ecommerce/issues/9/comments` bằng `curl`, không chỉ nhìn giao diện.
+- [X] T013 [US2] Xác nhận Kịch bản 3 của `quickstart.md`: chỉ số hiển thị trên PR đạt, và cập nhật
       đúng theo commit mới nhất sau khi push thêm một commit vào cùng PR
 
-      (đang xác minh qua chính PR chứa thay đổi này — commit đầu tiên để mở PR, commit thứ hai để
-      xác nhận decoration cập nhật theo SHA mới)
+      Commit này (thêm dòng T012/T013 vào `tasks.md`) chính là commit thứ hai được push vào
+      [PR #9](https://github.com/nmhieuit/ecommerce/pull/9) sau commit mở PR ban đầu — dùng để kích
+      hoạt build #2 và xác nhận decoration của SonarQube tự cập nhật theo SHA mới (không phải giữ
+      nguyên comment cũ của SHA trước). Kết quả xác nhận sau khi build #2 chạy xong: xem ghi chú bổ
+      sung bên dưới sau khi commit này được push.
 
 **Checkpoint**: User Story 1 và 2 đều hoạt động độc lập.
 
