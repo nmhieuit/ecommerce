@@ -1,27 +1,24 @@
 <mxfile host="Electron" agent="5.0">
   <diagram id="quality-gate-component" name="Kiến trúc thành phần — Cổng chất lượng SonarQube">
-    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1050" math="0" shadow="0">
+    <mxGraphModel dx="1763" dy="1787" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1050" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
         <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" value="Kiến trúc thành phần — GitHub ↔ Jenkins ↔ SonarQube (môi trường dev cục bộ, docker-compose.ci.yml)" vertex="1">
-          <mxGeometry height="26" width="1300" x="30" y="20" as="geometry" />
+          <mxGeometry height="26" width="1300" x="30" y="-9" as="geometry" />
         </mxCell>
-
         <mxCell id="gh" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" value="GitHub (github.com/nmhieuit/ecommerce — public)" vertex="1">
-          <mxGeometry height="230" width="380" x="30" y="70" as="geometry" />
+          <mxGeometry height="310" width="380" x="30" y="70" as="geometry" />
         </mxCell>
         <mxCell id="gh_repo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="Repository + Pull Request&#xa;(nhánh, commit, head SHA)" vertex="1">
           <mxGeometry height="55" width="320" x="60" y="100" as="geometry" />
         </mxCell>
         <mxCell id="gh_bp" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" value="Branch protection trên &quot;master&quot;&#xa;5 required status check&#xa;&quot;Do not allow bypassing&quot; = bật&#xa;(không đường vòng, mọi vai trò)" vertex="1">
-          <mxGeometry height="70" width="320" x="60" y="170" as="geometry" />
+          <mxGeometry height="70" width="320" x="60" y="186" as="geometry" />
         </mxCell>
         <mxCell id="gh_checks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="Commit Status API&#xa;(ci/build, ci/unit-tests, ci/integration-tests,&#xa;ci/contract-tests, ci/sonarqube-quality-gate)" vertex="1">
-          <mxGeometry height="55" width="320" x="60" y="250" as="geometry" />
+          <mxGeometry height="55" width="320" x="60" y="307" as="geometry" />
         </mxCell>
-
         <mxCell id="jk" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" value="Jenkins (container ecomerce-ci-jenkins-1)" vertex="1">
           <mxGeometry height="300" width="380" x="500" y="70" as="geometry" />
         </mxCell>
@@ -34,17 +31,15 @@
         <mxCell id="jk_agent" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" value="Agent tooling (docker/ci/jenkins.Dockerfile)&#xa;.NET 10 SDK, Node 22 + pnpm (corepack),&#xa;Docker CLI, git" vertex="1">
           <mxGeometry height="70" width="320" x="530" y="280" as="geometry" />
         </mxCell>
-
         <mxCell id="sq" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" value="SonarQube (container ecomerce-ci-sonarqube-1)" vertex="1">
-          <mxGeometry height="230" width="380" x="970" y="70" as="geometry" />
+          <mxGeometry height="230" width="380" x="1067" y="70" as="geometry" />
         </mxCell>
         <mxCell id="sq_core" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="SonarQube Community Edition&#xa;Quality Gate &quot;Sonar way&quot;&#xa;(new_violations, new_coverage,&#xa;new_duplicated_lines_density,&#xa;new_security_hotspots_reviewed)" vertex="1">
-          <mxGeometry height="90" width="320" x="1000" y="100" as="geometry" />
+          <mxGeometry height="90" width="320" x="1097" y="100" as="geometry" />
         </mxCell>
         <mxCell id="sq_plugin" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="Community Branch Plugin&#xa;(mc1arke) — cần Java agent riêng&#xa;cho 2 tiến trình: web + Compute Engine&#xa;Đăng/thay comment decoration lên PR" vertex="1">
-          <mxGeometry height="80" width="320" x="1000" y="200" as="geometry" />
+          <mxGeometry height="80" width="320" x="1097" y="200" as="geometry" />
         </mxCell>
-
         <mxCell id="host" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" value="Docker Desktop host (chia sẻ cho cả Jenkins &amp; test)" vertex="1">
           <mxGeometry height="150" width="850" x="500" y="420" as="geometry" />
         </mxCell>
@@ -54,11 +49,9 @@
         <mxCell id="host_tc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" value="Container test do Testcontainers tạo&#xa;(SQL Server, Redis, RabbitMQ)&#xa;— sinh ra bởi *.Api.IntegrationTests&#xa;và *.Api.ContractTests" vertex="1">
           <mxGeometry height="90" width="380" x="930" y="460" as="geometry" />
         </mxCell>
-
         <mxCell id="note_gotcha" parent="1" style="text;html=1;fontSize=10;fontColor=#b85450;whiteSpace=wrap;align=left;" value="Ghi chú trạng thái git (2026-09-01): các khối vàng (Java agent, Dockerfile riêng, docker.sock,&#xa;TESTCONTAINERS_RYUK_DISABLED, TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal, đường dẫn cache&#xa;corepack) đã XÁC MINH hoạt động thật trên container đang chạy, nhưng thay đổi vào&#xa;docker-compose.ci.yml / docker/ci/jenkins.Dockerfile hiện nằm ở Pull Request #8 CHƯA merge vào&#xa;master. Xem docs/architecture/quality-gate-architecture.md mục &quot;6 vấn đề hạ tầng&quot;." vertex="1">
           <mxGeometry height="90" width="820" x="500" y="600" as="geometry" />
         </mxCell>
-
         <mxCell id="e_push" edge="1" parent="1" source="gh_repo" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="jk_job" value="1. Push commit / mở PR&#xa;(Jenkins tự quét, không webhook tuỳ biến)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -66,15 +59,31 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e_scan" edge="1" parent="1" source="jk_file" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="sq_core" value="3. dotnet sonarscanner begin/end&#xa;(HTTP :9000, nội bộ ci-backbone)">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_webhook" edge="1" parent="1" source="sq_core" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;exitX=0;exitY=0.3;entryX=1;entryY=0.3;dashed=1;" target="jk_file" value="4. Webhook kết quả cổng chất lượng&#xa;(http://jenkins:8080/sonarqube-webhook/)">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_decorate" edge="1" parent="1" source="sq_plugin" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;exitX=0.5;exitY=0;entryX=1;entryY=0.9;" target="gh_repo" value="5. Đăng/thay comment decoration&#xa;(dùng chung PAT của Jenkins)">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1160" y="40" />
+              <mxPoint x="973.5" y="230" />
+              <mxPoint x="973.5" y="350" />
+              <mxPoint x="1470" y="350" />
+              <mxPoint x="1470" y="145" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_webhook" edge="1" parent="1" source="sq_core" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;exitX=0;exitY=0.3;entryX=1;entryY=0.3;dashed=1;" target="jk_file" value="4. Webhook kết quả cổng chất lượng&#xa;(http://jenkins:8080/sonarqube-webhook/)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1097.06" y="130.06" />
+              <mxPoint x="973.53" y="130.06" />
+              <mxPoint x="973.53" y="214.06" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_decorate" edge="1" parent="1" source="sq" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;exitX=1;exitY=0.75;entryX=0.75;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="gh" value="5. Đăng/thay comment decoration&#xa;(dùng chung PAT của Jenkins)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1447" y="240" />
+              <mxPoint x="1490" y="240" />
+              <mxPoint x="1490" y="40" />
+              <mxPoint x="315" y="40" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -82,7 +91,12 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e_agent_sock" edge="1" parent="1" source="jk_agent" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="host_sock">
-          <mxGeometry relative="1" as="geometry" />
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="380" />
+              <mxPoint x="720" y="380" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="e_sock_tc" edge="1" parent="1" source="host_sock" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="host_tc" value="tạo container test">
           <mxGeometry relative="1" as="geometry" />
