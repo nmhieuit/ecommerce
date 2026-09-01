@@ -14,7 +14,7 @@ public class VerticalSliceStructureTests
     /// technical role, and nothing about them earns an exemption from SC-004.
     /// </summary>
     private static readonly string[] ExpectedServices =
-        ["baskets", "bff", "gateway", "orders", "parties", "products"];
+        ["baskets", "bff", "gateway", "identity", "orders", "parties", "products"];
 
     [Fact]
     public void NoService_HasATopLevelTechnicalLayerFolder()

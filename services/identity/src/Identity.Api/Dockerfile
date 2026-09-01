@@ -1,28 +1,30 @@
 # Build context is the REPOSITORY ROOT, not this folder — the project needs the solution-level
 # Directory.*.props and the shared ServiceDefaults project it references (Principle VII):
 #
-#   docker build -f services/gateway/src/Gateway.Api/Dockerfile -t gateway-api .
+#   docker build -f services/identity/src/Identity.Api/Dockerfile -t identity-api .
 #
 # Only this service's own sources are copied in. Nothing from another service enters the image,
-# so there is no path to another service's code or configuration at runtime (spec FR-005).
+# so there is no path to another service's code or configuration at runtime.
+#
+# No `migrator` build stage yet, unlike services/parties: this Dockerfile mirrors
+# services/gateway/src/Gateway.Api/Dockerfile because at Setup/Foundational time (tasks.md T008)
+# this service has no EF store to bundle migrations for. User Story 1 (tasks.md T020-T021) adds the
+# Duende configuration/operational store and the user credential store — a `migrations`/`migrator`
+# stage (see services/parties/src/Parties.Api/Dockerfile for the pattern) is added alongside them,
+# not before.
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Project files first, so restore is cached independently of source edits.
-# .editorconfig travels with the props files: it carries analyzer severities the build depends on
-# (the CA1861 suppression scoped to generated EF migrations, for one), and a build that cannot see
-# it fails on rules a local build passes.
 COPY Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY shared/ServiceDefaults/ServiceDefaults.csproj shared/ServiceDefaults/
-COPY shared/Identity/Identity.csproj shared/Identity/
-COPY services/gateway/src/Gateway.Api/Gateway.Api.csproj services/gateway/src/Gateway.Api/
-RUN dotnet restore services/gateway/src/Gateway.Api/Gateway.Api.csproj
+COPY services/identity/src/Identity.Api/Identity.Api.csproj services/identity/src/Identity.Api/
+RUN dotnet restore services/identity/src/Identity.Api/Identity.Api.csproj
 
 COPY shared/ServiceDefaults/ shared/ServiceDefaults/
-COPY shared/Identity/ shared/Identity/
-COPY services/gateway/src/Gateway.Api/ services/gateway/src/Gateway.Api/
-RUN dotnet publish services/gateway/src/Gateway.Api/Gateway.Api.csproj \
+COPY services/identity/src/Identity.Api/ services/identity/src/Identity.Api/
+RUN dotnet publish services/identity/src/Identity.Api/Identity.Api.csproj \
     --configuration Release --no-restore --output /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
@@ -45,4 +47,4 @@ RUN apt-get update \
 USER $APP_UID
 
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "Gateway.Api.dll"]
+ENTRYPOINT ["dotnet", "Identity.Api.dll"]

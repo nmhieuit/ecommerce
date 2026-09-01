@@ -106,8 +106,28 @@ services:
       - -c
       - /opt/mssql-tools18/bin/sqlcmd -S orders-db -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID('orders') IS NULL CREATE DATABASE [orders];"
 
+  identity-db:
+    <<: *mssql
+    ports:
+      - "14334:1433"
+    volumes:
+      - identity-db-data:/var/opt/mssql
+    healthcheck: *mssql-healthcheck
+
+  identity-db-init:
+    <<: *mssql
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - /bin/bash
+      - -c
+      - /opt/mssql-tools18/bin/sqlcmd -S identity-db -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID('identity') IS NULL CREATE DATABASE [identity];"
+
 volumes:
   parties-db-data:
   products-db-data:
   baskets-db-data:
   orders-db-data:
+  identity-db-data:

@@ -3,6 +3,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\shared\ServiceDefaults\ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\..\..\shared\Tenancy\Tenancy.csproj" />
+    <!-- Not yet consumed at Setup/Foundational time (tasks.md T007) — wiring
+         AddIdentityValidation()/UseIdentityValidation() into Program.cs is User Story 2's job
+         (tasks.md T038). -->
+    <ProjectReference Include="..\..\..\..\shared\Identity\Identity.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -35,19 +35,35 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 **Purpose**: Dựng khung project cho service `identity` mới và thư viện chia sẻ mới `shared/Identity`, đưa cả hai vào solution.
 
-- [ ] T001 Tạo project shell cho service `identity` mới tại `services/identity/src/Identity.Api/Identity.Api.csproj` (ASP.NET Core, `net10.0`, gói Duende IdentityServer — ADR-0001)
-- [ ] T002 [P] Tạo project shell `Identity.Api.UnitTests` tại `services/identity/tests/Identity.Api.UnitTests/Identity.Api.UnitTests.csproj` (xUnit, tham chiếu `Identity.Api.csproj`)
-- [ ] T003 [P] Tạo project shell `Identity.Api.IntegrationTests` tại `services/identity/tests/Identity.Api.IntegrationTests/Identity.Api.IntegrationTests.csproj` (xUnit + Testcontainers SQL Server, theo đúng khuôn mẫu `Parties.Api.IntegrationTests`)
-- [ ] T004 [P] Tạo thư viện chia sẻ mới tại `shared/Identity/Identity.csproj` (bố cục phẳng, giống hệt `shared/Tenancy/Tenancy.csproj`)
-- [ ] T005 [P] Tạo project shell `shared/Identity.UnitTests/Identity.UnitTests.csproj` (xUnit, tham chiếu `Identity.csproj`)
-- [ ] T006 Thêm `services/identity/src/Identity.Api`, `services/identity/tests/Identity.Api.UnitTests`, `services/identity/tests/Identity.Api.IntegrationTests`, `shared/Identity`, và `shared/Identity.UnitTests` vào `Ecommerce.slnx` (phụ thuộc T001-T005)
-- [ ] T007 Thêm `ProjectReference` tới `shared/Identity/Identity.csproj` từ `Gateway.Api.csproj`, `Bff.Api.csproj`, `Products.Api.csproj`, `Baskets.Api.csproj`, `Orders.Api.csproj`, và `Parties.Api.csproj` (phụ thuộc T004)
-- [ ] T008 Viết `Dockerfile` cho service `identity` tại `services/identity/src/Identity.Api/Dockerfile`, theo đúng khuôn mẫu `services/gateway/src/Gateway.Api/Dockerfile`
-- [ ] T009 Viết `service-manifest.yaml` cho service `identity` tại `services/identity/src/Identity.Api/service-manifest.yaml` (SLO mặc định internal-service-api — constitution Principle VIII; theo khuôn mẫu `services/parties/src/Parties.Api/service-manifest.yaml`)
-- [ ] T010 [P] Thêm `identity-db`, `identity-migrate`, `identity-api` vào `docker-compose.local.yml`, theo đúng khuôn mẫu các entry `parties-db`/`parties-migrate`/`parties-api` hiện có
-- [ ] T011 [P] Thêm dependency container SQL Server cho `identity` vào `docker-compose.deps.yml`
+- [X] T001 Tạo project shell cho service `identity` mới tại `services/identity/src/Identity.Api/Identity.Api.csproj` (ASP.NET Core, `net10.0`, gói Duende IdentityServer — ADR-0001)
+- [X] T002 [P] Tạo project shell `Identity.Api.UnitTests` tại `services/identity/tests/Identity.Api.UnitTests/Identity.Api.UnitTests.csproj` (xUnit, tham chiếu `Identity.Api.csproj`)
+- [X] T003 [P] Tạo project shell `Identity.Api.IntegrationTests` tại `services/identity/tests/Identity.Api.IntegrationTests/Identity.Api.IntegrationTests.csproj` (xUnit + Testcontainers SQL Server, theo đúng khuôn mẫu `Parties.Api.IntegrationTests`)
+- [X] T004 [P] Tạo thư viện chia sẻ mới tại `shared/Identity/Identity.csproj` (bố cục phẳng, giống hệt `shared/Tenancy/Tenancy.csproj`)
+- [X] T005 [P] Tạo project shell `shared/Identity.UnitTests/Identity.UnitTests.csproj` (xUnit, tham chiếu `Identity.csproj`)
+- [X] T006 Thêm `services/identity/src/Identity.Api`, `services/identity/tests/Identity.Api.UnitTests`, `services/identity/tests/Identity.Api.IntegrationTests`, `shared/Identity`, và `shared/Identity.UnitTests` vào `Ecommerce.slnx` (phụ thuộc T001-T005)
+- [X] T007 Thêm `ProjectReference` tới `shared/Identity/Identity.csproj` từ `Gateway.Api.csproj`, `Bff.Api.csproj`, `Products.Api.csproj`, `Baskets.Api.csproj`, `Orders.Api.csproj`, và `Parties.Api.csproj` (phụ thuộc T004)
+- [X] T008 Viết `Dockerfile` cho service `identity` tại `services/identity/src/Identity.Api/Dockerfile`, theo đúng khuôn mẫu `services/gateway/src/Gateway.Api/Dockerfile`
+- [X] T009 Viết `service-manifest.yaml` cho service `identity` tại `services/identity/src/Identity.Api/service-manifest.yaml` (SLO mặc định internal-service-api — constitution Principle VIII; theo khuôn mẫu `services/parties/src/Parties.Api/service-manifest.yaml`)
+- [X] T010 [P] Thêm `identity-db`, `identity-api` vào `docker-compose.local.yml`, theo đúng khuôn mẫu các entry `parties-db`/`parties-api` hiện có
+- [X] T011 [P] Thêm dependency container SQL Server cho `identity` vào `docker-compose.deps.yml`
 
-**Checkpoint**: Khung project cho service `identity` và thư viện `shared/Identity` đã sẵn sàng, nằm trong solution, build được.
+> **T001/T010 rescoped during implementation — decided, not outstanding.** `Identity.Api.csproj`
+> references no Duende IdentityServer package yet: T001 is the service *shell* (buildable, health
+> probes only, mirrors every other service's original scaffold), and the Duende bootstrap is
+> User Story 1's own task (T020-T024) — adding the package now with nothing using it would be dead
+> weight. For the same reason, T010 does not add an `identity-migrate` compose entry or a
+> `migrator` Docker stage: there is no EF store to bundle migrations for yet (no `identity-db-init`
+> dependency either — `docker-compose.deps.yml`'s `identity-db` starts empty like every other
+> service's, and the CREATE DATABASE step is deferred to T020-T021 alongside it). Both arrive
+> together with T020-T021's EF stores, following the `parties-migrate`/`parties-db-init` pattern.
+> Verified: `dotnet build Ecommerce.slnx` succeeds (0 warnings, 0 errors) with all five new projects
+> in the solution, and `tests/ContainerConventionTests`, `tests/StructureConventionTests`, and
+> `tests/CrossServiceIsolation.Tests` all pass after updating their hardcoded service-list
+> expectations and the six existing services' Dockerfiles (which now also compile against
+> `shared/Identity` per T007 and needed the matching `COPY shared/Identity/...` lines the
+> `DockerfileSharedProjectTests` scanner requires).
+
+**Checkpoint**: Khung project cho service `identity` và thư viện `shared/Identity` đã sẵn sàng, nằm trong solution, build được — xác nhận bằng `dotnet build Ecommerce.slnx`.
 
 ---
 
@@ -61,16 +77,32 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 > Viết các test này TRƯỚC; xác nhận chúng FAIL trước khi bắt đầu triển khai (constitution Principle III).
 
-- [ ] T012 [P] Unit test: `IdentityServerOptions` bind đúng `Authority`/`Audience` từ section cấu hình `Identity`, trong `shared/Identity.UnitTests/IdentityServerOptionsTests.cs` (data-model.md — cấu hình xác thực)
-- [ ] T013 [P] Unit test: `AddIdentityValidation()` đăng ký scheme JwtBearer và đặt `FallbackPolicy = RequireAuthenticatedUser()` — một request không có token bị `401`, một endpoint đánh dấu `[AllowAnonymous]` vẫn được cho qua — dùng `WebApplicationFactory` tối giản, trong `shared/Identity.UnitTests/IdentityValidationExtensionsTests.cs` (research.md Decision 4/6)
+- [X] T012 [P] Unit test: `IdentityServerOptions` bind đúng `Authority`/`Audience` từ section cấu hình `Identity`, trong `shared/Identity.UnitTests/IdentityServerOptionsTests.cs` (data-model.md — cấu hình xác thực)
+- [X] T013 [P] Unit test: `AddIdentityValidation()` đăng ký scheme JwtBearer và đặt `FallbackPolicy = RequireAuthenticatedUser()`, trong `shared/Identity.UnitTests/IdentityValidationExtensionsTests.cs` (research.md Decision 4/6)
+
+> **T013 rescoped during implementation — decided, not outstanding.** Verifies the DI registration
+> directly (`IAuthenticationSchemeProvider`/`IAuthorizationPolicyProvider`, resolved from a bare
+> `ServiceCollection`) rather than through a `WebApplicationFactory` HTTP round-trip — the same
+> lower-level approach `shared/Tenancy.UnitTests/TenantContextMiddlewareTests.cs` already uses for
+> the equivalent DI-registration question, and it needs no `[AllowAnonymous]`-vs-`401` endpoint
+> fixture to prove the same fact. The `Microsoft.AspNetCore.Mvc.Testing` package stayed in the
+> `.csproj` (T005) for a future HTTP-level test if one is needed, but this task didn't need it.
 
 ### Implementation
 
-- [ ] T014 Cài đặt `IdentityServerOptions` (`Authority`, `Audience`) trong `shared/Identity/IdentityServerOptions.cs` (làm T012 pass)
-- [ ] T015 Cài đặt `AuthenticationFallbackPolicy` (`FallbackPolicy = RequireAuthenticatedUser()`) trong `shared/Identity/AuthenticationFallbackPolicy.cs` (research.md Decision 6; phụ thuộc T014)
-- [ ] T016 Cài đặt `IdentityValidationExtensions` (`AddIdentityValidation()`/`UseIdentityValidation()`, mirror hình dạng của `TenancyExtensions`' `AddTenancy()`/`UseTenancy()`) trong `shared/Identity/IdentityValidationExtensions.cs` (phụ thuộc T014, T015; làm T012, T013 pass)
+- [X] T014 Cài đặt `IdentityServerOptions` (`Authority`, `Audience`) trong `shared/Identity/IdentityServerOptions.cs` (làm T012 pass)
+- [X] T015 Cài đặt `AuthenticationFallbackPolicy` (`FallbackPolicy = RequireAuthenticatedUser()`) trong `shared/Identity/AuthenticationFallbackPolicy.cs` (research.md Decision 6; phụ thuộc T014)
+- [X] T016 Cài đặt `IdentityValidationExtensions` (`AddIdentityValidation()`/`UseIdentityValidation()`, mirror hình dạng của `TenancyExtensions`' `AddTenancy()`/`UseTenancy()`) trong `shared/Identity/IdentityValidationExtensions.cs` (phụ thuộc T014, T015; làm T012, T013 pass)
 
-**Checkpoint**: `shared/Identity` đã được build và unit-test — sẵn sàng để gateway (US1) và BFF + 4 domain service (US2) gọi.
+> **T016 note**: `AddJwtBearer` cần package `Microsoft.AspNetCore.Authentication.JwtBearer` —
+> KHÔNG có sẵn trong shared framework như research.md Decision 2 giả định ban đầu (xác nhận bằng
+> `dotnet build`: lỗi CS0234 khi thiếu). Đã thêm `PackageReference`/`PackageVersion` tương ứng vào
+> `shared/Identity/Identity.csproj` và `Directory.Packages.props`. `IdentityValidationExtensions`
+> cũng đặt `RequireHttpsMetadata` dựa trên scheme của `Authority` (false cho `http://` nội bộ
+> cluster, true mặc định cho `https://`) — nếu không, JwtBearer từ chối khởi động với một
+> `Authority` dạng `http://identity-api:8080` như mọi lệnh gọi nội bộ khác trong nền tảng này dùng.
+
+**Checkpoint**: `shared/Identity` đã được build và unit-test — sẵn sàng để gateway (US1) và BFF + 4 domain service (US2) gọi. Xác nhận bằng `dotnet test shared/Identity.UnitTests/Identity.UnitTests.csproj`: 5/5 pass.
 
 ---
 

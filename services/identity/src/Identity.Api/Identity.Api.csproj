@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\shared\ServiceDefaults\ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <!-- No PackageReference for Duende IdentityServer yet: this task only scaffolds the service shell
+       (tasks.md T001). The Duende bootstrap, EF stores, and login flow arrive in User Story 1
+       (tasks.md T020-T024) once this shell is wired into the solution and building. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

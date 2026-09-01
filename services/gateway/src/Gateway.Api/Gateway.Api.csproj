@@ -2,6 +2,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\shared\ServiceDefaults\ServiceDefaults.csproj" />
+    <!-- Not yet consumed at Setup/Foundational time (tasks.md T007) — the toggle-gated switch from
+         StubIdentity to AddIdentityValidation() is User Story 1's job (tasks.md T025). -->
+    <ProjectReference Include="..\..\..\..\shared\Identity\Identity.csproj" />
   </ItemGroup>
 
   <ItemGroup>

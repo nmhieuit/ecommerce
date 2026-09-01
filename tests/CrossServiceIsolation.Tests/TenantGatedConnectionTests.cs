@@ -9,11 +9,15 @@ public class TenantGatedConnectionTests
 {
     /// <summary>Every service under <c>services/</c>, in the ordinal order the scanner returns them.</summary>
     private static readonly string[] ExpectedServices =
-        ["baskets", "bff", "gateway", "orders", "parties", "products"];
+        ["baskets", "bff", "gateway", "identity", "orders", "parties", "products"];
 
     /// <summary>
     /// The services that own a database. <c>bff</c> and <c>gateway</c> own none (Principle I), so
-    /// requiring a tenant-gated registration of them would assert something untrue.
+    /// requiring a tenant-gated registration of them would assert something untrue. <c>identity</c>
+    /// belongs here too once 014-identity-server-auth's User Story 1 (tasks.md T020-T021) adds its
+    /// configuration/user-credential store — at Setup/Foundational time (tasks.md T012-T016) it has
+    /// no <c>AddDbContext</c> registration yet, so it is treated like the other stateless services
+    /// for now (research.md Decision 8: it will own a database, but not yet).
     /// </summary>
     private static readonly string[] DatabaseOwningServices = ["baskets", "orders", "parties", "products"];
 

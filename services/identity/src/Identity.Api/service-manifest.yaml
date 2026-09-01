@@ -1,0 +1,59 @@
+# Service manifest — identity
+#
+# Constitution Principle VIII: "Every service MUST declare its SLOs — latency, error rate, and
+# availability — in its service manifest, and those SLOs MUST be measured continuously from the
+# telemetry required by Principle VII." Declared at scaffold time so the budget is measured from
+# day one rather than bolted on after the first regression.
+#
+# Scope note: at Setup/Foundational time (014-identity-server-auth tasks.md T009) this service
+# exposes only the two health probes. Duende IdentityServer's token/login endpoints, and the
+# per-endpoint SLOs for them, arrive in User Story 1 (tasks.md T020-T024).
+
+service:
+  name: identity
+  description: >-
+    Central identity server (ADR-0001: Duende IdentityServer). Authenticates users and issues
+    tokens carrying verified identity and tenant claims, replacing the Phase 1 hardcoded stub
+    identity (014-identity-server-auth). Owns its own credential/configuration store, separate from
+    the `parties` service's business data (research.md Decision 8).
+
+data:
+  store: sql-server
+  database: identity
+  connection-string-key: ConnectionStrings:IdentityDb
+  # Not yet provisioned — User Story 1 (tasks.md T020-T021) adds the Duende configuration/
+  # operational store and the ASP.NET Core Identity user credential store.
+  owned-exclusively: true
+
+slos:
+  # Platform defaults for an internal service API (constitution Principle VIII). No justified
+  # alternative is claimed, so the defaults apply verbatim.
+  availability: 99.9%          # monthly
+  error-rate:
+    max-5xx-ratio: 0.1%
+  latency:
+    p95: 150ms
+    p99: 500ms
+
+endpoints:
+  - route: GET /health/live
+    purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
+    authentication: anonymous   # probes cannot present a token
+    latency:
+      p95: 150ms
+      p99: 500ms
+  - route: GET /health/ready
+    purpose: >-
+      Readiness probe. Empty check set at Setup/Foundational time — this service owns no database
+      yet (tasks.md T009/T020-T021 note above); gated on the identity/user stores once they exist.
+    authentication: anonymous
+    latency:
+      p95: 150ms
+      p99: 500ms
+
+observability:
+  # Principle VII — emitted via shared/ServiceDefaults, never configured per service by hand.
+  traces: otlp
+  metrics: otlp
+  logs: otlp
+  correlation-id-header: X-Correlation-Id

@@ -20,7 +20,7 @@ public class DockerfileSharedProjectTests
 {
     /// <summary>Every service that has an image, and therefore must have a correct one.</summary>
     private static readonly string[] ExpectedServices =
-        ["baskets", "bff", "gateway", "orders", "parties", "products"];
+        ["baskets", "bff", "gateway", "identity", "orders", "parties", "products"];
 
     [Fact]
     public void EveryServiceImage_ReceivesEverySharedProject_ItCompilesAgainst()

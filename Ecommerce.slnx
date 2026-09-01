@@ -26,6 +26,14 @@
     <Project Path="services/gateway/tests/Gateway.Api.IntegrationTests/Gateway.Api.IntegrationTests.csproj" />
     <Project Path="services/gateway/tests/Gateway.Api.UnitTests/Gateway.Api.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/services/identity/" />
+  <Folder Name="/services/identity/src/">
+    <Project Path="services/identity/src/Identity.Api/Identity.Api.csproj" />
+  </Folder>
+  <Folder Name="/services/identity/tests/">
+    <Project Path="services/identity/tests/Identity.Api.IntegrationTests/Identity.Api.IntegrationTests.csproj" />
+    <Project Path="services/identity/tests/Identity.Api.UnitTests/Identity.Api.UnitTests.csproj" />
+  </Folder>
   <Folder Name="/services/orders/" />
   <Folder Name="/services/orders/src/">
     <Project Path="services/orders/src/Orders.Api/Orders.Api.csproj" />
@@ -55,6 +63,8 @@
   <Folder Name="/shared/">
     <Project Path="shared/EventContracts/EventContracts.csproj" />
     <Project Path="shared/EventContracts.UnitTests/EventContracts.UnitTests.csproj" />
+    <Project Path="shared/Identity/Identity.csproj" />
+    <Project Path="shared/Identity.UnitTests/Identity.UnitTests.csproj" />
     <Project Path="shared/IntegrationTestSupport/IntegrationTestSupport.csproj" />
     <Project Path="shared/IntegrationTestSupport.Tests/IntegrationTestSupport.Tests.csproj" />
     <Project Path="shared/ServiceDefaults/ServiceDefaults.csproj" />
