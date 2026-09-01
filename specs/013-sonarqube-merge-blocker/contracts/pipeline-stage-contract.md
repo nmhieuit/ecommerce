@@ -64,6 +64,22 @@ tự chối các nỗ lực merge khi có required check đang thất bại/đan
 năng này với hợp đồng này là đảm bảo branch protection thực sự được cấu hình đúng như mục 1 — phần
 còn lại thuộc về GitHub.
 
-**Trạng thái hiện tại (2026-08-27)**: nghĩa vụ đó **chưa được hoàn thành** — xem research.md
-Decision 7. Cho tới khi branch protection được bật thành công, mục 1–4 của hợp đồng này mô tả hành
-vi *mục tiêu* mà pipeline đã sẵn sàng thực hiện, không phải hành vi đã xác minh trên GitHub thật.
+**Trạng thái hiện tại (2026-09-01, T017)**: nghĩa vụ đó **đã hoàn thành và đã xác minh trên GitHub
+thật** — không chỉ bật thành công (T009/T010), mà còn chặn merge thật với zero đường vòng, kể cả cho
+chủ repo (PR #3), và tự mở khoá merge ngay khi gate đạt (PR #2, #6, #9). Bản thân cơ chế dự phòng
+audit cũng đã xác minh, không cần viết thêm mã nào:
+
+- **Ai đổi cấu hình branch protection, khi nào**: `github.com/settings/security-log` (lọc theo
+  `repo:nmhieuit/ecommerce`) ghi lại sự kiện `repo.change_merge_setting` ("Blocked a merge setting on
+  the nmhieuit/ecommerce repository") kèm actor, thời gian, và IP — đây là hình thức audit log của
+  GitHub cho tài khoản cá nhân (tổ chức/Enterprise có endpoint audit-log riêng, phong phú hơn, nhưng
+  không cần thiết ở quy mô repo này).
+- **Trạng thái cổng chất lượng tại thời điểm mỗi lần merge thành công**: `GET
+  /repos/{owner}/{repo}/commits/{sha}/status` trả về đầy đủ lịch sử 5 required check
+  (`ci/build`, `ci/unit-tests`, `ci/integration-tests`, `ci/contract-tests`,
+  `ci/sonarqube-quality-gate`) cho bất kỳ SHA nào đã từng chạy pipeline, kể cả sau khi PR đã merge và
+  đóng — đã dùng lệnh này thật hàng chục lần xuyên suốt T010–T015 để xác minh mọi lượt build. Tab
+  "Checks" trên giao diện PR cũng hiển thị cùng dữ liệu này cho người không dùng API.
+
+Kết hợp hai nguồn trên trả lời đầy đủ câu hỏi FR-009 đặt ra ("lượt merge nào, cổng chất lượng lúc đó
+ra sao") mà không cần một endpoint audit tuỳ biến nào.
