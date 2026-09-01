@@ -350,15 +350,72 @@ không có thao tác thủ công nào khác.
 
 ## Phase cuối: Hoàn thiện & các mối quan tâm xuyên suốt
 
-- [ ] T016 [P] Cập nhật `docs/github-jenkins-sonarqube-setup.md` để phản ánh trạng thái đã xác minh
+- [X] T016 [P] Cập nhật `docs/github-jenkins-sonarqube-setup.md` để phản ánh trạng thái đã xác minh
       hôm nay (2026-08-27) — plugin cộng đồng đã cài, job Jenkins đã kết nối GitHub thật, build #1
       đã chạy và lý do thất bại — thay vì mô tả trạng thái "chưa dựng gì" của lần ghi trước
       (2026-08-23)
-- [ ] T017 [P] Xác nhận hợp đồng audit ở `contracts/pipeline-stage-contract.md` §4 (FR-009): không
+
+      Cập nhật vượt xa yêu cầu ban đầu của task: tài liệu giờ phản ánh toàn bộ trạng thái đã xác
+      minh tới hết Phase 5 (2026-09-01), không dừng ở "build #1 đã chạy". Thêm mục "Current status"
+      liệt kê từng khẳng định kèm bằng chứng PR thật (#2, #3, #6, #9), và một mục riêng ghi lại
+      **6 lỗi hạ tầng thật** phải sửa để mọi thứ thực sự chạy được — không chỉ kết nối được — mà các
+      bước thiết lập thủ công gốc không hề nhắc tới: java agent của Community Branch Plugin,
+      Dockerfile riêng cho Jenkins agent, đường dẫn cache của corepack, mount docker.sock +
+      group `root` cho Testcontainers, tắt Ryuk, và trỏ Testcontainers vào `host.docker.internal`
+      thay vì `localhost`. Mục "What requires you, specifically to do it" đổi tên thành "Runbook:
+      recreating this from scratch" vì các bước đó đã hoàn tất cho instance đang chạy — giữ lại làm
+      hướng dẫn dựng lại từ đầu, không phải việc-cần-làm.
+- [X] T017 [P] Xác nhận hợp đồng audit ở `contracts/pipeline-stage-contract.md` §4 (FR-009): không
       cần viết mã mới, chỉ xác nhận audit log tổ chức của GitHub và lịch sử check đã đủ để tra cứu
       mọi lượt merge thành công kèm trạng thái cổng chất lượng tại thời điểm đó
-- [ ] T018 Chạy đầy đủ danh sách "Tiêu chí thành công" ở cuối `quickstart.md` (SC-001–SC-004) trên
+
+      Xác nhận không cần viết thêm mã. Hai nguồn có sẵn của GitHub cùng trả lời trọn vẹn câu hỏi của
+      FR-009: (1) `github.com/settings/security-log` ghi sự kiện `repo.change_merge_setting` (ai bật
+      branch protection, khi nào, từ IP nào) — đây là audit log cấp tài khoản cá nhân, tương đương
+      audit log tổ chức trên các repo thuộc GitHub Organization/Enterprise; (2)
+      `GET /repos/{owner}/{repo}/commits/{sha}/status` (và tab "Checks" trên PR) trả về đầy đủ lịch
+      sử 5 required check cho bất kỳ SHA nào, kể cả sau khi PR đã merge/đóng — đã tự mình dùng lệnh
+      này hàng chục lần xuyên suốt T010–T015 để xác minh từng lượt build. Đã cập nhật ghi chú lỗi
+      thời "chưa hoàn thành (2026-08-27)" trong `contracts/pipeline-stage-contract.md` §4 thành
+      trạng thái đã xác minh thật.
+- [X] T018 Chạy đầy đủ danh sách "Tiêu chí thành công" ở cuối `quickstart.md` (SC-001–SC-004) trên
       một PR thật sau khi T001–T017 đã hoàn tất
+
+      Các lần xác minh trước (T010–T015) mỗi lần chỉ chứng minh một phần của danh sách này, tách
+      trên nhiều PR khác nhau — chưa có PR nào tự nó đi qua đủ cả bốn tiêu chí cùng lúc, và Kịch bản
+      2 chưa từng được xác minh bằng một **lỗi chất lượng thật do SonarQube phát hiện** (trước giờ
+      chỉ dùng unit test cố tình hỏng, tức là chặn qua `ci/unit-tests` chứ không phải chính cổng
+      chất lượng). T018 lấp khoảng trống đó bằng một PR duy nhất
+      ([PR #10](https://github.com/nmhieuit/ecommerce/pull/10)) đi trọn vòng đời: thêm một vi phạm
+      SonarQube thật (một khối `catch` rỗng, không có test, trong
+      `shared/ServiceDefaults/QualityGateVerification.cs`) → xác nhận bị chặn có lý do rõ ràng →
+      xoá vi phạm → xác nhận tự mở khoá.
+
+      - **SC-001** (tự kích hoạt đủ năm stage, không thao tác thủ công): xác nhận qua
+        `GET .../commits/{sha}/status` cho cả hai lần chạy (lúc thất bại lẫn lúc đạt) — cả năm
+        context `ci/build`, `ci/unit-tests`, `ci/integration-tests`, `ci/contract-tests`,
+        `ci/sonarqube-quality-gate` đều xuất hiện tự động, không có thao tác "Scan Now" nào.
+      - **SC-002** (không PR nào merge được khi cổng thất bại, mọi vai trò): build đầu tiên
+        (`ci/sonarqube-quality-gate: failure`, `SonarQube task ... Quality gate is 'ERROR'`) khiến
+        `mergeable_state` chuyển thành `"unstable"` — nhất quán với bằng chứng "không đường vòng"
+        đã xác nhận trực tiếp trên PR #3 (Phase 3) cho đúng cấu hình branch protection này.
+      - **SC-003** (coverage/duplication/code smell hiển thị ngay trên PR): comment decoration của
+        `sonarqube-ecommerce-nmhieuit[bot]` hiển thị đúng lý do thất bại —
+        `"Quality Gate failed - 2 New Issues (is greater than 0)"` — ngay trên PR, không cần mở
+        SonarQube.
+      - **SC-004** (tự chạy lại và tự mở khoá sau đúng một lần sửa, không can thiệp thủ công): push
+        commit xoá vi phạm → pipeline tự chạy lại hoàn toàn tự động (gặp thêm 2 lần flaky
+        cold-start ở tầng contract test — một race điều kiện đã biết trong fixture PactNet, không
+        liên quan tới thay đổi chất lượng; đã tách thành việc riêng để sửa tận gốc — hệ thống tự
+        chạy lại cả hai lần mà không cần thao tác gì thêm) → build cuối `SUCCESS`, decoration cập
+        nhật thành
+        `"Quality Gate passed - 0 New Issues"`, `mergeable_state` chuyển thành `"clean"` ngay khi
+        gate đạt, không có bước thủ công nào ở giữa.
+
+      **Trạng thái GitHub cuối cùng của PR #10** (xác nhận qua API): `mergeable: true,
+      mergeable_state: "clean"`, cả 5 required check `success`. PR #10 đã đóng (không merge) và
+      nhánh `test/verify-quality-gate-full-cycle` đã xoá — nội dung PR là vi phạm SonarQube cố tình
+      tạo ra để test, không thuộc về `master`.
 
 ---
 
