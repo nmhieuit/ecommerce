@@ -142,10 +142,6 @@ services:
     volumes:
       - local-parties-db-data:/var/opt/mssql
 
-  # No identity-migrate entry yet: this service has no EF store to migrate at Setup/Foundational
-  # time (014-identity-server-auth tasks.md T010). User Story 1 (tasks.md T020-T021) adds the
-  # Duende configuration/operational store and the user credential store; identity-migrate is added
-  # alongside them, following the parties-migrate pattern above.
   identity-db:
     <<: *mssql
     ports:
@@ -264,6 +260,21 @@ services:
       parties-db:
         condition: service_healthy
 
+  # Runs all three of identity's EF bundles in sequence (Dockerfile's migrator stage) — the
+  # configuration/operational store and the user credential store, all against the same database.
+  identity-migrate:
+    restart: on-failure:3
+    build: &identity-build
+      context: .
+      dockerfile: services/identity/src/Identity.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__IdentityDb: Server=identity-db;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      identity-db:
+        condition: service_healthy
+
   # ---------------------------------------------------------------- domain services
   #
   # ASPNETCORE_ENVIRONMENT=Development everywhere, which brings one trap with it that has to be
@@ -349,19 +360,20 @@ services:
         condition: service_completed_successfully
     healthcheck: *service-healthcheck
 
-  # No EF store yet (see identity-db's comment above), so no ConnectionStrings__IdentityDb and no
-  # depends_on identity-migrate — this entry only proves the shell container builds and answers its
-  # own health probes (014-identity-server-auth tasks.md T010). User Story 1 wires the database.
   identity-api:
     build:
-      context: .
-      dockerfile: services/identity/src/Identity.Api/Dockerfile
+      <<: *identity-build
+      target: final
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__IdentityDb: Server=identity-db;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5205:8080"
     networks: [backbone]
+    depends_on:
+      identity-migrate:
+        condition: service_completed_successfully
     healthcheck: *service-healthcheck
 
   # ---------------------------------------------------------------- edge

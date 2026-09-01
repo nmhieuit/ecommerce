@@ -15,19 +15,31 @@ public static class HealthCheckEndpoints
 {
     private const string ReadyTag = "ready";
 
+    /// <summary>The contract's name for this service's own-database connectivity check.</summary>
+    private const string SelfDatabaseCheck = "self-database";
+
     private static readonly JsonSerializerOptions ResponseJsonOptions = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
     /// <summary>
-    /// Registers the health-check services. No readiness check is registered yet: this service owns
-    /// no database at shell-scaffolding time (tasks.md T001) — a database-backed readiness check
-    /// arrives once User Story 1 (tasks.md T020-T021) adds the identity/user stores.
+    /// Registers the readiness check against this service's own "identity" database — added once
+    /// User Story 1 (tasks.md T020-T021) gave this service a database at all. A raw connection,
+    /// not <c>AddDbContextCheck&lt;T&gt;</c>, matching every domain service's pattern (mirrors
+    /// <c>Parties.Api.Features.HealthCheck.HealthCheckEndpoints</c>) — this service happens to have
+    /// no tenant-gating reason to avoid <c>AddDbContextCheck</c>, but staying consistent with the
+    /// platform's one health-check shape is worth more than the marginal simplification.
     /// </summary>
     public static IServiceCollection AddHealthCheckFeature(this IServiceCollection services)
     {
-        services.AddHealthChecks();
+        services.AddHealthChecks()
+            .AddSqlServer(
+                connectionStringFactory: serviceProvider =>
+                    serviceProvider.GetRequiredService<IConfiguration>().GetConnectionString("IdentityDb")
+                    ?? string.Empty,
+                name: SelfDatabaseCheck,
+                tags: [ReadyTag]);
 
         return services;
     }

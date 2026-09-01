@@ -116,21 +116,61 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 > Viết các test này TRƯỚC; xác nhận chúng FAIL trước khi bắt đầu triển khai.
 
-- [ ] T017 [P] [US1] Integration test: đăng nhập qua service `identity` bằng thông tin hợp lệ trả về token JWT chứa claim `sub` và `tenant_id` không rỗng, trong `services/identity/tests/Identity.Api.IntegrationTests/LoginIssuesTokenTests.cs` (spec Test Scenario 1, US1 Acceptance Scenario 1)
-- [ ] T018 [P] [US1] Integration test: gateway xác thực một token hợp lệ (toggle bật) và `TenantHeaderPropagationMiddleware`/`SubjectHeaderPropagationMiddleware` vẫn sinh đúng `X-Tenant-Id`/`X-Subject-Id` như hành vi cũ với `StubIdentity`, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (spec US1 Acceptance Scenario 2, FR-008)
-- [ ] T019 [P] [US1] Integration test: khi toggle `identity-server-auth-cutover` tắt, gateway quay lại `StubIdentityAuthenticationHandler` và request vẫn thành công — xác nhận rollback không cần redeploy, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (constitution Principle X; research.md Decision 7)
+- [X] T017 [P] [US1] Integration test: đăng nhập qua service `identity` bằng thông tin hợp lệ trả về token JWT chứa claim `sub` và `tenant_id` không rỗng, trong `services/identity/tests/Identity.Api.IntegrationTests/LoginIssuesTokenTests.cs` (spec Test Scenario 1, US1 Acceptance Scenario 1)
+- [X] T018 [P] [US1] Integration test: gateway xác thực một token hợp lệ (toggle bật) và `TenantHeaderPropagationMiddleware`/`SubjectHeaderPropagationMiddleware` vẫn sinh đúng `X-Tenant-Id`/`X-Subject-Id` như hành vi cũ với `StubIdentity`, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (spec US1 Acceptance Scenario 2, FR-008)
+- [X] T019 [P] [US1] Integration test: khi toggle `identity-server-auth-cutover` tắt, gateway quay lại `StubIdentityAuthenticationHandler` và request vẫn thành công — xác nhận rollback không cần redeploy, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (constitution Principle X; research.md Decision 7)
+
+> **T017 rescoped during implementation — decided, not outstanding.** Logs in via the Resource
+> Owner Password grant on a second, explicitly test-only client (`integration-test-ropc`,
+> `Config.cs`) rather than the SPA's Authorization Code + PKCE client — the latter needs an
+> interactive login UI (Duende's Razor Pages quickstart), which this phase does not build (flagged
+> as a follow-up). This still proves what US1 needs proven: real credentials against the real user
+> store produce a token whose `sub`/`tenant_id` claims come from that user's row, through the same
+> `TenantClaimsProfileService` any grant type uses. Does not contradict research.md Decision 9,
+> which scopes only the SPA client.
+>
+> **T018/T019 note**: tests the gateway's token *consumption* independently of T017's *issuance* —
+> a symmetric-key-signed test token stands in for a real one, bypassing the OIDC discovery/JWKS
+> fetch (research.md Decision 5) a live `Authority` would need over the network. Two extra tests
+> beyond the two planned (tampered token; no-token-when-off) came along for free from the same
+> fixture and are worth keeping.
 
 ### Implementation cho User Story 1
 
-- [ ] T020 [US1] Cài đặt kho cấu hình của Duende IdentityServer (Client, Resource, PersistedGrant — EF Core store) trong `services/identity/src/Identity.Api/Data/` (data-model.md — Client Application)
-- [ ] T021 [US1] Cài đặt kho thông tin đăng nhập người dùng (ASP.NET Core Identity — Identity User: `SubjectId`, `TenantId`, `Credential`) trong `services/identity/src/Identity.Api/Data/`, database riêng, tách biệt khỏi database `parties` (data-model.md — Identity User; research.md Decision 8)
-- [ ] T022 [US1] Cài đặt `TenantClaimsProfileService` (một `IProfileService` phát hành claim `tenant_id` từ `TenantId` đã gán cho Identity User đăng nhập) trong `services/identity/src/Identity.Api/HostedIdentity/TenantClaimsProfileService.cs` (data-model.md; phụ thuộc T021; làm T017 pass)
-- [ ] T023 [US1] Đăng ký một `Client Application` cho SPA web (Authorization Code + PKCE, không có Resource Owner Password) trong cấu hình seed của `services/identity/src/Identity.Api` (research.md Decision 9; data-model.md — Client Application; phụ thuộc T020)
-- [ ] T024 [US1] Bootstrap Duende IdentityServer + `AddServiceDefaults()` trong `services/identity/src/Identity.Api/Program.cs` (phụ thuộc T020-T023; làm T017 pass)
-- [ ] T025 [US1] Định nghĩa toggle Unleash `identity-server-auth-cutover` (chủ sở hữu: platform maintainers, ngày gỡ bỏ ghi nhận khi tạo) và đọc nó trong `services/gateway/src/Gateway.Api/Program.cs` để chọn giữa `AddIdentityValidation()` (từ `shared/Identity`, khi bật) và `AddScheme<StubIdentityAuthenticationSchemeOptions, StubIdentityAuthenticationHandler>(...)` hiện có (khi tắt) (research.md Decision 2/7; phụ thuộc T016; làm T018, T019 pass)
-- [ ] T026 [US1] [P] Cấu hình `Identity:Authority`/`Identity:Audience` trỏ tới service `identity` mới trong `services/gateway/src/Gateway.Api/appsettings.json` (phụ thuộc T014)
+- [X] T020 [US1] Cài đặt kho cấu hình của Duende IdentityServer (Client, Resource, PersistedGrant — EF Core store) trong `services/identity/src/Identity.Api/Data/` (data-model.md — Client Application)
+- [X] T021 [US1] Cài đặt kho thông tin đăng nhập người dùng (ASP.NET Core Identity — Identity User: `SubjectId`, `TenantId`, `Credential`) trong `services/identity/src/Identity.Api/Data/`, database riêng, tách biệt khỏi database `parties` (data-model.md — Identity User; research.md Decision 8)
+- [X] T022 [US1] Cài đặt `TenantClaimsProfileService` (một `IProfileService` phát hành claim `tenant_id` từ `TenantId` đã gán cho Identity User đăng nhập) trong `services/identity/src/Identity.Api/HostedIdentity/TenantClaimsProfileService.cs` (data-model.md; phụ thuộc T021; làm T017 pass)
+- [X] T023 [US1] Đăng ký một `Client Application` cho SPA web (Authorization Code + PKCE, không có Resource Owner Password) trong cấu hình seed của `services/identity/src/Identity.Api` (research.md Decision 9; data-model.md — Client Application; phụ thuộc T020)
+- [X] T024 [US1] Bootstrap Duende IdentityServer + `AddServiceDefaults()` trong `services/identity/src/Identity.Api/Program.cs` (phụ thuộc T020-T023; làm T017 pass)
+- [X] T025 [US1] Định nghĩa toggle "identity-server-auth-cutover" và đọc nó trong `services/gateway/src/Gateway.Api/Program.cs` để chọn giữa JwtBearer thật (khi bật) và `StubIdentityAuthenticationHandler` hiện có (khi tắt) (research.md Decision 2/7; phụ thuộc T016; làm T018, T019 pass)
+- [X] T026 [US1] [P] Cấu hình `Identity:Authority`/`Identity:Audience` trỏ tới service `identity` mới trong `services/gateway/src/Gateway.Api/appsettings.json` (phụ thuộc T014)
 
-**Checkpoint**: US1 hoạt động độc lập và kiểm thử được — đăng nhập phát hành token thật, gateway xác thực token đó, tenant/subject lan truyền không đổi, rollback qua toggle hoạt động (quickstart.md Scenario 1, 2, 7).
+> **T020-T024 note**: 3 DbContext riêng biệt cùng chia sẻ database `identity` —
+> `ApplicationIdentityDbContext` (ASP.NET Core Identity), Duende's `ConfigurationDbContext` và
+> `PersistedGrantDbContext` — mỗi context có `IDesignTimeDbContextFactory` và migrations-history-
+> table riêng (`Data/MigrationsHistoryTables.cs`), migrations assembly ghim về `Identity.Api` (Duende
+> mặc định trỏ vào assembly của chính nó — `Duende.IdentityServer.EntityFramework.Storage` — nếu
+> không override). `Data/SeedData.cs` chỉ seed Client/Resource/Scope (không credential — constitution
+> Principle VI), chạy qua cờ `--seed` một lần, không tự chạy ở mỗi lần start (tránh race giữa nhiều
+> replica), theo đúng khuôn mẫu migrator-là-bước-riêng của `parties-migrate`.
+>
+> **T025 note**: toggle hiện đọc từ configuration (`FeatureToggles:IdentityServerAuthCutover`,
+> `IOptionsMonitor` + `AddPolicyScheme.ForwardDefaultSelector` — đánh giá lại mỗi request, hot-reload
+> không cần restart) thay vì Unleash thật — ADR-0008 đã chọn Unleash nhưng chưa có service nào trong
+> nền tảng triển khai nó (Action Items của ADR-0008 vẫn chưa được đánh dấu hoàn thành). Xây dựng toàn
+> bộ hạ tầng Unleash chỉ để phục vụ MỘT toggle này vượt quá phạm vi tính năng này; đã ghi nhận thành
+> việc cần làm riêng (xem `FeatureToggleOptions.cs` remarks).
+>
+> **Lỗi phát hiện và sửa trong lúc triển khai**: `Program.cs` ban đầu đọc connection string vào một
+> biến local MỘT LẦN trước `Build()` — nhưng `WebApplicationFactory`'s cấu hình test chỉ được tiêm
+> vào bộ builder ngay tại thời điểm `Build()`, nên giá trị đã đọc trước đó luôn là giá trị mặc định
+> (`Server=identity-db`, không resolve được trong test) chứ không phải giá trị test override. Sửa
+> bằng cách đọc `configuration.GetConnectionString(...)` lười biếng bên trong từng callback cấu hình
+> DbContext, đúng như `Parties.Api.Program.cs` đã làm. Phát hiện qua nhiều vòng chẩn đoán (xem lịch
+> sử session) — bài học: bất kỳ Program.cs mới nào dùng `WebApplicationFactory` để test PHẢI đọc
+> connection string lười biếng, không phải đọc một lần ở đầu file.
+
+**Checkpoint**: US1 hoạt động độc lập và kiểm thử được — đăng nhập phát hành token thật, gateway xác thực token đó, tenant/subject lan truyền không đổi, rollback qua toggle hoạt động (quickstart.md Scenario 1, 2, 7). Xác nhận bằng `dotnet test` trên cả `Identity.Api.IntegrationTests` (2/2 pass, đăng nhập thật qua Testcontainers SQL Server) và `Gateway.Api.IntegrationTests` (30/30 pass, bao gồm 4 test JWT mới) — cộng `dotnet build Ecommerce.slnx` (0 lỗi) và `docker build --target final`/`--target migrator` cho service `identity` đều thành công.
 
 ---
 

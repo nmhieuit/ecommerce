@@ -2,11 +2,32 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\shared\ServiceDefaults\ServiceDefaults.csproj" />
+    <!-- Not the client-side AddIdentityValidation() library (that's for services validating
+         tokens) — referenced only for the shared IdentityServerOptions/AuthenticationFallbackPolicy
+         types, so the identity server's own appsettings section name and its consumers' stay in
+         sync by construction rather than by two copies of the same string (research.md Decision 4). -->
+    <ProjectReference Include="..\..\..\..\shared\Identity\Identity.csproj" />
   </ItemGroup>
 
-  <!-- No PackageReference for Duende IdentityServer yet: this task only scaffolds the service shell
-       (tasks.md T001). The Duende bootstrap, EF stores, and login flow arrive in User Story 1
-       (tasks.md T020-T024) once this shell is wired into the solution and building. -->
+  <ItemGroup>
+    <!-- The identity server itself (ADR-0001; research.md Decision 1). -->
+    <PackageReference Include="Duende.IdentityServer" />
+    <!-- Client/Resource/PersistedGrant EF store (data-model.md — Client Application; tasks.md T020). -->
+    <PackageReference Include="Duende.IdentityServer.EntityFramework" />
+    <!-- Bridges Duende to ASP.NET Core Identity as the user/credential store (data-model.md —
+         Identity User; research.md Decision 8; tasks.md T021-T022). -->
+    <PackageReference Include="Duende.IdentityServer.AspNetIdentity" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <!-- Readiness opens a raw connection rather than resolving a DbContext, matching every other
+         domain service's pattern (a Kubernetes probe calling /health/ready directly has no tenant/
+         request context to resolve one through). -->
+    <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <!-- Design-time only: supplies `dotnet ef migrations` tooling for the three DbContexts below.
+         PrivateAssets="all" keeps it out of the published image. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>

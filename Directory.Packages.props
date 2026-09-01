@@ -45,6 +45,19 @@
          Only shared/Identity references this; every service consumes it through
          AddIdentityValidation() rather than referencing JwtBearer directly (research.md Decision 4). -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+    <!-- The identity server itself (services/identity only). 8.0.6 is Duende's first line to target
+         net10.0 directly (verified against the published .nuspec, matching the platform's TFM);
+         all three ship in lockstep from the same repo, hence the shared version. No license key is
+         configured yet — ADR-0001 Action Item 1 ("procure a license appropriate to current revenue
+         tier") is still open; Duende runs in its unlicensed/trial mode (a startup log warning, not
+         a hard failure) until that is done. -->
+    <PackageVersion Include="Duende.IdentityServer" Version="8.0.6" />
+    <PackageVersion Include="Duende.IdentityServer.EntityFramework" Version="8.0.6" />
+    <PackageVersion Include="Duende.IdentityServer.AspNetIdentity" Version="8.0.6" />
+    <!-- ASP.NET Core Identity's own EF Core store (services/identity's user/credential store —
+         research.md Decision 8). Not in the shared framework; matches the 10.0.11 pin already used
+         for Microsoft.AspNetCore.OpenApi above for the same transitive-advisory reason. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.11" />
 
     <!-- Resilience (constitution Principle VIII; 002-gateway-bff-routing research.md Decision 3).
          Supplies AddStandardResilienceHandler() — the timeout/retry/circuit-breaker pipeline every

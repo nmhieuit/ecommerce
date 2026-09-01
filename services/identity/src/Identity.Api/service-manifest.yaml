@@ -4,10 +4,6 @@
 # availability — in its service manifest, and those SLOs MUST be measured continuously from the
 # telemetry required by Principle VII." Declared at scaffold time so the budget is measured from
 # day one rather than bolted on after the first regression.
-#
-# Scope note: at Setup/Foundational time (014-identity-server-auth tasks.md T009) this service
-# exposes only the two health probes. Duende IdentityServer's token/login endpoints, and the
-# per-endpoint SLOs for them, arrive in User Story 1 (tasks.md T020-T024).
 
 service:
   name: identity
@@ -21,8 +17,9 @@ data:
   store: sql-server
   database: identity
   connection-string-key: ConnectionStrings:IdentityDb
-  # Not yet provisioned — User Story 1 (tasks.md T020-T021) adds the Duende configuration/
-  # operational store and the ASP.NET Core Identity user credential store.
+  # Three DbContexts, one database: the user credential store (ASP.NET Core Identity) and Duende's
+  # configuration/operational stores, each with its own migrations history table
+  # (Data/MigrationsHistoryTables.cs) — data-model.md Identity User, Client Application.
   owned-exclusively: true
 
 slos:
@@ -36,6 +33,23 @@ slos:
     p99: 500ms
 
 endpoints:
+  - route: POST /connect/token
+    purpose: >-
+      Issues an access token carrying verified identity (sub) and tenant (tenant_id) claims
+      (contracts/identity-token-claims-contract.md; spec Test Scenario 1). Duende-hosted; no
+      handler of this service's own.
+    authentication: anonymous   # the credentials in the request body ARE the authentication
+    latency:
+      p95: 150ms
+      p99: 500ms
+  - route: GET /.well-known/openid-configuration
+    purpose: >-
+      OIDC discovery document every consumer's AddIdentityValidation()/toggle-gated JwtBearer
+      registration fetches once and caches (research.md Decision 5) — never on the request path.
+    authentication: anonymous
+    latency:
+      p95: 150ms
+      p99: 500ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token
@@ -44,8 +58,8 @@ endpoints:
       p99: 500ms
   - route: GET /health/ready
     purpose: >-
-      Readiness probe. Empty check set at Setup/Foundational time — this service owns no database
-      yet (tasks.md T009/T020-T021 note above); gated on the identity/user stores once they exist.
+      Readiness probe, gated on this service's own "identity" database being reachable (a raw SQL
+      connection check, matching every other database-owning service's pattern).
     authentication: anonymous
     latency:
       p95: 150ms

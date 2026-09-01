@@ -5,13 +5,13 @@ using ServiceDefaults;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
-// Constitution Principle V: the tenant is resolved here, at the edge, and nowhere else. Phase 1
-// resolves it from a fixed stub identity; Phase 3 (SCRUM-23) swaps this one registration for
-// AddJwtBearer(...) against the real identity server and nothing downstream changes (spec FR-007).
-builder.Services.AddAuthentication(StubIdentityAuthenticationHandler.SchemeName)
-    .AddScheme<StubIdentityAuthenticationSchemeOptions, StubIdentityAuthenticationHandler>(
-        StubIdentityAuthenticationHandler.SchemeName,
-        options => builder.Configuration.GetSection("StubIdentity").Bind(options));
+// Constitution Principle V: the tenant is resolved here, at the edge, and nowhere else.
+// 014-identity-server-auth: which scheme actually authenticates a given request — the Phase 1
+// stub, or the real identity server's JwtBearer — is decided per request from a live-reloaded
+// toggle, not fixed at startup (research.md Decision 2/7). Everything downstream of the resolved
+// claims (TenantHeaderPropagationMiddleware, SubjectHeaderPropagationMiddleware, and everything
+// they feed) is unchanged either way — spec FR-008.
+builder.Services.AddToggleGatedIdentity(builder.Configuration);
 
 // No AddDbContext here, unlike the domain services: the gateway owns no data and reads no
 // service's database (constitution Principle I; plan.md Technical Context — Storage: N/A).
@@ -48,10 +48,12 @@ app.UseServiceDefaults();
 // be answered by the gateway itself rather than forwarded downstream.
 app.UseCors(StorefrontCorsPolicy);
 
-// Authenticate first, then turn the resolved identity's tenant and subject claims into the headers
-// every hop below reads. All three must run before MapReverseProxy: once YARP forwards the request,
-// the headers it copied are already decided.
+// Authenticate, then authorize (deny-by-default FallbackPolicy — AddToggleGatedIdentity), then turn
+// the resolved identity's tenant and subject claims into the headers every hop below reads. All
+// four must run before MapReverseProxy: once YARP forwards the request, the headers it copied are
+// already decided, and a request that failed authorization never reaches this far regardless.
 app.UseAuthentication();
+app.UseAuthorization();
 app.UseMiddleware<TenantHeaderPropagationMiddleware>();
 app.UseMiddleware<SubjectHeaderPropagationMiddleware>();
 

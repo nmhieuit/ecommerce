@@ -12,14 +12,23 @@ public class TenantGatedConnectionTests
         ["baskets", "bff", "gateway", "identity", "orders", "parties", "products"];
 
     /// <summary>
-    /// The services that own a database. <c>bff</c> and <c>gateway</c> own none (Principle I), so
-    /// requiring a tenant-gated registration of them would assert something untrue. <c>identity</c>
-    /// belongs here too once 014-identity-server-auth's User Story 1 (tasks.md T020-T021) adds its
-    /// configuration/user-credential store — at Setup/Foundational time (tasks.md T012-T016) it has
-    /// no <c>AddDbContext</c> registration yet, so it is treated like the other stateless services
-    /// for now (research.md Decision 8: it will own a database, but not yet).
+    /// The services that own a tenant-partitioned database, gated the way <c>Scan_AcceptsAGatedRegistration</c>
+    /// demonstrates. <c>bff</c> and <c>gateway</c> own no database at all (Principle I), so requiring
+    /// a tenant-gated registration of them would assert something untrue.
     /// </summary>
     private static readonly string[] DatabaseOwningServices = ["baskets", "orders", "parties", "products"];
+
+    /// <summary>
+    /// <c>identity</c> owns a database (014-identity-server-auth's User Story 1, tasks.md T020-T021 —
+    /// its configuration/operational store and user credential store) but does not belong in
+    /// <see cref="DatabaseOwningServices"/>: it is the <em>source</em> of the tenant claim every other
+    /// service's persistence gate requires, not a consumer of one, so its <c>AddDbContext</c>
+    /// registrations are correctly ungated (research.md Decision 8). It is excluded from
+    /// <see cref="NoStatelessService_RegistersADbContext"/>'s zero-registration requirement below for
+    /// the same reason, rather than added to <see cref="DatabaseOwningServices"/>, which would
+    /// wrongly assert it has exactly one registration and that it is tenant-gated.
+    /// </summary>
+    private static readonly string[] TenantAgnosticDatabaseOwningServices = ["identity"];
 
     [Fact]
     public void EveryDatabaseOwningService_HasExactlyOneDbContextRegistration()
@@ -53,9 +62,10 @@ public class TenantGatedConnectionTests
     public void NoStatelessService_RegistersADbContext()
     {
         var result = TenantGatedConnectionScanner.Scan(TenantGatedConnectionScanner.LocateServicesDirectory());
+        var exempt = DatabaseOwningServices.Concat(TenantAgnosticDatabaseOwningServices);
 
         Assert.All(
-            result.Findings.Where(finding => !DatabaseOwningServices.Contains(finding.Service, StringComparer.Ordinal)),
+            result.Findings.Where(finding => !exempt.Contains(finding.Service, StringComparer.Ordinal)),
             finding => Assert.Equal(0, finding.CallSiteCount));
     }
 

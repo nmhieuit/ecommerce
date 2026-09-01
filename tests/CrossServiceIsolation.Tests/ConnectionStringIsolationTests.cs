@@ -19,18 +19,15 @@ public class ConnectionStringIsolationTests
     /// string. <c>bff</c> and <c>gateway</c> are stateless proxy/aggregation layers — constitution
     /// Principle I gives persistence only to services that own business invariants — so counting
     /// connection strings against <see cref="ExpectedServices"/> would assert something untrue of
-    /// two of them. <c>identity</c> will join this list once 014-identity-server-auth's User
-    /// Story 1 (tasks.md T020-T021) adds its own database — see <see cref="StatelessServices"/>.
+    /// two of them. <c>identity</c> joined this list in 014-identity-server-auth's User Story 1
+    /// (tasks.md T020-T021), which gave it a configuration/operational store and a user credential
+    /// store (data-model.md — Client Application, Identity User) — all in its own "identity"
+    /// database, per research.md Decision 8.
     /// </summary>
-    private static readonly string[] DatabaseOwningServices = ["baskets", "orders", "parties", "products"];
+    private static readonly string[] DatabaseOwningServices = ["baskets", "identity", "orders", "parties", "products"];
 
-    /// <summary>
-    /// The services that must declare no connection string at all. <c>identity</c> is here only for
-    /// now (Setup/Foundational time, tasks.md T012-T016) — it moves to
-    /// <see cref="DatabaseOwningServices"/> once User Story 1 gives it a configuration/user-
-    /// credential store (data-model.md — Identity User, Client Application).
-    /// </summary>
-    private static readonly string[] StatelessServices = ["bff", "gateway", "identity"];
+    /// <summary>The services that must declare no connection string at all.</summary>
+    private static readonly string[] StatelessServices = ["bff", "gateway"];
 
     [Fact]
     public void NoServiceConfiguration_NamesAnotherServicesDatabase()
