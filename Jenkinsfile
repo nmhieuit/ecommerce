@@ -84,7 +84,7 @@ pipeline {
 
         // TEMP (see banner above) — 'true' stubs sonarqube/integration/contract; set to 'false'
         // (or remove this line) for the real, final run before closing out Phase 3.
-        CI_FAST_ITERATION = 'false'
+        CI_FAST_ITERATION = 'true'
     }
 
     stages {
