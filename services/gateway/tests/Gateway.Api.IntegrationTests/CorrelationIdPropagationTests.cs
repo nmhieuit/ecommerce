@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using IntegrationTestSupport;
 using ServiceDefaults;
 
 namespace Gateway.Api.IntegrationTests;
@@ -22,7 +23,7 @@ public class CorrelationIdPropagationTests
     {
         await using var bff = GatewayTestHost.CreateBff();
         await using var gateway = GatewayTestHost.CreateGateway(bff);
-        var client = gateway.CreateClient();
+        var client = gateway.CreateClient().UseTestBearerToken();
 
         // No inbound header: the gateway must generate one and forward it. The route fails because
         // no products service is running, which is convenient — the BFF's ProblemDetails is what
@@ -49,7 +50,7 @@ public class CorrelationIdPropagationTests
 
         await using var bff = GatewayTestHost.CreateBff();
         await using var gateway = GatewayTestHost.CreateGateway(bff);
-        var client = gateway.CreateClient();
+        var client = gateway.CreateClient().UseTestBearerToken();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
         request.Headers.Add(CorrelationIdMiddleware.HeaderName, supplied);

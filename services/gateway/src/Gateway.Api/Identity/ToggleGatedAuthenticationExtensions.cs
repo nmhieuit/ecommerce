@@ -52,6 +52,11 @@ public static class ToggleGatedAuthenticationExtensions
                 // Authority's own scheme rather than the framework default of always-true.
                 jwtOptions.RequireHttpsMetadata =
                     identityOptions.Authority?.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ?? true;
+
+                // Same clear, distinguishable 401 every other service gets from
+                // AddIdentityValidation() (spec FR-006, US3) — applied here explicitly since the
+                // gateway can't call that helper directly (see class remarks).
+                ClearUnauthorizedResponseEvents.Configure(jwtOptions);
             });
 
         // Same deny-by-default fallback every other service gets from AddIdentityValidation()

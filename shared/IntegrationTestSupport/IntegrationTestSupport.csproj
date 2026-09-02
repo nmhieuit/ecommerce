@@ -17,6 +17,17 @@
          matching the existing per-service SqlServerFixture shape — a compile-time xUnit dependency
          here is intentional, not a leftover. -->
     <PackageReference Include="xunit" />
+    <!-- TestJwtBearer (014-identity-server-auth): every service's integration tests now run behind
+         AddIdentityValidation()'s FallbackPolicy, so a shared symmetric-key token issuer + JwtBearer
+         bypass belongs here rather than duplicated per service (mirrors the SqlServerFixture
+         precedent above). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ASP.NET Core hosting types (IWebHostBuilder) without being a runnable web app itself —
+         the same shape shared/Identity and shared/Tenancy use for the same reason. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>

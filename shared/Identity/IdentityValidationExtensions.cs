@@ -20,14 +20,10 @@ public static class IdentityValidationExtensions
     /// configuration section (<see cref="IdentityServerOptions"/>), and sets
     /// <see cref="AuthenticationFallbackPolicy"/> as the authorization fallback so every endpoint
     /// requires an authenticated user unless it explicitly opts out with <c>[AllowAnonymous]</c>
-    /// (research.md Decision 6).
+    /// (research.md Decision 6). A rejected token — expired or otherwise invalid — gets the clear,
+    /// distinguishable response <see cref="ClearUnauthorizedResponseEvents"/> writes, not the
+    /// framework's default empty-body 401 (spec FR-006, US3).
     /// </summary>
-    /// <remarks>
-    /// No <c>OnAuthenticationFailed</c>/<c>OnChallenge</c> customization yet — a token that fails to
-    /// validate here still produces ASP.NET Core's default 401. Distinguishing "expired" from other
-    /// validation failures with a clearer response is User Story 3's job (tasks.md T043), layered
-    /// onto this same registration once it exists.
-    /// </remarks>
     public static IServiceCollection AddIdentityValidation(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -50,6 +46,8 @@ public static class IdentityValidationExtensions
                 // does not fail startup over a property the deployment topology already governs.
                 jwtOptions.RequireHttpsMetadata =
                     identityOptions.Authority?.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ?? true;
+
+                ClearUnauthorizedResponseEvents.Configure(jwtOptions);
             });
 
         services.AddAuthorization(authorizationOptions =>

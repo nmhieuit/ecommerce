@@ -1,5 +1,6 @@
 extern alias BffApi;
 
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,10 +35,19 @@ public static class GatewayTestHost
     /// there (T013). That document is the one 200-returning response only the BFF can produce
     /// without any domain service running, which makes it the cleanest proof that a request
     /// actually arrived at the BFF rather than being answered by the gateway.
+    /// <para>
+    /// Since Phase 4 (T027), the BFF enforces its own independent auth
+    /// (<c>shared/Identity.AddIdentityValidation</c>, constitution Principle VI — the gateway is
+    /// not a trust boundary services rely on). <see cref="TestJwtBearer.UseTestJwtBearer"/> lets
+    /// this in-process BFF validate the same symmetric-key test tokens the gateway's own suite
+    /// signs, without either side needing a real Identity.Api or network JWKS fetch.
+    /// </para>
     /// </remarks>
     public static WebApplicationFactory<BffApi::Program> CreateBff() =>
         new WebApplicationFactory<BffApi::Program>()
-            .WithWebHostBuilder(builder => builder.UseEnvironment(Environments.Development));
+            .WithWebHostBuilder(builder => builder
+                .UseEnvironment(Environments.Development)
+                .UseTestJwtBearer());
 
     /// <summary>
     /// Starts the gateway with its configured routes, forwarding into <paramref name="bff"/>.

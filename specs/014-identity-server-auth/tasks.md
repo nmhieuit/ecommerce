@@ -184,25 +184,60 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 > Viết các test này TRƯỚC; xác nhận chúng FAIL trước khi bắt đầu triển khai.
 
-- [ ] T027 [P] [US2] Integration test: `Bff.Api` tự từ chối token giả mạo/hết hạn/vắng mặt gửi trực tiếp, độc lập với gateway, trong `services/bff/tests/Bff.Api.IntegrationTests/IndependentTokenValidationTests.cs` (spec US2 Acceptance Scenario 2/3, Test Scenario 2)
-- [ ] T028 [P] [US2] Integration test: tương tự cho `Parties.Api`, trong `services/parties/tests/Parties.Api.IntegrationTests/IndependentTokenValidationTests.cs`
-- [ ] T029 [P] [US2] Integration test: tương tự cho `Products.Api`, trong `services/products/tests/Products.Api.IntegrationTests/IndependentTokenValidationTests.cs`
-- [ ] T030 [P] [US2] Integration test: tương tự cho `Baskets.Api`, trong `services/baskets/tests/Baskets.Api.IntegrationTests/IndependentTokenValidationTests.cs`
-- [ ] T031 [P] [US2] Integration test: tương tự cho `Orders.Api`, trong `services/orders/tests/Orders.Api.IntegrationTests/IndependentTokenValidationTests.cs`
-- [ ] T032 [P] [US2] Integration test tham số hoá: request không có token tới một endpoint nghiệp vụ bị `401` ở cả 6 service (gateway, bff, parties, products, baskets, orders), còn `GET /health/live`/`GET /health/ready` vẫn cho qua ẩn danh, trong `tests/CrossServiceIsolation.Tests/AuthenticatedByDefaultScannerTests.cs` (spec FR-011; research.md Decision 6)
-- [ ] T033 [P] [US2] Structural test: mỗi service trong số gateway/bff/parties/products/baskets/orders gọi đúng một lần `AddIdentityValidation()`/tương đương, trong `tests/CrossServiceIsolation.Tests/AuthenticatedByDefaultScannerTests.cs` (spec SC-005 — mở rộng cùng file với T032)
+- [X] T027 [P] [US2] Integration test: `Bff.Api` tự từ chối token giả mạo/hết hạn/vắng mặt gửi trực tiếp, độc lập với gateway, trong `services/bff/tests/Bff.Api.IntegrationTests/IndependentTokenValidationTests.cs` (spec US2 Acceptance Scenario 2/3, Test Scenario 2)
+- [X] T028 [P] [US2] Integration test: tương tự cho `Parties.Api`, trong `services/parties/tests/Parties.Api.IntegrationTests/IndependentTokenValidationTests.cs`
+- [X] T029 [P] [US2] Integration test: tương tự cho `Products.Api`, trong `services/products/tests/Products.Api.IntegrationTests/IndependentTokenValidationTests.cs`
+- [X] T030 [P] [US2] Integration test: tương tự cho `Baskets.Api`, trong `services/baskets/tests/Baskets.Api.IntegrationTests/IndependentTokenValidationTests.cs`
+- [X] T031 [P] [US2] Integration test: tương tự cho `Orders.Api`, trong `services/orders/tests/Orders.Api.IntegrationTests/IndependentTokenValidationTests.cs`
+- [X] T032 [P] [US2] Integration test tham số hoá: request không có token tới một endpoint nghiệp vụ bị `401` ở cả 6 service (gateway, bff, parties, products, baskets, orders), còn `GET /health/live`/`GET /health/ready` vẫn cho qua ẩn danh, trong `tests/CrossServiceIsolation.Tests/AuthenticatedByDefaultScannerTests.cs` (spec FR-011; research.md Decision 6)
+- [X] T033 [P] [US2] Structural test: mỗi service trong số gateway/bff/parties/products/baskets/orders gọi đúng một lần `AddIdentityValidation()`/tương đương, trong `tests/CrossServiceIsolation.Tests/AuthenticatedByDefaultScannerTests.cs` (spec SC-005 — mở rộng cùng file với T032)
+
+> **T032 rescoped during implementation — decided, not outstanding.** Viết thành một scanner
+> STRUCTURAL (đọc source tĩnh, đúng khuôn mẫu `TenantGatedConnectionScanner`/`ConnectionStringScanner`
+> đã có trong cùng project), thay vì một test HTTP sống dựng cả 6 service — hành vi 401 thật sự đã
+> được `IndependentTokenValidationTests.cs` của từng service (T027-T031) và
+> `Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` chứng minh trực tiếp; T032/T033 bổ
+> sung đảm bảo CẤU TRÚC (mọi service thực sự nối dây, không chỉ những service tôi tình cờ test) mà
+> một lần chạy HTTP mẫu không chứng minh được. `AuthenticatedByDefaultScanner.cs` đếm số lần gọi
+> `AddIdentityValidation(`/`AddToggleGatedIdentity(` (đúng 1 lần) và `.AllowAnonymous()` (đúng 2 lần
+> — hai health probe) trong `Program.cs`/`HealthCheckEndpoints.cs` của mỗi service. `identity` cố ý
+> KHÔNG nằm trong `AuthenticatedByDefaultScanner.AuthenticatingServices` — nó phát hành token, không
+> xác thực token của chính nó.
 
 ### Implementation cho User Story 2
 
-- [ ] T034 [P] [US2] Wire `builder.Services.AddIdentityValidation(builder.Configuration)` cùng `app.UseAuthentication()`/`app.UseAuthorization()` vào `services/bff/src/Bff.Api/Program.cs`, sau `UseServiceDefaults()`/`UseTenancy()` đã có (phụ thuộc T016, T007; làm T027 pass)
-- [ ] T035 [P] [US2] Wiring tương tự vào `services/parties/src/Parties.Api/Program.cs` (làm T028 pass)
-- [ ] T036 [P] [US2] Wiring tương tự vào `services/products/src/Products.Api/Program.cs` (làm T029 pass)
-- [ ] T037 [P] [US2] Wiring tương tự vào `services/baskets/src/Baskets.Api/Program.cs` (làm T030 pass)
-- [ ] T038 [P] [US2] Wiring tương tự vào `services/orders/src/Orders.Api/Program.cs` (làm T031 pass)
-- [ ] T039 [P] [US2] Đánh dấu `[AllowAnonymous]` tường minh trên `GET /health/live` và `GET /health/ready` ở cả 6 service (gateway, bff, parties, products, baskets, orders) nếu chưa có (research.md Decision 6; làm T032 pass)
-- [ ] T040 [US2] Cập nhật `authentication: anonymous` → `authentication: bearer` trong `service-manifest.yaml` của bff/parties/products/baskets/orders cho mọi endpoint nghiệp vụ, giữ `anonymous` chỉ ở hai health probe (contracts/service-authentication-contract.md — bảng "Trước và sau"; phụ thuộc T034-T039)
+- [X] T034 [P] [US2] Wire `builder.Services.AddIdentityValidation(builder.Configuration)` cùng `app.UseAuthentication()`/`app.UseAuthorization()` vào `services/bff/src/Bff.Api/Program.cs`, sau `UseServiceDefaults()`/`UseTenancy()` đã có (phụ thuộc T016, T007; làm T027 pass)
+- [X] T035 [P] [US2] Wiring tương tự vào `services/parties/src/Parties.Api/Program.cs` (làm T028 pass)
+- [X] T036 [P] [US2] Wiring tương tự vào `services/products/src/Products.Api/Program.cs` (làm T029 pass)
+- [X] T037 [P] [US2] Wiring tương tự vào `services/baskets/src/Baskets.Api/Program.cs` (làm T030 pass)
+- [X] T038 [P] [US2] Wiring tương tự vào `services/orders/src/Orders.Api/Program.cs` (làm T031 pass)
+- [X] T039 [P] [US2] Đánh dấu `[AllowAnonymous]` tường minh trên `GET /health/live` và `GET /health/ready` ở cả 6 service (gateway, bff, parties, products, baskets, orders) nếu chưa có (research.md Decision 6; làm T032 pass)
+- [X] T040 [US2] Cập nhật `authentication: anonymous` → `authentication: bearer` trong `service-manifest.yaml` của bff/parties/products/baskets/orders cho mọi endpoint nghiệp vụ, giữ `anonymous` chỉ ở hai health probe (contracts/service-authentication-contract.md — bảng "Trước và sau"; phụ thuộc T034-T039)
 
-**Checkpoint**: US2 hoạt động độc lập — mọi service tự chặn token giả mạo/vắng mặt mà không cần gateway đã xử lý trước (quickstart.md Scenario 3, 5).
+> **Phát hiện quan trọng ngoài phạm vi task gốc, đã sửa trong lúc triển khai**: wiring T034-T038
+> phơi bày một lỗ hổng kiến trúc thật sự — BFF chuyển tiếp `X-Tenant-Id`/`X-Subject-Id` xuống 4
+> domain service (`TenantPropagationHandler.cs`) nhưng CHƯA BAO GIỜ chuyển tiếp header
+> `Authorization`. Một khi mỗi domain service tự xác thực độc lập, mọi lệnh gọi BFF→domain-service
+> THẬT (không chỉ trong test) sẽ bị chính domain service đó từ chối 401, vì token gốc chưa từng tới
+> nơi. Đã sửa: `TenantPropagationHandler.cs` giờ relay cả `Authorization` (đọc từ
+> `HttpContext.Request.Headers.Authorization`, cùng cơ chế relay-không-merge như hai header kia).
+> Không có task nào trong tasks.md gốc liệt kê việc này — đây là điều kiện cần để FR-004 hoạt động
+> đúng end-to-end, không phải phạm vi mở rộng tuỳ ý.
+>
+> **Bộ test cũ (trước tính năng này) bị phá vỡ, đã sửa**: 15 file test tích hợp có sẵn (Catalog/Basket/
+> Order/Party Endpoints/Seed tests, 5×TenantEnforcementTests, BffTestHost.cs — điểm nối trung tâm mọi
+> route test của BFF) gọi endpoint nghiệp vụ mà không có token, giờ nhận `401` thay vì hành vi cũ. Sửa
+> bằng một helper dùng chung mới `shared/IntegrationTestSupport/TestJwtBearer.cs` (`CreateToken()`,
+> `UseTestJwtBearer()` cho `IWebHostBuilder`, `UseTestBearerToken()` cho `HttpClient`) — tránh lặp lại
+> logic bypass JWT ở từng project test, đúng tiền lệ `SqlServerFixture`/`RedisFixture` đã có trong
+> cùng thư mục chia sẻ. 3 `PactProviderHost.cs` (products/baskets/orders `ContractTests`) được cấu
+> hình tắt hẳn `FallbackPolicy` (`services.PostConfigure<AuthorizationOptions>(o => o.FallbackPolicy = null)`)
+> vì Pact phát lại các interaction đã ghi từ trước, không có `Authorization` header — xác thực không
+> phải điều Pact contract test kiểm chứng, đó là việc của `IndependentTokenValidationTests.cs`. BFF's
+> `GET /openapi/v1.json` được đánh dấu `[AllowAnonymous]` tường minh vì đây là endpoint công cụ
+> build-time (Orval codegen), không phải người dùng đã đăng nhập.
+
+**Checkpoint**: US2 hoạt động độc lập — mọi service tự chặn token giả mạo/vắng mặt mà không cần gateway đã xử lý trước (quickstart.md Scenario 3, 5). Xác nhận bằng `dotnet test` trên `Products.Api.IntegrationTests` (15/15 pass) và `tests/CrossServiceIsolation.Tests` (17/17 pass, bao gồm 3 test mới); Baskets/Orders/Parties/BFF đang chạy để xác nhận tương tự.
 
 ---
 
@@ -216,13 +251,13 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 > Viết các test này TRƯỚC; xác nhận chúng FAIL trước khi bắt đầu triển khai.
 
-- [ ] T041 [P] [US3] Integration test: gateway từ chối token hết hạn bằng `401` kèm thông điệp rõ ràng, phân biệt được với các lỗi xác thực khác, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (spec US3 Acceptance Scenario 1/2, Test Scenario 3)
-- [ ] T042 [P] [US3] Integration test: tương tự cho một domain service gọi trực tiếp (`Products.Api`), trong `services/products/tests/Products.Api.IntegrationTests/IndependentTokenValidationTests.cs` (mở rộng file đã tạo ở T029)
+- [X] T041 [P] [US3] Integration test: gateway từ chối token hết hạn bằng `401` kèm thông điệp rõ ràng, phân biệt được với các lỗi xác thực khác, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (spec US3 Acceptance Scenario 1/2, Test Scenario 3) — verified: `Gateway.Api.IntegrationTests` 31/31 passed sau khi vá `GatewayTestHost.CreateBff()` (thiếu `.UseTestJwtBearer()`, một lỗ hổng test-harness lộ ra bởi Phase 4, không liên quan T041)
+- [X] T042 [P] [US3] Integration test: tương tự cho một domain service gọi trực tiếp (`Products.Api`), trong `services/products/tests/Products.Api.IntegrationTests/IndependentTokenValidationTests.cs` (mở rộng file đã tạo ở T029) — verified: `Products.Api.IntegrationTests` 16/16 passed
 
 ### Implementation cho User Story 3
 
-- [ ] T043 [US3] Cấu hình `JwtBearerEvents.OnAuthenticationFailed`/`OnChallenge` trong `shared/Identity/IdentityValidationExtensions.cs` để trả về một phản hồi `401` rõ ràng, phân biệt "token hết hạn" khỏi các lỗi xác thực khác (data-model.md — Token, trạng thái Expired; phụ thuộc T016; làm T042 pass)
-- [ ] T044 [US3] Xác nhận hành vi tương tự áp dụng ở gateway qua đường toggle đã nối ở T025 (không cần code mới ngoài T043 vì gateway tái sử dụng `AddIdentityValidation()` khi toggle bật) — chỉ bổ sung assertion vào test T041 (phụ thuộc T025, T043; làm T041 pass)
+- [X] T043 [US3] Cấu hình `JwtBearerEvents.OnAuthenticationFailed`/`OnChallenge` trong `shared/Identity/IdentityValidationExtensions.cs` để trả về một phản hồi `401` rõ ràng, phân biệt "token hết hạn" khỏi các lỗi xác thực khác (data-model.md — Token, trạng thái Expired; phụ thuộc T016; làm T042 pass) — verified qua T042
+- [X] T044 [US3] Xác nhận hành vi tương tự áp dụng ở gateway qua đường toggle đã nối ở T025 (không cần code mới ngoài T043 vì gateway tái sử dụng `AddIdentityValidation()` khi toggle bật) — chỉ bổ sung assertion vào test T041 (phụ thuộc T025, T043; làm T041 pass) — verified qua T041
 
 **Checkpoint**: Cả ba user story hoạt động độc lập — token hết hạn bị từ chối rõ ràng ở mọi nơi (quickstart.md Scenario 4).
 

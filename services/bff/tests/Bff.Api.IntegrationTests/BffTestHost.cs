@@ -1,3 +1,4 @@
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -47,11 +48,19 @@ public static class BffTestHost
         where TDbContext : DbContext
     {
         var factory = new WebApplicationFactory<TEntryPoint>().WithWebHostBuilder(builder =>
+        {
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     [$"ConnectionStrings:{connectionStringKey}"] = connectionString,
-                })));
+                }));
+
+            // The BFF now relays the caller's Authorization header onto every downstream call
+            // (TenantPropagationHandler; 014-identity-server-auth spec FR-004), and this downstream
+            // validates it independently — same test signing key as the BFF's own bypass below, so
+            // a token accepted by one is accepted by the other.
+            builder.UseTestJwtBearer();
+        });
 
         using var scope = factory.Services.CreateScope();
 
@@ -89,7 +98,7 @@ public static class BffTestHost
     /// </remarks>
     public static HttpClient CreateTenantClient(WebApplicationFactory<Program> factory)
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
         client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, SeedTenantId);
 
         return client;
@@ -122,6 +131,8 @@ public static class BffTestHost
                     services.AddHttpClient(serviceName).ConfigurePrimaryHttpMessageHandler(handlerFactory);
                 }
             });
+
+            builder.UseTestJwtBearer();
         });
     }
 
@@ -134,7 +145,7 @@ public static class BffTestHost
         WebApplicationFactory<Program> factory,
         string subjectId = SeedSubjectId)
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
         client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, SeedTenantId);
         client.DefaultRequestHeaders.Add(CallerContextMiddleware.HeaderName, subjectId);
 
@@ -201,6 +212,8 @@ public static class BffTestHost
                     services.AddHttpClient(serviceConfigurationName)
                         .ConfigurePrimaryHttpMessageHandler(handlerFactory));
             }
+
+            builder.UseTestJwtBearer();
         });
     }
 

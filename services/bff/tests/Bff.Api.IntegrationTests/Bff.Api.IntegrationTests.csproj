@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Bff.Api\Bff.Api.csproj" />
+    <ProjectReference Include="..\..\..\..\shared\IntegrationTestSupport\IntegrationTestSupport.csproj" />
   </ItemGroup>
 
   <!--

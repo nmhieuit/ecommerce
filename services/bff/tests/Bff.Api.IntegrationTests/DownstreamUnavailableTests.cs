@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using IntegrationTestSupport;
 
 namespace Bff.Api.IntegrationTests;
 
@@ -41,7 +42,7 @@ public class DownstreamUnavailableTests
     public async Task GetProducts_ReturnsBadGateway_WhenTheProductsServiceIsUnreachable()
     {
         await using var bff = BffTestHost.CreateBffWithFailingTransport("ProductsApi");
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         var stopwatch = Stopwatch.StartNew();
         var response = await client.GetAsync("/bff/products");
@@ -62,7 +63,7 @@ public class DownstreamUnavailableTests
     public async Task GetProducts_ReturnsGatewayTimeout_WhenTheProductsServiceNeverAnswers()
     {
         await using var bff = BffTestHost.CreateBffWithUnresponsiveService("ProductsApi");
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         var stopwatch = Stopwatch.StartNew();
         var response = await client.GetAsync("/bff/products");
@@ -82,7 +83,7 @@ public class DownstreamUnavailableTests
     public async Task ADownstreamFailure_ReturnsProblemDetailsCarryingTheCorrelationId()
     {
         await using var bff = BffTestHost.CreateBffWithFailingTransport("ProductsApi");
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         var response = await client.GetAsync("/bff/products");
 
@@ -111,7 +112,7 @@ public class DownstreamUnavailableTests
     public async Task ADownstreamFailure_NamesTheLogicalServiceOnly_NeverItsAddress()
     {
         await using var bff = BffTestHost.CreateBffWithFailingTransport("ProductsApi");
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         var response = await client.GetAsync("/bff/products");
         var body = await response.Content.ReadAsStringAsync();
@@ -140,7 +141,7 @@ public class DownstreamUnavailableTests
         string route)
     {
         await using var bff = BffTestHost.CreateBffWithFailingTransport(serviceConfigurationName);
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         var response = await client.GetAsync(route);
 
@@ -161,7 +162,7 @@ public class DownstreamUnavailableTests
     public async Task ADownstreamFailure_IsBoundedAndStructured_AgainstARealUnreachableHost()
     {
         await using var bff = BffTestHost.CreateBffWithUnreachableService("ProductsApi", UnreachableAddress);
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         var stopwatch = Stopwatch.StartNew();
         var response = await client.GetAsync("/bff/products");

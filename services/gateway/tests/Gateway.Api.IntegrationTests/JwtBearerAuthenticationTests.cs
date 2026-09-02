@@ -92,22 +92,53 @@ public class JwtBearerAuthenticationTests
     }
 
     /// <summary>
-    /// constitution Principle X; research.md Decision 7: gagging the toggle back off restores the
-    /// exact Phase 1 behavior — no token required — without a code change or redeploy. This is the
-    /// rollback path the toggle exists for.
+    /// spec US3 Acceptance Scenario 1/2, Test Scenario 3: an expired token is rejected with a clear,
+    /// distinguishable response — not the framework's default empty-body 401, and not conflated with
+    /// a tampered or malformed token (data-model.md — Token, trạng thái Expired).
     /// </summary>
     [Fact]
-    public async Task ARequestWithNoToken_StillSucceeds_WhenToggleIsOff()
+    public async Task ARequestWithAnExpiredToken_IsRejected_WithAClearExpiredMessage_WhenToggleIsOn()
     {
-        await using var gateway = CreateGatewayWithTestJwtBearer(GatewayTestHost.CreateBff(), toggleOn: false);
+        await using var gateway = CreateGatewayWithTestJwtBearer(GatewayTestHost.CreateBff(), toggleOn: true);
         var client = gateway.CreateClient();
 
-        var response = await client.GetAsync("/bff/products");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(expired: true));
 
-        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("token_expired", body, StringComparison.Ordinal);
     }
 
-    private static string CreateToken()
+    /// <summary>
+    /// constitution Principle X; research.md Decision 7: gagging the toggle back off restores the
+    /// gateway's own Phase 1 behavior — it stops requiring a token itself and forwards the request
+    /// regardless, without a code change or redeploy. This is the rollback path the toggle exists
+    /// for. Since Phase 4 (T027) gave the BFF its own independent auth, that rollback is scoped to
+    /// the gateway alone (constitution Principle VI: "gateway is not a trust boundary services rely
+    /// on") — the BFF still enforces its own policy regardless of this toggle, so what the toggle
+    /// actually controls is whether the *gateway* rejects the request, not the end-to-end outcome.
+    /// Proven the same way <see cref="ARequestWithAValidToken_PropagatesTenantAndSubject_WhenToggleIsOn"/>
+    /// proves forwarding: the request reaches the BFF's pipeline at all, recorded before the BFF's
+    /// own auth has a chance to act on it.
+    /// </summary>
+    [Fact]
+    public async Task ARequestWithNoToken_StillReachesTheBff_WhenToggleIsOff()
+    {
+        var recorder = new HeaderRecorder();
+        await using var bff = CreateRecordingBff(recorder);
+        await using var gateway = CreateGatewayWithTestJwtBearer(bff, toggleOn: false);
+        var client = gateway.CreateClient();
+
+        await client.GetAsync("/bff/products");
+
+        Assert.Single(recorder.Observed);
+    }
+
+    private static string CreateToken(bool expired = false)
     {
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TestSigningKey)),
@@ -119,7 +150,7 @@ public class JwtBearerAuthenticationTests
                 new Claim(JwtRegisteredClaimNames.Sub, TestSubjectId),
                 new Claim(TenantClaimType, TestTenantId),
             ],
-            expires: DateTime.UtcNow.AddMinutes(5),
+            expires: expired ? DateTime.UtcNow.AddMinutes(-5) : DateTime.UtcNow.AddMinutes(5),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

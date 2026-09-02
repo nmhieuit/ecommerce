@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -51,8 +52,17 @@ internal sealed class PactProviderHost(
                 ["ConnectionStrings:BasketsDb"] = connectionString,
             }));
 
-        builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(
-            new ProviderStateStartupFilter(tenantId, applyStateAsync)));
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<IStartupFilter>(new ProviderStateStartupFilter(tenantId, applyStateAsync));
+
+            // Pact verifies request/response shape against interactions recorded by the BFF's
+            // consumer tests (011-consumer-contract-tests) — those recordings carry no Authorization
+            // header, predating 014-identity-server-auth's independent token validation. Whether a
+            // request is authenticated is a separate concern, covered by
+            // Baskets.Api.IntegrationTests.IndependentTokenValidationTests instead.
+            services.PostConfigure<AuthorizationOptions>(options => options.FallbackPolicy = null);
+        });
     }
 
     protected override IHost CreateHost(IHostBuilder builder)

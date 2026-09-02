@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using IntegrationTestSupport;
 
 namespace Gateway.Api.IntegrationTests;
 
@@ -40,7 +41,7 @@ public class UnmatchedRouteTests
     {
         await using var bff = GatewayTestHost.CreateBff();
         await using var gateway = GatewayTestHost.CreateGateway(bff);
-        var client = gateway.CreateClient();
+        var client = gateway.CreateClient().UseTestBearerToken();
 
         var stopwatch = Stopwatch.StartNew();
         var response = await client.GetAsync(path);
@@ -61,7 +62,7 @@ public class UnmatchedRouteTests
     {
         await using var bff = GatewayTestHost.CreateBff();
         await using var gateway = GatewayTestHost.CreateGateway(bff);
-        var client = gateway.CreateClient();
+        var client = gateway.CreateClient().UseTestBearerToken();
 
         var response = await client.GetAsync("/no-such-path");
         var body = await response.Content.ReadAsStringAsync();

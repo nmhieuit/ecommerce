@@ -1,5 +1,6 @@
 extern alias ProductsApi;
 
+using IntegrationTestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using ProductsApi::Products.Api.Data;
 using Tenancy;
@@ -28,7 +29,7 @@ public class TenantPropagationTests(DownstreamServicesFixture fixture)
 
         var recorder = new OutboundTenantRecorder();
         await using var bff = CreateRecordingBff(products, recorder);
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
         request.Headers.Add(TenantContextMiddleware.HeaderName, ResolvedTenant);
@@ -50,7 +51,7 @@ public class TenantPropagationTests(DownstreamServicesFixture fixture)
 
         var recorder = new OutboundTenantRecorder();
         await using var bff = CreateRecordingBff(products, recorder);
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         // No X-Tenant-Id on the way in: nothing resolved this request's tenant.
         await client.GetAsync("/bff/products");

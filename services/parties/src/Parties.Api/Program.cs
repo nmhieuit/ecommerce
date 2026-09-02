@@ -1,3 +1,4 @@
+using Identity;
 using Microsoft.EntityFrameworkCore;
 using Parties.Api.Data;
 using Parties.Api.Features.Parties;
@@ -7,6 +8,12 @@ using Tenancy;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+
+// Independent token validation (014-identity-server-auth spec US2/FR-004) — this service does not
+// trust that the gateway already authenticated the request; it validates the token itself.
+// FallbackPolicy denies by default (research.md Decision 6), so every endpoint requires it unless
+// explicitly marked [AllowAnonymous] (the health probes, Features/HealthCheck/HealthCheckEndpoints.cs).
+builder.Services.AddIdentityValidation(builder.Configuration);
 
 // Registered before the DbContext below, which will be gated on the tenant this resolves.
 builder.Services.AddTenancy();
@@ -29,6 +36,11 @@ builder.Services.AddHealthCheckFeature();
 
 var app = builder.Build();
 app.UseServiceDefaults();
+
+// Authenticate/authorize before tenant resolution — an unauthenticated request is rejected before
+// spending any effort resolving a tenant or touching persistence.
+app.UseIdentityValidation();
+
 app.UseTenancy();
 app.MapHealthCheckEndpoints();
 app.MapPartyEndpoints();

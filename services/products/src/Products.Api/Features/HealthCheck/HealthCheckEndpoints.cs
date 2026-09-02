@@ -53,8 +53,11 @@ public static class HealthCheckEndpoints
     }
 
     /// <summary>
-    /// Maps the two probes Kubernetes and local verification consume. Both are anonymous — probes
-    /// cannot present a token (documented exception, plan.md Constitution Check, Principle VI).
+    /// Maps the two probes Kubernetes and local verification consume. Both are explicitly
+    /// <c>AllowAnonymous</c> — probes cannot present a token — which matters now that
+    /// <c>AddIdentityValidation</c> (014-identity-server-auth; research.md Decision 6) installs a
+    /// deny-by-default <c>FallbackPolicy</c>: without it, these endpoints would inherit that policy
+    /// like any other unmarked endpoint and probes would start failing with 401.
     /// </summary>
     public static WebApplication MapHealthCheckEndpoints(this WebApplication app)
     {
@@ -64,7 +67,7 @@ public static class HealthCheckEndpoints
         {
             Predicate = _ => false,
             ResponseWriter = WriteLivenessResponse,
-        });
+        }).AllowAnonymous();
 
         // Readiness answers "can this service actually serve traffic right now", which includes
         // reaching its own database — it must fail closed, never report healthy without it
@@ -73,7 +76,7 @@ public static class HealthCheckEndpoints
         {
             Predicate = registration => registration.Tags.Contains(ReadyTag),
             ResponseWriter = WriteReadinessResponse,
-        });
+        }).AllowAnonymous();
 
         return app;
     }
