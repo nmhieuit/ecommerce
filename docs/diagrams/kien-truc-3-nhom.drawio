@@ -1,287 +1,425 @@
-<mxfile host="Electron" agent="5.0" version="24.0.0" type="device">
+<mxfile host="Electron" agent="5.0" pages="2">
   <diagram id="arch-3-groups" name="Kiến trúc phân 3 nhóm">
-    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1500" math="0" shadow="0">
+    <mxGraphModel dx="1452" dy="607" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1500" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
-        <mxCell id="title1" parent="1" vertex="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#333333;" value="Kiến trúc hệ thống — phân 3 nhóm: Trong repo / 3rd-party library / External component">
-          <mxGeometry x="30" y="20" width="1200" height="26" as="geometry" />
+        <mxCell id="title1" parent="1" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#333333;" value="Kiến trúc hệ thống — phân 3 nhóm: Trong repo / 3rd-party library / External component" vertex="1">
+          <mxGeometry height="26" width="1200" x="614.25" y="20" as="geometry" />
         </mxCell>
-
-        <!-- Row A: client + shared libs (trong repo) -->
-        <mxCell id="client" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="Storefront (frontend/apps/web)&#10;TRONG REPO — React + Vite&#10;Cổng 4173 (docker) / 5173 (dev)&#10;3 màn hình: Sản phẩm - Giỏ hàng - Xác nhận">
-          <mxGeometry x="30" y="60" width="460" height="90" as="geometry" />
+        <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="Storefront (frontend/apps/web)&#xa;TRONG REPO — React + Vite&#xa;Cổng 4173 (docker) / 5173 (dev)&#xa;3 màn hình: Sản phẩm - Giỏ hàng - Xác nhận" vertex="1">
+          <mxGeometry height="90" width="460" x="136.5" y="1163" as="geometry" />
         </mxCell>
-        <mxCell id="sd" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="shared/ServiceDefaults&#10;TRONG REPO — thư viện dùng chung&#10;(không phải service)&#10;Log/trace/metric + Correlation-Id">
-          <mxGeometry x="850" y="60" width="280" height="90" as="geometry" />
+        <mxCell id="sd" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="shared/ServiceDefaults&#xa;TRONG REPO — thư viện dùng chung&#xa;(không phải service)&#xa;Log/trace/metric + Correlation-Id" vertex="1">
+          <mxGeometry height="90" width="280" x="983.17" y="1163" as="geometry" />
         </mxCell>
-        <mxCell id="tenancy" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="shared/Tenancy&#10;TRONG REPO — thư viện dùng chung&#10;Bắt buộc X-Tenant-Id + X-Subject-Id&#10;trước khi chạm CSDL">
-          <mxGeometry x="1150" y="60" width="280" height="90" as="geometry" />
+        <mxCell id="tenancy" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="shared/Tenancy&#xa;TRONG REPO — thư viện dùng chung&#xa;Bắt buộc X-Tenant-Id + X-Subject-Id&#xa;trước khi chạm CSDL" vertex="1">
+          <mxGeometry height="90" width="280" x="1074.25" y="56" as="geometry" />
         </mxCell>
-
-        <mxCell id="lib_otel" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="OpenTelemetry SDK&#10;3RD-PARTY LIBRARY&#10;(dùng bên trong ServiceDefaults)">
-          <mxGeometry x="850" y="170" width="280" height="60" as="geometry" />
+        <mxCell id="lib_otel" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="OpenTelemetry SDK&#xa;3RD-PARTY LIBRARY&#xa;(dùng bên trong ServiceDefaults)" vertex="1">
+          <mxGeometry height="60" width="280" x="936.5" y="1343" as="geometry" />
         </mxCell>
-
-        <!-- Row B: Gateway -->
-        <mxCell id="gw" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="Gateway.Api (services/gateway)&#10;TRONG REPO&#10;Cổng 5300 — DUY NHẤT công bố ra ngoài mặc định&#10;Định tuyến 100% request sang BFF&#10;Gán X-Tenant-Id/X-Subject-Id (danh tính giả lập)">
-          <mxGeometry x="30" y="240" width="460" height="130" as="geometry" />
+        <mxCell id="gw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="Gateway.Api (services/gateway)&#xa;TRONG REPO&#xa;Cổng 5300 — DUY NHẤT công bố ra ngoài mặc định&#xa;Định tuyến 100% request sang BFF&#xa;Gán X-Tenant-Id/X-Subject-Id (danh tính giả lập)" vertex="1">
+          <mxGeometry height="130" width="460" x="136.5" y="1343" as="geometry" />
         </mxCell>
-        <mxCell id="lib_yarp" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="Yarp.ReverseProxy&#10;3RD-PARTY LIBRARY">
-          <mxGeometry x="520" y="255" width="260" height="55" as="geometry" />
+        <mxCell id="lib_yarp" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="Yarp.ReverseProxy&#xa;3RD-PARTY LIBRARY" vertex="1">
+          <mxGeometry height="55" width="260" x="20" y="1563" as="geometry" />
         </mxCell>
-
-        <!-- Row C: BFF -->
-        <mxCell id="bff" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="Bff.Api (services/bff)&#10;TRONG REPO — Backend For Frontend&#10;Cổng 5301 (chỉ debug)&#10;Duy nhất được gọi cả 4 service nghiệp vụ&#10;Điều phối luồng Checkout (xem Trang 2)">
-          <mxGeometry x="30" y="400" width="460" height="130" as="geometry" />
+        <mxCell id="bff" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="Bff.Api (services/bff)&#xa;TRONG REPO — Backend For Frontend&#xa;Cổng 5301 (chỉ debug)&#xa;Duy nhất được gọi cả 4 service nghiệp vụ&#xa;Điều phối luồng Checkout (xem Trang 2)" vertex="1">
+          <mxGeometry height="130" width="460" x="1041.36" y="1563" as="geometry" />
         </mxCell>
-        <mxCell id="lib_resilience" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="Microsoft.Extensions.Http.Resilience&#10;3RD-PARTY LIBRARY&#10;Timeout/retry/circuit-breaker">
-          <mxGeometry x="520" y="415" width="280" height="60" as="geometry" />
+        <mxCell id="lib_resilience" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="Microsoft.Extensions.Http.Resilience&#xa;3RD-PARTY LIBRARY&#xa;Timeout/retry/circuit-breaker" vertex="1">
+          <mxGeometry height="60" width="280" x="1428.5" y="1804" as="geometry" />
         </mxCell>
-
-        <mxCell id="svcnote" parent="1" vertex="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;" value="4 service nghiệp vụ HOÀN TOÀN không biết đến nhau: không cái nào gọi cái nào, không tham chiếu code chéo nhau (canh giữ bởi tests/CrossServiceIsolation.Tests).">
-          <mxGeometry x="30" y="540" width="1390" height="18" as="geometry" />
+        <mxCell id="svcnote" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;" value="4 service nghiệp vụ HOÀN TOÀN không biết đến nhau: không cái nào gọi cái nào, không tham chiếu code chéo nhau (canh giữ bởi tests/CrossServiceIsolation.Tests)." vertex="1">
+          <mxGeometry height="18" width="1390" x="519.25" y="156" as="geometry" />
         </mxCell>
-
-        <!-- Row D: 4 domain services -->
-        <mxCell id="svc1" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Products.Api&#10;TRONG REPO&#10;GET /products&#10;Cổng 5088 (debug)">
-          <mxGeometry x="30" y="565" width="320" height="140" as="geometry" />
+        <mxCell id="svc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Products.Api&#xa;TRONG REPO&#xa;GET /products&#xa;Cổng 5088 (debug)" vertex="1">
+          <mxGeometry height="140" width="320" x="1738.5" y="1804" as="geometry" />
         </mxCell>
-        <mxCell id="svc2" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Baskets.Api&#10;TRONG REPO&#10;Giỏ hàng theo người gọi&#10;Cổng 5188 (debug)">
-          <mxGeometry x="380" y="565" width="320" height="140" as="geometry" />
+        <mxCell id="svc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Baskets.Api&#xa;TRONG REPO&#xa;Giỏ hàng theo người gọi&#xa;Cổng 5188 (debug)" vertex="1">
+          <mxGeometry height="140" width="320" x="2088.5" y="1804" as="geometry" />
         </mxCell>
-        <mxCell id="svc3" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Orders.Api&#10;TRONG REPO&#10;Tạo/đọc đơn hàng&#10;Cổng 5041 (debug/demo)">
-          <mxGeometry x="730" y="565" width="320" height="140" as="geometry" />
+        <mxCell id="svc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Orders.Api&#xa;TRONG REPO&#xa;Tạo/đọc đơn hàng&#xa;Cổng 5041 (debug/demo)" vertex="1">
+          <mxGeometry height="140" width="320" x="549.83" y="1804" as="geometry" />
         </mxCell>
-        <mxCell id="svc4" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Parties.Api&#10;TRONG REPO&#10;GET /parties/{id}&#10;Cổng 5204 (debug)&#10;Chưa được storefront gọi tới">
-          <mxGeometry x="1080" y="565" width="320" height="140" as="geometry" />
+        <mxCell id="svc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Parties.Api&#xa;TRONG REPO&#xa;GET /parties/{id}&#xa;Cổng 5204 (debug)&#xa;Chưa được storefront gọi tới" vertex="1">
+          <mxGeometry height="140" width="320" x="1078.5" y="1804" as="geometry" />
         </mxCell>
-
-        <!-- Row E: EF Core lib + EventContracts -->
-        <mxCell id="lib_efcore" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="Entity Framework Core + .SqlServer&#10;3RD-PARTY LIBRARY — dùng bởi cả 4 service nghiệp vụ">
-          <mxGeometry x="30" y="725" width="460" height="65" as="geometry" />
+        <mxCell id="lib_efcore" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="Entity Framework Core + .SqlServer&#xa;3RD-PARTY LIBRARY — dùng bởi cả 4 service nghiệp vụ" vertex="1">
+          <mxGeometry height="65" width="460" x="617.83" y="2026" as="geometry" />
         </mxCell>
-        <mxCell id="shared_events" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="shared/EventContracts&#10;TRONG REPO — định nghĩa OrderPlacedV1, BasketCheckedOutV1&#10;Đã định nghĩa xong — CHƯA ai publish/consume thật">
-          <mxGeometry x="520" y="725" width="460" height="65" as="geometry" />
+        <mxCell id="shared_events" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="shared/EventContracts&#xa;TRONG REPO — định nghĩa OrderPlacedV1, BasketCheckedOutV1&#xa;Đã định nghĩa xong — CHƯA ai publish/consume thật" vertex="1">
+          <mxGeometry height="65" width="460" x="453.5" y="2168" as="geometry" />
         </mxCell>
-
-        <!-- Row F: external components -->
-        <mxCell id="exttitle" parent="1" vertex="1" style="text;html=1;fontStyle=1;fontSize=12;fontColor=#333333;" value="External component (chạy tách biệt — tương đương cloud/SaaS khi lên production)">
-          <mxGeometry x="30" y="810" width="800" height="20" as="geometry" />
+        <mxCell id="exttitle" parent="1" style="text;html=1;fontStyle=1;fontSize=12;fontColor=#333333;" value="External component (chạy tách biệt — tương đương cloud/SaaS khi lên production)" vertex="1">
+          <mxGeometry height="20" width="800" x="814.25" y="184" as="geometry" />
         </mxCell>
-        <mxCell id="db_sql" parent="1" vertex="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;boundedLbl=1;align=left;spacingLeft=6;" value="SQL Server (1 container dùng chung)&#10;EXTERNAL COMPONENT — Đang dùng thật&#10;4 database: products, baskets, orders, parties">
-          <mxGeometry x="30" y="840" width="460" height="110" as="geometry" />
+        <mxCell id="db_sql" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;boundedLbl=1;align=left;spacingLeft=6;" value="SQL Server (1 container dùng chung)&#xa;EXTERNAL COMPONENT — Đang dùng thật&#xa;4 database: products, baskets, orders, parties" vertex="1">
+          <mxGeometry height="110" width="460" x="1107.83" y="2026" as="geometry" />
         </mxCell>
-        <mxCell id="redis" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;dashed=1;align=left;spacingLeft=6;" value="Redis&#10;EXTERNAL COMPONENT&#10;ĐANG CHẠY — CHƯA có code nào kết nối&#10;(có chủ đích, dự phòng tương lai)">
-          <mxGeometry x="520" y="840" width="280" height="110" as="geometry" />
+        <mxCell id="redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;dashed=1;align=left;spacingLeft=6;" value="Redis&#xa;EXTERNAL COMPONENT&#xa;ĐANG CHẠY — CHƯA có code nào kết nối&#xa;(có chủ đích, dự phòng tương lai)" vertex="1">
+          <mxGeometry height="110" width="280" x="1074.25" y="214" as="geometry" />
         </mxCell>
-        <mxCell id="rabbitmq" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;dashed=1;align=left;spacingLeft=6;" value="RabbitMQ&#10;EXTERNAL COMPONENT&#10;ĐANG CHẠY — CHƯA có code sản phẩm kết nối&#10;(đã có hạ tầng test thật dùng RabbitMQ)">
-          <mxGeometry x="830" y="840" width="280" height="110" as="geometry" />
+        <mxCell id="rabbitmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;dashed=1;align=left;spacingLeft=6;" value="RabbitMQ&#xa;EXTERNAL COMPONENT&#xa;ĐANG CHẠY — CHƯA có code sản phẩm kết nối&#xa;(đã có hạ tầng test thật dùng RabbitMQ)" vertex="1">
+          <mxGeometry height="110" width="280" x="543.5" y="2320" as="geometry" />
         </mxCell>
-        <mxCell id="otel_collector" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="OTel Collector&#10;EXTERNAL COMPONENT — Đang dùng thật&#10;Nhận log/trace/metric từ cả 6 service">
-          <mxGeometry x="1140" y="840" width="320" height="110" as="geometry" />
+        <mxCell id="otel_collector" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="OTel Collector&#xa;EXTERNAL COMPONENT — Đang dùng thật&#xa;Nhận log/trace/metric từ cả 6 service" vertex="1">
+          <mxGeometry height="110" width="320" x="1531.36" y="1353" as="geometry" />
         </mxCell>
-
-        <!-- Row G: CI-only box -->
-        <mxCell id="cibg" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#999999;dashed=1;verticalAlign=top;fontColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Chỉ tồn tại trong docker-compose.ci.yml — KHÔNG phải hạ tầng runtime của ứng dụng. Đã viết xong Jenkinsfile + script nhưng CHƯA thực sự bật (cần quản trị viên bật Jenkins/SonarQube + branch protection GitHub).">
-          <mxGeometry x="20" y="970" width="1000" height="115" as="geometry" />
+        <mxCell id="cibg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#999999;dashed=1;verticalAlign=top;fontColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Chỉ tồn tại trong docker-compose.ci.yml — KHÔNG phải hạ tầng runtime của ứng dụng. Đã viết xong Jenkinsfile + script nhưng CHƯA thực sự bật (cần quản trị viên bật Jenkins/SonarQube + branch protection GitHub)." vertex="1">
+          <mxGeometry height="115" width="1000" x="714.25" y="334" as="geometry" />
         </mxCell>
-        <mxCell id="jenkins" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="Jenkins&#10;EXTERNAL COMPONENT (CI only)">
-          <mxGeometry x="40" y="1005" width="280" height="65" as="geometry" />
+        <mxCell id="jenkins" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="Jenkins&#xa;EXTERNAL COMPONENT (CI only)" vertex="1">
+          <mxGeometry height="65" width="280" x="626.5" y="1188" as="geometry" />
         </mxCell>
-        <mxCell id="sonarqube" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="SonarQube&#10;EXTERNAL COMPONENT (CI only)&#10;Cổng chất lượng code">
-          <mxGeometry x="360" y="1005" width="280" height="65" as="geometry" />
+        <mxCell id="sonarqube" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="SonarQube&#xa;EXTERNAL COMPONENT (CI only)&#xa;Cổng chất lượng code" vertex="1">
+          <mxGeometry height="65" width="280" x="626.5" y="1343" as="geometry" />
         </mxCell>
-
-        <!-- Row H/I: future target -->
-        <mxCell id="futtitle" parent="1" vertex="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#a03030;" value="MỤC TIÊU TƯƠNG LAI — CHƯA XÂY (Giai đoạn 3-5 của roadmap)">
-          <mxGeometry x="30" y="1110" width="900" height="24" as="geometry" />
+        <mxCell id="futtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=13;fontColor=#a03030;" value="MỤC TIÊU TƯƠNG LAI — CHƯA XÂY (Giai đoạn 3-5 của roadmap)" vertex="1">
+          <mxGeometry height="24" width="900" x="764.25" y="459" as="geometry" />
         </mxCell>
-        <mxCell id="futurebg" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#cc6666;dashed=1;" value="">
-          <mxGeometry x="20" y="1140" width="1400" height="190" as="geometry" />
+        <mxCell id="futurebg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#cc6666;dashed=1;" value="" vertex="1">
+          <mxGeometry height="190" width="1400" x="514.25" y="493" as="geometry" />
         </mxCell>
-        <mxCell id="logistics" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Logistics service&#10;TRONG REPO — MỤC TIÊU&#10;chưa tồn tại">
-          <mxGeometry x="40" y="1165" width="210" height="80" as="geometry" />
+        <mxCell id="logistics" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Logistics service&#xa;TRONG REPO — MỤC TIÊU&#xa;chưa tồn tại" vertex="1">
+          <mxGeometry height="80" width="210" x="771.83" y="2519" as="geometry" />
         </mxCell>
-        <mxCell id="invoices" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Invoices service&#10;TRONG REPO — MỤC TIÊU&#10;chưa tồn tại">
-          <mxGeometry x="270" y="1165" width="210" height="80" as="geometry" />
+        <mxCell id="invoices" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Invoices service&#xa;TRONG REPO — MỤC TIÊU&#xa;chưa tồn tại" vertex="1">
+          <mxGeometry height="80" width="210" x="531.83" y="2519" as="geometry" />
         </mxCell>
-        <mxCell id="identity_server" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Identity Server thật (Duende)&#10;EXTERNAL — MỤC TIÊU&#10;thay cho xác thực giả lập hiện tại">
-          <mxGeometry x="500" y="1165" width="230" height="80" as="geometry" />
+        <mxCell id="identity_server" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Identity Server thật (Duende)&#xa;EXTERNAL — MỤC TIÊU&#xa;thay cho xác thực giả lập hiện tại" vertex="1">
+          <mxGeometry height="80" width="230" x="289.83" y="1804" as="geometry" />
         </mxCell>
-        <mxCell id="vault" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="HashiCorp Vault + ESO&#10;EXTERNAL — MỤC TIÊU">
-          <mxGeometry x="750" y="1165" width="200" height="80" as="geometry" />
+        <mxCell id="vault" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="HashiCorp Vault + ESO&#xa;EXTERNAL — MỤC TIÊU" vertex="1">
+          <mxGeometry height="80" width="200" x="1114.25" y="693" as="geometry" />
         </mxCell>
-        <mxCell id="unleash" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Unleash&#10;EXTERNAL — MỤC TIÊU&#10;feature toggle">
-          <mxGeometry x="970" y="1165" width="200" height="80" as="geometry" />
+        <mxCell id="unleash" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Unleash&#xa;EXTERNAL — MỤC TIÊU&#xa;feature toggle" vertex="1">
+          <mxGeometry height="80" width="200" x="1248.02" y="1393" as="geometry" />
         </mxCell>
-        <mxCell id="pact_broker" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Pact Broker&#10;EXTERNAL — MỤC TIÊU&#10;hợp đồng hiện chỉ lưu file .json trong repo (pacts/)">
-          <mxGeometry x="1190" y="1165" width="210" height="80" as="geometry" />
+        <mxCell id="pact_broker" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Pact Broker&#xa;EXTERNAL — MỤC TIÊU&#xa;hợp đồng hiện chỉ lưu file .json trong repo (pacts/)" vertex="1">
+          <mxGeometry height="80" width="210" x="551.5" y="1613" as="geometry" />
         </mxCell>
-        <mxCell id="elastic" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Elastic Stack (Elasticsearch/Kibana)&#10;EXTERNAL — MỤC TIÊU&#10;OTel Collector hiện chưa có nơi nhận phía sau">
-          <mxGeometry x="40" y="1260" width="320" height="60" as="geometry" />
+        <mxCell id="elastic" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#cc0000;dashed=1;fontColor=#333333;fontSize=10;align=left;spacingLeft=6;" value="Elastic Stack (Elasticsearch/Kibana)&#xa;EXTERNAL — MỤC TIÊU&#xa;OTel Collector hiện chưa có nơi nhận phía sau" vertex="1">
+          <mxGeometry height="60" width="320" x="1531.36" y="1563" as="geometry" />
         </mxCell>
-
-        <!-- Legend -->
-        <mxCell id="lgtitle" parent="1" vertex="1" style="text;html=1;fontStyle=1;fontSize=12;" value="Chú giải">
-          <mxGeometry x="30" y="1355" width="100" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgc1" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="">
-          <mxGeometry x="30" y="1385" width="20" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgc1t" parent="1" vertex="1" style="text;html=1;fontSize=11;" value="Trong repo — code do dự án viết">
-          <mxGeometry x="55" y="1385" width="280" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgc2" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="">
-          <mxGeometry x="360" y="1385" width="20" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgc2t" parent="1" vertex="1" style="text;html=1;fontSize=11;" value="3rd-party library — chạy lồng trong service">
-          <mxGeometry x="385" y="1385" width="300" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgc3" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="">
-          <mxGeometry x="720" y="1385" width="20" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgc3t" parent="1" vertex="1" style="text;html=1;fontSize=11;" value="External component — container/dịch vụ ngoài (≈ cloud/SaaS khi lên production)">
-          <mxGeometry x="745" y="1385" width="420" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgc4" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc0000;dashed=1;" value="">
-          <mxGeometry x="30" y="1415" width="20" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgc4t" parent="1" vertex="1" style="text;html=1;fontSize=11;" value="Mục tiêu tương lai — chưa xây (viền đỏ nét đứt)">
-          <mxGeometry x="55" y="1415" width="320" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgline1" parent="1" edge="1" style="edgeStyle=none;html=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="420" y="1425" as="sourcePoint" /><mxPoint x="470" y="1425" as="targetPoint" /></mxGeometry>
-        </mxCell>
-        <mxCell id="lgline1t" parent="1" vertex="1" style="text;html=1;fontSize=11;" value="Đồng bộ (HTTP)">
-          <mxGeometry x="480" y="1415" width="160" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgline2" parent="1" edge="1" style="edgeStyle=none;dashed=1;html=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="660" y="1425" as="sourcePoint" /><mxPoint x="710" y="1425" as="targetPoint" /></mxGeometry>
-        </mxCell>
-        <mxCell id="lgline2t" parent="1" vertex="1" style="text;html=1;fontSize=11;" value="Bất đồng bộ / tham chiếu thư viện / telemetry">
-          <mxGeometry x="720" y="1415" width="340" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lgline3" parent="1" edge="1" style="edgeStyle=none;dashed=1;html=1;strokeColor=#cc0000;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="1080" y="1425" as="sourcePoint" /><mxPoint x="1130" y="1425" as="targetPoint" /></mxGeometry>
-        </mxCell>
-        <mxCell id="lgline3t" parent="1" vertex="1" style="text;html=1;fontSize=11;" value="Mục tiêu tương lai (chưa nối dây)">
-          <mxGeometry x="1140" y="1415" width="260" height="20" as="geometry" />
-        </mxCell>
-
-        <!-- Edges: solid sync -->
-        <mxCell id="e_client_gw" parent="1" edge="1" source="client" target="gw" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" value="HTTP :5300">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_gw_bff" parent="1" edge="1" source="gw" target="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" value="Chuyển tiếp 100% + headers">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_bff_svc1" parent="1" edge="1" source="bff" target="svc1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" value="GET /bff/products">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_bff_svc2" parent="1" edge="1" source="bff" target="svc2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" value="giỏ hàng">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_bff_svc3" parent="1" edge="1" source="bff" target="svc3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" value="đơn hàng">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_bff_svc4" parent="1" edge="1" source="bff" target="svc4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" value="tra cứu (chưa dùng bởi UI)">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Edges: dashed lib reference -->
-        <mxCell id="e_gw_yarp" parent="1" edge="1" source="gw" target="lib_yarp" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" value="dùng thư viện">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_bff_resilience" parent="1" edge="1" source="bff" target="lib_resilience" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" value="dùng thư viện">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_sd_otel" parent="1" edge="1" source="sd" target="lib_otel" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" value="dùng thư viện">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_svc1_ef" parent="1" edge="1" source="svc1" target="lib_efcore" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_svc2_ef" parent="1" edge="1" source="svc2" target="lib_efcore" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_svc3_ef" parent="1" edge="1" source="svc3" target="lib_efcore" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_svc4_ef" parent="1" edge="1" source="svc4" target="lib_efcore" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_svc2_events" parent="1" edge="1" source="svc2" target="shared_events" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" value="build payload, chưa publish">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_svc3_events" parent="1" edge="1" source="svc3" target="shared_events" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Edges: solid to external db -->
-        <mxCell id="e_svc1_db" parent="1" edge="1" source="svc1" target="db_sql" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_svc2_db" parent="1" edge="1" source="svc2" target="db_sql" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_svc3_db" parent="1" edge="1" source="svc3" target="db_sql" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_svc4_db" parent="1" edge="1" source="svc4" target="db_sql" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_sd_otelc" parent="1" edge="1" source="sd" target="otel_collector" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;" value="OTLP export, cả 6 service">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_jenkins_sonar" parent="1" edge="1" source="jenkins" target="sonarqube" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" value="phân tích chất lượng code">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Edges: future dashed red -->
-        <mxCell id="e_events_rabbit_future" parent="1" edge="1" source="shared_events" target="rabbitmq" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;fontColor=#a03030;endArrow=block;fontSize=9;" value="MỤC TIÊU: publish/consume thật (SCRUM-31)">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_rabbit_logistics_future" parent="1" edge="1" source="rabbitmq" target="logistics" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;" value="MỤC TIÊU: consume OrderPlaced">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_rabbit_invoices_future" parent="1" edge="1" source="rabbitmq" target="invoices" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;" value="MỤC TIÊU: consume OrderPlaced">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_gw_identity_future" parent="1" edge="1" source="gw" target="identity_server" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;" value="MỤC TIÊU: JWT validation">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_bff_identity_future" parent="1" edge="1" source="bff" target="identity_server" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;" value="MỤC TIÊU: JWT validation">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_otel_elastic_future" parent="1" edge="1" source="otel_collector" target="elastic" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;" value="MỤC TIÊU: xuất dữ liệu xuống đây">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_pactbroker_svc3_future" parent="1" edge="1" source="pact_broker" target="svc3" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;" value="MỤC TIÊU: lưu trữ hợp đồng tập trung">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e_unleash_bff_future" parent="1" edge="1" source="unleash" target="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;" value="MỤC TIÊU: feature flag SDK">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="lgtitle" parent="1" style="text;html=1;fontStyle=1;fontSize=12;" value="Chú giải" vertex="1">
+          <mxGeometry height="20" width="100" x="1164.25" y="783" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="" vertex="1">
+          <mxGeometry height="20" width="20" x="1204.25" y="813" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc1t" parent="1" style="text;html=1;fontSize=11;" value="Trong repo — code do dự án viết" vertex="1">
+          <mxGeometry height="20" width="280" x="1074.25" y="843" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="" vertex="1">
+          <mxGeometry height="20" width="20" x="1204.25" y="873" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc2t" parent="1" style="text;html=1;fontSize=11;" value="3rd-party library — chạy lồng trong service" vertex="1">
+          <mxGeometry height="20" width="300" x="1064.25" y="903" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="" vertex="1">
+          <mxGeometry height="20" width="20" x="1204.25" y="933" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc3t" parent="1" style="text;html=1;fontSize=11;" value="External component — container/dịch vụ ngoài (≈ cloud/SaaS khi lên production)" vertex="1">
+          <mxGeometry height="20" width="420" x="1004.25" y="963" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cc0000;dashed=1;" value="" vertex="1">
+          <mxGeometry height="20" width="20" x="1204.25" y="993" as="geometry" />
+        </mxCell>
+        <mxCell id="lgc4t" parent="1" style="text;html=1;fontSize=11;" value="Mục tiêu tương lai — chưa xây (viền đỏ nét đứt)" vertex="1">
+          <mxGeometry height="20" width="320" x="1054.25" y="1023" as="geometry" />
+        </mxCell>
+        <mxCell id="lgline1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="428" y="1445" as="sourcePoint" />
+            <mxPoint x="478" y="1445" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lgline1t" parent="1" style="text;html=1;fontSize=11;" value="Đồng bộ (HTTP)" vertex="1">
+          <mxGeometry height="20" width="160" x="1134.25" y="1053" as="geometry" />
+        </mxCell>
+        <mxCell id="lgline2" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;dashed=1;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="668" y="1445" as="sourcePoint" />
+            <mxPoint x="718" y="1445" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lgline2t" parent="1" style="text;html=1;fontSize=11;" value="Bất đồng bộ / tham chiếu thư viện / telemetry" vertex="1">
+          <mxGeometry height="20" width="340" x="1044.25" y="1083" as="geometry" />
+        </mxCell>
+        <mxCell id="lgline3" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;dashed=1;html=1;strokeColor=#cc0000;endArrow=block;fontSize=9;rounded=1;curved=0;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1088" y="1445" as="sourcePoint" />
+            <mxPoint x="1138" y="1445" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lgline3t" parent="1" style="text;html=1;fontSize=11;" value="Mục tiêu tương lai (chưa nối dây)" vertex="1">
+          <mxGeometry height="20" width="260" x="1084.25" y="1113" as="geometry" />
+        </mxCell>
+        <mxCell id="e_client_gw" edge="1" parent="1" source="client" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;rounded=1;curved=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="gw" value="HTTP :5300">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="1" as="offset" />
+            <Array as="points">
+              <mxPoint x="366.5" y="1298" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_gw_bff" edge="1" parent="1" source="gw" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;rounded=1;curved=0;exitX=0.75;exitY=1;entryX=0.3333;entryY=0;" target="bff" value="Chuyển tiếp 100% + headers">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="327.6" y="30" as="offset" />
+            <Array as="points">
+              <mxPoint x="481.5" y="1489" />
+              <mxPoint x="1194.69" y="1489" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_bff_svc1" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.7143;exitY=1;entryX=0.5;entryY=0;" target="svc1" value="GET /bff/products">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="234.78" y="39.5" as="offset" />
+            <Array as="points">
+              <mxPoint x="1369.93" y="1719" />
+              <mxPoint x="1898.5" y="1719" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_bff_svc2" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.8571;exitY=1;entryX=0.5;entryY=0;" target="svc2" value="giỏ hàng">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="366.93" y="49.5" as="offset" />
+            <Array as="points">
+              <mxPoint x="1435.64" y="1709" />
+              <mxPoint x="2248.5" y="1709" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_bff_svc3" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.2857;exitY=1;entryX=0.6667;entryY=0;" target="svc3" value="đơn hàng">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-169.98" y="39.5" as="offset" />
+            <Array as="points">
+              <mxPoint x="1172.79" y="1719" />
+              <mxPoint x="768.5" y="1719" />
+              <mxPoint x="768.5" y="1788" />
+              <mxPoint x="763.17" y="1788" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_bff_svc4" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.4286;exitY=1;entryX=0.5;entryY=0;" target="svc4" value="tra cứu (chưa dùng bởi UI)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="10" as="offset" />
+            <Array as="points">
+              <mxPoint x="1238.5" y="1748.5" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_gw_yarp" edge="1" parent="1" source="gw" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" target="lib_yarp" value="dùng thư viện">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-21.75" y="30" as="offset" />
+            <Array as="points">
+              <mxPoint x="251.5" y="1489" />
+              <mxPoint x="150" y="1489" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_bff_resilience" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.5714;exitY=1;entryX=0.5;entryY=0;" target="lib_resilience" value="dùng thư viện">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="112.64" y="29.5" as="offset" />
+            <Array as="points">
+              <mxPoint x="1304.21" y="1729" />
+              <mxPoint x="1568.5" y="1729" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_sd_otel" edge="1" parent="1" source="sd" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.3333;exitY=1;entryX=0.5;entryY=0;" target="lib_otel" value="dùng thư viện">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="1" as="offset" />
+            <Array as="points">
+              <mxPoint x="1076.5" y="1298" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc1_ef" edge="1" parent="1" source="svc1" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.3333;exitY=1;entryX=0.6;entryY=0;" target="lib_efcore">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1845.17" y="1970" />
+              <mxPoint x="893.83" y="1970" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc2_ef" edge="1" parent="1" source="svc2" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.25;exitY=1;entryX=0.8;entryY=0;" target="lib_efcore">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2168.5" y="1980" />
+              <mxPoint x="985.83" y="1980" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc3_ef" edge="1" parent="1" source="svc3" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.5;exitY=1;entryX=0.2;entryY=0;" target="lib_efcore">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="709.83" y="1985" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc4_ef" edge="1" parent="1" source="svc4" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.3333;exitY=1;entryX=0.4;entryY=0;" target="lib_efcore">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1185.17" y="1960" />
+              <mxPoint x="847.83" y="1960" />
+              <mxPoint x="847.83" y="2000" />
+              <mxPoint x="801.83" y="2000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc2_events" edge="1" parent="1" source="svc2" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.75;exitY=1;entryX=0.6667;entryY=0;" target="shared_events" value="build payload, chưa publish">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="15.49" y="-71" as="offset" />
+            <Array as="points">
+              <mxPoint x="2328.5" y="2010" />
+              <mxPoint x="1655.83" y="2010" />
+              <mxPoint x="1655.83" y="2152" />
+              <mxPoint x="760.17" y="2152" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc3_events" edge="1" parent="1" source="svc3" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.25;exitY=1;entryX=0.3333;entryY=0;" target="shared_events">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="629.83" y="1960" />
+              <mxPoint x="606.83" y="1960" />
+              <mxPoint x="606.83" y="2081" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc1_db" edge="1" parent="1" source="svc1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.6667;exitY=1;entryX=0.6;entryY=0;" target="db_sql">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1951.83" y="1990" />
+              <mxPoint x="1383.83" y="1990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc2_db" edge="1" parent="1" source="svc2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.5;exitY=1;entryX=0.8;entryY=0;" target="db_sql">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2248.5" y="2000" />
+              <mxPoint x="1475.83" y="2000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc3_db" edge="1" parent="1" source="svc3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.75;exitY=1;entryX=0.2;entryY=0;" target="db_sql">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="789.83" y="1990" />
+              <mxPoint x="1199.83" y="1990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_svc4_db" edge="1" parent="1" source="svc4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.6667;exitY=1;entryX=0.4;entryY=0;" target="db_sql">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1291.83" y="1985" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_sd_otelc" edge="1" parent="1" source="sd" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.6666;exitY=1;entryX=0.5;entryY=0;" target="otel_collector" value="OTLP export, cả 6 service">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="226.77" y="30" as="offset" />
+            <Array as="points">
+              <mxPoint x="1169.83" y="1269" />
+              <mxPoint x="1691.36" y="1269" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_jenkins_sonar" edge="1" parent="1" source="jenkins" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="sonarqube" value="phân tích chất lượng code">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="1" as="offset" />
+            <Array as="points">
+              <mxPoint x="766.5" y="1298" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_events_rabbit_future" edge="1" parent="1" source="shared_events" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;fontColor=#a03030;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="rabbitmq" value="MỤC TIÊU: publish/consume thật (SCRUM-31)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="683.5" y="2276.5" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_rabbit_logistics_future" edge="1" parent="1" source="rabbitmq" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.6667;exitY=1;entryX=0.5;entryY=0;" target="logistics" value="MỤC TIÊU: consume OrderPlaced">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="44.83" y="29.5" as="offset" />
+            <Array as="points">
+              <mxPoint x="730.17" y="2446" />
+              <mxPoint x="876.83" y="2446" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_rabbit_invoices_future" edge="1" parent="1" source="rabbitmq" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.3333;exitY=1;entryX=0.5;entryY=0;" target="invoices" value="MỤC TIÊU: consume OrderPlaced">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="1" as="offset" />
+            <Array as="points">
+              <mxPoint x="636.83" y="2474.5" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_gw_identity_future" edge="1" parent="1" source="gw" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.5;exitY=1;entryX=0.3333;entryY=0;" target="identity_server" value="MỤC TIÊU: JWT validation">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="-10.5" as="offset" />
+            <Array as="points">
+              <mxPoint x="366.5" y="1519" />
+              <mxPoint x="366.5" y="1758.5" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_bff_identity_future" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.1428;exitY=1;entryX=0.6667;entryY=0;" target="identity_server" value="MỤC TIÊU: JWT validation">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-292.45" y="49.5" as="offset" />
+            <Array as="points">
+              <mxPoint x="1107.07" y="1709" />
+              <mxPoint x="443.17" y="1709" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_otel_elastic_future" edge="1" parent="1" source="otel_collector" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="elastic" value="MỤC TIÊU: xuất dữ liệu xuống đây">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="6" as="offset" />
+            <Array as="points">
+              <mxPoint x="1691.36" y="1513" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_pactbroker_svc3_future" edge="1" parent="1" source="pact_broker" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.5;exitY=1;entryX=0.3333;entryY=0;" target="svc3" value="MỤC TIÊU: lưu trữ hợp đồng tập trung">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="10" as="offset" />
+            <Array as="points">
+              <mxPoint x="656.5" y="1748.5" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_unleash_bff_future" edge="1" parent="1" source="unleash" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#cc0000;endArrow=block;fontSize=9;rounded=1;curved=0;exitX=0.5;exitY=1;entryX=0.6667;entryY=0;" target="bff" value="MỤC TIÊU: feature flag SDK">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="1" as="offset" />
+            <Array as="points">
+              <mxPoint x="1348.02" y="1518" />
+            </Array>
+          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
-
   <diagram id="sequence-checkout" name="Sequence — Checkout">
     <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="700" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-
         <mxCell id="stitle" parent="1" vertex="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" value="Luồng quan trọng nhất: Checkout (đặt hàng) — trạng thái THẬT hiện tại, đồng bộ, không dùng hàng đợi sự kiện">
           <mxGeometry x="20" y="10" width="1100" height="24" as="geometry" />
         </mxCell>
-
-        <mxCell id="p1" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Storefront&#10;(Web SPA)">
+        <mxCell id="p1" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Storefront&#xa;(Web SPA)">
           <mxGeometry x="40" y="50" width="150" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="p2" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Gateway.Api&#10;(YARP)">
+        <mxCell id="p2" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Gateway.Api&#xa;(YARP)">
           <mxGeometry x="260" y="50" width="150" height="50" as="geometry" />
         </mxCell>
         <mxCell id="p3" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Bff.Api">
@@ -293,66 +431,108 @@
         <mxCell id="p5" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" value="Orders.Api">
           <mxGeometry x="920" y="50" width="150" height="50" as="geometry" />
         </mxCell>
-
         <mxCell id="l1" parent="1" edge="1" style="html=1;dashed=1;endArrow=none;startArrow=none;">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="115" y="100" as="sourcePoint" /><mxPoint x="115" y="650" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="115" y="100" as="sourcePoint" />
+            <mxPoint x="115" y="650" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="l2" parent="1" edge="1" style="html=1;dashed=1;endArrow=none;startArrow=none;">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="335" y="100" as="sourcePoint" /><mxPoint x="335" y="650" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="335" y="100" as="sourcePoint" />
+            <mxPoint x="335" y="650" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="l3" parent="1" edge="1" style="html=1;dashed=1;endArrow=none;startArrow=none;">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="555" y="100" as="sourcePoint" /><mxPoint x="555" y="650" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="555" y="100" as="sourcePoint" />
+            <mxPoint x="555" y="650" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="l4" parent="1" edge="1" style="html=1;dashed=1;endArrow=none;startArrow=none;">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="775" y="100" as="sourcePoint" /><mxPoint x="775" y="650" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="775" y="100" as="sourcePoint" />
+            <mxPoint x="775" y="650" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="l5" parent="1" edge="1" style="html=1;dashed=1;endArrow=none;startArrow=none;">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="995" y="100" as="sourcePoint" /><mxPoint x="995" y="650" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="995" y="100" as="sourcePoint" />
+            <mxPoint x="995" y="650" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-
         <mxCell id="s1" parent="1" edge="1" style="html=1;endArrow=block;fontSize=10;" value="1. POST /bff/checkout">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="115" y="120" as="sourcePoint" /><mxPoint x="335" y="120" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="115" y="120" as="sourcePoint" />
+            <mxPoint x="335" y="120" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="note1" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=9;dashed=1;" value="Gateway gắn X-Tenant-Id, X-Subject-Id (danh tính giả lập) + X-Correlation-Id">
           <mxGeometry x="360" y="135" width="260" height="40" as="geometry" />
         </mxCell>
         <mxCell id="s2" parent="1" edge="1" style="html=1;endArrow=block;fontSize=10;" value="2. POST /bff/checkout (kèm headers)">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="335" y="195" as="sourcePoint" /><mxPoint x="555" y="195" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="335" y="195" as="sourcePoint" />
+            <mxPoint x="555" y="195" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="s3" parent="1" edge="1" style="html=1;endArrow=block;fontSize=10;" value="3. GET /baskets/current">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="555" y="240" as="sourcePoint" /><mxPoint x="775" y="240" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="555" y="240" as="sourcePoint" />
+            <mxPoint x="775" y="240" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="s4" parent="1" edge="1" style="html=1;dashed=1;endArrow=block;fontSize=10;" value="4. giỏ hàng hiện tại">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="775" y="275" as="sourcePoint" /><mxPoint x="555" y="275" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="775" y="275" as="sourcePoint" />
+            <mxPoint x="555" y="275" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="note2" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" value="Nếu giỏ hàng RỖNG: BFF trả lỗi 409 ngay tại đây, KHÔNG gọi Orders, dừng luồng.">
           <mxGeometry x="600" y="290" width="290" height="35" as="geometry" />
         </mxCell>
         <mxCell id="s5" parent="1" edge="1" style="html=1;endArrow=block;fontSize=10;" value="5. POST /orders (các dòng giỏ hàng)">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="555" y="345" as="sourcePoint" /><mxPoint x="995" y="345" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="555" y="345" as="sourcePoint" />
+            <mxPoint x="995" y="345" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="note3" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=9;dashed=1;" value="Orders tự tính lại tổng tiền — không tin số tiền do BFF gửi">
           <mxGeometry x="1020" y="360" width="160" height="40" as="geometry" />
         </mxCell>
         <mxCell id="s6" parent="1" edge="1" style="html=1;dashed=1;endArrow=block;fontSize=10;" value="6. 201 Created { orderId, total }">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="995" y="415" as="sourcePoint" /><mxPoint x="555" y="415" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="995" y="415" as="sourcePoint" />
+            <mxPoint x="555" y="415" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="s7" parent="1" edge="1" style="html=1;endArrow=block;fontSize=10;" value="7. POST /baskets/current/clear">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="555" y="460" as="sourcePoint" /><mxPoint x="775" y="460" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="555" y="460" as="sourcePoint" />
+            <mxPoint x="775" y="460" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="note4" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6e6;strokeColor=#cc6666;fontSize=9;" value="RỦI RO ĐÃ GHI NHẬN (ADR-0011): bước 7 chỉ chạy SAU KHI bước 5-6 thành công. Nếu bước 7 lỗi, đơn hàng vẫn tồn tại hợp lệ nhưng giỏ hàng KHÔNG tự dọn — không có cơ chế hoàn tác (compensation).">
           <mxGeometry x="600" y="480" width="560" height="45" as="geometry" />
         </mxCell>
         <mxCell id="s8" parent="1" edge="1" style="html=1;dashed=1;endArrow=block;fontSize=10;" value="8. 200 OK (giỏ đã dọn), hoặc lỗi — chỉ ghi log, KHÔNG rollback đơn hàng">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="775" y="545" as="sourcePoint" /><mxPoint x="555" y="545" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="775" y="545" as="sourcePoint" />
+            <mxPoint x="555" y="545" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="s9" parent="1" edge="1" style="html=1;dashed=1;endArrow=block;fontSize=10;" value="9. 201 Created (xác nhận đặt hàng)">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="555" y="590" as="sourcePoint" /><mxPoint x="335" y="590" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="555" y="590" as="sourcePoint" />
+            <mxPoint x="335" y="590" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="s10" parent="1" edge="1" style="html=1;dashed=1;endArrow=block;fontSize=10;" value="10. 201 Created — hiển thị màn hình Xác nhận">
-          <mxGeometry relative="1" as="geometry"><mxPoint x="335" y="620" as="sourcePoint" /><mxPoint x="115" y="620" as="targetPoint" /></mxGeometry>
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="335" y="620" as="sourcePoint" />
+            <mxPoint x="115" y="620" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
-
         <mxCell id="lg0" parent="1" vertex="1" style="text;html=1;fontSize=11;fontStyle=1;" value="Chú giải: đường liền = gọi đồng bộ (request)   |   đường đứt = phản hồi / trả kết quả">
           <mxGeometry x="20" y="660" width="700" height="20" as="geometry" />
         </mxCell>

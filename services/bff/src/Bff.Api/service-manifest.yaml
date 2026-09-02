@@ -68,28 +68,28 @@ endpoints:
     purpose: >-
       Product listing, shaped from the products service (spec FR-004; the proxy path Test
       Scenario 1 proves). Returns an empty items envelope for an empty catalog, never 404.
-    authentication: anonymous   # no identity server yet — see plan.md Constitution Check (VI)
+    authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     proxies: products
     latency:
       p95: 300ms
       p99: 800ms
   - route: GET /bff/baskets/{basketId}
     purpose: Single basket, shaped from the baskets service. 404 when no such basket exists.
-    authentication: anonymous
+    authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     proxies: baskets
     latency:
       p95: 300ms
       p99: 800ms
   - route: GET /bff/orders/{orderId}
     purpose: Single order, shaped from the orders service. 404 when no such order exists.
-    authentication: anonymous
+    authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     proxies: orders
     latency:
       p95: 300ms
       p99: 800ms
   - route: GET /bff/parties/{partyId}
     purpose: Single party (customer), shaped from the parties service. 404 when no such party exists.
-    authentication: anonymous
+    authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     proxies: parties
     latency:
       p95: 300ms
@@ -113,8 +113,8 @@ endpoints:
   - route: GET /openapi/v1.json
     purpose: >-
       Generated OpenAPI document (research.md Decision 6) consumed by the frontend's Orval codegen
-      (ADR-0004). Development-only until real authorization exists (SCRUM-23).
-    authentication: anonymous
+      (ADR-0004).
+    authentication: anonymous   # 014-identity-server-auth: deliberate AllowAnonymous — a build-time codegen fetch, not a logged-in user; scope is what restricts this to Development, not auth
     environments: [development]
     latency:
       p95: 300ms

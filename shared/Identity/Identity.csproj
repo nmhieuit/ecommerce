@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ASP.NET Core types (authorization policies, IApplicationBuilder) without being a runnable
+         web app itself — the same shape shared/Tenancy uses for the same reason. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- Unlike Cookies/Negotiate, JwtBearer does not ship in the shared framework above — it needs
+         its own package reference (verified: build fails with CS0234 without it). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+</Project>

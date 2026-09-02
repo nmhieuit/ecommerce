@@ -1,4 +1,5 @@
 using System.Net;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,7 +40,7 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
     public async Task ARequestWithoutATenant_Fails_RatherThanServingDefaultSchemaData()
     {
         await using var factory = CreateFactory();
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
 
         var response = await client.GetAsync($"/parties/{AnyPartyId}");
 
@@ -48,9 +49,12 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
 
     private WebApplicationFactory<Program> CreateFactory() =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:PartiesDb"] = sqlServer.ConnectionString,
-                })));
+                }));
+            builder.UseTestJwtBearer();
+        });
 }

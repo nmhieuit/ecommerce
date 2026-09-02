@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -93,11 +94,14 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
         IReadOnlyCollection<Order> orders)
     {
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:OrdersDb"] = sqlServer.ConnectionString,
-                })));
+                }));
+            builder.UseTestJwtBearer();
+        });
 
         using var scope = factory.Services.CreateScope();
 
@@ -122,7 +126,7 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
     /// </summary>
     private static HttpClient CreateTenantClient(WebApplicationFactory<Program> factory)
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
         client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, SeedTenantId);
 
         return client;

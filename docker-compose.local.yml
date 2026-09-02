@@ -36,10 +36,12 @@
 #   baskets-api         5188 → 8080      http://localhost:5188/health/ready
 #   orders-api          5041 → 8080      http://localhost:5041/health/ready
 #   parties-api         5204 → 8080      http://localhost:5204/health/ready
+#   identity-api        5205 → 8080      http://localhost:5205/health/ready
 #   parties-db         14330 → 1433      sa / $MSSQL_SA_PASSWORD
 #   products-db        14331 → 1433      sa / $MSSQL_SA_PASSWORD
 #   baskets-db         14332 → 1433      sa / $MSSQL_SA_PASSWORD
 #   orders-db          14333 → 1433      sa / $MSSQL_SA_PASSWORD
+#   identity-db        14334 → 1433      sa / $MSSQL_SA_PASSWORD
 #   redis               6379 → 6379
 #   rabbitmq            5672 → 5672      broker
 #   rabbitmq           15672 → 15672     management UI, guest/guest
@@ -70,6 +72,7 @@ volumes:
   local-products-db-data:
   local-baskets-db-data:
   local-orders-db-data:
+  local-identity-db-data:
   local-rabbitmq-data:
 
 # The database servers are identical apart from their port and volume, so the parts that must not
@@ -138,6 +141,13 @@ services:
       - "14330:1433"
     volumes:
       - local-parties-db-data:/var/opt/mssql
+
+  identity-db:
+    <<: *mssql
+    ports:
+      - "14334:1433"
+    volumes:
+      - local-identity-db-data:/var/opt/mssql
 
   # ---------------------------------------------------------------- other dependencies
   redis:
@@ -250,6 +260,21 @@ services:
       parties-db:
         condition: service_healthy
 
+  # Runs all three of identity's EF bundles in sequence (Dockerfile's migrator stage) — the
+  # configuration/operational store and the user credential store, all against the same database.
+  identity-migrate:
+    restart: on-failure:3
+    build: &identity-build
+      context: .
+      dockerfile: services/identity/src/Identity.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__IdentityDb: Server=identity-db;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      identity-db:
+        condition: service_healthy
+
   # ---------------------------------------------------------------- domain services
   #
   # ASPNETCORE_ENVIRONMENT=Development everywhere, which brings one trap with it that has to be
@@ -278,6 +303,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__ProductsDb: Server=products-db;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      Identity__Authority: http://identity-api:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5088:8080"
@@ -285,6 +311,8 @@ services:
     depends_on:
       products-migrate:
         condition: service_completed_successfully
+      identity-api:
+        condition: service_healthy
     healthcheck: *service-healthcheck
 
   baskets-api:
@@ -294,6 +322,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__BasketsDb: Server=baskets-db;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      Identity__Authority: http://identity-api:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5188:8080"
@@ -301,6 +330,8 @@ services:
     depends_on:
       baskets-migrate:
         condition: service_completed_successfully
+      identity-api:
+        condition: service_healthy
     healthcheck: *service-healthcheck
 
   orders-api:
@@ -310,6 +341,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__OrdersDb: Server=orders-db;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      Identity__Authority: http://identity-api:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5041:8080"
@@ -317,6 +349,8 @@ services:
     depends_on:
       orders-migrate:
         condition: service_completed_successfully
+      identity-api:
+        condition: service_healthy
     healthcheck: *service-healthcheck
 
   parties-api:
@@ -326,12 +360,31 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__PartiesDb: Server=parties-db;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      Identity__Authority: http://identity-api:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5204:8080"
     networks: [backbone]
     depends_on:
       parties-migrate:
+        condition: service_completed_successfully
+      identity-api:
+        condition: service_healthy
+    healthcheck: *service-healthcheck
+
+  identity-api:
+    build:
+      <<: *identity-build
+      target: final
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__IdentityDb: Server=identity-db;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5205:8080"
+    networks: [backbone]
+    depends_on:
+      identity-migrate:
         condition: service_completed_successfully
     healthcheck: *service-healthcheck
 
@@ -349,6 +402,7 @@ services:
       Services__BasketsApi__BaseUrl: http://baskets-api:8080
       Services__OrdersApi__BaseUrl: http://orders-api:8080
       Services__PartiesApi__BaseUrl: http://parties-api:8080
+      Identity__Authority: http://identity-api:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5301:8080"
@@ -360,6 +414,7 @@ services:
       baskets-api: { condition: service_healthy }
       orders-api: { condition: service_healthy }
       parties-api: { condition: service_healthy }
+      identity-api: { condition: service_healthy }
     healthcheck: *service-healthcheck
 
   gateway-api:
@@ -377,12 +432,21 @@ services:
       # dev server admitted too, so `pnpm dev` can be pointed at this backend.
       Cors__AllowedOrigins__0: http://localhost:4173
       Cors__AllowedOrigins__1: http://localhost:5173
+      # appsettings.Development.json's Identity:Authority also names localhost:5205 for the same
+      # reason as the ReverseProxy address above — restored to the compose hostname. Deliberately
+      # NOT overriding FeatureToggles:IdentityServerAuthCutover here: it stays sourced from
+      # appsettings.Development.json specifically so quickstart.md Scenario 7 can flip it live
+      # (docker exec + edit the file in place) without restarting the container — an environment
+      # variable would be fixed for the container's lifetime and could not demonstrate that.
+      Identity__Authority: http://identity-api:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5300:8080"
     networks: [backbone]
     depends_on:
       bff-api:
+        condition: service_healthy
+      identity-api:
         condition: service_healthy
     healthcheck:
       # Liveness, not readiness: the gateway's readiness is deliberately empty, because making it

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Baskets.Api.Data;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -150,7 +151,7 @@ public class CurrentBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlS
         await using var factory = await CreateFactoryAsync("basket-current-no-caller");
 
         // Tenant but no subject: enough to reach persistence, not enough to name a shopper.
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
         client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, TenantId);
 
         var response = await client.GetAsync("/baskets/current");
@@ -183,11 +184,14 @@ public class CurrentBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlS
         }.ConnectionString;
 
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
+        {
             host.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:BasketsDb"] = connectionString,
-                })));
+                }));
+            host.UseTestJwtBearer();
+        });
 
         using var scope = factory.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = TenantId;
@@ -198,7 +202,7 @@ public class CurrentBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlS
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> factory, string subjectId)
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
         client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, TenantId);
         client.DefaultRequestHeaders.Add(CallerContextMiddleware.HeaderName, subjectId);
 

@@ -6,7 +6,11 @@ namespace Bff.Api.DownstreamClients;
 /// Copies the caller identity the BFF received — the tenant and, since
 /// 004-minimal-shopping-spa, the subject — onto every outbound downstream call
 /// (contracts/tenant-id-header.md and 004's contracts/subject-id-header.md: the BFF relays, it
-/// never resolves).
+/// never resolves). Since 014-identity-server-auth, also relays the original <c>Authorization</c>
+/// header: each domain service now validates the bearer token independently (spec FR-004), so the
+/// same token the BFF itself was authenticated with must reach it, or every real downstream call
+/// would be rejected as unauthenticated the moment the domain service enforces its own
+/// <c>FallbackPolicy</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -37,7 +41,8 @@ public sealed class TenantPropagationHandler(IHttpContextAccessor httpContextAcc
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var requestServices = httpContextAccessor.HttpContext?.RequestServices;
+        var httpContext = httpContextAccessor.HttpContext;
+        var requestServices = httpContext?.RequestServices;
 
         Relay(
             request,
@@ -48,6 +53,14 @@ public sealed class TenantPropagationHandler(IHttpContextAccessor httpContextAcc
             request,
             CallerContextMiddleware.HeaderName,
             requestServices?.GetService<CallerContext>()?.SubjectId);
+
+        // Read from the inbound request, not from a resolved ClaimsPrincipal: the raw header value
+        // is what a downstream service's own JwtBearer handler re-validates, byte for byte — the
+        // same reason TenantContext/CallerContext are read from headers rather than re-derived.
+        Relay(
+            request,
+            "Authorization",
+            httpContext?.Request.Headers.Authorization.ToString());
 
         return base.SendAsync(request, cancellationToken);
     }

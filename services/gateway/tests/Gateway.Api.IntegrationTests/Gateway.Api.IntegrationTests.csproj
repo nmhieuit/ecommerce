@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Gateway.Api\Gateway.Api.csproj" />
+    <ProjectReference Include="..\..\..\..\shared\IntegrationTestSupport\IntegrationTestSupport.csproj" />
   </ItemGroup>
 
   <!--

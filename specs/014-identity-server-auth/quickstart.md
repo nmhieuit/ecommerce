@@ -65,11 +65,12 @@ Kiểm tra bằng code review, không phải runtime call: xác nhận `TenantHe
 ### Scenario 7 — Rollback không cần redeploy (constitution Principle X)
 
 ```bash
-# Gạt toggle Unleash `identity-server-auth-cutover` về OFF, không redeploy
+# Gạt toggle (config) `FeatureToggles:IdentityServerAuthCutover` về false, không cần redeploy —
+# ví dụ sửa trực tiếp appsettings.Development.json đang chạy trong container (reloadOnChange).
 curl -i http://localhost:<gateway-port>/bff/products
 ```
 
-**Expected**: Gateway quay lại xác thực bằng `StubIdentityAuthenticationHandler` (Phase 1 stub), request vẫn thành công như trước tính năng này — xác nhận rollback tức thời khả dụng (research.md Decision 7).
+**Expected**: Gateway quay lại xác thực bằng `StubIdentityAuthenticationHandler` (Phase 1 stub) — có nghĩa là chính GATEWAY không còn tự đòi hỏi token nữa, và việc gạt toggle có tác dụng ngay lập tức, không cần redeploy hay restart container (research.md Decision 7). **AMENDED sau khi chạy quickstart T047 (Phase 6)**: đây KHÔNG còn đồng nghĩa với "request thành công như trước tính năng này" — kể từ Phase 4 (US2), BFF tự xác thực độc lập với gateway (constitution Principle VI: "gateway is not a trust boundary services rely on"), nên một request không token vẫn bị BFF từ chối `401` dù gateway đã tắt xác thực. Đã xác nhận bằng thực nghiệm: dừng tạm `bff-api` rồi lặp lại request cho ra `502 Bad Gateway` (không phải `401`) — chứng minh chính gateway đã không chặn request, nó CHỈ chuyển tiếp; `401` quan sát được khi `bff-api` chạy bình thường đến từ tầng BFF, không phải từ toggle này. Rollback qua toggle này giờ chỉ kiểm soát lớp xác thực của riêng gateway, không phục hồi hành vi "không cần token nào, ở bất kỳ đâu" của Phase 1.
 
 ## Automated Coverage
 

@@ -16,11 +16,13 @@ WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY shared/ServiceDefaults/ServiceDefaults.csproj shared/ServiceDefaults/
 COPY shared/Tenancy/Tenancy.csproj shared/Tenancy/
+COPY shared/Identity/Identity.csproj shared/Identity/
 COPY services/parties/src/Parties.Api/Parties.Api.csproj services/parties/src/Parties.Api/
 RUN dotnet restore services/parties/src/Parties.Api/Parties.Api.csproj
 
 COPY shared/ServiceDefaults/ shared/ServiceDefaults/
 COPY shared/Tenancy/ shared/Tenancy/
+COPY shared/Identity/ shared/Identity/
 COPY services/parties/src/Parties.Api/ services/parties/src/Parties.Api/
 RUN dotnet publish services/parties/src/Parties.Api/Parties.Api.csproj \
     --configuration Release --no-restore --output /app/publish

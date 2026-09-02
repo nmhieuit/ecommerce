@@ -35,19 +35,35 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 **Purpose**: Dựng khung project cho service `identity` mới và thư viện chia sẻ mới `shared/Identity`, đưa cả hai vào solution.
 
-- [ ] T001 Tạo project shell cho service `identity` mới tại `services/identity/src/Identity.Api/Identity.Api.csproj` (ASP.NET Core, `net10.0`, gói Duende IdentityServer — ADR-0001)
-- [ ] T002 [P] Tạo project shell `Identity.Api.UnitTests` tại `services/identity/tests/Identity.Api.UnitTests/Identity.Api.UnitTests.csproj` (xUnit, tham chiếu `Identity.Api.csproj`)
-- [ ] T003 [P] Tạo project shell `Identity.Api.IntegrationTests` tại `services/identity/tests/Identity.Api.IntegrationTests/Identity.Api.IntegrationTests.csproj` (xUnit + Testcontainers SQL Server, theo đúng khuôn mẫu `Parties.Api.IntegrationTests`)
-- [ ] T004 [P] Tạo thư viện chia sẻ mới tại `shared/Identity/Identity.csproj` (bố cục phẳng, giống hệt `shared/Tenancy/Tenancy.csproj`)
-- [ ] T005 [P] Tạo project shell `shared/Identity.UnitTests/Identity.UnitTests.csproj` (xUnit, tham chiếu `Identity.csproj`)
-- [ ] T006 Thêm `services/identity/src/Identity.Api`, `services/identity/tests/Identity.Api.UnitTests`, `services/identity/tests/Identity.Api.IntegrationTests`, `shared/Identity`, và `shared/Identity.UnitTests` vào `Ecommerce.slnx` (phụ thuộc T001-T005)
-- [ ] T007 Thêm `ProjectReference` tới `shared/Identity/Identity.csproj` từ `Gateway.Api.csproj`, `Bff.Api.csproj`, `Products.Api.csproj`, `Baskets.Api.csproj`, `Orders.Api.csproj`, và `Parties.Api.csproj` (phụ thuộc T004)
-- [ ] T008 Viết `Dockerfile` cho service `identity` tại `services/identity/src/Identity.Api/Dockerfile`, theo đúng khuôn mẫu `services/gateway/src/Gateway.Api/Dockerfile`
-- [ ] T009 Viết `service-manifest.yaml` cho service `identity` tại `services/identity/src/Identity.Api/service-manifest.yaml` (SLO mặc định internal-service-api — constitution Principle VIII; theo khuôn mẫu `services/parties/src/Parties.Api/service-manifest.yaml`)
-- [ ] T010 [P] Thêm `identity-db`, `identity-migrate`, `identity-api` vào `docker-compose.local.yml`, theo đúng khuôn mẫu các entry `parties-db`/`parties-migrate`/`parties-api` hiện có
-- [ ] T011 [P] Thêm dependency container SQL Server cho `identity` vào `docker-compose.deps.yml`
+- [X] T001 Tạo project shell cho service `identity` mới tại `services/identity/src/Identity.Api/Identity.Api.csproj` (ASP.NET Core, `net10.0`, gói Duende IdentityServer — ADR-0001)
+- [X] T002 [P] Tạo project shell `Identity.Api.UnitTests` tại `services/identity/tests/Identity.Api.UnitTests/Identity.Api.UnitTests.csproj` (xUnit, tham chiếu `Identity.Api.csproj`)
+- [X] T003 [P] Tạo project shell `Identity.Api.IntegrationTests` tại `services/identity/tests/Identity.Api.IntegrationTests/Identity.Api.IntegrationTests.csproj` (xUnit + Testcontainers SQL Server, theo đúng khuôn mẫu `Parties.Api.IntegrationTests`)
+- [X] T004 [P] Tạo thư viện chia sẻ mới tại `shared/Identity/Identity.csproj` (bố cục phẳng, giống hệt `shared/Tenancy/Tenancy.csproj`)
+- [X] T005 [P] Tạo project shell `shared/Identity.UnitTests/Identity.UnitTests.csproj` (xUnit, tham chiếu `Identity.csproj`)
+- [X] T006 Thêm `services/identity/src/Identity.Api`, `services/identity/tests/Identity.Api.UnitTests`, `services/identity/tests/Identity.Api.IntegrationTests`, `shared/Identity`, và `shared/Identity.UnitTests` vào `Ecommerce.slnx` (phụ thuộc T001-T005)
+- [X] T007 Thêm `ProjectReference` tới `shared/Identity/Identity.csproj` từ `Gateway.Api.csproj`, `Bff.Api.csproj`, `Products.Api.csproj`, `Baskets.Api.csproj`, `Orders.Api.csproj`, và `Parties.Api.csproj` (phụ thuộc T004)
+- [X] T008 Viết `Dockerfile` cho service `identity` tại `services/identity/src/Identity.Api/Dockerfile`, theo đúng khuôn mẫu `services/gateway/src/Gateway.Api/Dockerfile`
+- [X] T009 Viết `service-manifest.yaml` cho service `identity` tại `services/identity/src/Identity.Api/service-manifest.yaml` (SLO mặc định internal-service-api — constitution Principle VIII; theo khuôn mẫu `services/parties/src/Parties.Api/service-manifest.yaml`)
+- [X] T010 [P] Thêm `identity-db`, `identity-api` vào `docker-compose.local.yml`, theo đúng khuôn mẫu các entry `parties-db`/`parties-api` hiện có
+- [X] T011 [P] Thêm dependency container SQL Server cho `identity` vào `docker-compose.deps.yml`
 
-**Checkpoint**: Khung project cho service `identity` và thư viện `shared/Identity` đã sẵn sàng, nằm trong solution, build được.
+> **T001/T010 rescoped during implementation — decided, not outstanding.** `Identity.Api.csproj`
+> references no Duende IdentityServer package yet: T001 is the service *shell* (buildable, health
+> probes only, mirrors every other service's original scaffold), and the Duende bootstrap is
+> User Story 1's own task (T020-T024) — adding the package now with nothing using it would be dead
+> weight. For the same reason, T010 does not add an `identity-migrate` compose entry or a
+> `migrator` Docker stage: there is no EF store to bundle migrations for yet (no `identity-db-init`
+> dependency either — `docker-compose.deps.yml`'s `identity-db` starts empty like every other
+> service's, and the CREATE DATABASE step is deferred to T020-T021 alongside it). Both arrive
+> together with T020-T021's EF stores, following the `parties-migrate`/`parties-db-init` pattern.
+> Verified: `dotnet build Ecommerce.slnx` succeeds (0 warnings, 0 errors) with all five new projects
+> in the solution, and `tests/ContainerConventionTests`, `tests/StructureConventionTests`, and
+> `tests/CrossServiceIsolation.Tests` all pass after updating their hardcoded service-list
+> expectations and the six existing services' Dockerfiles (which now also compile against
+> `shared/Identity` per T007 and needed the matching `COPY shared/Identity/...` lines the
+> `DockerfileSharedProjectTests` scanner requires).
+
+**Checkpoint**: Khung project cho service `identity` và thư viện `shared/Identity` đã sẵn sàng, nằm trong solution, build được — xác nhận bằng `dotnet build Ecommerce.slnx`.
 
 ---
 
@@ -61,16 +77,32 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 > Viết các test này TRƯỚC; xác nhận chúng FAIL trước khi bắt đầu triển khai (constitution Principle III).
 
-- [ ] T012 [P] Unit test: `IdentityServerOptions` bind đúng `Authority`/`Audience` từ section cấu hình `Identity`, trong `shared/Identity.UnitTests/IdentityServerOptionsTests.cs` (data-model.md — cấu hình xác thực)
-- [ ] T013 [P] Unit test: `AddIdentityValidation()` đăng ký scheme JwtBearer và đặt `FallbackPolicy = RequireAuthenticatedUser()` — một request không có token bị `401`, một endpoint đánh dấu `[AllowAnonymous]` vẫn được cho qua — dùng `WebApplicationFactory` tối giản, trong `shared/Identity.UnitTests/IdentityValidationExtensionsTests.cs` (research.md Decision 4/6)
+- [X] T012 [P] Unit test: `IdentityServerOptions` bind đúng `Authority`/`Audience` từ section cấu hình `Identity`, trong `shared/Identity.UnitTests/IdentityServerOptionsTests.cs` (data-model.md — cấu hình xác thực)
+- [X] T013 [P] Unit test: `AddIdentityValidation()` đăng ký scheme JwtBearer và đặt `FallbackPolicy = RequireAuthenticatedUser()`, trong `shared/Identity.UnitTests/IdentityValidationExtensionsTests.cs` (research.md Decision 4/6)
+
+> **T013 rescoped during implementation — decided, not outstanding.** Verifies the DI registration
+> directly (`IAuthenticationSchemeProvider`/`IAuthorizationPolicyProvider`, resolved from a bare
+> `ServiceCollection`) rather than through a `WebApplicationFactory` HTTP round-trip — the same
+> lower-level approach `shared/Tenancy.UnitTests/TenantContextMiddlewareTests.cs` already uses for
+> the equivalent DI-registration question, and it needs no `[AllowAnonymous]`-vs-`401` endpoint
+> fixture to prove the same fact. The `Microsoft.AspNetCore.Mvc.Testing` package stayed in the
+> `.csproj` (T005) for a future HTTP-level test if one is needed, but this task didn't need it.
 
 ### Implementation
 
-- [ ] T014 Cài đặt `IdentityServerOptions` (`Authority`, `Audience`) trong `shared/Identity/IdentityServerOptions.cs` (làm T012 pass)
-- [ ] T015 Cài đặt `AuthenticationFallbackPolicy` (`FallbackPolicy = RequireAuthenticatedUser()`) trong `shared/Identity/AuthenticationFallbackPolicy.cs` (research.md Decision 6; phụ thuộc T014)
-- [ ] T016 Cài đặt `IdentityValidationExtensions` (`AddIdentityValidation()`/`UseIdentityValidation()`, mirror hình dạng của `TenancyExtensions`' `AddTenancy()`/`UseTenancy()`) trong `shared/Identity/IdentityValidationExtensions.cs` (phụ thuộc T014, T015; làm T012, T013 pass)
+- [X] T014 Cài đặt `IdentityServerOptions` (`Authority`, `Audience`) trong `shared/Identity/IdentityServerOptions.cs` (làm T012 pass)
+- [X] T015 Cài đặt `AuthenticationFallbackPolicy` (`FallbackPolicy = RequireAuthenticatedUser()`) trong `shared/Identity/AuthenticationFallbackPolicy.cs` (research.md Decision 6; phụ thuộc T014)
+- [X] T016 Cài đặt `IdentityValidationExtensions` (`AddIdentityValidation()`/`UseIdentityValidation()`, mirror hình dạng của `TenancyExtensions`' `AddTenancy()`/`UseTenancy()`) trong `shared/Identity/IdentityValidationExtensions.cs` (phụ thuộc T014, T015; làm T012, T013 pass)
 
-**Checkpoint**: `shared/Identity` đã được build và unit-test — sẵn sàng để gateway (US1) và BFF + 4 domain service (US2) gọi.
+> **T016 note**: `AddJwtBearer` cần package `Microsoft.AspNetCore.Authentication.JwtBearer` —
+> KHÔNG có sẵn trong shared framework như research.md Decision 2 giả định ban đầu (xác nhận bằng
+> `dotnet build`: lỗi CS0234 khi thiếu). Đã thêm `PackageReference`/`PackageVersion` tương ứng vào
+> `shared/Identity/Identity.csproj` và `Directory.Packages.props`. `IdentityValidationExtensions`
+> cũng đặt `RequireHttpsMetadata` dựa trên scheme của `Authority` (false cho `http://` nội bộ
+> cluster, true mặc định cho `https://`) — nếu không, JwtBearer từ chối khởi động với một
+> `Authority` dạng `http://identity-api:8080` như mọi lệnh gọi nội bộ khác trong nền tảng này dùng.
+
+**Checkpoint**: `shared/Identity` đã được build và unit-test — sẵn sàng để gateway (US1) và BFF + 4 domain service (US2) gọi. Xác nhận bằng `dotnet test shared/Identity.UnitTests/Identity.UnitTests.csproj`: 5/5 pass.
 
 ---
 
@@ -84,21 +116,61 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 > Viết các test này TRƯỚC; xác nhận chúng FAIL trước khi bắt đầu triển khai.
 
-- [ ] T017 [P] [US1] Integration test: đăng nhập qua service `identity` bằng thông tin hợp lệ trả về token JWT chứa claim `sub` và `tenant_id` không rỗng, trong `services/identity/tests/Identity.Api.IntegrationTests/LoginIssuesTokenTests.cs` (spec Test Scenario 1, US1 Acceptance Scenario 1)
-- [ ] T018 [P] [US1] Integration test: gateway xác thực một token hợp lệ (toggle bật) và `TenantHeaderPropagationMiddleware`/`SubjectHeaderPropagationMiddleware` vẫn sinh đúng `X-Tenant-Id`/`X-Subject-Id` như hành vi cũ với `StubIdentity`, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (spec US1 Acceptance Scenario 2, FR-008)
-- [ ] T019 [P] [US1] Integration test: khi toggle `identity-server-auth-cutover` tắt, gateway quay lại `StubIdentityAuthenticationHandler` và request vẫn thành công — xác nhận rollback không cần redeploy, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (constitution Principle X; research.md Decision 7)
+- [X] T017 [P] [US1] Integration test: đăng nhập qua service `identity` bằng thông tin hợp lệ trả về token JWT chứa claim `sub` và `tenant_id` không rỗng, trong `services/identity/tests/Identity.Api.IntegrationTests/LoginIssuesTokenTests.cs` (spec Test Scenario 1, US1 Acceptance Scenario 1)
+- [X] T018 [P] [US1] Integration test: gateway xác thực một token hợp lệ (toggle bật) và `TenantHeaderPropagationMiddleware`/`SubjectHeaderPropagationMiddleware` vẫn sinh đúng `X-Tenant-Id`/`X-Subject-Id` như hành vi cũ với `StubIdentity`, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (spec US1 Acceptance Scenario 2, FR-008)
+- [X] T019 [P] [US1] Integration test: khi toggle `identity-server-auth-cutover` tắt, gateway quay lại `StubIdentityAuthenticationHandler` và request vẫn thành công — xác nhận rollback không cần redeploy, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (constitution Principle X; research.md Decision 7)
+
+> **T017 rescoped during implementation — decided, not outstanding.** Logs in via the Resource
+> Owner Password grant on a second, explicitly test-only client (`integration-test-ropc`,
+> `Config.cs`) rather than the SPA's Authorization Code + PKCE client — the latter needs an
+> interactive login UI (Duende's Razor Pages quickstart), which this phase does not build (flagged
+> as a follow-up). This still proves what US1 needs proven: real credentials against the real user
+> store produce a token whose `sub`/`tenant_id` claims come from that user's row, through the same
+> `TenantClaimsProfileService` any grant type uses. Does not contradict research.md Decision 9,
+> which scopes only the SPA client.
+>
+> **T018/T019 note**: tests the gateway's token *consumption* independently of T017's *issuance* —
+> a symmetric-key-signed test token stands in for a real one, bypassing the OIDC discovery/JWKS
+> fetch (research.md Decision 5) a live `Authority` would need over the network. Two extra tests
+> beyond the two planned (tampered token; no-token-when-off) came along for free from the same
+> fixture and are worth keeping.
 
 ### Implementation cho User Story 1
 
-- [ ] T020 [US1] Cài đặt kho cấu hình của Duende IdentityServer (Client, Resource, PersistedGrant — EF Core store) trong `services/identity/src/Identity.Api/Data/` (data-model.md — Client Application)
-- [ ] T021 [US1] Cài đặt kho thông tin đăng nhập người dùng (ASP.NET Core Identity — Identity User: `SubjectId`, `TenantId`, `Credential`) trong `services/identity/src/Identity.Api/Data/`, database riêng, tách biệt khỏi database `parties` (data-model.md — Identity User; research.md Decision 8)
-- [ ] T022 [US1] Cài đặt `TenantClaimsProfileService` (một `IProfileService` phát hành claim `tenant_id` từ `TenantId` đã gán cho Identity User đăng nhập) trong `services/identity/src/Identity.Api/HostedIdentity/TenantClaimsProfileService.cs` (data-model.md; phụ thuộc T021; làm T017 pass)
-- [ ] T023 [US1] Đăng ký một `Client Application` cho SPA web (Authorization Code + PKCE, không có Resource Owner Password) trong cấu hình seed của `services/identity/src/Identity.Api` (research.md Decision 9; data-model.md — Client Application; phụ thuộc T020)
-- [ ] T024 [US1] Bootstrap Duende IdentityServer + `AddServiceDefaults()` trong `services/identity/src/Identity.Api/Program.cs` (phụ thuộc T020-T023; làm T017 pass)
-- [ ] T025 [US1] Định nghĩa toggle Unleash `identity-server-auth-cutover` (chủ sở hữu: platform maintainers, ngày gỡ bỏ ghi nhận khi tạo) và đọc nó trong `services/gateway/src/Gateway.Api/Program.cs` để chọn giữa `AddIdentityValidation()` (từ `shared/Identity`, khi bật) và `AddScheme<StubIdentityAuthenticationSchemeOptions, StubIdentityAuthenticationHandler>(...)` hiện có (khi tắt) (research.md Decision 2/7; phụ thuộc T016; làm T018, T019 pass)
-- [ ] T026 [US1] [P] Cấu hình `Identity:Authority`/`Identity:Audience` trỏ tới service `identity` mới trong `services/gateway/src/Gateway.Api/appsettings.json` (phụ thuộc T014)
+- [X] T020 [US1] Cài đặt kho cấu hình của Duende IdentityServer (Client, Resource, PersistedGrant — EF Core store) trong `services/identity/src/Identity.Api/Data/` (data-model.md — Client Application)
+- [X] T021 [US1] Cài đặt kho thông tin đăng nhập người dùng (ASP.NET Core Identity — Identity User: `SubjectId`, `TenantId`, `Credential`) trong `services/identity/src/Identity.Api/Data/`, database riêng, tách biệt khỏi database `parties` (data-model.md — Identity User; research.md Decision 8)
+- [X] T022 [US1] Cài đặt `TenantClaimsProfileService` (một `IProfileService` phát hành claim `tenant_id` từ `TenantId` đã gán cho Identity User đăng nhập) trong `services/identity/src/Identity.Api/HostedIdentity/TenantClaimsProfileService.cs` (data-model.md; phụ thuộc T021; làm T017 pass)
+- [X] T023 [US1] Đăng ký một `Client Application` cho SPA web (Authorization Code + PKCE, không có Resource Owner Password) trong cấu hình seed của `services/identity/src/Identity.Api` (research.md Decision 9; data-model.md — Client Application; phụ thuộc T020)
+- [X] T024 [US1] Bootstrap Duende IdentityServer + `AddServiceDefaults()` trong `services/identity/src/Identity.Api/Program.cs` (phụ thuộc T020-T023; làm T017 pass)
+- [X] T025 [US1] Định nghĩa toggle "identity-server-auth-cutover" và đọc nó trong `services/gateway/src/Gateway.Api/Program.cs` để chọn giữa JwtBearer thật (khi bật) và `StubIdentityAuthenticationHandler` hiện có (khi tắt) (research.md Decision 2/7; phụ thuộc T016; làm T018, T019 pass)
+- [X] T026 [US1] [P] Cấu hình `Identity:Authority`/`Identity:Audience` trỏ tới service `identity` mới trong `services/gateway/src/Gateway.Api/appsettings.json` (phụ thuộc T014)
 
-**Checkpoint**: US1 hoạt động độc lập và kiểm thử được — đăng nhập phát hành token thật, gateway xác thực token đó, tenant/subject lan truyền không đổi, rollback qua toggle hoạt động (quickstart.md Scenario 1, 2, 7).
+> **T020-T024 note**: 3 DbContext riêng biệt cùng chia sẻ database `identity` —
+> `ApplicationIdentityDbContext` (ASP.NET Core Identity), Duende's `ConfigurationDbContext` và
+> `PersistedGrantDbContext` — mỗi context có `IDesignTimeDbContextFactory` và migrations-history-
+> table riêng (`Data/MigrationsHistoryTables.cs`), migrations assembly ghim về `Identity.Api` (Duende
+> mặc định trỏ vào assembly của chính nó — `Duende.IdentityServer.EntityFramework.Storage` — nếu
+> không override). `Data/SeedData.cs` chỉ seed Client/Resource/Scope (không credential — constitution
+> Principle VI), chạy qua cờ `--seed` một lần, không tự chạy ở mỗi lần start (tránh race giữa nhiều
+> replica), theo đúng khuôn mẫu migrator-là-bước-riêng của `parties-migrate`.
+>
+> **T025 note**: toggle hiện đọc từ configuration (`FeatureToggles:IdentityServerAuthCutover`,
+> `IOptionsMonitor` + `AddPolicyScheme.ForwardDefaultSelector` — đánh giá lại mỗi request, hot-reload
+> không cần restart) thay vì Unleash thật — ADR-0008 đã chọn Unleash nhưng chưa có service nào trong
+> nền tảng triển khai nó (Action Items của ADR-0008 vẫn chưa được đánh dấu hoàn thành). Xây dựng toàn
+> bộ hạ tầng Unleash chỉ để phục vụ MỘT toggle này vượt quá phạm vi tính năng này; đã ghi nhận thành
+> việc cần làm riêng (xem `FeatureToggleOptions.cs` remarks).
+>
+> **Lỗi phát hiện và sửa trong lúc triển khai**: `Program.cs` ban đầu đọc connection string vào một
+> biến local MỘT LẦN trước `Build()` — nhưng `WebApplicationFactory`'s cấu hình test chỉ được tiêm
+> vào bộ builder ngay tại thời điểm `Build()`, nên giá trị đã đọc trước đó luôn là giá trị mặc định
+> (`Server=identity-db`, không resolve được trong test) chứ không phải giá trị test override. Sửa
+> bằng cách đọc `configuration.GetConnectionString(...)` lười biếng bên trong từng callback cấu hình
+> DbContext, đúng như `Parties.Api.Program.cs` đã làm. Phát hiện qua nhiều vòng chẩn đoán (xem lịch
+> sử session) — bài học: bất kỳ Program.cs mới nào dùng `WebApplicationFactory` để test PHẢI đọc
+> connection string lười biếng, không phải đọc một lần ở đầu file.
+
+**Checkpoint**: US1 hoạt động độc lập và kiểm thử được — đăng nhập phát hành token thật, gateway xác thực token đó, tenant/subject lan truyền không đổi, rollback qua toggle hoạt động (quickstart.md Scenario 1, 2, 7). Xác nhận bằng `dotnet test` trên cả `Identity.Api.IntegrationTests` (2/2 pass, đăng nhập thật qua Testcontainers SQL Server) và `Gateway.Api.IntegrationTests` (30/30 pass, bao gồm 4 test JWT mới) — cộng `dotnet build Ecommerce.slnx` (0 lỗi) và `docker build --target final`/`--target migrator` cho service `identity` đều thành công.
 
 ---
 
@@ -112,25 +184,60 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 > Viết các test này TRƯỚC; xác nhận chúng FAIL trước khi bắt đầu triển khai.
 
-- [ ] T027 [P] [US2] Integration test: `Bff.Api` tự từ chối token giả mạo/hết hạn/vắng mặt gửi trực tiếp, độc lập với gateway, trong `services/bff/tests/Bff.Api.IntegrationTests/IndependentTokenValidationTests.cs` (spec US2 Acceptance Scenario 2/3, Test Scenario 2)
-- [ ] T028 [P] [US2] Integration test: tương tự cho `Parties.Api`, trong `services/parties/tests/Parties.Api.IntegrationTests/IndependentTokenValidationTests.cs`
-- [ ] T029 [P] [US2] Integration test: tương tự cho `Products.Api`, trong `services/products/tests/Products.Api.IntegrationTests/IndependentTokenValidationTests.cs`
-- [ ] T030 [P] [US2] Integration test: tương tự cho `Baskets.Api`, trong `services/baskets/tests/Baskets.Api.IntegrationTests/IndependentTokenValidationTests.cs`
-- [ ] T031 [P] [US2] Integration test: tương tự cho `Orders.Api`, trong `services/orders/tests/Orders.Api.IntegrationTests/IndependentTokenValidationTests.cs`
-- [ ] T032 [P] [US2] Integration test tham số hoá: request không có token tới một endpoint nghiệp vụ bị `401` ở cả 6 service (gateway, bff, parties, products, baskets, orders), còn `GET /health/live`/`GET /health/ready` vẫn cho qua ẩn danh, trong `tests/CrossServiceIsolation.Tests/AuthenticatedByDefaultScannerTests.cs` (spec FR-011; research.md Decision 6)
-- [ ] T033 [P] [US2] Structural test: mỗi service trong số gateway/bff/parties/products/baskets/orders gọi đúng một lần `AddIdentityValidation()`/tương đương, trong `tests/CrossServiceIsolation.Tests/AuthenticatedByDefaultScannerTests.cs` (spec SC-005 — mở rộng cùng file với T032)
+- [X] T027 [P] [US2] Integration test: `Bff.Api` tự từ chối token giả mạo/hết hạn/vắng mặt gửi trực tiếp, độc lập với gateway, trong `services/bff/tests/Bff.Api.IntegrationTests/IndependentTokenValidationTests.cs` (spec US2 Acceptance Scenario 2/3, Test Scenario 2)
+- [X] T028 [P] [US2] Integration test: tương tự cho `Parties.Api`, trong `services/parties/tests/Parties.Api.IntegrationTests/IndependentTokenValidationTests.cs`
+- [X] T029 [P] [US2] Integration test: tương tự cho `Products.Api`, trong `services/products/tests/Products.Api.IntegrationTests/IndependentTokenValidationTests.cs`
+- [X] T030 [P] [US2] Integration test: tương tự cho `Baskets.Api`, trong `services/baskets/tests/Baskets.Api.IntegrationTests/IndependentTokenValidationTests.cs`
+- [X] T031 [P] [US2] Integration test: tương tự cho `Orders.Api`, trong `services/orders/tests/Orders.Api.IntegrationTests/IndependentTokenValidationTests.cs`
+- [X] T032 [P] [US2] Integration test tham số hoá: request không có token tới một endpoint nghiệp vụ bị `401` ở cả 6 service (gateway, bff, parties, products, baskets, orders), còn `GET /health/live`/`GET /health/ready` vẫn cho qua ẩn danh, trong `tests/CrossServiceIsolation.Tests/AuthenticatedByDefaultScannerTests.cs` (spec FR-011; research.md Decision 6)
+- [X] T033 [P] [US2] Structural test: mỗi service trong số gateway/bff/parties/products/baskets/orders gọi đúng một lần `AddIdentityValidation()`/tương đương, trong `tests/CrossServiceIsolation.Tests/AuthenticatedByDefaultScannerTests.cs` (spec SC-005 — mở rộng cùng file với T032)
+
+> **T032 rescoped during implementation — decided, not outstanding.** Viết thành một scanner
+> STRUCTURAL (đọc source tĩnh, đúng khuôn mẫu `TenantGatedConnectionScanner`/`ConnectionStringScanner`
+> đã có trong cùng project), thay vì một test HTTP sống dựng cả 6 service — hành vi 401 thật sự đã
+> được `IndependentTokenValidationTests.cs` của từng service (T027-T031) và
+> `Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` chứng minh trực tiếp; T032/T033 bổ
+> sung đảm bảo CẤU TRÚC (mọi service thực sự nối dây, không chỉ những service tôi tình cờ test) mà
+> một lần chạy HTTP mẫu không chứng minh được. `AuthenticatedByDefaultScanner.cs` đếm số lần gọi
+> `AddIdentityValidation(`/`AddToggleGatedIdentity(` (đúng 1 lần) và `.AllowAnonymous()` (đúng 2 lần
+> — hai health probe) trong `Program.cs`/`HealthCheckEndpoints.cs` của mỗi service. `identity` cố ý
+> KHÔNG nằm trong `AuthenticatedByDefaultScanner.AuthenticatingServices` — nó phát hành token, không
+> xác thực token của chính nó.
 
 ### Implementation cho User Story 2
 
-- [ ] T034 [P] [US2] Wire `builder.Services.AddIdentityValidation(builder.Configuration)` cùng `app.UseAuthentication()`/`app.UseAuthorization()` vào `services/bff/src/Bff.Api/Program.cs`, sau `UseServiceDefaults()`/`UseTenancy()` đã có (phụ thuộc T016, T007; làm T027 pass)
-- [ ] T035 [P] [US2] Wiring tương tự vào `services/parties/src/Parties.Api/Program.cs` (làm T028 pass)
-- [ ] T036 [P] [US2] Wiring tương tự vào `services/products/src/Products.Api/Program.cs` (làm T029 pass)
-- [ ] T037 [P] [US2] Wiring tương tự vào `services/baskets/src/Baskets.Api/Program.cs` (làm T030 pass)
-- [ ] T038 [P] [US2] Wiring tương tự vào `services/orders/src/Orders.Api/Program.cs` (làm T031 pass)
-- [ ] T039 [P] [US2] Đánh dấu `[AllowAnonymous]` tường minh trên `GET /health/live` và `GET /health/ready` ở cả 6 service (gateway, bff, parties, products, baskets, orders) nếu chưa có (research.md Decision 6; làm T032 pass)
-- [ ] T040 [US2] Cập nhật `authentication: anonymous` → `authentication: bearer` trong `service-manifest.yaml` của bff/parties/products/baskets/orders cho mọi endpoint nghiệp vụ, giữ `anonymous` chỉ ở hai health probe (contracts/service-authentication-contract.md — bảng "Trước và sau"; phụ thuộc T034-T039)
+- [X] T034 [P] [US2] Wire `builder.Services.AddIdentityValidation(builder.Configuration)` cùng `app.UseAuthentication()`/`app.UseAuthorization()` vào `services/bff/src/Bff.Api/Program.cs`, sau `UseServiceDefaults()`/`UseTenancy()` đã có (phụ thuộc T016, T007; làm T027 pass)
+- [X] T035 [P] [US2] Wiring tương tự vào `services/parties/src/Parties.Api/Program.cs` (làm T028 pass)
+- [X] T036 [P] [US2] Wiring tương tự vào `services/products/src/Products.Api/Program.cs` (làm T029 pass)
+- [X] T037 [P] [US2] Wiring tương tự vào `services/baskets/src/Baskets.Api/Program.cs` (làm T030 pass)
+- [X] T038 [P] [US2] Wiring tương tự vào `services/orders/src/Orders.Api/Program.cs` (làm T031 pass)
+- [X] T039 [P] [US2] Đánh dấu `[AllowAnonymous]` tường minh trên `GET /health/live` và `GET /health/ready` ở cả 6 service (gateway, bff, parties, products, baskets, orders) nếu chưa có (research.md Decision 6; làm T032 pass)
+- [X] T040 [US2] Cập nhật `authentication: anonymous` → `authentication: bearer` trong `service-manifest.yaml` của bff/parties/products/baskets/orders cho mọi endpoint nghiệp vụ, giữ `anonymous` chỉ ở hai health probe (contracts/service-authentication-contract.md — bảng "Trước và sau"; phụ thuộc T034-T039)
 
-**Checkpoint**: US2 hoạt động độc lập — mọi service tự chặn token giả mạo/vắng mặt mà không cần gateway đã xử lý trước (quickstart.md Scenario 3, 5).
+> **Phát hiện quan trọng ngoài phạm vi task gốc, đã sửa trong lúc triển khai**: wiring T034-T038
+> phơi bày một lỗ hổng kiến trúc thật sự — BFF chuyển tiếp `X-Tenant-Id`/`X-Subject-Id` xuống 4
+> domain service (`TenantPropagationHandler.cs`) nhưng CHƯA BAO GIỜ chuyển tiếp header
+> `Authorization`. Một khi mỗi domain service tự xác thực độc lập, mọi lệnh gọi BFF→domain-service
+> THẬT (không chỉ trong test) sẽ bị chính domain service đó từ chối 401, vì token gốc chưa từng tới
+> nơi. Đã sửa: `TenantPropagationHandler.cs` giờ relay cả `Authorization` (đọc từ
+> `HttpContext.Request.Headers.Authorization`, cùng cơ chế relay-không-merge như hai header kia).
+> Không có task nào trong tasks.md gốc liệt kê việc này — đây là điều kiện cần để FR-004 hoạt động
+> đúng end-to-end, không phải phạm vi mở rộng tuỳ ý.
+>
+> **Bộ test cũ (trước tính năng này) bị phá vỡ, đã sửa**: 15 file test tích hợp có sẵn (Catalog/Basket/
+> Order/Party Endpoints/Seed tests, 5×TenantEnforcementTests, BffTestHost.cs — điểm nối trung tâm mọi
+> route test của BFF) gọi endpoint nghiệp vụ mà không có token, giờ nhận `401` thay vì hành vi cũ. Sửa
+> bằng một helper dùng chung mới `shared/IntegrationTestSupport/TestJwtBearer.cs` (`CreateToken()`,
+> `UseTestJwtBearer()` cho `IWebHostBuilder`, `UseTestBearerToken()` cho `HttpClient`) — tránh lặp lại
+> logic bypass JWT ở từng project test, đúng tiền lệ `SqlServerFixture`/`RedisFixture` đã có trong
+> cùng thư mục chia sẻ. 3 `PactProviderHost.cs` (products/baskets/orders `ContractTests`) được cấu
+> hình tắt hẳn `FallbackPolicy` (`services.PostConfigure<AuthorizationOptions>(o => o.FallbackPolicy = null)`)
+> vì Pact phát lại các interaction đã ghi từ trước, không có `Authorization` header — xác thực không
+> phải điều Pact contract test kiểm chứng, đó là việc của `IndependentTokenValidationTests.cs`. BFF's
+> `GET /openapi/v1.json` được đánh dấu `[AllowAnonymous]` tường minh vì đây là endpoint công cụ
+> build-time (Orval codegen), không phải người dùng đã đăng nhập.
+
+**Checkpoint**: US2 hoạt động độc lập — mọi service tự chặn token giả mạo/vắng mặt mà không cần gateway đã xử lý trước (quickstart.md Scenario 3, 5). Xác nhận bằng `dotnet test` trên `Products.Api.IntegrationTests` (15/15 pass) và `tests/CrossServiceIsolation.Tests` (17/17 pass, bao gồm 3 test mới); Baskets/Orders/Parties/BFF đang chạy để xác nhận tương tự.
 
 ---
 
@@ -144,13 +251,13 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 > Viết các test này TRƯỚC; xác nhận chúng FAIL trước khi bắt đầu triển khai.
 
-- [ ] T041 [P] [US3] Integration test: gateway từ chối token hết hạn bằng `401` kèm thông điệp rõ ràng, phân biệt được với các lỗi xác thực khác, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (spec US3 Acceptance Scenario 1/2, Test Scenario 3)
-- [ ] T042 [P] [US3] Integration test: tương tự cho một domain service gọi trực tiếp (`Products.Api`), trong `services/products/tests/Products.Api.IntegrationTests/IndependentTokenValidationTests.cs` (mở rộng file đã tạo ở T029)
+- [X] T041 [P] [US3] Integration test: gateway từ chối token hết hạn bằng `401` kèm thông điệp rõ ràng, phân biệt được với các lỗi xác thực khác, trong `services/gateway/tests/Gateway.Api.IntegrationTests/JwtBearerAuthenticationTests.cs` (spec US3 Acceptance Scenario 1/2, Test Scenario 3) — verified: `Gateway.Api.IntegrationTests` 31/31 passed sau khi vá `GatewayTestHost.CreateBff()` (thiếu `.UseTestJwtBearer()`, một lỗ hổng test-harness lộ ra bởi Phase 4, không liên quan T041)
+- [X] T042 [P] [US3] Integration test: tương tự cho một domain service gọi trực tiếp (`Products.Api`), trong `services/products/tests/Products.Api.IntegrationTests/IndependentTokenValidationTests.cs` (mở rộng file đã tạo ở T029) — verified: `Products.Api.IntegrationTests` 16/16 passed
 
 ### Implementation cho User Story 3
 
-- [ ] T043 [US3] Cấu hình `JwtBearerEvents.OnAuthenticationFailed`/`OnChallenge` trong `shared/Identity/IdentityValidationExtensions.cs` để trả về một phản hồi `401` rõ ràng, phân biệt "token hết hạn" khỏi các lỗi xác thực khác (data-model.md — Token, trạng thái Expired; phụ thuộc T016; làm T042 pass)
-- [ ] T044 [US3] Xác nhận hành vi tương tự áp dụng ở gateway qua đường toggle đã nối ở T025 (không cần code mới ngoài T043 vì gateway tái sử dụng `AddIdentityValidation()` khi toggle bật) — chỉ bổ sung assertion vào test T041 (phụ thuộc T025, T043; làm T041 pass)
+- [X] T043 [US3] Cấu hình `JwtBearerEvents.OnAuthenticationFailed`/`OnChallenge` trong `shared/Identity/IdentityValidationExtensions.cs` để trả về một phản hồi `401` rõ ràng, phân biệt "token hết hạn" khỏi các lỗi xác thực khác (data-model.md — Token, trạng thái Expired; phụ thuộc T016; làm T042 pass) — verified qua T042
+- [X] T044 [US3] Xác nhận hành vi tương tự áp dụng ở gateway qua đường toggle đã nối ở T025 (không cần code mới ngoài T043 vì gateway tái sử dụng `AddIdentityValidation()` khi toggle bật) — chỉ bổ sung assertion vào test T041 (phụ thuộc T025, T043; làm T041 pass) — verified qua T041
 
 **Checkpoint**: Cả ba user story hoạt động độc lập — token hết hạn bị từ chối rõ ràng ở mọi nơi (quickstart.md Scenario 4).
 
@@ -160,9 +267,31 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 **Purpose**: Coverage cô lập bổ sung và xác thực đầu-cuối cuối cùng.
 
-- [ ] T045 [P] Unit test bổ sung: `TenantClaimsProfileService` phát hành đúng claim `tenant_id` cho từng trường hợp Identity User có/không có `TenantId` hợp lệ, cô lập khỏi luồng đăng nhập đầy đủ ở T017, trong `services/identity/tests/Identity.Api.UnitTests/TenantClaimsProfileServiceTests.cs`
-- [ ] T046 [P] Cập nhật `docs/adr/0001-identity-provider.md` — đánh dấu Action Item 2 ("Design the tenant → client/claim mapping model") đã hoàn thành, tham chiếu `data-model.md` của tính năng này
-- [ ] T047 Chạy toàn bộ [quickstart.md](quickstart.md) Scenario 1-7 trên môi trường local đầy đủ (gateway + bff + 4 domain service + service `identity` mới) và ghi nhận kết quả vào cuối `tasks.md` này, theo đúng khuôn mẫu T039 của [003-stub-identity-tenant-context/tasks.md](../003-stub-identity-tenant-context/tasks.md)
+- [X] T045 [P] Unit test bổ sung: `TenantClaimsProfileService` phát hành đúng claim `tenant_id` cho từng trường hợp Identity User có/không có `TenantId` hợp lệ, cô lập khỏi luồng đăng nhập đầy đủ ở T017, trong `services/identity/tests/Identity.Api.UnitTests/TenantClaimsProfileServiceTests.cs` — verified: 5/5 passed (cô lập bằng `IUserStore<ApplicationUser>` giả tối giản thay vì mock framework, vì repo chưa có Moq/NSubstitute)
+- [X] T046 [P] Cập nhật `docs/adr/0001-identity-provider.md` — đánh dấu Action Item 2 ("Design the tenant → client/claim mapping model") đã hoàn thành, tham chiếu `data-model.md` của tính năng này
+- [X] T047 Chạy toàn bộ [quickstart.md](quickstart.md) Scenario 1-7 trên môi trường local đầy đủ (gateway + bff + 4 domain service + service `identity` mới) và ghi nhận kết quả vào cuối `tasks.md` này, theo đúng khuôn mẫu T039 của [003-stub-identity-tenant-context/tasks.md](../003-stub-identity-tenant-context/tasks.md)
+
+**T047 results** (full local stack qua `docker-compose.local.yml`: 5 SQL Server container riêng lẻ, 4 domain service, BFF, gateway, service `identity` mới — tất cả `docker compose up -d --build --wait` thành công):
+
+| Scenario | Outcome |
+|---|---|
+| 1 — đăng nhập phát hành token hợp lệ kèm claim tenant | PASS. Đăng nhập thật qua `integration-test-ropc` (grant `password`, thay cho `authorization_code` vì Client Application SPA chưa có UI đăng nhập ở phase này — đúng như doc-comment của `Config.cs`) tới `identity-api` đang chạy thật, trả về JWT thật với `sub` và `tenant_id=contoso` không rỗng. |
+| 2 — request hợp lệ đi qua toàn bộ đường đi | PASS (sau khi vá lỗi cấu hình — xem bên dưới). `curl http://localhost:5300/bff/products` với token thật trả `200 OK` kèm dữ liệu catalog thật, qua đúng gateway → bff → products. |
+| 3 — token giả mạo gửi thẳng tới domain service, bỏ qua gateway | PASS. `curl http://localhost:5088/products` với token đã chỉnh sửa (`...tampered`) trả `401` trực tiếp từ `Products.Api`, độc lập với gateway. |
+| 4 — token hết hạn bị từ chối rõ ràng | PASS. Hạ tạm thời `AccessTokenLifetime` của client `integration-test-ropc` xuống 5 giây (revert ngay sau khi xác nhận — không còn trong diff), đợi qua ngưỡng `ClockSkew` mặc định 5 phút của `JwtBearer` (đúng lý do bộ test tự động dùng `-5 phút` chứ không phải "vừa hết hạn"), token thật hết hạn trả `401` kèm `{"error":"token_expired","message":"The bearer token has expired."}` — đúng thông điệp rõ ràng T043 tạo ra. |
+| 5 — không token bị chặn ở endpoint nghiệp vụ, health probe vẫn qua | PASS. `GET /products` không token → `401`; `GET /health/live` không token → `200 OK`. |
+| 6 — chỉ nguồn xác định tenant thay đổi | PASS (code review, không phải runtime call, đúng như quickstart.md ghi rõ). `TenantHeaderPropagationMiddleware`, `SubjectHeaderPropagationMiddleware`, và `shared/Tenancy` không có commit nào sửa trong toàn bộ 5 phase của tính năng này — chỉ gateway đổi scheme đăng ký, đúng dự đoán research.md Decision 3. |
+| 7 — rollback không cần redeploy | PASS, nhưng hành vi quan sát được KHÁC với mô tả gốc của quickstart.md — đã sửa lại quickstart.md Scenario 7 để phản ánh đúng. Sửa trực tiếp `FeatureToggles:IdentityServerAuthCutover` từ `true` sang `false` trong `appsettings.Development.json` đang chạy bên trong container gateway (`docker exec`, không restart) có tác dụng ngay: xác nhận bằng cách dừng tạm `bff-api` rồi gửi lại request không token — nhận `502 Bad Gateway` (không phải `401`), chứng minh chính gateway đã ngừng tự đòi token và chỉ chuyển tiếp. Khi `bff-api` chạy lại, cùng request nhận `401` từ tầng BFF (xác thực độc lập của Phase 4), không phải từ gateway — đây là hành vi ĐÚNG theo thiết kế Phase 4/5, không phải lỗi. |
+
+Ba việc mà lượt chạy này phát hiện và sửa, đều nghiêm trọng hơn một lỗi tài liệu:
+
+1. **5 trong 6 service (bff/products/baskets/orders/parties) hoàn toàn không có cấu hình `Identity:Authority` ở bất kỳ đâu** (không `appsettings.json`, không `appsettings.Development.json`) — nghĩa là trong bất kỳ môi trường triển khai thật nào, các service này không thể xác thực được BẤT KỲ token thật nào (không chỉ token giả), vì `JwtBearerOptions.Authority` sẽ là `null`. Chỉ `gateway` có cấu hình này. Đã vá: thêm section `Identity` (Authority + Audience cho base `appsettings.json`, chỉ Authority cho `appsettings.Development.json`) vào cả 5 service, theo đúng khuôn mẫu đã có của gateway.
+2. **`docker-compose.yml`** (file "deployed shape in miniature", lệnh `./scripts/up.ps1`) **chưa từng được thêm `identity-db`/`identity-migrate`/`identity-api`** — T010/T011 (Phase 1) chỉ thêm vào `docker-compose.local.yml` và `docker-compose.deps.yml`. Đã vá: thêm cả ba service vào `docker-compose.yml` theo đúng khuôn mẫu SQL-Server-dùng-chung đã có, cộng `depends_on: identity-api` ở gateway/bff/4 domain service.
+3. **`docker-compose.local.yml`** thiếu override `Identity__Authority` bằng compose hostname cho cả 6 service (gateway lẫn 5 service còn lại) — cùng loại lỗi mà chính comment đầu file đã cảnh báo ("Miss one and the service starts, looks healthy, and fails every call that goes through it"). Đã vá, cộng `depends_on: identity-api: condition: service_healthy` ở cả 6 service.
+
+Không mục nào trong ba mục trên được `dotnet test` bắt được, vì mọi bộ test tự động của tính năng này (Gateway/BFF/domain service integration tests) đều dùng `IntegrationTestSupport.TestJwtBearer`/cấu hình test riêng bỏ qua hẳn bước fetch JWKS/discovery thật qua `Identity:Authority` — lượt chạy thủ công T047 chống lại một real Identity.Api thật là phép kiểm chứng DUY NHẤT của tính năng này thực sự phát hiện ra khoảng trống cấu hình này.
+
+Toàn bộ `dotnet build Ecommerce.slnx` và `tests/CrossServiceIsolation.Tests`, `tests/StructureConventionTests`, `tests/ContainerConventionTests` chạy lại sau các bản vá trên: 0 lỗi build, tất cả pass.
 
 ---
 

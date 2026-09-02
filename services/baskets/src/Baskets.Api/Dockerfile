@@ -16,6 +16,7 @@ WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY shared/ServiceDefaults/ServiceDefaults.csproj shared/ServiceDefaults/
 COPY shared/Tenancy/Tenancy.csproj shared/Tenancy/
+COPY shared/Identity/Identity.csproj shared/Identity/
 # Referenced since 011-consumer-contract-tests, for the BasketCheckedOut payload this service
 # constructs at checkout (shared/EventContracts).
 COPY shared/EventContracts/EventContracts.csproj shared/EventContracts/
@@ -24,6 +25,7 @@ RUN dotnet restore services/baskets/src/Baskets.Api/Baskets.Api.csproj
 
 COPY shared/ServiceDefaults/ shared/ServiceDefaults/
 COPY shared/Tenancy/ shared/Tenancy/
+COPY shared/Identity/ shared/Identity/
 COPY shared/EventContracts/ shared/EventContracts/
 COPY services/baskets/src/Baskets.Api/ services/baskets/src/Baskets.Api/
 RUN dotnet publish services/baskets/src/Baskets.Api/Baskets.Api.csproj \

@@ -6,11 +6,18 @@ using Bff.Api.Features.HealthCheck;
 using Bff.Api.Features.Orders;
 using Bff.Api.Features.Parties;
 using Bff.Api.Features.Products;
+using Identity;
 using ServiceDefaults;
 using Tenancy;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+
+// Independent token validation (014-identity-server-auth spec US2/FR-004) — the BFF does not trust
+// that the gateway already authenticated the request; it validates the token itself. FallbackPolicy
+// denies by default (research.md Decision 6), so every endpoint requires it unless explicitly
+// marked [AllowAnonymous] (the health probes, Features/HealthCheck/HealthCheckEndpoints.cs).
+builder.Services.AddIdentityValidation(builder.Configuration);
 
 // The BFF resolves nothing: it reads the tenant the gateway already resolved off the inbound
 // X-Tenant-Id header (constitution Principle V — one resolution point, at the edge) and relays it
@@ -44,19 +51,24 @@ var app = builder.Build();
 // that middleware resolves, so that must run first.
 app.UseServiceDefaults();
 
+// Authenticate/authorize before tenant resolution — an unauthenticated request is rejected before
+// spending any effort resolving a tenant or calling downstream.
+app.UseIdentityValidation();
+
 // Outside the exception handler so that the handler's own log lines carry the tenant too, the same
 // way UseServiceDefaults' correlation ID wraps everything after it.
 app.UseTenancy();
 
 app.UseExceptionHandler();
 
-// Exposed in Development only. The document describes the BFF's whole client-facing surface, and
-// there is no authorization in front of it yet (plan.md Complexity Tracking, Principle VI
-// deviation) — publishing it from a deployed environment would hand out that map anonymously.
-// The codegen pipeline reads it from a local/CI run, which is a Development host.
+// Exposed in Development only, and explicitly AllowAnonymous rather than inheriting the
+// FallbackPolicy above (014-identity-server-auth): the codegen pipeline (ADR-0004) fetches this at
+// build time, not as a logged-in user, so there is no bearer token to send. Restricting exposure to
+// Development — never a deployed environment — is what keeps this from handing out the BFF's whole
+// client-facing surface map anonymously in production; it is not a substitute for that restriction.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
 }
 
 app.MapHealthCheckEndpoints();

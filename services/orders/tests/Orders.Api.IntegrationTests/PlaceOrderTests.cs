@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -124,7 +125,7 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
     {
         await using var factory = await CreateFactoryAsync("orders-no-caller");
 
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
         client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, TenantId);
 
         var response = await client.PostAsJsonAsync("/orders", new
@@ -196,11 +197,14 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
         }.ConnectionString;
 
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
+        {
             host.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:OrdersDb"] = connectionString,
-                })));
+                }));
+            host.UseTestJwtBearer();
+        });
 
         using var scope = factory.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = TenantId;
@@ -211,7 +215,7 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> factory)
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
         client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, TenantId);
         client.DefaultRequestHeaders.Add(CallerContextMiddleware.HeaderName, Shopper);
 

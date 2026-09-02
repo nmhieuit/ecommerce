@@ -40,7 +40,7 @@ endpoints:
     purpose: >-
       Lists the product catalog. The downstream surface the BFF's product-listing route proxies
       (spec FR-004; contracts/downstream-openapi.yaml). An empty catalog returns an empty array.
-    authentication: anonymous   # no identity server yet — see plan.md Constitution Check (VI)
+    authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     latency:
       p95: 150ms
       p99: 500ms

@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Orders.Api\Orders.Api.csproj" />
+    <ProjectReference Include="..\..\..\..\shared\IntegrationTestSupport\IntegrationTestSupport.csproj" />
   </ItemGroup>
 
 </Project>

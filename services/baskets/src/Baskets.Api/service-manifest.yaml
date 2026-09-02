@@ -42,7 +42,7 @@ endpoints:
     purpose: >-
       Returns a single basket. The downstream surface the BFF's basket route proxies
       (contracts/downstream-openapi.yaml). Unknown id returns 404, never an empty 200.
-    authentication: anonymous   # no identity server yet — see plan.md Constitution Check (VI)
+    authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     latency:
       p95: 150ms
       p99: 500ms

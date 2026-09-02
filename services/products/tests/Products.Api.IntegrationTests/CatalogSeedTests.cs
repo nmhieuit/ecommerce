@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -102,11 +103,14 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
         };
 
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
+        {
             host.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:ProductsDb"] = builder.ConnectionString,
-                })));
+                }));
+            host.UseTestJwtBearer();
+        });
 
         using var scope = factory.Services.CreateScope();
 
@@ -121,7 +125,7 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
     private static HttpClient CreateTenantClient(WebApplicationFactory<Program> factory)
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
         client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, SeedTenantId);
 
         return client;

@@ -33,7 +33,12 @@ dotnet_naming_style.pascal_case.capitalization = pascal_case
 #
 # CA1861: migrations pass column-name arrays inline to InsertData/UpdateData. The rule's premise
 # (a method called repeatedly in a hot path) does not hold for a migration that runs once.
-[**/Migrations/*.cs]
+#
+# Matches both the flat `Migrations/*.cs` layout (one DbContext per project — parties, products,
+# etc.) and EF's own per-context subfolder layout (`Migrations/{ContextName}/*.cs`), which it
+# switches to automatically for a project with more than one DbContext — services/identity has
+# three (ApplicationIdentityDbContext, Duende's ConfigurationDbContext and PersistedGrantDbContext).
+[**/Migrations/**.cs]
 dotnet_diagnostic.CA1861.severity = none
 
 [*.{json,yml,yaml}]

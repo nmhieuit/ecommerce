@@ -15,10 +15,12 @@ WORKDIR /src
 # it fails on rules a local build passes.
 COPY Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY shared/ServiceDefaults/ServiceDefaults.csproj shared/ServiceDefaults/
+COPY shared/Identity/Identity.csproj shared/Identity/
 COPY services/gateway/src/Gateway.Api/Gateway.Api.csproj services/gateway/src/Gateway.Api/
 RUN dotnet restore services/gateway/src/Gateway.Api/Gateway.Api.csproj
 
 COPY shared/ServiceDefaults/ shared/ServiceDefaults/
+COPY shared/Identity/ shared/Identity/
 COPY services/gateway/src/Gateway.Api/ services/gateway/src/Gateway.Api/
 RUN dotnet publish services/gateway/src/Gateway.Api/Gateway.Api.csproj \
     --configuration Release --no-restore --output /app/publish

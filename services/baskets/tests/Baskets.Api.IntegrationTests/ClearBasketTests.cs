@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Baskets.Api.Data;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -118,11 +119,14 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
         }.ConnectionString;
 
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(host =>
+        {
             host.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:BasketsDb"] = connectionString,
-                })));
+                }));
+            host.UseTestJwtBearer();
+        });
 
         using var scope = factory.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<TenantContext>().TenantId = TenantId;
@@ -133,7 +137,7 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> factory)
     {
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
         client.DefaultRequestHeaders.Add(TenantContextMiddleware.HeaderName, TenantId);
         client.DefaultRequestHeaders.Add(CallerContextMiddleware.HeaderName, Shopper);
 

@@ -1,5 +1,6 @@
 extern alias ProductsApi;
 
+using IntegrationTestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using ProductsApi::Products.Api.Data;
 using Tenancy;
@@ -30,7 +31,7 @@ public class SubjectPropagationTests(DownstreamServicesFixture fixture)
 
         var recorder = new OutboundSubjectRecorder();
         await using var bff = CreateRecordingBff(products, recorder);
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
         request.Headers.Add(TenantContextMiddleware.HeaderName, ResolvedTenant);
@@ -53,7 +54,7 @@ public class SubjectPropagationTests(DownstreamServicesFixture fixture)
 
         var recorder = new OutboundSubjectRecorder();
         await using var bff = CreateRecordingBff(products, recorder);
-        var client = bff.CreateClient();
+        var client = bff.CreateClient().UseTestBearerToken();
 
         // A tenant but no subject: enough to reach persistence, not enough to name a caller. This
         // is the combination that would quietly pick a default if one existed.

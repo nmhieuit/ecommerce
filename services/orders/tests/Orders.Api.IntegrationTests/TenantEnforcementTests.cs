@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using IntegrationTestSupport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -44,7 +45,7 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
     public async Task ARequestWithoutATenant_Fails_RatherThanServingDefaultSchemaData()
     {
         await using var factory = CreateFactory();
-        var client = factory.CreateClient();
+        var client = factory.CreateClient().UseTestBearerToken();
 
         var response = await client.GetAsync($"/orders/{AnyOrderId}");
 
@@ -67,7 +68,7 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
 
         var before = await CountOrdersAsync(factory);
 
-        var response = await factory.CreateClient().PostAsJsonAsync("/orders", new
+        var response = await factory.CreateClient().UseTestBearerToken().PostAsJsonAsync("/orders", new
         {
             items = new[]
             {
@@ -97,9 +98,12 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
 
     private WebApplicationFactory<Program> CreateFactory() =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:OrdersDb"] = sqlServer.ConnectionString,
-                })));
+                }));
+            builder.UseTestJwtBearer();
+        });
 }
