@@ -209,9 +209,9 @@ phạm vi tường minh, ghi nhận sẵn trong code lẫn `research.md`.
 
 ## 7. Sơ đồ
 
-- Sơ đồ thành phần: [`docs/diagrams/identity-server-component.drawio`](../diagrams/identity-server-component.drawio)
+- Sơ đồ thành phần: [`docs/diagrams/014-identity-server-component.drawio`](../diagrams/014-identity-server-component.drawio)
 - Sơ đồ trình tự (đăng nhập → token → request qua từng lớp xác thực, gồm nhánh token hết hạn/giả
-  mạo): [`docs/diagrams/identity-server-sequence.drawio`](../diagrams/identity-server-sequence.drawio)
+  mạo): [`docs/diagrams/014-identity-server-sequence.drawio`](../diagrams/014-identity-server-sequence.drawio)
 
 ## 8. Trạng thái xác minh đầy đủ theo từng project test
 

@@ -186,9 +186,9 @@ hỏi "ai đổi cấu hình chặn merge, và cổng chất lượng ra sao t�
 
 ## 5. Sơ đồ
 
-- Sơ đồ thành phần: [`docs/diagrams/quality-gate-component.drawio`](../diagrams/quality-gate-component.drawio)
+- Sơ đồ thành phần: [`docs/diagrams/013-quality-gate-component.drawio`](../diagrams/013-quality-gate-component.drawio)
 - Sơ đồ trình tự (đầy đủ luồng, gồm cả nhánh thất bại → sửa → tự động chạy lại):
-  [`docs/diagrams/quality-gate-sequence.drawio`](../diagrams/quality-gate-sequence.drawio)
+  [`docs/diagrams/013-quality-gate-sequence.drawio`](../diagrams/013-quality-gate-sequence.drawio)
 
 ## 6. Lịch sử các lỗi thật đã gặp — bài học cho lần tích hợp tương tự sau này
 

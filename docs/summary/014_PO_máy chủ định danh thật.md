@@ -50,7 +50,7 @@ hoặc cấu hình sai, mọi bộ phận phía sau vẫn tự bảo vệ đư�
 6. **Nếu vé đã hết hạn**: người dùng nhận được thông báo rõ ràng "cần đăng nhập lại", không phải một
    lỗi khó hiểu hay một sự im lặng bất thường.
 
-*(Xem sơ đồ minh hoạ: [`docs/diagrams/identity-server-flow-nghiep-vu.drawio`](../diagrams/identity-server-flow-nghiep-vu.drawio))*
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/014-identity-server-flow-nghiep-vu.drawio`](../diagrams/014-identity-server-flow-nghiep-vu.drawio))*
 
 ## Điều đặc biệt: đã kiểm chứng thật, không chỉ thiết kế trên giấy
 
@@ -90,4 +90,4 @@ Hai điều dưới đây đã được **thử nghiệm thật**, không chỉ 
   chúng chỉ lộ ra khi chạy đúng như một hệ thống thật sẽ chạy. Đây chính là lý do việc chạy thử trên
   môi trường đầy đủ, thay vì chỉ tin vào các bài kiểm tra tự động, là một bước bắt buộc trước khi coi
   một tính năng là "đã xong" — chi tiết kỹ thuật dành cho đội kỹ thuật, xem
-  [`docs/architecture/identity-server-architecture.md`](../architecture/identity-server-architecture.md).
+  [`docs/architecture/014_Architect_máy chủ định danh thật.md`](../architecture/014_Architect_máy%20chủ%20định%20danh%20thật.md).

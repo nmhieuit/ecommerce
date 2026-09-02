@@ -1,0 +1,95 @@
+<mxfile host="65bd71144e">
+    <diagram id="identity-server-component" name="Kiến trúc thành phần — máy chủ định danh + phòng thủ theo chiều sâu">
+        <mxGraphModel dx="1232" dy="1348" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kiến trúc thành phần — service identity + phòng thủ theo chiều sâu (không có ranh giới tin cậy duy nhất)" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="-9" width="1300" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="client" value="Client (SPA thật hoặc curl thử nghiệm)&#xa;1. Đăng nhập&#xa;2. Gửi request kèm Bearer token" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="70" width="280" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="identity_grp" value="service identity (Duende IdentityServer)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="580" y="60" width="420" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="identity_api" value="Identity.Api&#xa;/connect/token · JWKS · OpenID discovery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="610" y="90" width="360" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="identity_db" value="Database riêng (tách biệt hoàn toàn khỏi DB parties)&#xa;TenantClaimsProfileService phát hành claim tenant_id" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="610" y="160" width="360" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_grp" value="Gateway.Api" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="300" width="330" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_scheme" value="AddPolicyScheme&#xa;chọn lại MỖI REQUEST theo toggle&#xa;FeatureToggles:IdentityServerAuthCutover" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="330" width="270" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_two" value="JwtBearer (toggle ON)&#xa;⇄ StubIdentityAuthenticationHandler (toggle OFF)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="410" width="270" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff_grp" value="Bff.Api" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="300" width="280" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff_valid" value="AddIdentityValidation()&#xa;TỰ xác thực độc lập — KHÔNG tin&#xa;gateway đã xác thực" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="340" width="240" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="dom_grp" value="4 domain service — mỗi service tự xác thực riêng" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="720" y="300" width="560" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="dom_parties" value="Parties.Api&#xa;AddIdentityValidation()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="740" y="340" width="125" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="dom_products" value="Products.Api&#xa;AddIdentityValidation()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="875" y="340" width="125" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="dom_baskets" value="Baskets.Api&#xa;AddIdentityValidation()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="340" width="125" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="dom_orders" value="Orders.Api&#xa;AddIdentityValidation()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="1145" y="340" width="125" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Nguyên lý xuyên suốt (constitution Principle VI): gateway KHÔNG phải ranh giới tin cậy các service khác dựa vào. BFF và mỗi&#xa;domain service tự fetch JWKS của chính mình từ service identity và tự xác thực lại cùng token gốc — không tin bất kỳ ai đã&#xa;&quot;xử lý xong hộ&quot;. Toggle ở gateway chỉ kiểm soát lớp xác thực CỦA RIÊNG gateway (xem docs/architecture/014_Architect_máy chủ định danh thật.md mục 4)." style="text;html=1;fontSize=10;fontColor=#b85450;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="510" width="1250" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_login" value="1. Đăng nhập&#xa;(ROPC test client — UI thật chưa xây, mục 6)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;exitX=0.75;exitY=0;" parent="1" source="client" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="664" y="90" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="240" y="40"/>
+                            <mxPoint x="664" y="40"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_request" value="2. Request kèm&#xa;Authorization: Bearer &lt;token&gt;" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="client" target="gw_grp" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="195" y="210"/>
+                            <mxPoint x="195" y="210"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_jwks1" value="JWKS fetch (cached, độc lập)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;strokeColor=#82b366;exitX=1;exitY=0.3;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="gw_two" target="identity_api" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="380" y="428"/>
+                            <mxPoint x="380" y="120"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_jwks2" value="JWKS fetch (cached, độc lập)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;strokeColor=#82b366;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" parent="1" source="bff_valid" target="identity_db" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_jwks3" value="JWKS fetch (cached, độc lập —&#xa;mỗi service riêng)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;strokeColor=#82b366;exitX=0.3;exitY=0;entryX=0.9;entryY=1;" parent="1" source="dom_grp" target="identity_db" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_fwd1" value="forward Authorization header&#xa;nguyên vẹn (YARP)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="gw_grp" target="bff_grp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_fwd2" value="forward Authorization header&#xa;(TenantPropagationHandler)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="bff_grp" target="dom_grp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

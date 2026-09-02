@@ -1,0 +1,55 @@
+<mxfile host="Electron" agent="5.0">
+  <diagram id="002-gateway-bff-routing" name="Định tuyến Gateway → BFF → 4 domain service">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" value="Định tuyến Gateway → BFF → 4 domain service — một cửa vào duy nhất, BFF tổng hợp" vertex="1">
+          <mxGeometry height="26" width="1300" x="30" y="-9" as="geometry" />
+        </mxCell>
+
+        <mxCell id="client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="Client (SPA)&#xa;chỉ biết MỘT địa chỉ duy nhất" vertex="1">
+          <mxGeometry height="80" width="220" x="30" y="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="Gateway (YARP)&#xa;Định tuyến theo path&#xa;Không lộ topology nội bộ&#xa;(ADR-0002)" vertex="1">
+          <mxGeometry height="100" width="230" x="330" y="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bff" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" value="BFF (Minimal API)&#xa;Aggregation + shaping&#xa;KHÔNG business logic&#xa;(ADR-0003)" vertex="1">
+          <mxGeometry height="100" width="230" x="660" y="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dom_grp" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;verticalAlign=top;fontStyle=1;" value="4 domain service (HttpClient + resilience handler chuẩn)" vertex="1">
+          <mxGeometry height="140" width="560" x="990" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="dom_products" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="Products.Api" vertex="1">
+          <mxGeometry height="70" width="120" x="1010" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="dom_baskets" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="Baskets.Api" vertex="1">
+          <mxGeometry height="70" width="120" x="1145" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="dom_orders" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="Orders.Api" vertex="1">
+          <mxGeometry height="70" width="120" x="1280" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="dom_parties" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="Parties.Api" vertex="1">
+          <mxGeometry height="70" width="120" x="1415" y="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" edge="1" parent="1" source="client" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="gw" value="1. Request (một địa chỉ duy nhất)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="gw" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="bff" value="2. Route theo path&#xa;(X-Correlation-Id forward)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="bff" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="dom_grp" value="3. Gọi 1 hoặc nhiều service&#xa;và tổng hợp kết quả">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" value="Nếu một domain service không phản hồi hoặc chậm: BFF trả về lỗi ProblemDetails có cấu trúc trong thời gian giới hạn (SC-003: dưới 5 giây),&#xa;không để request treo vô thời hạn (research.md Decision 4)." vertex="1">
+          <mxGeometry height="40" width="1000" x="330" y="250" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

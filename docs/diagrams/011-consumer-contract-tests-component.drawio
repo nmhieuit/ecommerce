@@ -1,0 +1,52 @@
+<mxfile host="Electron" agent="5.0">
+  <diagram id="011-component" name="Kiến trúc thành phần — consumer-driven contract test">
+    <mxGraphModel dx="1300" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1250" pageHeight="440" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" value="Consumer-driven contract (PactNet) — bên phát tự kiểm tra mình trong build của chính nó" vertex="1">
+          <mxGeometry height="26" width="1150" x="30" y="-9" as="geometry" />
+        </mxCell>
+
+        <mxCell id="consumer_grp" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" value="Consumer — khai báo kỳ vọng" vertex="1">
+          <mxGeometry height="180" width="300" x="30" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="bff_c" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="BFF (HTTP, 3 boundary:&#xa;products/baskets/orders)" vertex="1">
+          <mxGeometry height="60" width="260" x="50" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="orders_c" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" value="Orders (event, consumer của&#xa;BasketCheckedOut — thí điểm)" vertex="1">
+          <mxGeometry height="60" width="260" x="50" y="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pact" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" value="File Pact (filesystem, KHÔNG dùng&#xa;Pact Broker ở feature này)" vertex="1">
+          <mxGeometry height="60" width="260" x="400" y="115" as="geometry" />
+        </mxCell>
+
+        <mxCell id="provider_grp" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" value="Provider — tự verify hành vi THẬT" vertex="1">
+          <mxGeometry height="180" width="380" x="740" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="products_p" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="Products.Api&#xa;PactProviderHost" vertex="1">
+          <mxGeometry height="55" width="170" x="760" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="baskets_p" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="Baskets.Api&#xa;PactProviderHost&#xa;(cũng là event producer)" vertex="1">
+          <mxGeometry height="55" width="170" x="940" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="orders_p" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" value="Orders.Api&#xa;PactProviderHost" vertex="1">
+          <mxGeometry height="55" width="170" x="760" y="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" edge="1" parent="1" source="consumer_grp" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="pact" value="khai báo">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="pact" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="provider_grp" value="verify trong build của chính provider">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" parent="1" style="text;html=1;fontSize=10;fontColor=#b85450;whiteSpace=wrap;align=left;" value="Provider verification chạy in-process, KHÔNG cần Testcontainers/Docker — nhanh, chạy được ở mọi build. Pact-recorded interaction không mang&#xa;Authorization header thật, nên PactProviderHost.cs tắt riêng FallbackPolicy cho đúng host đó (không ảnh hưởng service thật)." vertex="1">
+          <mxGeometry height="40" width="1150" x="30" y="290" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

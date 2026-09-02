@@ -1,0 +1,104 @@
+<mxfile host="Electron" agent="5.0">
+  <diagram id="004-sequence" name="Trình tự — duyệt, giỏ hàng, checkout, xác nhận">
+    <mxGraphModel dx="1300" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" value="Trình tự — duyệt → thêm giỏ → checkout 2 bước → xác nhận, gồm nhánh giỏ trống và double-submit" vertex="1">
+          <mxGeometry height="26" width="1050" x="30" y="10" as="geometry" />
+        </mxCell>
+
+        <mxCell id="h_shopper" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" value="Shopper (SPA)" vertex="1">
+          <mxGeometry height="40" width="170" x="30" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="h_bff" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" value="BFF" vertex="1">
+          <mxGeometry height="40" width="150" x="330" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="h_baskets" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" value="Baskets.Api" vertex="1">
+          <mxGeometry height="40" width="170" x="600" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="h_orders" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" value="Orders.Api" vertex="1">
+          <mxGeometry height="40" width="170" x="880" y="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="l1" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="115" y="100" as="sourcePoint" /><mxPoint x="115" y="600" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="l2" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="405" y="100" as="sourcePoint" /><mxPoint x="405" y="600" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="l3" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="685" y="100" as="sourcePoint" /><mxPoint x="685" y="600" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="l4" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="965" y="100" as="sourcePoint" /><mxPoint x="965" y="600" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="a1" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="115" y="140" as="sourcePoint" /><mxPoint x="405" y="140" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="a1t" parent="1" style="text;html=1;fontSize=10;" value="1. GET /bff/products" vertex="1">
+          <mxGeometry height="20" width="260" x="140" y="122" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a2" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="115" y="190" as="sourcePoint" /><mxPoint x="405" y="190" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="a2t" parent="1" style="text;html=1;fontSize=10;" value="2. POST add-to-basket (gộp quantity nếu đã có line)" vertex="1">
+          <mxGeometry height="20" width="450" x="140" y="172" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="405" y="230" as="sourcePoint" /><mxPoint x="685" y="230" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="a3t" parent="1" style="text;html=1;fontSize=10;" value="3. Lưu line item + đơn giá tại thời điểm thêm" vertex="1">
+          <mxGeometry height="20" width="420" x="420" y="212" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" value="Giỏ hàng&#xa;trống?" vertex="1">
+          <mxGeometry height="70" width="130" x="340" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="d1t" parent="1" style="text;html=1;fontSize=9;fontColor=#b85450;" value="Có → chặn NGAY tại SPA, không gửi request checkout" vertex="1">
+          <mxGeometry height="20" width="400" x="30" y="290" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a4" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="115" y="370" as="sourcePoint" /><mxPoint x="405" y="370" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="a4t" parent="1" style="text;html=1;fontSize=10;" value="4. POST checkout (nút vô hiệu hoá khi đang xử lý — chặn double-submit)" vertex="1">
+          <mxGeometry height="20" width="500" x="140" y="352" as="geometry" />
+        </mxCell>
+        <mxCell id="a5" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="405" y="410" as="sourcePoint" /><mxPoint x="685" y="410" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="a5t" parent="1" style="text;html=1;fontSize=10;" value="5. Đọc line items từ basket" vertex="1">
+          <mxGeometry height="20" width="300" x="420" y="392" as="geometry" />
+        </mxCell>
+        <mxCell id="a6" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="405" y="450" as="sourcePoint" /><mxPoint x="965" y="450" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="a6t" parent="1" style="text;html=1;fontSize=10;" value="6. Place order từ lines — Orders TỰ tính tổng" vertex="1">
+          <mxGeometry height="20" width="420" x="420" y="432" as="geometry" />
+        </mxCell>
+        <mxCell id="a7" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="965" y="490" as="sourcePoint" /><mxPoint x="405" y="490" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="a7t" parent="1" style="text;html=1;fontSize=10;" value="7. Order reference + total" vertex="1">
+          <mxGeometry height="20" width="300" x="420" y="472" as="geometry" />
+        </mxCell>
+        <mxCell id="a8" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="405" y="530" as="sourcePoint" /><mxPoint x="685" y="530" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="a8t" parent="1" style="text;html=1;fontSize=10;" value="8. Dọn giỏ hàng (checkout thành công)" vertex="1">
+          <mxGeometry height="20" width="350" x="420" y="512" as="geometry" />
+        </mxCell>
+        <mxCell id="a9" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="405" y="570" as="sourcePoint" /><mxPoint x="115" y="570" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="a9t" parent="1" style="text;html=1;fontSize=10;fontStyle=1;color=#2d6a2d;" value="9. Màn hình xác nhận — order reference + total" vertex="1">
+          <mxGeometry height="20" width="400" x="140" y="552" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

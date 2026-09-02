@@ -1,0 +1,97 @@
+<mxfile host="65bd71144e">
+    <diagram id="003-sequence" name="Trình tự — resolve tenant, lan truyền, gate">
+        <mxGraphModel dx="1232" dy="448" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="560" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Trình tự — resolve tenant một lần, lan truyền, gate tại persistence" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1000" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_client" value="Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="150" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_gw" value="Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="60" width="150" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_bff" value="BFF" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="60" width="150" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_svc" value="Domain service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="60" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="105" y="100" as="sourcePoint"/>
+                        <mxPoint x="105" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="l2" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="375" y="100" as="sourcePoint"/>
+                        <mxPoint x="375" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="l3" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="645" y="100" as="sourcePoint"/>
+                        <mxPoint x="645" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="l4" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="930" y="100" as="sourcePoint"/>
+                        <mxPoint x="930" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a1" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="105" y="140" as="sourcePoint"/>
+                        <mxPoint x="375" y="140" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a1t" value="1. Request vào cửa vào chính" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="122" width="260" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="box1" value="2. Resolve tenant MỘT LẦN (stub identity) → stamp X-Tenant-Id" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="170" width="310" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="a2" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="375" y="240" as="sourcePoint"/>
+                        <mxPoint x="645" y="240" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a2t" value="3. Forward + X-Tenant-Id" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="390" y="222" width="260" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a3" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="645" y="280" as="sourcePoint"/>
+                        <mxPoint x="930" y="280" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a3t" value="4. Forward + X-Tenant-Id (không đổi)" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="650" y="262" width="300" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="box2" value="5. TenantContext.Resolved từ header" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="320" width="260" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="d1" value="Tenant đã&#xa;resolve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="865" y="380" width="130" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="a4" style="endArrow=block;html=1;fontSize=10;fontColor=#2d6a2d;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="930" y="480" as="sourcePoint"/>
+                        <mxPoint x="105" y="480" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a4t" value="6a. Có → mở DbContext, xử lý request bình thường" style="text;html=1;fontSize=10;fontColor=#2d6a2d;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="462" width="500" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a5t" value="6b. Không → MissingTenantContextException NGAY, không mở kết nối, không tenant mặc định" style="text;html=1;fontSize=10;fontColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="476" width="500" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
