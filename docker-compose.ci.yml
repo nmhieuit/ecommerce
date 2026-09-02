@@ -21,7 +21,14 @@ volumes:
 
 services:
   jenkins:
-    image: jenkins/jenkins:lts-jdk17
+    # Built, not pulled: the Jenkinsfile's agent requirements (.NET 10 SDK, Node 22 + pnpm, the
+    # Docker CLI, git) previously existed only as a manually-built, untagged local image — silently
+    # lost ("dotnet: not found") the moment the container was recreated from a plain
+    # `jenkins/jenkins:lts-jdk17`. See docker/ci/jenkins.Dockerfile for how it was reconstructed.
+    build:
+      context: .
+      dockerfile: docker/ci/jenkins.Dockerfile
+    image: ecomerce-ci-jenkins:local
     ports:
       - "8080:8080"
       - "50000:50000"
@@ -33,6 +40,37 @@ services:
       # Real tokens, gitignored. Mounted read-only so the init script can read them and nothing
       # in a build can write them.
       - ./.ci-secrets:/run/ci-secrets:ro
+      # Docker-outside-of-Docker: the contract/integration tiers spin up Testcontainers (spec 010),
+      # which need a real Docker daemon. The Jenkinsfile agent already has the Docker CLI
+      # (docker/ci/jenkins.Dockerfile); this mount gives it something to talk to — the host daemon
+      # itself, not a nested one.
+      - /var/run/docker.sock:/var/run/docker.sock
+    # The socket is owned by root:root, mode 660, on the Docker host; the jenkins user (uid 1000)
+    # has no other way to reach it. Adding it to the root group (gid 0) is the standard
+    # docker-outside-of-docker workaround for a non-root Jenkins image.
+    group_add:
+      - "0"
+    environment:
+      # Testcontainers' Ryuk reaper container needs a reverse TCP handshake back to the test
+      # process. That works when the test process and the Docker daemon share a network namespace;
+      # here the Jenkins container only shares the daemon (docker-outside-of-docker, socket-mounted)
+      # and Ryuk's container is a sibling on a different network path, so the handshake times out
+      # with "ResourceReaperException: Initialization has been cancelled." Testcontainers' own docs
+      # recommend disabling Ryuk in exactly this sibling-container CI setup; test containers are
+      # still torn down at the end of each test run via IAsyncLifetime, just without Ryuk's
+      # ambient-failure safety net.
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+      # Testcontainers-dotnet assumes the Docker daemon and the test process share a network
+      # namespace, so it addresses spun-up containers (SQL Server, etc.) as localhost:<published-port>.
+      # That assumption breaks here: docker.sock points at Docker Desktop's VM, so published ports
+      # actually live on the VM's network stack, not inside this container's own loopback — the app
+      # under test binds fine, but the pact verifier's provider-state calls to
+      # http://127.0.0.1:<port>/_pact/provider-states, and the app's own connections to its
+      # Testcontainers-backed dependencies, land on nothing. host.docker.internal is Docker Desktop's
+      # standing DNS name for that VM, reachable from every container on it (confirmed via
+      # `getent hosts host.docker.internal` inside this container), so pointing Testcontainers at it
+      # instead of localhost makes those published ports reachable again.
+      TESTCONTAINERS_HOST_OVERRIDE: "host.docker.internal"
     networks: [ci-backbone]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login || exit 1"]
@@ -55,6 +93,19 @@ services:
       # sysctl change (262144) not worth making just to run a local/dev SonarQube in Docker Desktop.
       # Do not carry this into a real deployment.
       SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+      # Required by the SonarQube Community Branch Plugin (research.md Decision 8): without this
+      # Java agent, the plugin's ServerExtensionInstaller refuses to load ("did not detect agent
+      # modifications") and the whole server aborts startup — this is not just a missing-feature
+      # case, it is a hard crash. This was previously set out-of-band (never persisted here), so a
+      # plain `docker compose down`/`up` silently dropped it and broke SonarQube entirely. The path
+      # is relative to SONARQUBE_HOME and must match the jar's actual filename/version in the
+      # sonarqube-extensions volume (see `docker run --rm -v ecomerce-ci_sonarqube-extensions:/data
+      # busybox ls /data/plugins/` to check after a plugin upgrade).
+      # The plugin instruments each SonarQube JVM component separately — web alone is not enough;
+      # Compute Engine (which actually processes analysis reports and computes gate results) needs
+      # its own agent too, or the server aborts startup the same way for that component instead.
+      SONAR_WEB_JAVAADDITIONALOPTS: "-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-26.5.0.jar=web"
+      SONAR_CE_JAVAADDITIONALOPTS: "-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-26.5.0.jar=ce"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:9000/api/system/status | grep -q '\"status\":\"UP\"' || exit 1"]
       interval: 10s
