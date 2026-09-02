@@ -267,9 +267,31 @@ Tính năng này thêm một service triển khai được mới, một thư vi�
 
 **Purpose**: Coverage cô lập bổ sung và xác thực đầu-cuối cuối cùng.
 
-- [ ] T045 [P] Unit test bổ sung: `TenantClaimsProfileService` phát hành đúng claim `tenant_id` cho từng trường hợp Identity User có/không có `TenantId` hợp lệ, cô lập khỏi luồng đăng nhập đầy đủ ở T017, trong `services/identity/tests/Identity.Api.UnitTests/TenantClaimsProfileServiceTests.cs`
-- [ ] T046 [P] Cập nhật `docs/adr/0001-identity-provider.md` — đánh dấu Action Item 2 ("Design the tenant → client/claim mapping model") đã hoàn thành, tham chiếu `data-model.md` của tính năng này
-- [ ] T047 Chạy toàn bộ [quickstart.md](quickstart.md) Scenario 1-7 trên môi trường local đầy đủ (gateway + bff + 4 domain service + service `identity` mới) và ghi nhận kết quả vào cuối `tasks.md` này, theo đúng khuôn mẫu T039 của [003-stub-identity-tenant-context/tasks.md](../003-stub-identity-tenant-context/tasks.md)
+- [X] T045 [P] Unit test bổ sung: `TenantClaimsProfileService` phát hành đúng claim `tenant_id` cho từng trường hợp Identity User có/không có `TenantId` hợp lệ, cô lập khỏi luồng đăng nhập đầy đủ ở T017, trong `services/identity/tests/Identity.Api.UnitTests/TenantClaimsProfileServiceTests.cs` — verified: 5/5 passed (cô lập bằng `IUserStore<ApplicationUser>` giả tối giản thay vì mock framework, vì repo chưa có Moq/NSubstitute)
+- [X] T046 [P] Cập nhật `docs/adr/0001-identity-provider.md` — đánh dấu Action Item 2 ("Design the tenant → client/claim mapping model") đã hoàn thành, tham chiếu `data-model.md` của tính năng này
+- [X] T047 Chạy toàn bộ [quickstart.md](quickstart.md) Scenario 1-7 trên môi trường local đầy đủ (gateway + bff + 4 domain service + service `identity` mới) và ghi nhận kết quả vào cuối `tasks.md` này, theo đúng khuôn mẫu T039 của [003-stub-identity-tenant-context/tasks.md](../003-stub-identity-tenant-context/tasks.md)
+
+**T047 results** (full local stack qua `docker-compose.local.yml`: 5 SQL Server container riêng lẻ, 4 domain service, BFF, gateway, service `identity` mới — tất cả `docker compose up -d --build --wait` thành công):
+
+| Scenario | Outcome |
+|---|---|
+| 1 — đăng nhập phát hành token hợp lệ kèm claim tenant | PASS. Đăng nhập thật qua `integration-test-ropc` (grant `password`, thay cho `authorization_code` vì Client Application SPA chưa có UI đăng nhập ở phase này — đúng như doc-comment của `Config.cs`) tới `identity-api` đang chạy thật, trả về JWT thật với `sub` và `tenant_id=contoso` không rỗng. |
+| 2 — request hợp lệ đi qua toàn bộ đường đi | PASS (sau khi vá lỗi cấu hình — xem bên dưới). `curl http://localhost:5300/bff/products` với token thật trả `200 OK` kèm dữ liệu catalog thật, qua đúng gateway → bff → products. |
+| 3 — token giả mạo gửi thẳng tới domain service, bỏ qua gateway | PASS. `curl http://localhost:5088/products` với token đã chỉnh sửa (`...tampered`) trả `401` trực tiếp từ `Products.Api`, độc lập với gateway. |
+| 4 — token hết hạn bị từ chối rõ ràng | PASS. Hạ tạm thời `AccessTokenLifetime` của client `integration-test-ropc` xuống 5 giây (revert ngay sau khi xác nhận — không còn trong diff), đợi qua ngưỡng `ClockSkew` mặc định 5 phút của `JwtBearer` (đúng lý do bộ test tự động dùng `-5 phút` chứ không phải "vừa hết hạn"), token thật hết hạn trả `401` kèm `{"error":"token_expired","message":"The bearer token has expired."}` — đúng thông điệp rõ ràng T043 tạo ra. |
+| 5 — không token bị chặn ở endpoint nghiệp vụ, health probe vẫn qua | PASS. `GET /products` không token → `401`; `GET /health/live` không token → `200 OK`. |
+| 6 — chỉ nguồn xác định tenant thay đổi | PASS (code review, không phải runtime call, đúng như quickstart.md ghi rõ). `TenantHeaderPropagationMiddleware`, `SubjectHeaderPropagationMiddleware`, và `shared/Tenancy` không có commit nào sửa trong toàn bộ 5 phase của tính năng này — chỉ gateway đổi scheme đăng ký, đúng dự đoán research.md Decision 3. |
+| 7 — rollback không cần redeploy | PASS, nhưng hành vi quan sát được KHÁC với mô tả gốc của quickstart.md — đã sửa lại quickstart.md Scenario 7 để phản ánh đúng. Sửa trực tiếp `FeatureToggles:IdentityServerAuthCutover` từ `true` sang `false` trong `appsettings.Development.json` đang chạy bên trong container gateway (`docker exec`, không restart) có tác dụng ngay: xác nhận bằng cách dừng tạm `bff-api` rồi gửi lại request không token — nhận `502 Bad Gateway` (không phải `401`), chứng minh chính gateway đã ngừng tự đòi token và chỉ chuyển tiếp. Khi `bff-api` chạy lại, cùng request nhận `401` từ tầng BFF (xác thực độc lập của Phase 4), không phải từ gateway — đây là hành vi ĐÚNG theo thiết kế Phase 4/5, không phải lỗi. |
+
+Ba việc mà lượt chạy này phát hiện và sửa, đều nghiêm trọng hơn một lỗi tài liệu:
+
+1. **5 trong 6 service (bff/products/baskets/orders/parties) hoàn toàn không có cấu hình `Identity:Authority` ở bất kỳ đâu** (không `appsettings.json`, không `appsettings.Development.json`) — nghĩa là trong bất kỳ môi trường triển khai thật nào, các service này không thể xác thực được BẤT KỲ token thật nào (không chỉ token giả), vì `JwtBearerOptions.Authority` sẽ là `null`. Chỉ `gateway` có cấu hình này. Đã vá: thêm section `Identity` (Authority + Audience cho base `appsettings.json`, chỉ Authority cho `appsettings.Development.json`) vào cả 5 service, theo đúng khuôn mẫu đã có của gateway.
+2. **`docker-compose.yml`** (file "deployed shape in miniature", lệnh `./scripts/up.ps1`) **chưa từng được thêm `identity-db`/`identity-migrate`/`identity-api`** — T010/T011 (Phase 1) chỉ thêm vào `docker-compose.local.yml` và `docker-compose.deps.yml`. Đã vá: thêm cả ba service vào `docker-compose.yml` theo đúng khuôn mẫu SQL-Server-dùng-chung đã có, cộng `depends_on: identity-api` ở gateway/bff/4 domain service.
+3. **`docker-compose.local.yml`** thiếu override `Identity__Authority` bằng compose hostname cho cả 6 service (gateway lẫn 5 service còn lại) — cùng loại lỗi mà chính comment đầu file đã cảnh báo ("Miss one and the service starts, looks healthy, and fails every call that goes through it"). Đã vá, cộng `depends_on: identity-api: condition: service_healthy` ở cả 6 service.
+
+Không mục nào trong ba mục trên được `dotnet test` bắt được, vì mọi bộ test tự động của tính năng này (Gateway/BFF/domain service integration tests) đều dùng `IntegrationTestSupport.TestJwtBearer`/cấu hình test riêng bỏ qua hẳn bước fetch JWKS/discovery thật qua `Identity:Authority` — lượt chạy thủ công T047 chống lại một real Identity.Api thật là phép kiểm chứng DUY NHẤT của tính năng này thực sự phát hiện ra khoảng trống cấu hình này.
+
+Toàn bộ `dotnet build Ecommerce.slnx` và `tests/CrossServiceIsolation.Tests`, `tests/StructureConventionTests`, `tests/ContainerConventionTests` chạy lại sau các bản vá trên: 0 lỗi build, tất cả pass.
 
 ---
 

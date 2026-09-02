@@ -178,6 +178,22 @@ services:
       sqlserver:
         condition: service_healthy
 
+  # Runs all three of identity's EF bundles in sequence (Dockerfile's migrator stage) — the
+  # configuration/operational store and the user credential store, all against the same database
+  # (014-identity-server-auth research.md Decision 8).
+  identity-migrate:
+    restart: on-failure:3
+    build: &identity-build
+      context: .
+      dockerfile: services/identity/src/Identity.Api/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__IdentityDb: Server=sqlserver;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+    networks: [backbone]
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
   # ---------------------------------------------------------------- domain services
   #
   # Service names match the hostnames already baked into the BFF's and gateway's configuration
@@ -205,6 +221,8 @@ services:
     depends_on:
       products-migrate:
         condition: service_completed_successfully
+      identity-api:
+        condition: service_healthy
     healthcheck: &service-healthcheck
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/health/ready"]
       interval: 5s
@@ -223,6 +241,8 @@ services:
     depends_on:
       baskets-migrate:
         condition: service_completed_successfully
+      identity-api:
+        condition: service_healthy
 
   orders-api:
     <<: *domain-service
@@ -235,6 +255,8 @@ services:
     depends_on:
       orders-migrate:
         condition: service_completed_successfully
+      identity-api:
+        condition: service_healthy
 
   parties-api:
     <<: *domain-service
@@ -247,6 +269,21 @@ services:
     depends_on:
       parties-migrate:
         condition: service_completed_successfully
+      identity-api:
+        condition: service_healthy
+
+  identity-api:
+    build:
+      <<: *identity-build
+      target: final
+    environment:
+      ConnectionStrings__IdentityDb: Server=sqlserver;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    networks: [backbone]
+    depends_on:
+      identity-migrate:
+        condition: service_completed_successfully
+    healthcheck: *service-healthcheck
 
   # ---------------------------------------------------------------- edge
   bff-api:
@@ -263,6 +300,7 @@ services:
       baskets-api: { condition: service_healthy }
       orders-api: { condition: service_healthy }
       parties-api: { condition: service_healthy }
+      identity-api: { condition: service_healthy }
     healthcheck: *service-healthcheck
 
   gateway-api:
@@ -287,6 +325,8 @@ services:
       - "5300:8080"
     depends_on:
       bff-api:
+        condition: service_healthy
+      identity-api:
         condition: service_healthy
     healthcheck:
       # Liveness, not readiness: the gateway's readiness is deliberately empty, because making it

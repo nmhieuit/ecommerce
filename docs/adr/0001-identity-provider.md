@@ -65,5 +65,5 @@ The deciding factor is operational consistency, not feature checklists: every ot
 ## Action Items
 
 1. [ ] Procure Duende IdentityServer license appropriate to current revenue tier
-2. [ ] Design the tenant → client/claim mapping model and get it reviewed as a tenant-resolution-path change (constitution requires owning-service-maintainer review for this)
+2. [X] Design the tenant → client/claim mapping model and get it reviewed as a tenant-resolution-path change (constitution requires owning-service-maintainer review for this) — done in [014-identity-server-auth/data-model.md](../../specs/014-identity-server-auth/data-model.md): `TenantClaimsProfileService` issues `tenant_id` from `ApplicationUser.TenantId` (one tenant per Identity User), and `Config.cs` maps each client to its `ecommerce-api` scope
 3. [ ] Wire `ServiceDefaults` telemetry into the identity server project
