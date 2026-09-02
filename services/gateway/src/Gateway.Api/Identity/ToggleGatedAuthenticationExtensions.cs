@@ -1,6 +1,7 @@
 using Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 
 namespace Gateway.Api.Identity;
@@ -59,11 +60,25 @@ public static class ToggleGatedAuthenticationExtensions
                 ClearUnauthorizedResponseEvents.Configure(jwtOptions);
             });
 
+        // Same ApiScope registration every other service gets from AddIdentityValidation()
+        // (015-deny-by-default-authz, research.md Decision 1/2/5/6) — the gateway just can't call
+        // that helper directly, since it needs the three-scheme registration above instead of the
+        // plain single AddJwtBearer call.
+        services.Configure<AuthorizationToggleOptions>(
+            configuration.GetSection(AuthorizationToggleOptions.ConfigSectionName));
+        services.AddSingleton<IAuthorizationHandler, RequireApiScopeAuthorizationHandler>();
+        services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, ClearForbiddenResponseEvents>();
+
         // Same deny-by-default fallback every other service gets from AddIdentityValidation()
         // (research.md Decision 6) — the gateway just can't call that helper directly, since it
         // needs the three-scheme registration above instead of the plain single AddJwtBearer call.
         services.AddAuthorization(authorizationOptions =>
-            authorizationOptions.FallbackPolicy = AuthenticationFallbackPolicy.Build());
+        {
+            authorizationOptions.FallbackPolicy = AuthenticationFallbackPolicy.Build();
+            authorizationOptions.AddPolicy(AuthorizationPolicies.ApiScope, policy => policy
+                .RequireAuthenticatedUser()
+                .AddRequirements(new RequireApiScopeRequirement()));
+        });
 
         return authenticationBuilder;
     }

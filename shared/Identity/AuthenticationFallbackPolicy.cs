@@ -12,13 +12,16 @@ namespace Identity;
 public static class AuthenticationFallbackPolicy
 {
     /// <summary>
-    /// Requires an authenticated user and nothing more — no role, no scope. Fine-grained RBAC/scope
-    /// policies are a separate concern layered on top of this default (contracts/service-authentication-contract.md
-    /// — Stability), not part of this feature's scope (spec.md — SCRUM-23 is authentication, not
-    /// authorization roles).
+    /// Requires an authenticated user (014) AND — once <see cref="RequireApiScopeAuthorizationHandler"/>'s
+    /// toggle is on — the <c>ApiScope</c> policy's scope requirement (015-deny-by-default-authz,
+    /// research.md Decision 1). The fallback is deliberately at least as strict as the named
+    /// <c>AuthorizationPolicies.ApiScope</c> policy every route declares explicitly
+    /// (<see cref="IdentityValidationExtensions.AddIdentityValidation"/>), so an endpoint that
+    /// forgets to declare it is never left less protected than one that does.
     /// </summary>
     public static AuthorizationPolicy Build() =>
         new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
+            .AddRequirements(new RequireApiScopeRequirement())
             .Build();
 }
