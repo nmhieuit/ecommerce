@@ -62,5 +62,8 @@ phải bị quên.
 
 ## 4. Sơ đồ
 
-Luồng mua sắm bốn bước (duyệt → giỏ hàng → thanh toán → xác nhận), qua đúng một backend surface:
-[`docs/diagrams/004-minimal-shopping-spa-flow.drawio`](../diagrams/004-minimal-shopping-spa-flow.drawio).
+- Sơ đồ thành phần: [`docs/diagrams/004-minimal-shopping-spa-component.drawio`](../diagrams/004-minimal-shopping-spa-component.drawio)
+- Sơ đồ trình tự (duyệt → giỏ hàng → checkout 2 bước → xác nhận, gồm nhánh giỏ trống bị chặn và
+  double-submit): [`docs/diagrams/004-minimal-shopping-spa-sequence.drawio`](../diagrams/004-minimal-shopping-spa-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/004-minimal-shopping-spa-flow-nghiep-vu.drawio`](../diagrams/004-minimal-shopping-spa-flow-nghiep-vu.drawio)

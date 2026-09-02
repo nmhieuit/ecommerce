@@ -32,6 +32,8 @@ nhất rằng một quy tắc thực sự được bảo vệ, không chỉ "tr�
 4. **Ghi lại thành văn bản kỷ luật làm việc đi tiếp**: từ nay, mọi thay đổi tới các quy tắc này phải
    viết bài kiểm tra thất bại trước, sửa mã sau — không còn ngoại lệ.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/009-retrofit-tdd-basket-order-flow-nghiep-vu.drawio`](../diagrams/009-retrofit-tdd-basket-order-flow-nghiep-vu.drawio))*
+
 ## Điều đặc biệt: một phát hiện tốt hơn mong đợi
 
 Sau khi rà soát kỹ, đội xác nhận **toàn bộ quy tắc quan trọng đã được xây đúng và đã có bài kiểm tra

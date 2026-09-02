@@ -29,6 +29,8 @@ chính hợp đồng đó, nên không có cách nào để nó lệch khỏi th
    hoạt động bình thường, không bị lỗi hay sập — đây là điều kiện quan trọng để có thể bổ sung tính
    năng mới ở phía sau mà không làm hỏng giao diện đang chạy.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/007-bff-openapi-contracts-flow-nghiep-vu.drawio`](../diagrams/007-bff-openapi-contracts-flow-nghiep-vu.drawio))*
+
 ## Lợi ích kinh doanh
 
 - **Giảm hẳn một loại lỗi rất khó phát hiện** — "giao diện gọi sai vì hiểu nhầm hình dạng dữ liệu" —

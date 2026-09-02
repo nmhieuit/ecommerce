@@ -36,6 +36,8 @@ trình có thể chạy lại nhiều lần cho ra cùng một kết quả, có 
 6. **Để lại bằng chứng lâu dài**: một bài viết tường thuật từng bước kèm ảnh chụp, được lưu trong kho
    mã nguồn để bất kỳ ai sau này cũng xem lại được mà không cần yêu cầu chạy lại buổi demo.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/006-e2e-order-demo-flow-nghiep-vu.drawio`](../diagrams/006-e2e-order-demo-flow-nghiep-vu.drawio))*
+
 ## Điều đặc biệt: đã tìm và sửa ba lỗi thật ngay trong lúc chuẩn bị demo
 
 Trong lúc tự động hoá buổi demo, đội phát hiện và sửa ba vấn đề thật, không phải giả định:

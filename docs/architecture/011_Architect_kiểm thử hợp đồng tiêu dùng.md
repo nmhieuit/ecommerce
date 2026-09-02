@@ -58,6 +58,8 @@ verification cần tắt riêng fallback policy cho đúng provider host đó, k
 
 ## 4. Sơ đồ
 
-Không có diagram riêng — mô hình consumer-driven contract (consumer khai báo kỳ vọng → provider tự
-verify trong build của chính nó) đã mô tả đủ rõ bằng văn bản ở mục 1, và không có kiến trúc runtime
-mới nào (không service, không route mới) để minh hoạ thêm.
+- Sơ đồ thành phần: [`docs/diagrams/011-consumer-contract-tests-component.drawio`](../diagrams/011-consumer-contract-tests-component.drawio)
+- Sơ đồ trình tự (consumer khai báo kỳ vọng → provider tự verify hành vi thật trong build của chính
+  nó, gồm nhánh sai lệch chặn build của bên phát): [`docs/diagrams/011-consumer-contract-tests-sequence.drawio`](../diagrams/011-consumer-contract-tests-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/011-consumer-contract-tests-flow-nghiep-vu.drawio`](../diagrams/011-consumer-contract-tests-flow-nghiep-vu.drawio)

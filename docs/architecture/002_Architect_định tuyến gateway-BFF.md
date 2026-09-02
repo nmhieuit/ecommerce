@@ -78,5 +78,8 @@ trước (làm nóng EF model + connection pool). Đo lại đúng cách: reques
 
 ## 5. Sơ đồ
 
-Sơ đồ định tuyến gateway → BFF → 4 domain service:
-[`docs/diagrams/002-gateway-bff-routing-component.drawio`](../diagrams/002-gateway-bff-routing-component.drawio).
+- Sơ đồ thành phần: [`docs/diagrams/002-gateway-bff-routing-component.drawio`](../diagrams/002-gateway-bff-routing-component.drawio)
+- Sơ đồ trình tự (request → route → aggregate, gồm nhánh downstream không khả dụng):
+  [`docs/diagrams/002-gateway-bff-routing-sequence.drawio`](../diagrams/002-gateway-bff-routing-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio`](../diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio)

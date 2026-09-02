@@ -56,5 +56,8 @@ tạo phiên bản mới), test đó thất bại ngay, chặn merge.
 
 ## 5. Sơ đồ
 
-Cấu trúc hợp đồng và luồng producer/consumer tương lai:
-[`docs/diagrams/008-versioned-event-schemas-component.drawio`](../diagrams/008-versioned-event-schemas-component.drawio).
+- Sơ đồ thành phần: [`docs/diagrams/008-versioned-event-schemas-component.drawio`](../diagrams/008-versioned-event-schemas-component.drawio)
+- Sơ đồ trình tự (đề xuất thay đổi schema → compatibility check → chặn hoặc version mới; và nhánh
+  tolerant-reader): [`docs/diagrams/008-versioned-event-schemas-sequence.drawio`](../diagrams/008-versioned-event-schemas-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/008-versioned-event-schemas-flow-nghiep-vu.drawio`](../diagrams/008-versioned-event-schemas-flow-nghiep-vu.drawio)

@@ -31,6 +31,8 @@ ranh giới cấu trúc, được xây ngay từ đầu, không phải một quy
 3. **Mọi mã nguồn liên quan tới một chức năng được gom lại một chỗ**, thay vì rải rác khắp nơi theo
    kiểu phân lớp kỹ thuật — giúp người mới tham gia dự án tìm đúng chỗ cần sửa nhanh hơn.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio`](../diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio))*
+
 ## Điều đặc biệt: ranh giới dữ liệu đã được kiểm chứng thật, không chỉ thiết kế trên giấy
 
 Đội đã thử nghiệm cụ thể: cố tình để mã nguồn của một khối tìm cách chạm vào kho dữ liệu của khối

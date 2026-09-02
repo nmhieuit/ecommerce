@@ -1,0 +1,61 @@
+<mxfile host="65bd71144e">
+    <diagram id="006-component" name="Kiến trúc thành phần — demo đặt hàng end-to-end">
+        <mxGraphModel dx="1232" dy="928" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="480" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kịch bản demo — điều phối walkthrough thật + thu bằng chứng, không dùng dữ liệu giả" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="-9" width="1200" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="script" value="scripts/demo.ps1 / .sh" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="70" width="280" height="250" as="geometry"/>
+                </mxCell>
+                <mxCell id="ready" value="1. Chờ platform sẵn sàng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="100" width="240" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="clean" value="2. Dọn giỏ hàng qua Baskets.Api&#xa;(không qua checkout)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="150" width="240" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="playwright" value="3. Playwright — trình duyệt thật" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="210" width="240" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="evidence" value="4. Thu bằng chứng hop từ OTel Collector logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="260" width="240" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="storefront" value="Storefront" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="130" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw" value="Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="580" y="130" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff" value="BFF" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="130" width="180" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="dom" value="Products/Baskets/Orders&#xa;(mỗi span non-health được đếm làm bằng chứng)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="130" width="280" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="verify" value="Verification: GET order trực tiếp từ Orders.Api&#xa;— kèm/không kèm X-Tenant-Id" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="254" width="500" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="playwright" target="storefront" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="storefront" target="gw" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="gw" target="bff" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="bff" target="dom" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" parent="1" source="evidence" target="verify" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Bộ lọc bằng chứng hop PHẢI loại bỏ health-check span — Docker probe mỗi service mỗi 5 giây tạo hàng trăm span/service; đếm thô sẽ khiến&#xa;một component không phục vụ gì vẫn &quot;trông bận rộn&quot;. Parties.Api không nằm trên đường đi đặt hàng nên đúng ra phải VẮNG MẶT trong bằng chứng." style="text;html=1;fontSize=10;fontColor=#b85450;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="330" width="1250" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

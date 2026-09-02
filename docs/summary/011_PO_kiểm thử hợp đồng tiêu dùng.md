@@ -33,6 +33,8 @@ của bên nhận, và càng không phải khi hệ thống đã chạy thật.
 4. **Có thể liệt kê đầy đủ mọi đường giao tiếp quan trọng và xác nhận từng đường đã có bài kiểm tra
    bảo vệ** trong vòng vài phút, không cần đọc mã nguồn của từng mảng nghiệp vụ.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/011-consumer-contract-tests-flow-nghiep-vu.drawio`](../diagrams/011-consumer-contract-tests-flow-nghiep-vu.drawio))*
+
 ## Lợi ích kinh doanh
 
 - **Lỗi được phát hiện sớm nhất có thể, đúng ngay tại nguồn gây ra nó** — không đợi tới khi lan sang

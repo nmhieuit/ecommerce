@@ -71,8 +71,11 @@ tình huống design-time, tách biệt khỏi luồng request thật.
 
 ## 5. Sơ đồ
 
-Không có diagram riêng cho feature này — luồng lan truyền tenant (gateway → BFF → domain service, một
-header duy nhất, một điểm gate duy nhất mỗi service) đơn giản hơn nhiều so với sơ đồ định tuyến của
-[002](002_Architect_định%20tuyến%20gateway-BFF.md) và được mô tả đủ rõ bằng văn bản + khối code ở
-mục 1. Sơ đồ tổng thể 3 nhóm kiến trúc của toàn nền tảng (bao gồm tenancy) xem
+- Sơ đồ thành phần: [`docs/diagrams/003-stub-identity-tenant-context-component.drawio`](../diagrams/003-stub-identity-tenant-context-component.drawio)
+- Sơ đồ trình tự (resolve tenant một lần → lan truyền header → gate tại `AddDbContext`, gồm nhánh
+  thiếu tenant): [`docs/diagrams/003-stub-identity-tenant-context-sequence.drawio`](../diagrams/003-stub-identity-tenant-context-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/003-stub-identity-tenant-context-flow-nghiep-vu.drawio`](../diagrams/003-stub-identity-tenant-context-flow-nghiep-vu.drawio)
+
+Sơ đồ tổng thể 3 nhóm kiến trúc của toàn nền tảng (bao gồm tenancy) xem
 [`docs/diagrams/kien-truc-3-nhom.drawio`](../diagrams/kien-truc-3-nhom.drawio).

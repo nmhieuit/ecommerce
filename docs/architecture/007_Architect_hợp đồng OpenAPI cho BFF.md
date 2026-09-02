@@ -44,5 +44,8 @@ checkout, và health-check nằm ngoài phạm vi, theo đúng Assumptions đã 
 
 ## 5. Sơ đồ
 
-Không có diagram riêng — đây là một bước xác nhận hợp đồng đã có sẵn (không thay đổi kiến trúc), mô tả
-bằng bảng quyết định ở mục 2 là đủ.
+- Sơ đồ thành phần: [`docs/diagrams/007-bff-openapi-contracts-component.drawio`](../diagrams/007-bff-openapi-contracts-component.drawio)
+- Sơ đồ trình tự (route BFF thay đổi → spec tự cập nhật → sinh lại client, gồm nhánh field lạ không
+  làm sập client): [`docs/diagrams/007-bff-openapi-contracts-sequence.drawio`](../diagrams/007-bff-openapi-contracts-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/007-bff-openapi-contracts-flow-nghiep-vu.drawio`](../diagrams/007-bff-openapi-contracts-flow-nghiep-vu.drawio)

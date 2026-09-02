@@ -1,0 +1,51 @@
+<mxfile host="65bd71144e">
+    <diagram id="006-flow" name="Bằng chứng Phase 1 đã xong">
+        <mxGraphModel dx="1232" dy="448" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="420" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Demo đặt hàng đầu-cuối — bằng chứng &quot;Phase 1 đã xong&quot;" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="20" width="900" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="n1" value="1. Khởi động nền tảng,&#xa;đợi sẵn sàng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="90" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="n2" value="2. Đặt 1 đơn hàng thật&#xa;qua giao diện — không&#xa;can thiệp thủ công" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="85" width="230" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="n3" value="3. Xác nhận đơn hàng&#xa;lưu đúng, đúng khách&#xa;hàng doanh nghiệp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="600" y="85" width="230" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="n4" value="4. Lưu bằng chứng&#xa;(ảnh + tường thuật)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="890" y="90" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="d1" value="Chạy lại từ&#xa;giỏ trống?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="1160" y="80" width="150" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n1" target="n2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n2" target="n3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n3" target="n4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n4" target="d1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="Có → kết quả giống hệt,&#xa;đơn hàng mới riêng biệt" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="d1" target="n2" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1235" y="320"/>
+                            <mxPoint x="425" y="320"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="note" value="Ba lỗi thật đã được phát hiện và sửa ngay trong lúc tự động hoá buổi demo — ví dụ một ảnh chụp minh hoạ ban đầu trùng khớp&#xa;từng byte với ảnh trước đó (không chứng minh được gì) và đã bị thay thế." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="240" width="1200" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

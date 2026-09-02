@@ -36,6 +36,8 @@ hệ thống tự động:
 4. **Nếu một mảng đang gặp sự cố** (ví dụ tạm thời ngừng hoạt động), người dùng nhận được một thông
    báo lỗi rõ ràng trong vòng vài giây — không phải một màn hình treo không phản hồi.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio`](../diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio))*
+
 ## Điều đặc biệt: một lỗi thật đã bị bắt và sửa ngay trong lúc kiểm chứng
 
 Trong lúc chạy thử toàn bộ luồng thật, đội phát hiện một lỗi tinh vi: mã số theo dõi một yêu cầu (dùng

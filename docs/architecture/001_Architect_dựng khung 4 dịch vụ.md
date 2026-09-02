@@ -60,7 +60,11 @@ nào cho phép — không phải một runtime check, mà một đảm bảo có
 
 ## 5. Sơ đồ
 
-Không có diagram riêng cho feature này — bốn service có cấu trúc lặp lại giống hệt nhau (một mẫu duy
-nhất nhân bốn lần), văn bản ở trên đã mô tả đủ rõ mà không cần một sơ đồ trực quan bổ sung. Sơ đồ kiến
-trúc tổng thể của nền tảng (bao gồm cả bốn service này trong bối cảnh gateway/BFF) xem
+- Sơ đồ thành phần: [`docs/diagrams/001-scaffold-service-shells-component.drawio`](../diagrams/001-scaffold-service-shells-component.drawio)
+- Sơ đồ trình tự (khởi động một service, health check phân biệt liveness/readiness):
+  [`docs/diagrams/001-scaffold-service-shells-sequence.drawio`](../diagrams/001-scaffold-service-shells-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio`](../diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio)
+
+Sơ đồ kiến trúc tổng thể của nền tảng (bao gồm cả bốn service này trong bối cảnh gateway/BFF) xem
 [`docs/diagrams/kien-truc-3-nhom.drawio`](../diagrams/kien-truc-3-nhom.drawio).

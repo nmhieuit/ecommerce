@@ -1,203 +1,178 @@
-<mxfile host="Electron" agent="5.0">
-  <diagram id="quality-gate-sequence" name="Trình tự — từ push commit tới mở khoá merge">
-    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="1650" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-
-        <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" value="Trình tự xử lý một Pull Request — từ push commit tới lúc merge được mở khoá" vertex="1">
-          <mxGeometry height="26" width="1100" x="30" y="10" as="geometry" />
-        </mxCell>
-
-        <!-- Lifelines -->
-        <mxCell id="h_dev" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" value="Nhà phát triển" vertex="1">
-          <mxGeometry height="40" width="180" x="30" y="60" as="geometry" />
-        </mxCell>
-        <mxCell id="h_gh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;" value="GitHub&#xa;(PR + branch protection)" vertex="1">
-          <mxGeometry height="40" width="220" x="330" y="60" as="geometry" />
-        </mxCell>
-        <mxCell id="h_jk" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" value="Jenkins&#xa;(Jenkinsfile 5 stage)" vertex="1">
-          <mxGeometry height="40" width="220" x="680" y="60" as="geometry" />
-        </mxCell>
-        <mxCell id="h_sq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" value="SonarQube&#xa;+ Community Branch Plugin" vertex="1">
-          <mxGeometry height="40" width="240" x="1010" y="60" as="geometry" />
-        </mxCell>
-
-        <mxCell id="l_dev" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1" source="h_dev" target="h_dev">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="120" y="100" as="sourcePoint" />
-            <mxPoint x="120" y="1580" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="l_gh" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="440" y="100" as="sourcePoint" />
-            <mxPoint x="440" y="1580" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="l_jk" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="790" y="100" as="sourcePoint" />
-            <mxPoint x="790" y="1580" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="l_sq" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1130" y="100" as="sourcePoint" />
-            <mxPoint x="1130" y="1580" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-
-        <!-- Step 1 -->
-        <mxCell id="a1" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="120" y="140" as="sourcePoint" />
-            <mxPoint x="440" y="140" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a1t" parent="1" style="text;html=1;fontSize=10;" value="1. Mở PR / push commit" vertex="1">
-          <mxGeometry height="20" width="200" x="150" y="122" as="geometry" />
-        </mxCell>
-
-        <!-- Step 2 -->
-        <mxCell id="a2" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="790" y="180" as="sourcePoint" />
-            <mxPoint x="440" y="180" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a2t" parent="1" style="text;html=1;fontSize=10;" value="2. Jenkins TỰ QUÉT phát hiện commit mới&#xa;(PeriodicFolderTrigger, mỗi 5 phút — không phải GitHub chủ động gọi Jenkins)" vertex="1">
-          <mxGeometry height="30" width="400" x="470" y="160" as="geometry" />
-        </mxCell>
-
-        <mxCell id="box_run" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9673a6;dashed=1;fontSize=10;verticalAlign=top;align=left;spacingLeft=8;fontStyle=2;" value="3. Chạy tuần tự: build -&gt; unit test -&gt; integration test -&gt; contract test&#xa;    (mỗi bước cập nhật ngay một check tương ứng lên PR)" vertex="1">
-          <mxGeometry height="60" width="240" x="680" y="220" as="geometry" />
-        </mxCell>
-        <mxCell id="a3" parent="1" style="endArrow=block;html=1;fontSize=9;dashed=1;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="790" y="230" as="sourcePoint" />
-            <mxPoint x="440" y="230" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a3t" parent="1" style="text;html=1;fontSize=9;fontColor=#666666;" value="githubNotify: PENDING -&gt; SUCCESS (x4)" vertex="1">
-          <mxGeometry height="20" width="260" x="470" y="270" as="geometry" />
-        </mxCell>
-
-        <!-- Step 4: sonar begin -->
-        <mxCell id="a4" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="790" y="310" as="sourcePoint" />
-            <mxPoint x="1130" y="310" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a4t" parent="1" style="text;html=1;fontSize=10;" value="4. dotnet sonarscanner begin/end — tải phân tích lên" vertex="1">
-          <mxGeometry height="20" width="330" x="800" y="292" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a5" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="790" y="350" as="sourcePoint" />
-            <mxPoint x="1130" y="350" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a5t" parent="1" style="text;html=1;fontSize=10;" value="5. waitForQualityGate() — chờ tối đa 15 phút" vertex="1">
-          <mxGeometry height="20" width="330" x="800" y="332" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a6" parent="1" style="endArrow=block;html=1;fontSize=10;dashed=1;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1130" y="400" as="sourcePoint" />
-            <mxPoint x="790" y="400" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a6t" parent="1" style="text;html=1;fontSize=10;" value="6. Webhook trả kết quả cổng: KHÔNG ĐẠT (ví dụ)" vertex="1">
-          <mxGeometry height="20" width="330" x="800" y="382" as="geometry" />
-        </mxCell>
-
-        <!-- Fail branch box -->
-        <mxCell id="fail_box" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff5f5;strokeColor=#b85450;fontSize=10;verticalAlign=top;align=left;spacingTop=6;" value="Nhánh: cổng chất lượng KHÔNG đạt" vertex="1">
-          <mxGeometry height="220" width="1200" x="30" y="430" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a7" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="790" y="470" as="sourcePoint" />
-            <mxPoint x="440" y="470" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a7t" parent="1" style="text;html=1;fontSize=10;" value="7. ci/sonarqube-quality-gate = FAILURE&#xa;-&gt; GitHub tự khoá nút merge, mọi vai trò" vertex="1">
-          <mxGeometry height="30" width="330" x="470" y="452" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a8" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1130" y="530" as="sourcePoint" />
-            <mxPoint x="440" y="530" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a8t" parent="1" style="text;html=1;fontSize=10;" value="8. Community Branch Plugin đăng comment lên PR: &quot;Quality Gate failed&quot; kèm lý do cụ thể" vertex="1">
-          <mxGeometry height="20" width="600" x="470" y="512" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a9" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="440" y="590" as="sourcePoint" />
-            <mxPoint x="120" y="590" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a9t" parent="1" style="text;html=1;fontSize=10;" value="9. Nhà phát triển thấy PR bị chặn kèm lý do rõ ràng ngay tại chỗ" vertex="1">
-          <mxGeometry height="20" width="330" x="150" y="572" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a10" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="120" y="630" as="sourcePoint" />
-            <mxPoint x="440" y="630" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a10t" parent="1" style="text;html=1;fontSize=10;" value="10. Sửa vấn đề, push commit mới vào CÙNG PR" vertex="1">
-          <mxGeometry height="20" width="330" x="150" y="612" as="geometry" />
-        </mxCell>
-
-        <!-- Loop box -->
-        <mxCell id="loop_box" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#eef7ee;strokeColor=#82b366;fontSize=10;verticalAlign=top;align=left;spacingTop=6;fontStyle=1;" value="Lặp lại TỰ ĐỘNG bước 2 -&gt; 6 (không ai bấm nút nào) — lần này cổng chất lượng ĐẠT" vertex="1">
-          <mxGeometry height="230" width="1200" x="30" y="680" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a11" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="790" y="730" as="sourcePoint" />
-            <mxPoint x="440" y="730" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a11t" parent="1" style="text;html=1;fontSize=10;" value="11. ci/sonarqube-quality-gate = SUCCESS" vertex="1">
-          <mxGeometry height="20" width="300" x="470" y="712" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a12" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1130" y="770" as="sourcePoint" />
-            <mxPoint x="440" y="770" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a12t" parent="1" style="text;html=1;fontSize=10;" value="12. Comment decoration được THAY (không chồng) thành &quot;Quality Gate passed&quot;, số liệu cập nhật mới" vertex="1">
-          <mxGeometry height="20" width="600" x="470" y="752" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" value="13. GitHub tự mở khoá nút &quot;Merge pull request&quot;&#xa;— không cần bước duyệt thủ công nào thêm" vertex="1">
-          <mxGeometry height="50" width="300" x="290" y="800" as="geometry" />
-        </mxCell>
-
-        <mxCell id="a14" parent="1" style="endArrow=block;html=1;fontSize=10;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="120" y="880" as="sourcePoint" />
-            <mxPoint x="440" y="880" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="a14t" parent="1" style="text;html=1;fontSize=10;" value="14. Nhà phát triển bấm merge — hoàn tất" vertex="1">
-          <mxGeometry height="20" width="300" x="150" y="862" as="geometry" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
+<mxfile host="65bd71144e">
+    <diagram id="quality-gate-sequence" name="Trình tự — từ push commit tới mở khoá merge">
+        <mxGraphModel dx="1449" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="1650" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Trình tự xử lý một Pull Request — từ push commit tới lúc merge được mở khoá" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1100" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_dev" value="Nhà phát triển" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_gh" value="GitHub&#xa;(PR + branch protection)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="60" width="220" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_jk" value="Jenkins&#xa;(Jenkinsfile 5 stage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="60" width="220" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_sq" value="SonarQube&#xa;+ Community Branch Plugin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="60" width="240" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="l_dev" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" source="h_dev" target="h_dev" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="120" y="100" as="sourcePoint"/>
+                        <mxPoint x="120" y="1580" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="l_gh" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="440" y="100" as="sourcePoint"/>
+                        <mxPoint x="440" y="1580" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="l_jk" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="790" y="100" as="sourcePoint"/>
+                        <mxPoint x="790" y="1580" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="l_sq" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1130" y="100" as="sourcePoint"/>
+                        <mxPoint x="1130" y="1580" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a1" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="120" y="140" as="sourcePoint"/>
+                        <mxPoint x="440" y="140" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a1t" value="1. Mở PR / push commit" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="122" width="200" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a2" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="790" y="180" as="sourcePoint"/>
+                        <mxPoint x="440" y="180" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a2t" value="2. Jenkins TỰ QUÉT phát hiện commit mới&#xa;(PeriodicFolderTrigger, mỗi 5 phút — không phải GitHub chủ động gọi Jenkins)" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="150" width="400" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="box_run" value="3. Chạy tuần tự: build -&gt; unit test -&gt; integration test -&gt; contract test&#xa;    (mỗi bước cập nhật ngay một check tương ứng lên PR)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9673a6;dashed=1;fontSize=10;verticalAlign=top;align=left;spacingLeft=8;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="230" width="320" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="a3" style="endArrow=block;html=1;fontSize=9;dashed=1;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="790" y="230" as="sourcePoint"/>
+                        <mxPoint x="440" y="230" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a3t" value="githubNotify: PENDING -&gt; SUCCESS (x4)" style="text;html=1;fontSize=9;fontColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="270" width="260" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a4" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="790" y="310" as="sourcePoint"/>
+                        <mxPoint x="1130" y="310" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a4t" value="4. dotnet sonarscanner begin/end — tải phân tích lên" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="292" width="330" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a5" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="790" y="350" as="sourcePoint"/>
+                        <mxPoint x="1130" y="350" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a5t" value="5. waitForQualityGate() — chờ tối đa 15 phút" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="332" width="330" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a6" style="endArrow=block;html=1;fontSize=10;dashed=1;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1130" y="400" as="sourcePoint"/>
+                        <mxPoint x="790" y="400" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a6t" value="6. Webhook trả kết quả cổng: KHÔNG ĐẠT (ví dụ)" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="382" width="330" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="fail_box" value="Nhánh: cổng chất lượng KHÔNG đạt" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff5f5;strokeColor=#b85450;fontSize=10;verticalAlign=top;align=left;spacingTop=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="430" width="1200" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="a7" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="790" y="470" as="sourcePoint"/>
+                        <mxPoint x="440" y="470" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a7t" value="7. ci/sonarqube-quality-gate = FAILURE&#xa;-&gt; GitHub tự khoá nút merge, mọi vai trò" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="439" width="330" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="a8" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1130" y="530" as="sourcePoint"/>
+                        <mxPoint x="440" y="530" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a8t" value="8. Community Branch Plugin đăng comment lên PR: &quot;Quality Gate failed&quot; kèm lý do cụ thể" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="512" width="600" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a9" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="440" y="590" as="sourcePoint"/>
+                        <mxPoint x="120" y="590" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a9t" value="9. Nhà phát triển thấy PR bị chặn kèm lý do rõ ràng ngay tại chỗ" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="572" width="330" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a10" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="120" y="630" as="sourcePoint"/>
+                        <mxPoint x="440" y="630" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a10t" value="10. Sửa vấn đề, push commit mới vào CÙNG PR" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="612" width="330" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="loop_box" value="Lặp lại TỰ ĐỘNG bước 2 -&gt; 6 (không ai bấm nút nào) — lần này cổng chất lượng ĐẠT" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#eef7ee;strokeColor=#82b366;fontSize=10;verticalAlign=top;align=left;spacingTop=6;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="680" width="1200" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="a11" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="790" y="730" as="sourcePoint"/>
+                        <mxPoint x="440" y="730" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a11t" value="11. ci/sonarqube-quality-gate = SUCCESS" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="712" width="300" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a12" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1130" y="770" as="sourcePoint"/>
+                        <mxPoint x="440" y="770" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a12t" value="12. Comment decoration được THAY (không chồng) thành &quot;Quality Gate passed&quot;, số liệu cập nhật mới" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="752" width="600" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a13" value="13. GitHub tự mở khoá nút &quot;Merge pull request&quot;&#xa;— không cần bước duyệt thủ công nào thêm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="800" width="300" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="a14" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="120" y="880" as="sourcePoint"/>
+                        <mxPoint x="440" y="880" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a14t" value="14. Nhà phát triển bấm merge — hoàn tất" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="862" width="300" height="20" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
 </mxfile>

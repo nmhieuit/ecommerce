@@ -69,5 +69,8 @@ không suy đoán "test chắc là đủ tốt", mà chứng minh bằng cách c
 
 ## 6. Sơ đồ
 
-Không có diagram — đây là một feature về kỷ luật quy trình và kiểm chứng lại, không có thay đổi kiến
-trúc hay luồng dữ liệu nào mới để minh hoạ.
+- Sơ đồ thành phần: [`docs/diagrams/009-retrofit-tdd-basket-order-component.drawio`](../diagrams/009-retrofit-tdd-basket-order-component.drawio)
+- Sơ đồ trình tự (cố tình gỡ một guard → test đỏ → khôi phục → test xanh, lặp lại cho cả 6 quy tắc):
+  [`docs/diagrams/009-retrofit-tdd-basket-order-sequence.drawio`](../diagrams/009-retrofit-tdd-basket-order-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/009-retrofit-tdd-basket-order-flow-nghiep-vu.drawio`](../diagrams/009-retrofit-tdd-basket-order-flow-nghiep-vu.drawio)

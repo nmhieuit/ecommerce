@@ -76,6 +76,8 @@ nhưng làm hỏng mọi lệnh gọi khác còn tệ hơn không có override n
 
 ## 5. Sơ đồ
 
-Không có diagram riêng — cấu trúc Docker Compose (dịch vụ + phụ thuộc + health gate) được mô tả đầy đủ
-bằng bảng quyết định ở mục 2 và các file `docker-compose.yml`/`docker-compose.deps.yml` trong repository
-tự thân đã là tài liệu tham chiếu chính xác nhất, không cần một sơ đồ trùng lặp thêm.
+- Sơ đồ thành phần: [`docs/diagrams/005-one-command-local-run-component.drawio`](../diagrams/005-one-command-local-run-component.drawio)
+- Sơ đồ trình tự (một lệnh → build → health-gate từng thành phần → chỉ báo thành công khi mọi thứ
+  sẵn sàng): [`docs/diagrams/005-one-command-local-run-sequence.drawio`](../diagrams/005-one-command-local-run-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/005-one-command-local-run-flow-nghiep-vu.drawio`](../diagrams/005-one-command-local-run-flow-nghiep-vu.drawio)

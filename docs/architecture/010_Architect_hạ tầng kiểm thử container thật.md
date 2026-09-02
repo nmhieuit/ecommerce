@@ -54,5 +54,8 @@ vì skip. Task của US1 chỉ cần CHỨNG MINH hành vi này, không phải x
 
 ## 5. Sơ đồ
 
-Không có diagram — đây là hạ tầng kiểm thử thuần tuý (một thư viện fixture dùng chung, không có luồng
-dữ liệu nghiệp vụ hay kiến trúc runtime mới để minh hoạ).
+- Sơ đồ thành phần: [`docs/diagrams/010-testcontainers-integration-tests-component.drawio`](../diagrams/010-testcontainers-integration-tests-component.drawio)
+- Sơ đồ trình tự (fixture khởi động container thật → wait strategy → fail loudly hoặc chạy test thật,
+  gồm nhánh RabbitMQ chết giữa test): [`docs/diagrams/010-testcontainers-integration-tests-sequence.drawio`](../diagrams/010-testcontainers-integration-tests-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/010-testcontainers-integration-tests-flow-nghiep-vu.drawio`](../diagrams/010-testcontainers-integration-tests-flow-nghiep-vu.drawio)

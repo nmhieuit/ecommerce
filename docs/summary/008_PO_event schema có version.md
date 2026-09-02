@@ -32,6 +32,8 @@ lắng nghe, thay đổi đó **bắt buộc phải mang một số phiên bản
 4. **Nếu một bên lắng nghe nhận được thông báo có thêm thông tin mới mà nó chưa biết tới**, nó vẫn xử
    lý bình thường, không bị lỗi hay bỏ sót những thông tin nó đã hiểu — chỉ đơn giản bỏ qua phần lạ.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/008-versioned-event-schemas-flow-nghiep-vu.drawio`](../diagrams/008-versioned-event-schemas-flow-nghiep-vu.drawio))*
+
 ## Lợi ích kinh doanh
 
 - **Các mảng nghiệp vụ có thể phát triển độc lập, không sợ làm hỏng nhau** — mỗi bên chỉ cần tuân

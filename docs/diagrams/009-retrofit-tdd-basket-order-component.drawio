@@ -1,0 +1,48 @@
+<mxfile host="Electron" agent="5.0">
+  <diagram id="009-component" name="Kiến trúc thành phần — quy tắc tính tiền đã bảo vệ">
+    <mxGraphModel dx="1300" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="420" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" value="Basket.AddItem và Order.PlaceFrom — mỗi quy tắc đã có unit test bảo vệ từ trước" vertex="1">
+          <mxGeometry height="26" width="1100" x="30" y="-9" as="geometry" />
+        </mxCell>
+
+        <mxCell id="basket" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" value="Basket.AddItem (Baskets.Api)" vertex="1">
+          <mxGeometry height="220" width="380" x="30" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="r1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="FR-001: Từ chối quantity &lt; 1 &#xa;— BasketLineMergeTests.Rejects_AQuantityBelowOne" vertex="1">
+          <mxGeometry height="50" width="340" x="50" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="r2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="FR-002: Giữ giá đã chốt lúc thêm đầu&#xa;— AddItem_KeepsTheOriginallyCapturedPrice" vertex="1">
+          <mxGeometry height="50" width="340" x="50" y="155" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="FR-003: Gộp vào line đã có, không tạo trùng&#xa;— AddItem_IncrementsTheExistingLine" vertex="1">
+          <mxGeometry height="50" width="340" x="50" y="210" as="geometry" />
+        </mxCell>
+
+        <mxCell id="order" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" value="Order.PlaceFrom (Orders.Api)" vertex="1">
+          <mxGeometry height="220" width="380" x="450" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="r4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="FR-004: Từ chối order 0 dòng&#xa;— PlaceFrom_Rejects_AnEmptyLineSet" vertex="1">
+          <mxGeometry height="50" width="340" x="470" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="r5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="FR-005: Từ chối dòng invalid&#xa;(qty&lt;1 hoặc giá âm) — 2 test" vertex="1">
+          <mxGeometry height="50" width="340" x="470" y="155" as="geometry" />
+        </mxCell>
+        <mxCell id="r6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="FR-006: Tổng do hệ thống tính, không nhận từ caller&#xa;— MultipliesQuantityByUnitPrice, SumsEveryLine" vertex="1">
+          <mxGeometry height="50" width="340" x="470" y="210" as="geometry" />
+        </mxCell>
+
+        <mxCell id="commit" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" value="docs/engineering/test-first-commits.md — kỷ luật commit đi tiếp&#xa;(test đỏ trước hoặc cùng lúc implementation, không phải add sau)" vertex="1">
+          <mxGeometry height="60" width="800" x="30" y="310" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" parent="1" style="text;html=1;fontSize=10;fontColor=#b85450;whiteSpace=wrap;align=left;" value="KHÔNG có mã mới nào trong feature này — cả 6 quy tắc đã đúng và đã có test từ trước; feature chỉ xác nhận lại + đóng khoảng cách lịch sử commit." vertex="1">
+          <mxGeometry height="30" width="1140" x="30" y="390" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

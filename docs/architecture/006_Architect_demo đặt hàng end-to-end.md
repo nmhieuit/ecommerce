@@ -105,7 +105,12 @@ giây.
 
 ## 6. Sơ đồ
 
-Không có diagram riêng — luồng demo tái sử dụng đúng sơ đồ đã có ở
-[004-minimal-shopping-spa](../diagrams/004-minimal-shopping-spa-flow.drawio) (cùng bốn bước duyệt →
-giỏ hàng → thanh toán → xác nhận), chỉ thêm bước xác minh tenant và bằng chứng hop mô tả bằng bảng ở
-mục 4 — không cần một sơ đồ trực quan riêng.
+- Sơ đồ thành phần: [`docs/diagrams/006-e2e-order-demo-component.drawio`](../diagrams/006-e2e-order-demo-component.drawio)
+- Sơ đồ trình tự (chạy demo → walkthrough thật → verify tenant → thu bằng chứng hop từ OTel, gồm
+  nhánh downstream không khả dụng): [`docs/diagrams/006-e2e-order-demo-sequence.drawio`](../diagrams/006-e2e-order-demo-sequence.drawio)
+- Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
+  [`docs/diagrams/006-e2e-order-demo-flow-nghiep-vu.drawio`](../diagrams/006-e2e-order-demo-flow-nghiep-vu.drawio)
+
+Luồng mua sắm bốn bước mà demo dựa trên đó (duyệt → giỏ hàng → thanh toán → xác nhận) đã có sơ đồ
+riêng ở [004-minimal-shopping-spa](../diagrams/004-minimal-shopping-spa-sequence.drawio) — sơ đồ trình
+tự ở đây chỉ thêm phần xác minh tenant và bằng chứng hop mà 004 không có.

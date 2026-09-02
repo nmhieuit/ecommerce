@@ -36,6 +36,8 @@ dùng tạm.
    đó ở đâu ra" thay đổi — toàn bộ cách thông tin đó đi theo yêu cầu và cách dữ liệu được bảo vệ giữ
    nguyên không đổi.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/003-stub-identity-tenant-context-flow-nghiep-vu.drawio`](../diagrams/003-stub-identity-tenant-context-flow-nghiep-vu.drawio))*
+
 ## Điều đặc biệt: đã kiểm chứng bằng cách rà soát toàn bộ mã nguồn, không chỉ vài ví dụ
 
 Đội đã quét toàn bộ mã nguồn để xác nhận **không có một nơi nào** trong hệ thống có thể chạm tới dữ

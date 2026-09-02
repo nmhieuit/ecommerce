@@ -38,6 +38,8 @@ diện mua sắm — và **chỉ báo "xong" khi mọi thứ thực sự sẵn s
    không khởi động được, lệnh báo lỗi rõ ràng, nêu đúng tên thành phần gặp vấn đề — không bao giờ báo
    "thành công" trong khi thực ra có thứ gì đó chưa hoạt động.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/005-one-command-local-run-flow-nghiep-vu.drawio`](../diagrams/005-one-command-local-run-flow-nghiep-vu.drawio))*
+
 ## Điều đặc biệt: đã đo bằng số liệu thật, không phải ước lượng
 
 Đội đã chạy đi chạy lại và đo thời gian thật: lần chạy đầu tiên (khi mọi thứ còn phải tải/dựng từ đầu)

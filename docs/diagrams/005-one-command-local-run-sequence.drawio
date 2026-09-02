@@ -1,0 +1,100 @@
+<mxfile host="65bd71144e">
+    <diagram id="005-sequence" name="Trình tự — một lệnh khởi động toàn bộ stack">
+        <mxGraphModel dx="1232" dy="448" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="560" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Trình tự — một lệnh, build → health-gate từng thành phần → chỉ báo thành công khi mọi thứ sẵn sàng" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1050" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_dev" value="Contributor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="160" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_compose" value="docker compose" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="60" width="200" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_stack" value="Mọi container (DB, migrate,&#xa;service, BFF, gateway, storefront)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="55" width="320" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="110" y="110" as="sourcePoint"/>
+                        <mxPoint x="110" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="l2" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="430" y="110" as="sourcePoint"/>
+                        <mxPoint x="430" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="l3" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="840" y="110" as="sourcePoint"/>
+                        <mxPoint x="840" y="520" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a1" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="110" y="150" as="sourcePoint"/>
+                        <mxPoint x="430" y="150" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a1t" value="1. ./scripts/up.ps1 (copy .env trước đó)" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="140" y="132" width="350" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a2" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="430" y="200" as="sourcePoint"/>
+                        <mxPoint x="840" y="200" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a2t" value="2. Build image, start DB, chờ healthy" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="182" width="400" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a3" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="430" y="250" as="sourcePoint"/>
+                        <mxPoint x="840" y="250" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a3t" value="3. Chạy init container migrate + seed catalog, exit 0" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="232" width="450" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a4" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="430" y="300" as="sourcePoint"/>
+                        <mxPoint x="840" y="300" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a4t" value="4. Start 4 domain service, chờ /health/ready" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="282" width="400" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a5" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="430" y="350" as="sourcePoint"/>
+                        <mxPoint x="840" y="350" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a5t" value="5. Start BFF → Gateway → Storefront, mỗi bước chờ healthy" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="332" width="480" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="d1" value="Mọi thành&#xa;phần healthy?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="765" y="390" width="150" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="a6" style="endArrow=block;html=1;fontSize=10;fontColor=#2d6a2d;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="840" y="490" as="sourcePoint"/>
+                        <mxPoint x="110" y="490" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a6t" value="6a. Có → lệnh trả về thành công, mở http://localhost:4173" style="text;html=1;fontSize=10;fontColor=#2d6a2d;" parent="1" vertex="1">
+                    <mxGeometry x="140" y="472" width="500" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a7t" value="6b. Không → lệnh THẤT BẠI, nêu đúng tên thành phần chưa sẵn sàng" style="text;html=1;fontSize=10;fontColor=#b85450;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="470" width="500" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

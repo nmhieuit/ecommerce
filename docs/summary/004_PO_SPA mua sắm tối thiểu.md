@@ -36,6 +36,8 @@ thanh toán.
 6. **Nếu hệ thống phía sau gặp sự cố** ở bất kỳ bước nào, người mua sắm luôn thấy thông báo lỗi rõ
    ràng trong vòng vài giây, không bao giờ bị treo màn hình hay gặp lỗi khó hiểu.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/004-minimal-shopping-spa-flow-nghiep-vu.drawio`](../diagrams/004-minimal-shopping-spa-flow-nghiep-vu.drawio))*
+
 ## Điều đặc biệt: đã kiểm chứng bằng kiểm thử trình duyệt thật, không chỉ kiểm thử mã nguồn
 
 Toàn bộ luồng bốn bước trên đã được kiểm thử bằng cách **điều khiển một trình duyệt thật** để đi qua

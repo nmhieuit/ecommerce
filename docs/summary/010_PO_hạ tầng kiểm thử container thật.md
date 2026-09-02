@@ -33,6 +33,8 @@ tầng còn lại mà nền tảng đã cam kết dùng nhưng chưa có tính n
 4. **Nếu hàng đợi tin nhắn "chết" đột ngột giữa lúc đang kiểm tra**, bài kiểm tra liên quan thất bại
    trong thời gian giới hạn rõ ràng — không bao giờ treo vô thời hạn chờ đợi một thứ đã không còn.
 
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/010-testcontainers-integration-tests-flow-nghiep-vu.drawio`](../diagrams/010-testcontainers-integration-tests-flow-nghiep-vu.drawio))*
+
 ## Lợi ích kinh doanh
 
 - **Độ tin cậy của bộ kiểm tra tự động cao hơn hẳn** — một bài kiểm tra "xanh" thực sự có nghĩa là
