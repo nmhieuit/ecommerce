@@ -1,1 +1,3 @@
-{"feature_directory":"specs/014-identity-server-auth"}
+{
+  "feature_directory": "specs/015-deny-by-default-authz"
+}
