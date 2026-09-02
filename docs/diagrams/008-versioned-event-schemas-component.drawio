@@ -1,0 +1,50 @@
+<mxfile host="Electron" agent="5.0">
+  <diagram id="008-versioned-event-schemas" name="Hợp đồng event có version — OrderPlaced, BasketCheckedOut">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="650" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" value="Hợp đồng event có version — shared/EventContracts (chưa đấu nối broker thật)" vertex="1">
+          <mxGeometry height="26" width="1200" x="30" y="-9" as="geometry" />
+        </mxCell>
+
+        <mxCell id="contracts_grp" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" value="shared/EventContracts — nguồn hợp đồng duy nhất (ADR-0005)" vertex="1">
+          <mxGeometry height="220" width="500" x="400" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="op_v1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="OrderPlaced v1&#xa;(BẤT BIẾN sau khi công bố)" vertex="1">
+          <mxGeometry height="60" width="220" x="430" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="op_v2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="OrderPlaced v2&#xa;(nếu có breaking change,&#xa;v1 vẫn hoạt động trong&#xa;cửa sổ deprecation)" vertex="1">
+          <mxGeometry height="70" width="220" x="430" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="bc_v1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="BasketCheckedOut v1&#xa;(BẤT BIẾN sau khi công bố)" vertex="1">
+          <mxGeometry height="60" width="220" x="660" y="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="check" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" value="Compatibility check&#xa;(SchemaImmutabilityTests)&#xa;— chặn merge nếu breaking&#xa;change thiếu version mới" vertex="1">
+          <mxGeometry height="80" width="440" x="450" y="250" as="geometry" />
+        </mxCell>
+
+        <mxCell id="producer" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="Producer (tương lai)&#xa;ví dụ Orders.Api&#xa;— tham chiếu schema,&#xa;KHÔNG tự định nghĩa riêng" vertex="1">
+          <mxGeometry height="100" width="230" x="30" y="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="consumer_old" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="Consumer cũ (tương lai)&#xa;chỉ biết schema v1&#xa;— TOLERANT READER: bỏ&#xa;qua field lạ, không sập" vertex="1">
+          <mxGeometry height="100" width="230" x="1000" y="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" edge="1" parent="1" source="producer" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="contracts_grp" value="tham chiếu (không copy)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="contracts_grp" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="consumer_old" value="đọc event (kể cả field mới&#xa;chưa biết tới)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" parent="1" style="text;html=1;fontSize=10;fontColor=#b85450;whiteSpace=wrap;align=left;" value="Phạm vi feature này CHỈ dừng ở tầng hợp đồng — Producer/Consumer trên sơ đồ là minh hoạ vai trò tương lai, chưa có wiring&#xa;RabbitMQ/MassTransit thật nào trong hệ thống đang chạy (research.md Decision 1; nhất quán với ADR-0011)." vertex="1">
+          <mxGeometry height="40" width="1000" x="150" y="400" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

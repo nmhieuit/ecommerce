@@ -41,7 +41,7 @@ sách dựa vào ý thức tự giác.
 6. **Hệ thống tự động kiểm tra lại từ đầu** — vẫn không cần ai nhắc hay bấm nút "kiểm tra lại" thủ
    công. Nếu lần này đạt, việc chặn được gỡ bỏ ngay trong đúng một lượt kiểm tra tiếp theo.
 
-*(Xem sơ đồ minh hoạ: [`docs/diagrams/quality-gate-flow-nghiep-vu.drawio`](../diagrams/quality-gate-flow-nghiep-vu.drawio))*
+*(Xem sơ đồ minh hoạ: [`docs/diagrams/013-quality-gate-flow-nghiep-vu.drawio`](../diagrams/013-quality-gate-flow-nghiep-vu.drawio))*
 
 ## Điều đặc biệt: không có "đường vòng" cho bất kỳ ai
 
@@ -69,5 +69,5 @@ không phải bị ẩn, mà thực sự không tồn tại trong luồng thao t
   hạ tầng vận hành chính thức lâu dài* là một công việc riêng, chưa nằm trong phạm vi đã hoàn thành.
 - Một số điều chỉnh kỹ thuật đã được xác minh hoạt động tốt trong quá trình thử nghiệm nhưng **hiện
   chưa được đưa chính thức vào nhánh mã nguồn chính** — chi tiết dành cho đội kỹ thuật, xem
-  [`docs/architecture/quality-gate-architecture.md`](../architecture/quality-gate-architecture.md).
+  [`docs/architecture/013_Architect_cổng chất lượng CI.md`](../architecture/013_Architect_cổng%20chất%20lượng%20CI.md).
   Điều này không ảnh hưởng tới việc cơ chế chặn merge đã hoạt động thật trên các thay đổi thật.
