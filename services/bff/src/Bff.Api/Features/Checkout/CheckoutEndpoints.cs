@@ -1,4 +1,5 @@
 using Bff.Api.DownstreamClients;
+using Identity;
 
 namespace Bff.Api.Features.Checkout;
 
@@ -83,7 +84,8 @@ public static partial class CheckoutEndpoints
             .Produces<OrderConfirmationResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status502BadGateway)
-            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout)
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         return app;
     }

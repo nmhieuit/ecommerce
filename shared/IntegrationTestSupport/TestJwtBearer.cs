@@ -27,15 +27,31 @@ public static class TestJwtBearer
 {
     private const string SigningKey = "integration-test-jwt-signing-key-at-least-32-bytes!!";
 
-    /// <summary>Issues a token accepted by <see cref="UseTestJwtBearer"/>-configured hosts.</summary>
-    public static string CreateToken(string subject = "test-user", DateTime? expires = null)
+    /// <summary>
+    /// Issues a token accepted by <see cref="UseTestJwtBearer"/>-configured hosts.
+    /// </summary>
+    /// <param name="includeApiScope">
+    /// 015-deny-by-default-authz: whether the token carries a <c>scope</c> claim of
+    /// <c>Identity.AuthorizationPolicies.RequiredApiScopeValue</c> ("ecommerce-api") — the claim the
+    /// <c>ApiScope</c> policy requires once its toggle is on. Defaults to <see langword="true"/> so
+    /// every existing call site (via <see cref="UseTestBearerToken"/>) keeps producing a token that
+    /// passes the policy unchanged; pass <see langword="false"/> only to build the one negative case
+    /// the policy exists to reject (spec Test Scenario 2).
+    /// </param>
+    public static string CreateToken(string subject = "test-user", DateTime? expires = null, bool includeApiScope = true)
     {
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey)),
             SecurityAlgorithms.HmacSha256);
 
+        List<Claim> claims = [new Claim(JwtRegisteredClaimNames.Sub, subject)];
+        if (includeApiScope)
+        {
+            claims.Add(new Claim("scope", "ecommerce-api"));
+        }
+
         var token = new JwtSecurityToken(
-            claims: [new Claim(JwtRegisteredClaimNames.Sub, subject)],
+            claims: claims,
             expires: expires ?? DateTime.UtcNow.AddMinutes(5),
             signingCredentials: credentials);
 
@@ -66,11 +82,12 @@ public static class TestJwtBearer
     }
 
     /// <summary>Attaches a fresh valid token to every request this client sends.</summary>
-    public static HttpClient UseTestBearerToken(this HttpClient client, string subject = "test-user")
+    public static HttpClient UseTestBearerToken(this HttpClient client, string subject = "test-user", bool includeApiScope = true)
     {
         ArgumentNullException.ThrowIfNull(client);
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CreateToken(subject));
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", CreateToken(subject, includeApiScope: includeApiScope));
         return client;
     }
 }

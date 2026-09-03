@@ -62,6 +62,52 @@ public class IdentityValidationExtensionsTests
         Assert.Equal("ecommerce-api", jwtOptions.Audience);
     }
 
+    /// <summary>
+    /// 015-deny-by-default-authz, research.md Decision 2: every route declares this named policy
+    /// explicitly (on top of the FallbackPolicy safety net) — it must exist and carry the same
+    /// requirement <see cref="AuthenticationFallbackPolicy"/> does.
+    /// </summary>
+    [Fact]
+    public async Task AddIdentityValidation_RegistersTheApiScopeNamedPolicy()
+    {
+        var services = new ServiceCollection();
+        services.AddIdentityValidation(BuildConfiguration());
+
+        using var provider = services.BuildServiceProvider();
+        var policyProvider = provider.GetRequiredService<IAuthorizationPolicyProvider>();
+
+        var policy = await policyProvider.GetPolicyAsync(AuthorizationPolicies.ApiScope);
+
+        Assert.NotNull(policy);
+        Assert.Contains(policy.Requirements, requirement => requirement is RequireApiScopeRequirement);
+    }
+
+    [Fact]
+    public void AddIdentityValidation_RegistersTheApiScopeAuthorizationHandler()
+    {
+        var services = new ServiceCollection();
+        services.AddIdentityValidation(BuildConfiguration());
+
+        using var provider = services.BuildServiceProvider();
+
+        Assert.Contains(
+            provider.GetServices<IAuthorizationHandler>(),
+            handler => handler is RequireApiScopeAuthorizationHandler);
+    }
+
+    /// <summary>research.md Decision 6: a 403 gets the same clear-body treatment 401 already has.</summary>
+    [Fact]
+    public void AddIdentityValidation_RegistersClearForbiddenResponseEvents_AsTheResultHandler()
+    {
+        var services = new ServiceCollection();
+        services.AddIdentityValidation(BuildConfiguration());
+
+        using var provider = services.BuildServiceProvider();
+
+        Assert.IsType<ClearForbiddenResponseEvents>(
+            provider.GetRequiredService<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler>());
+    }
+
     private static IConfiguration BuildConfiguration() =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>

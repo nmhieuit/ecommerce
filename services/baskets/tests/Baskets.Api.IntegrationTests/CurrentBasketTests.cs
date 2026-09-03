@@ -141,6 +141,25 @@ public class CurrentBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlS
     }
 
     /// <summary>
+    /// 015-deny-by-default-authz spec US3, contracts/client-server-validation-parity-contract.md:
+    /// the SPA never sends a price at all (it is resolved server-side from the catalog), so this
+    /// rule has no client-side counterpart to bypass — the server is the only place it is enforced,
+    /// and this proves it independently of any client.
+    /// </summary>
+    [Fact]
+    public async Task AddItem_Rejects_ANegativeUnitPrice()
+    {
+        await using var factory = await CreateFactoryAsync("basket-current-negative-price");
+        var client = CreateClient(factory, Shopper);
+
+        var response = await client.PostAsJsonAsync(
+            "/baskets/current/items",
+            new { productId = Notebook, quantity = 1, unitPrice = -0.01m });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>
     /// Constitution Principle V, extended to the caller: a request that did not come through the
     /// gateway resolved nobody, and must not be handed somebody's basket. There is no default
     /// caller to fall back to.

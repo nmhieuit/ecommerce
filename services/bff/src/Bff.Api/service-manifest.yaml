@@ -69,6 +69,7 @@ endpoints:
       Product listing, shaped from the products service (spec FR-004; the proxy path Test
       Scenario 1 proves). Returns an empty items envelope for an empty catalog, never 404.
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
+    authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: products
     latency:
       p95: 300ms
@@ -76,6 +77,7 @@ endpoints:
   - route: GET /bff/baskets/{basketId}
     purpose: Single basket, shaped from the baskets service. 404 when no such basket exists.
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
+    authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: baskets
     latency:
       p95: 300ms
@@ -83,6 +85,7 @@ endpoints:
   - route: GET /bff/orders/{orderId}
     purpose: Single order, shaped from the orders service. 404 when no such order exists.
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
+    authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: orders
     latency:
       p95: 300ms
@@ -90,6 +93,7 @@ endpoints:
   - route: GET /bff/parties/{partyId}
     purpose: Single party (customer), shaped from the parties service. 404 when no such party exists.
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
+    authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: parties
     latency:
       p95: 300ms
@@ -97,6 +101,7 @@ endpoints:
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check
+    authorization: anonymous
     latency:
       p95: 150ms
       p99: 500ms
@@ -107,6 +112,7 @@ endpoints:
       ProblemDetails per request (FR-006, US3) rather than pulling every BFF instance out of
       rotation, including for routes that never touch the failing service.
     authentication: anonymous
+    authorization: anonymous
     latency:
       p95: 150ms
       p99: 500ms
@@ -115,6 +121,7 @@ endpoints:
       Generated OpenAPI document (research.md Decision 6) consumed by the frontend's Orval codegen
       (ADR-0004).
     authentication: anonymous   # 014-identity-server-auth: deliberate AllowAnonymous — a build-time codegen fetch, not a logged-in user; scope is what restricts this to Development, not auth
+    authorization: anonymous
     environments: [development]
     latency:
       p95: 300ms

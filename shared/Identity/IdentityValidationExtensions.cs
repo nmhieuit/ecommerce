@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +26,13 @@ public static class IdentityValidationExtensions
     /// distinguishable response <see cref="ClearUnauthorizedResponseEvents"/> writes, not the
     /// framework's default empty-body 401 (spec FR-006, US3).
     /// </summary>
+    /// <remarks>
+    /// 015-deny-by-default-authz (research.md Decision 1/2/5/6): also registers the toggle-gated
+    /// <see cref="AuthorizationPolicies.ApiScope"/> named policy every route declares explicitly,
+    /// the <see cref="RequireApiScopeAuthorizationHandler"/> that evaluates it (and the upgraded
+    /// <see cref="AuthenticationFallbackPolicy"/>), and <see cref="ClearForbiddenResponseEvents"/>
+    /// for a 403 rejection as clear as the 401 one above.
+    /// </remarks>
     public static IServiceCollection AddIdentityValidation(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -50,8 +59,18 @@ public static class IdentityValidationExtensions
                 ClearUnauthorizedResponseEvents.Configure(jwtOptions);
             });
 
+        services.Configure<AuthorizationToggleOptions>(
+            configuration.GetSection(AuthorizationToggleOptions.ConfigSectionName));
+        services.AddSingleton<IAuthorizationHandler, RequireApiScopeAuthorizationHandler>();
+        services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, ClearForbiddenResponseEvents>();
+
         services.AddAuthorization(authorizationOptions =>
-            authorizationOptions.FallbackPolicy = AuthenticationFallbackPolicy.Build());
+        {
+            authorizationOptions.FallbackPolicy = AuthenticationFallbackPolicy.Build();
+            authorizationOptions.AddPolicy(AuthorizationPolicies.ApiScope, policy => policy
+                .RequireAuthenticatedUser()
+                .AddRequirements(new RequireApiScopeRequirement()));
+        });
 
         return services;
     }

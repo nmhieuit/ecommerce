@@ -1,4 +1,5 @@
 using Bff.Api.DownstreamClients;
+using Identity;
 
 namespace Bff.Api.Features.Products;
 
@@ -33,7 +34,8 @@ public static class ProductsEndpoints
             // possible outcome. Inferred metadata covers the success case only.
             .Produces<ProductListResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status502BadGateway)
-            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout)
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         return app;
     }

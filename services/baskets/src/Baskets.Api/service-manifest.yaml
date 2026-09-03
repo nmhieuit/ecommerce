@@ -43,18 +43,21 @@ endpoints:
       Returns a single basket. The downstream surface the BFF's basket route proxies
       (contracts/downstream-openapi.yaml). Unknown id returns 404, never an empty 200.
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
+    authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     latency:
       p95: 150ms
       p99: 500ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check
+    authorization: anonymous
     latency:
       p95: 150ms
       p99: 500ms
   - route: GET /health/ready
     purpose: Readiness probe. Gates traffic on this service's own database being reachable.
     authentication: anonymous
+    authorization: anonymous
     latency:
       p95: 150ms
       p99: 500ms
