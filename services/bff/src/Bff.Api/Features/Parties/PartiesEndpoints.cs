@@ -1,4 +1,5 @@
 using Bff.Api.DownstreamClients;
+using Identity;
 
 namespace Bff.Api.Features.Parties;
 
@@ -32,7 +33,8 @@ public static class PartiesEndpoints
             .Produces<PartyResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status502BadGateway)
-            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout)
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         return app;
     }

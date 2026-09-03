@@ -1,3 +1,4 @@
+using Identity;
 using Microsoft.EntityFrameworkCore;
 using Products.Api.Data;
 
@@ -21,7 +22,8 @@ public static class CatalogEndpoints
                 .AsNoTracking()
                 .OrderBy(product => product.Name)
                 .Select(product => new ProductResponse(product.Id, product.Name, product.Price))
-                .ToListAsync(cancellationToken));
+                .ToListAsync(cancellationToken))
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         return app;
     }

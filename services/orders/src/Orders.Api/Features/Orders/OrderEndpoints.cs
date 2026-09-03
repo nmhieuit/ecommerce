@@ -1,3 +1,4 @@
+using Identity;
 using Microsoft.EntityFrameworkCore;
 using Orders.Api.Data;
 using Tenancy;
@@ -26,7 +27,8 @@ public static class OrderEndpoints
                 .SingleOrDefaultAsync(cancellationToken);
 
             return order is null ? Results.NotFound() : Results.Ok(order);
-        });
+        })
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         // Spec FR-022: creates an order from the lines it is sent. The total is computed here and
         // is deliberately not a field of the request — see Order.PlaceFrom.
@@ -72,7 +74,8 @@ public static class OrderEndpoints
             var response = new OrderResponse(order.Id, order.PlacedAtUtc, order.Total, order.TenantId);
 
             return Results.Created($"/orders/{order.Id}", response);
-        });
+        })
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         return app;
     }

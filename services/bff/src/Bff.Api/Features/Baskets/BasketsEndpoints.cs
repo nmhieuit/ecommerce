@@ -1,4 +1,5 @@
 using Bff.Api.DownstreamClients;
+using Identity;
 
 namespace Bff.Api.Features.Baskets;
 
@@ -31,7 +32,8 @@ public static class BasketsEndpoints
             .WithName("getCurrentBasket")
             .Produces<BasketResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status502BadGateway)
-            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout)
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         group.MapPost("/basket/items", async (
                 AddBasketItemRequest request,
@@ -72,7 +74,8 @@ public static class BasketsEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status502BadGateway)
-            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout)
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         // Kept from 002: the read-by-id route. Its shape now carries line items and a total.
         group.MapGet("/baskets/{basketId:guid}", async (
@@ -93,7 +96,8 @@ public static class BasketsEndpoints
             .Produces<BasketResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status502BadGateway)
-            .ProducesProblem(StatusCodes.Status504GatewayTimeout);
+            .ProducesProblem(StatusCodes.Status504GatewayTimeout)
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         return app;
     }

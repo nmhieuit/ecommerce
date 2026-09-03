@@ -1,3 +1,4 @@
+using Identity;
 using Microsoft.EntityFrameworkCore;
 using Parties.Api.Data;
 
@@ -25,7 +26,8 @@ public static class PartyEndpoints
                 .SingleOrDefaultAsync(cancellationToken);
 
             return party is null ? Results.NotFound() : Results.Ok(party);
-        });
+        })
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         return app;
     }

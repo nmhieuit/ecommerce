@@ -1,4 +1,5 @@
 using Baskets.Api.Data;
+using Identity;
 using Microsoft.EntityFrameworkCore;
 using Tenancy;
 
@@ -29,7 +30,8 @@ public static class BasketEndpoints
             var basket = await FindOrCreateCurrentAsync(dbContext, caller, cancellationToken);
 
             return Results.Ok(ToResponse(basket));
-        });
+        })
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         app.MapPost("/baskets/current/items", async (
             AddBasketItemRequest request,
@@ -56,7 +58,8 @@ public static class BasketEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(ToResponse(basket));
-        });
+        })
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         app.MapPost("/baskets/current/clear", async (
             BasketsDbContext dbContext,
@@ -76,7 +79,8 @@ public static class BasketEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Results.NoContent();
-        });
+        })
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         // Kept from 002: the read-by-id the BFF's original basket route proxies. Its shape now
         // carries line items and a total like every other basket response.
@@ -91,7 +95,8 @@ public static class BasketEndpoints
                 .SingleOrDefaultAsync(entity => entity.Id == basketId, cancellationToken);
 
             return basket is null ? Results.NotFound() : Results.Ok(ToResponse(basket));
-        });
+        })
+            .RequireAuthorization(AuthorizationPolicies.ApiScope);
 
         return app;
     }
