@@ -1,0 +1,115 @@
+<mxfile host="65bd71144e">
+    <diagram id="deny-by-default-authz-component" name="Kiến trúc thành phần — chính sách ApiScope + scanner chặn build">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kiến trúc thành phần — chính sách phân quyền ApiScope (toggle-gated) và scanner chặn build" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1200" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="client" value="Client&#xa;(SPA thật hoặc curl thử nghiệm)&#xa;Gửi request kèm Bearer token" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="80" width="240" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="identity_grp" value="shared/Identity — chính sách &quot;ApiScope&quot; dùng chung" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="60" width="520" height="340" as="geometry"/>
+                </mxCell>
+                <mxCell id="policies" value="AuthorizationPolicies&#xa;tên &quot;ApiScope&quot; · giá trị scope bắt buộc &quot;ecommerce-api&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="95" width="480" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="toggle" value="AuthorizationToggleOptions&#xa;cờ AuthorizationRequireApiScope (FeatureToggles), mặc định false" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="145" width="480" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="requirement" value="RequireApiScopeRequirement — yêu cầu đánh dấu (marker)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="195" width="480" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="handler" value="RequireApiScopeAuthorizationHandler&#xa;đọc IOptionsMonitor mỗi request → toggle TẮT: Succeed() luôn; toggle BẬT: chỉ Succeed() nếu claim &quot;scope&quot; chứa &quot;ecommerce-api&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="240" width="480" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="forbidden" value="ClearForbiddenResponseEvents&#xa;403 kèm thân JSON rõ ràng (không phải 403 rỗng mặc định)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="310" width="480" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="fallback_note" value="AuthenticationFallbackPolicy (nâng cấp 014) = RequireAuthenticatedUser() + RequireApiScopeRequirement — lưới an toàn cho route lỡ quên khai báo" style="text;html=1;fontSize=9;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="355" width="480" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="gateway" value="Gateway.Api&#xa;ToggleGatedAuthenticationExtensions — lặp lại đăng ký&#xa;toggle/handler/policy (không gọi được AddIdentityValidation)&#xa;FallbackPolicy áp dụng cho MapReverseProxy() catch-all" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="70" width="330" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff" value="Bff.Api&#xa;AddIdentityValidation() + 5 file Features/*/Endpoints.cs&#xa;mỗi route: .RequireAuthorization(AuthorizationPolicies.ApiScope)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="180" width="330" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="domain" value="Baskets / Orders / Parties / Products.Api&#xa;AddIdentityValidation() + mỗi route trong &#xa;*Endpoints.cs: .RequireAuthorization(ApiScope)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="280" width="330" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="scanner" value="AuthorizationPolicyDeclaredScanner&#xa;(tests/CrossServiceIsolation.Tests)&#xa;Đọc mã nguồn tĩnh mọi *Endpoints.cs — xác nhận mỗi&#xa;Map* có .RequireAuthorization(...)/.AllowAnonymous();&#xa;quét IConsumer&lt;T&gt; toàn repo phòng ngừa" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="480" width="520" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="prgate" value="PR Gate hiện có&#xa;(013-sonarqube-merge-blocker)&#xa;build → unit → integration → contract → SonarQube" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="480" width="330" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="blocked" value="Route/handler thiếu khai báo →&#xa;Build/PR THẤT BẠI — không merge được" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="590" width="330" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="Bearer token" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="client" target="gateway" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="150" y="40"/>
+                            <mxPoint x="1165" y="40"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="gateway" target="identity_grp" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="940" y="115"/>
+                            <mxPoint x="940" y="115"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="bff" target="identity_grp" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="970" y="200"/>
+                            <mxPoint x="970" y="200"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="domain" target="identity_grp" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="930" y="325"/>
+                            <mxPoint x="930" y="325"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e5" value="đọc mã nguồn (đứng ngoài, không khởi động service nào)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;fontColor=#8a7c1f;" parent="1" source="scanner" target="bff" edge="1">
+                    <mxGeometry x="-0.215" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="960" y="535"/>
+                            <mxPoint x="960" y="220"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="scanner" target="domain" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="690" y="460"/>
+                            <mxPoint x="1165" y="460"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e7" value="chạy trong" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="scanner" target="prgate" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="660" y="440"/>
+                            <mxPoint x="1080" y="440"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e8" value="nếu tìm thấy vi phạm" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;fontColor=#b85450;" parent="1" source="prgate" target="blocked" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
