@@ -1,0 +1,2691 @@
+{
+  "info": {
+    "_postman_id": "3a91e6d4-2b5c-4f81-a6de-7c0f8b3d5e42",
+    "name": "Ecommerce - Local (v2 — xác thực + phân quyền)",
+    "description": "Toàn bộ mặt tiếp xúc HTTP của hệ thống, gọi được ngay sau khi import mà không phải tự thêm header hay tự dán id.\n\n## Chuẩn bị\n\nStack local phải đang chạy: `./scripts/local-up.ps1` (hoặc `./scripts/local-up.sh`). Sau khi import, chọn environment **Ecommerce - Local** ở góc trên bên phải Postman — không chọn thì mọi biến `{{...}}` đều rỗng và request nào cũng hỏng.\n\n## Quy tắc header — đọc trước khi sửa bất kỳ request nào\n\nĐây là chỗ dễ làm sai nhất, và làm sai thì collection vẫn chạy nhưng chứng minh sai điều:\n\n- Request **đi qua gateway** (`{{gatewayUrl}}`) **không** mang `X-Tenant-Id` hay `X-Subject-Id`. Gateway tự phân giải danh tính và ghi đè mọi giá trị client gửi lên. Gắn header vào sẽ tạo cảm giác sai rằng client quyết định được tenant, trong khi đó chính là điều hệ thống sinh ra để chặn.\n- Request **gọi thẳng BFF hoặc domain service** **bắt buộc** mang cả hai header. Thiếu tenant thì domain service trả 500; thiếu subject thì các endpoint theo người mua trả 500. BFF chỉ chuyển tiếp chứ không tự phân giải, nên gọi thẳng BFF cũng phải tự mang.\n- `X-Correlation-Id` được pre-request script ở cấp collection tự sinh cho mọi request, để khi cần thì tìm lại đúng request đó trong log của các service.\n\n## Cách chạy\n\nFolder **00 - Smoke Flow** chạy tuần tự từ trên xuống bằng Collection Runner và kết thúc bằng một đơn hàng thật. Nó tự dọn giỏ ở bước đầu nên chạy lại bao nhiêu lần cũng cho cùng kết quả.\n\nCác folder còn lại xếp theo master feature khớp với `docs/test-cases-2026-08-21.xlsx`. Mỗi request ghi mã test case tương ứng trong phần mô tả, ví dụ `[TC-PRD-011]`, để tra ngược về bảng test case.\n\n## Tắt database để thử\n\nCác request **Health ready** được viết để đúng trong cả hai trạng thái: 200 khi database sống, 503 kèm check `self-database` là Unhealthy khi bạn tắt database của service đó. Đây là cách nhanh nhất để tự tay kiểm chứng nhóm test case TC-BSK-029, TC-ORD-024, TC-PTY-005, TC-PRD-008. Các kịch bản đầy đủ nằm trong `docs/local-testing.md`.\n\n## Đổi sang staging\n\nKhông request nào hardcode host hay số cổng. Duplicate environment này, điền lại các biến URL là chạy được. Lưu ý staging thường chỉ publish gateway: khi đó các folder gọi thẳng service sẽ hỏng, và đó là đúng kỳ vọng chứ không phải lỗi của collection.\n\n## Xác thực & phân quyền (v2 — cập nhật theo 014-identity-server-auth và 015-deny-by-default-authz)\n\nHai tính năng này đổi hoàn toàn cách gọi API thật so với bản collection gốc (viết từ thời Phase 1 stub identity):\n\n- **014**: mọi service (gateway, BFF, cả 4 domain service) tự xác thực một access token JWT độc lập — không có token hợp lệ = `401`, bất kể header tenant/subject có hay không.\n- **015**: thêm một lớp phân quyền theo scope — token hợp lệ nhưng thiếu đúng claim `scope=ecommerce-api` = `403`.\n\nCollection này gắn sẵn **Authorization: Bearer {{accessToken}} ở cấp COLLECTION** — mọi request kế thừa mặc định, không cần tự thêm header Authorization ở từng nơi. Chạy folder **00 - Xác thực & phân quyền** đầu tiên (trước cả 00 - Smoke Flow) để lấy token thật — Collection Runner sẽ tự làm điều này nếu bạn chạy từ trên xuống.\n\n**Quy tắc header cũ (X-Tenant-Id/X-Subject-Id) vẫn giữ nguyên không đổi** — xem mục \"Quy tắc header\" phía trên. Token và header là hai lớp độc lập: token quyết định \"được phép gọi hay không\", header quyết định \"gọi thay cho tenant/người mua nào\" khi gọi thẳng service. Thiếu token thì không tới được bước kiểm tra header (401 chặn trước); có token nhưng thiếu header (khi gọi thẳng service) vẫn lỗi y hệt collection gốc.\n\n**Cần một tài khoản thử nghiệm trước khi dùng lần đầu** — hệ thống hiện KHÔNG seed sẵn user demo nào và KHÔNG có API đăng ký công khai (cố ý, xem specs/014-identity-server-auth/spec.md Assumptions và constitution Principle VI). Đọc mô tả đầy đủ của request **\"Lấy access token (đủ scope)\"** trong folder 00 để biết cách tạo, một lần duy nhất.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00 - Xác thực & phân quyền (Get Token)",
+      "description": "Lấy access token thật từ máy chủ định danh trước khi chạy bất kỳ folder nào khác — Bearer auth ở cấp collection đọc biến {{accessToken}} mà folder này điền vào. Bốn request theo đúng thứ tự: lấy token đủ quyền, xác nhận không token thì bị chặn 401, lấy một token thiếu quyền, xác nhận token đó bị chặn 403. Tự đặt auth = No Auth ở cấp folder này vì bản thân việc LẤY token không cần token.",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "01 Lấy access token (đủ scope ecommerce-api)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Host",
+                "value": "{{identityInternalHost}}",
+                "description": "BẮT BUỘC — xem phần \"Vì sao có header Host\" trong mô tả bên dưới. Không xoá header này."
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{tokenClientId}}", "type": "text" },
+                { "key": "client_secret", "value": "{{tokenClientSecret}}", "type": "text" },
+                { "key": "username", "value": "{{testUsername}}", "type": "text" },
+                { "key": "password", "value": "{{testPassword}}", "type": "text" },
+                { "key": "scope", "value": "openid profile ecommerce-api", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{identityUrl}}/connect/token",
+              "host": ["{{identityUrl}}"],
+              "path": ["connect", "token"]
+            },
+            "description": "Grant Resource Owner Password (ROPC) trên client test-only integration-test-ropc (services/identity/src/Identity.Api/Config.cs) — cách duy nhất lấy token tự động mà không cần luồng đăng nhập trình duyệt (UI đó chưa được xây, xem specs/014-identity-server-auth/spec.md Assumptions). Script lưu access_token vào {{accessToken}}, mọi request khác trong collection dùng ngay — không cần dán tay.\n\n**Chuẩn bị một lần trước khi dùng collection này lần đầu (KHÔNG có API đăng ký, KHÔNG có user demo nào được seed sẵn — cố ý, constitution Principle VI):**\n\n1. Đảm bảo stack local đang chạy và `identity-db` đã migrate (`./scripts/local-up.ps1`).\n2. Tạo một user thử nghiệm THẬT trong CSDL identity thật (không phải Testcontainers tạm thời của bộ test tự động) bằng đúng cơ chế `UserManager<ApplicationUser>.CreateAsync(...)` mà `services/identity/tests/Identity.Api.IntegrationTests/LoginIssuesTokenTests.cs` (hàm SeedUserAsync) đã dùng cho test — chỉ khác là chạy nhắm vào connection string thật (`ConnectionStrings:IdentityDb`, cổng 14334 cục bộ) thay vì CSDL Testcontainers tạm thời.\n3. Giá trị `{{testUsername}}`/`{{testPassword}}` trong environment đã đặt sẵn giá trị mặc định — đổi cả hai nếu bạn tạo user với thông tin khác.\n\n**Vì sao có header `Host: {{identityInternalHost}}` — đã kiểm chứng thật, không suy đoán:** `services/identity` không đặt `IssuerUri` cố định, nên Duende tự tính claim `iss` của token dựa trên header `Host` của request gọi tới nó. Gọi qua `{{identityUrl}}` (cổng publish ra host, `localhost:5205`) thì `iss` sẽ là `http://localhost:5205` — nhưng mọi service khác (`baskets`, `orders`, `parties`, `products`, `bff`, `gateway`) xác thực token dựa trên `Identity:Authority=http://identity-api:8080` (tên nội bộ Docker), nên chúng chờ đợi `iss=http://identity-api:8080` và từ chối token có `iss` khác — luôn `401`, kể cả với token hoàn toàn hợp lệ. Ghi đè header `Host` (kết nối vật lý vẫn qua `{{identityUrl}}`, chỉ đổi header) khiến Duende tính `iss=http://identity-api:8080`, khớp với mọi service — đã xác nhận bằng cách giải mã token và gọi thật `GET /baskets/current` lẫn `GET /bff/products`, cả hai đều `200`. Đây là cách sửa CHỈ ở phía client (Postman), không đụng tới `Program.cs` hay `docker-compose.local.yml` của dự án."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"có access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('access_token');",
+                  "});",
+                  "",
+                  "pm.environment.set('accessToken', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 Không có token thì bị chặn (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": ["{{basketsUrl}}"],
+              "path": ["baskets", "current"]
+            },
+            "description": "Gọi thẳng baskets service, cố tình không mang bất kỳ token nào (auth = No Auth, ghi đè Bearer mặc định của collection) và cũng không mang header tenant/subject — cô lập đúng một điều kiện: hoàn toàn không có token. 401 phải xảy ra trước khi service kịp kiểm tra bất cứ điều gì khác (constitution Principle VI, kế thừa 014). Mirror `IndependentTokenValidationTests.ARequestWithNoToken_IsRejected`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 401 khi không có token\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 Lấy access token KHÔNG có scope ecommerce-api",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Host",
+                "value": "{{identityInternalHost}}",
+                "description": "BẮT BUỘC — cùng lý do đã giải thích ở request \"01 Lấy access token\": không có header này thì token mang iss=localhost:5205, mọi service sẽ 401 thay vì 403 như bài test này cần chứng minh."
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{tokenClientId}}", "type": "text" },
+                { "key": "client_secret", "value": "{{tokenClientSecret}}", "type": "text" },
+                { "key": "username", "value": "{{testUsername}}", "type": "text" },
+                { "key": "password", "value": "{{testPassword}}", "type": "text" },
+                { "key": "scope", "value": "openid profile", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{identityUrl}}/connect/token",
+              "host": ["{{identityUrl}}"],
+              "path": ["connect", "token"]
+            },
+            "description": "Cùng user, cùng client — chỉ khác đúng một điều: KHÔNG xin scope ecommerce-api trong yêu cầu token. Duende chỉ cấp đúng scope được xin, dù client được PHÉP xin nhiều hơn (services/identity/src/Identity.Api/Config.cs — integration-test-ropc AllowedScopes có ecommerce-api). Token hợp lệ này dùng riêng cho request kế tiếp, KHÔNG dùng cho bất kỳ request nào khác trong collection."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.environment.set('accessTokenNoScope', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "04 Có token nhưng thiếu scope thì bị chặn (403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessTokenNoScope}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": ["{{basketsUrl}}"],
+              "path": ["baskets", "current"]
+            },
+            "description": "Ghi đè auth cấp request để dùng {{accessTokenNoScope}} thay vì {{accessToken}} mặc định của collection — một token ĐÃ xác thực thành công nhưng thiếu đúng claim scope=ecommerce-api mà chính sách ApiScope yêu cầu (shared/Identity/AuthorizationPolicies.cs; 015-deny-by-default-authz). Khác với 401: đây là đã đăng nhập đúng, chỉ thiếu quyền — client không cần đăng nhập lại. Mirror `AuthorizationPolicyTests.ARequestWithATokenMissingTheApiScopeClaim_IsForbidden`. Header tenant/subject vẫn giữ vì request này đại diện cho một lệnh gọi thật, dù kiểm tra scope chặn trước khi các header đó từng được đọc tới."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 403 khi có token nhưng thiếu scope\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test(\"thân lỗi ghi rõ forbidden_scope, không phải 403 rỗng mặc định\", function () {",
+                  "    pm.expect(pm.response.json().error).to.eql('forbidden_scope');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "00 - Smoke Flow",
+      "description": "Luồng mua hàng đầy đủ, đi qua gateway, chạy tuần tự từ trên xuống bằng Collection Runner. Bước đầu tiên dọn giỏ nên folder này chạy lại được nhiều lần mà kết quả không đổi. Cần {{accessToken}} đã có (chạy folder '00 - Xác thực & phân quyền' trước) — mọi request ở đây đi qua gateway nên chỉ cần token, không cần header tenant/subject.",
+      "item": [
+        {
+          "name": "00 Dọn giỏ trước khi bắt đầu",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Đưa giỏ về trạng thái rỗng, để cả luồng bên dưới không phụ thuộc dữ liệu còn sót lại từ lần chạy trước. Trả 204 nếu giỏ đang có hàng, 409 nếu vốn đã rỗng — ở bước này cả hai đều là thành công.\n\nĐây là request duy nhất trong folder không đi qua gateway: không có endpoint dọn giỏ nào được publish qua BFF, nên phải gọi thẳng baskets service — và vì gọi thẳng nên nó bắt buộc phải tự mang hai header định danh."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"giỏ đã về trạng thái rỗng (204 vừa dọn xong, hoặc 409 vốn đã rỗng)\", function () {",
+                  "    pm.expect([204, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "01 Xem danh sách sản phẩm",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Danh sách sản phẩm đi qua gateway. Không gắn header định danh: gateway tự phân giải tenant và subject rồi mới chuyển tiếp xuống dưới. Ba sản phẩm trong catalog là dữ liệu seed theo migration, không phải nhập tay. [TC-CMN-039]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"phản hồi là đối tượng bọc ngoài có items\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('items').that.is.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"catalog có Field Notes Notebook giá 12.50\", function () {",
+                  "    const items = pm.response.json().items;",
+                  "    const notebook = items.find(function (p) { return p.id === pm.collectionVariables.get('notebookId'); });",
+                  "    pm.expect(notebook, 'không tìm thấy Notebook trong catalog').to.not.be.undefined;",
+                  "    pm.expect(Number(notebook.price)).to.eql(12.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 Thêm Notebook vào giỏ (lần 1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Chỉ gửi productId và quantity. Giá không phải việc của client — BFF tự tra giá từ catalog, và đó chính là điều làm cho việc client tự khai giá trở nên vô nghĩa. [TC-CMN-012]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"dòng hàng mang tên sản phẩm và giá lấy từ catalog\", function () {",
+                  "    const line = pm.response.json().items[0];",
+                  "    pm.expect(line.name).to.eql('Field Notes Notebook');",
+                  "    pm.expect(Number(line.unitPrice)).to.eql(12.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 Thêm Notebook lần nữa, phải gộp dòng",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Thêm lại đúng sản phẩm đó: phải cộng dồn số lượng chứ không tạo dòng thứ hai cho cùng một sản phẩm. [TC-CMN-014]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"vẫn chỉ 1 dòng, số lượng cộng dồn lên 2\", function () {",
+                  "    const items = pm.response.json().items;",
+                  "    pm.expect(items.length).to.eql(1);",
+                  "    pm.expect(items[0].quantity).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "04 Thêm Linen Apron",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Sản phẩm khác thì phải nằm trên dòng riêng — nửa còn lại của luật gộp dòng ở request trên.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{apronId}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"giỏ có 2 dòng tách biệt\", function () {",
+                  "    pm.expect(pm.response.json().items.length).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "05 Xem giỏ hàng",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Hai Notebook gộp một dòng, cộng một Apron: tổng 59.25 — đúng con số mà kịch bản demo trong quickstart.md công bố. Script lưu lại basketId để các request đọc giỏ theo id dùng được ngay. [TC-CMN-011]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"2 dòng, Notebook số lượng 2, tổng tiền 59.25\", function () {",
+                  "    const basket = pm.response.json();",
+                  "    pm.expect(basket.items.length).to.eql(2);",
+                  "    const notebook = basket.items.find(function (i) { return i.productId === pm.collectionVariables.get('notebookId'); });",
+                  "    pm.expect(notebook.quantity).to.eql(2);",
+                  "    pm.expect(Number(basket.total)).to.eql(59.25);",
+                  "});",
+                  "",
+                  "// Lưu để request 'Đọc giỏ theo id' bên folder Basket dùng lại, khỏi phải dán tay.",
+                  "pm.environment.set('basketId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "06 Đặt hàng",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/checkout",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "checkout"
+              ]
+            },
+            "description": "Biến giỏ hàng thành đơn hàng. Tổng tiền do phía server tính, đi qua đủ ba service (products, baskets, orders). Script lưu orderId cho hai request kế tiếp. [TC-CMN-019]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"đơn hàng có mã dạng GUID và tổng tiền 59.25\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.id).to.match(/^[0-9a-f-]{36}$/i);",
+                  "    pm.expect(Number(order.total)).to.eql(59.25);",
+                  "});",
+                  "",
+                  "pm.environment.set('orderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "07 Đọc lại đơn vừa đặt",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/orders/{{orderId}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Mã đơn hiện trên màn hình xác nhận phải đọc lại được và khớp với đơn thật trong hệ thống — nếu không thì con số người mua nhìn thấy chẳng chứng minh được điều gì. [TC-CMN-020]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"đơn đọc lại trùng mã và trùng tổng tiền\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.id).to.eql(pm.environment.get('orderId'));",
+                  "    pm.expect(Number(order.total)).to.eql(59.25);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "08 Giỏ đã rỗng nhưng vẫn là giỏ cũ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Đặt hàng xong thì dọn sạch giỏ nhưng không xóa giỏ: id giữ nguyên. Một id mới sau mỗi lần mua đồng nghĩa với việc bản ghi giỏ bị xóa rồi tạo lại, và đó không phải điều đang được yêu cầu. [TC-CMN-021]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"giỏ rỗng, tổng 0, và vẫn mang đúng id cũ\", function () {",
+                  "    const basket = pm.response.json();",
+                  "    pm.expect(basket.items.length).to.eql(0);",
+                  "    pm.expect(Number(basket.total)).to.eql(0);",
+                  "    pm.expect(basket.id).to.eql(pm.environment.get('basketId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "09 Đặt hàng lần hai phải bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/checkout",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "checkout"
+              ]
+            },
+            "description": "Bấm đặt hàng hai lần không được tạo ra hai đơn. Lần thứ hai gặp giỏ đã rỗng và bị từ chối rõ ràng — đó là lý do việc dọn giỏ ở bước trên là bắt buộc chứ không phải cho gọn. [TC-CMN-022, TC-CMN-023]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Basket",
+      "description": "Giỏ hàng nhìn từ phía baskets service: giỏ theo người mua, gộp dòng, dọn giỏ, và hai kịch bản thiếu header định danh. Gọi thẳng service nên mỗi request cần cả {{accessToken}} (kế thừa từ collection) LẪN header X-Tenant-Id/X-Subject-Id tự khai — thiếu token thì 401 chặn trước khi kịp kiểm tra header.",
+      "item": [
+        {
+          "name": "Health live — tiến trình còn sống",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{basketsUrl}}/health/live",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-BSK-014]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Health ready — kết nối tới database riêng",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{basketsUrl}}/health/ready",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-BSK-028].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-BSK-029]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Viết theo kiểu chấp nhận cả hai trạng thái, để bộ collection chạy được cả khi bạn",
+                  "// đang cố tình tắt database để quan sát hành vi.",
+                  "pm.test(\"readiness trả 200 khi database sống, hoặc 503 khi database tắt\", function () {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 503) {",
+                  "    pm.test(\"khi 503 thì check self-database phải là Unhealthy\", function () {",
+                  "        const body = pm.response.json();",
+                  "        const self = body.checks.find(function (c) { return c.name === 'self-database'; });",
+                  "        pm.expect(self, 'không tìm thấy check tên self-database').to.not.be.undefined;",
+                  "        pm.expect(self.status).to.eql('Unhealthy');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Giỏ hiện tại của người mua",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current"
+              ]
+            },
+            "description": "Gọi thẳng baskets service nên bắt buộc có cả hai header: tenant quyết định được chạm vào dữ liệu nào, subject quyết định giỏ của ai. Lần đầu truy cập trả giỏ rỗng chứ không phải 404 — chưa từng mua hàng không phải là lỗi.\n\nScript lưu basketId, nhờ vậy request đọc giỏ theo id ngay bên dưới chạy được kể cả khi bạn không chạy folder Smoke Flow trước. [TC-BSK-021, TC-BSK-022]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"giỏ thuộc về đúng người gọi\", function () {",
+                  "    pm.expect(pm.response.json().customerRef).to.eql(pm.environment.get('subjectId'));",
+                  "});",
+                  "",
+                  "pm.environment.set('basketId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đọc giỏ theo id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/{{basketId}}",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "{{basketId}}"
+              ]
+            },
+            "description": "Dùng basketId mà request phía trên vừa lưu lại. [TC-BSK-015]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"trả về đúng giỏ được hỏi\", function () {",
+                  "    pm.expect(pm.response.json().id).to.eql(pm.environment.get('basketId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đọc giỏ theo id không tồn tại",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/{{unknownGuid}}",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "404 chứ không phải 200 với nội dung rỗng: 'không có giỏ nào như vậy' và 'giỏ này không có gì trong đó' là hai chuyện khác nhau, và BFF cần phân biệt được. [TC-BSK-016]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thêm hàng với số lượng 0 bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/items",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "items"
+              ]
+            },
+            "description": "Không cho phép tồn tại dòng hàng có số lượng bằng 0 hoặc âm. [TC-BSK-026]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 0,\n  \"unitPrice\": 12.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thiếu header subject thì không phát giỏ của ai",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current"
+              ]
+            },
+            "description": "Request này có tenant nhưng cố tình bỏ subject: đủ để chạm tới database, không đủ để gọi tên người mua. Không có người gọi mặc định để rơi vào — nếu có, mọi request thiếu subject sẽ dùng chung một giỏ hàng. [TC-BSK-027]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thiếu header tenant thì thất bại rõ ràng",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current"
+              ]
+            },
+            "description": "Request không đi qua gateway nên không có tenant nào được phân giải. Phải thất bại lớn tiếng chứ không được lặng lẽ phục vụ dữ liệu của schema mặc định. [TC-BSK-032]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Dọn giỏ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Trả 204 nếu giỏ đang có hàng, 409 nếu vốn đã rỗng. Request này tồn tại để đưa giỏ về một trạng thái biết trước cho request kế tiếp, nên cả hai mã đều được chấp nhận ở đây. [TC-BSK-017]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"dọn giỏ thành công, hoặc giỏ vốn đã rỗng\", function () {",
+                  "    pm.expect([204, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Dọn giỏ lần hai phải báo xung đột",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Ngay sau request phía trên, giỏ chắc chắn đang rỗng — nên lần dọn này phải thất bại rõ ràng thay vì im lặng thành công. Chính điều đó khiến một lần đặt hàng lặp lại không thể âm thầm đi tiếp. [TC-BSK-018, TC-BSK-019]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Gateway",
+      "description": "Bản thân lớp gateway: định tuyến, health probe của chính nó, đường dẫn không tồn tại, và chính sách CORS cho storefront. Request nghiệp vụ đi qua gateway chỉ cần {{accessToken}} (kế thừa từ collection); riêng hai request Health live/ready là anonymous, không cần token.",
+      "item": [
+        {
+          "name": "Health live của chính gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/health/live",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Route catch-all của gateway không được nuốt mất health probe của chính nó. Readiness của gateway cố ý để rỗng: nếu nó phụ thuộc vào BFF thì một sự cố phía dưới sẽ kéo gateway ra khỏi vòng phục vụ, trong khi việc của gateway lúc đó là vẫn trả lời và báo lỗi rõ ràng. [TC-GTW-025]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Tài liệu OpenAPI đi qua được gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/openapi/v1.json",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "openapi",
+                "v1.json"
+              ]
+            },
+            "description": "Tài liệu này chỉ BFF mới tạo ra được, nên nhận 200 ở đây là bằng chứng mạnh nhất rằng request thật sự đi tới BFF chứ không dừng lại ở gateway. [TC-GTW-023]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"đúng là tài liệu của BFF (có đường dẫn /bff/products)\", function () {",
+                  "    pm.expect(Object.keys(pm.response.json().paths)).to.include('/bff/products');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Route phía client được chuyển tiếp xuống BFF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Khác 404 nghĩa là gateway đã chuyển tiếp tới handler của BFF. Người gọi chỉ biết đường dẫn, không biết địa chỉ hay cổng của BFF — đó chính là thứ mà lớp gateway sinh ra để đạt được. [TC-GTW-024]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"không phải 404, tức là đã tới được handler của BFF\", function () {",
+                  "    pm.expect(pm.response.code).to.not.eql(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đường dẫn không tồn tại",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/no-such-path",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "no-such-path"
+              ]
+            },
+            "description": "404 phải đến nhanh, và nội dung phản hồi không được để lộ chi tiết định tuyến nội bộ. Treo hoặc lộ tên cluster đều là hỏng, dù mã trạng thái có đúng. [TC-GTW-036, TC-GTW-037]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"không để lộ bff-cluster, bff-route, products-api hay số cổng\", function () {",
+                  "    const body = pm.response.text().toLowerCase();",
+                  "    ['bff-cluster', 'bff-route', 'products-api', '8080'].forEach(function (leak) {",
+                  "        pm.expect(body, 'nội dung phản hồi để lộ ' + leak).to.not.include(leak);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test(\"trả lời nhanh chứ không treo\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(15000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "CORS preflight từ storefront",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{storefrontOrigin}}"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Trình duyệt gửi preflight này trước mọi request cross-origin có kèm credentials, và chính gateway phải trả lời chứ không được chuyển tiếp xuống BFF.\n\nOrigin lấy từ biến storefrontOrigin: đây là origin của trình duyệt người dùng, không phải địa chỉ của backend, nên trên staging nó đổi theo nơi storefront được phục vụ. [TC-GTW-026, TC-GTW-027, TC-GTW-031]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"preflight được chấp nhận\", function () {",
+                  "    pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"cho phép đúng origin của storefront, không dùng dấu *\", function () {",
+                  "    const allow = pm.response.headers.get('Access-Control-Allow-Origin');",
+                  "    pm.expect(allow).to.eql(pm.environment.get('storefrontOrigin'));",
+                  "    // Chuẩn CORS cấm trả lời request có credentials bằng origin dấu *,",
+                  "    // nên danh sách origin phải được cấu hình tường minh.",
+                  "    pm.expect(allow).to.not.eql('*');",
+                  "});",
+                  "",
+                  "pm.test(\"cho phép gửi kèm credentials\", function () {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Allow-Credentials')).to.eql('true');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "CORS preflight từ origin lạ",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "http://evil.example"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Danh sách origin là allow-list chứ không phải cửa mở tự do: origin không được cấu hình thì không nhận được header cho phép nào, và trình duyệt sẽ chặn phản hồi. [TC-GTW-028]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"không có header Access-Control-Allow-Origin\", function () {",
+                  "    pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Order",
+      "description": "Đơn hàng nhìn từ phía orders service: đặt hàng, đọc lại, các luật từ chối, và việc đơn hàng được quy về đúng tenant. Request gọi thẳng orders service cần cả {{accessToken}} lẫn header tenant/subject; request 'qua gateway' trong folder này chỉ cần token.",
+      "item": [
+        {
+          "name": "Health live — tiến trình còn sống",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{ordersUrl}}/health/live",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-ORD-001]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Health ready — kết nối tới database riêng",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{ordersUrl}}/health/ready",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-ORD-023].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-ORD-024]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Viết theo kiểu chấp nhận cả hai trạng thái, để bộ collection chạy được cả khi bạn",
+                  "// đang cố tình tắt database để quan sát hành vi.",
+                  "pm.test(\"readiness trả 200 khi database sống, hoặc 503 khi database tắt\", function () {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 503) {",
+                  "    pm.test(\"khi 503 thì check self-database phải là Unhealthy\", function () {",
+                  "        const body = pm.response.json();",
+                  "        const self = body.checks.find(function (c) { return c.name === 'self-database'; });",
+                  "        pm.expect(self, 'không tìm thấy check tên self-database').to.not.be.undefined;",
+                  "        pm.expect(self.status).to.eql('Unhealthy');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đặt hàng trực tiếp",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Gọi thẳng orders service, bỏ qua cả gateway lẫn BFF. Tổng tiền do server tự tính từ các dòng được gửi lên chứ không nhận tổng từ client — đó là thứ giữ cho mọi phép tính tiền nằm bên trong domain service.\n\nScript lưu mã đơn vào biến collection directOrderId, tách riêng khỏi orderId của Smoke Flow để hai luồng không đè lên nhau. [TC-ORD-015, TC-ORD-017]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"unitPrice\": 12.5\n    },\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000003\",\n      \"quantity\": 1,\n      \"unitPrice\": 34.25\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"tổng tiền do server tự tính là 59.25\", function () {",
+                  "    pm.expect(Number(pm.response.json().total)).to.eql(59.25);",
+                  "});",
+                  "",
+                  "pm.test(\"có header Location trỏ tới đơn vừa tạo\", function () {",
+                  "    const id = pm.response.json().id;",
+                  "    pm.expect(pm.response.headers.get('Location')).to.eql('/orders/' + id);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('directOrderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đọc lại đơn vừa đặt, kèm tenant",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders/{{directOrderId}}",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{directOrderId}}"
+              ]
+            },
+            "description": "Phải đọc thẳng orders service mới thấy trường tenantId — hình dạng dữ liệu đi qua BFF không mang nó. Đọc được tenant từ chính bản ghi nghĩa là đơn hàng thật sự được quy về một tenant, chứ không chỉ vang lại giá trị trong phản hồi. [TC-ORD-012, TC-ORD-013, TC-ORD-016]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"đơn trùng mã, tổng 59.25 và thuộc đúng tenant\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.id).to.eql(pm.collectionVariables.get('directOrderId'));",
+                  "    pm.expect(Number(order.total)).to.eql(59.25);",
+                  "    pm.expect(order.tenantId).to.eql(pm.environment.get('tenantId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đọc đơn không tồn tại",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "Mã đơn không có thật thì trả 404 sạch sẽ. [TC-ORD-014]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đặt hàng không có dòng nào bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Giao diện đã chặn việc đặt hàng khi giỏ rỗng, nhưng kiểm tra phía giao diện chỉ là trải nghiệm người dùng. Gọi thẳng API cũng không được phép tạo đơn cho hư không. [TC-ORD-018]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đặt hàng với số lượng 0 bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Số lượng phải lớn hơn 0, kiểm ngay ở tầng domain. [TC-ORD-019]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 0,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Tenant khai trong body bị bỏ qua",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Body cố tình nhét thêm tenantId lạ, trong khi header mang tenant thật. Đơn phải thuộc tenant lấy từ header: người gọi không tự chọn được tenant cho đơn hàng của mình, vì trường đó không thuộc hợp đồng của request. [TC-ORD-022]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"someone-elses-tenant\",\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 1,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"đơn thuộc tenant lấy từ header, không phải tenant khai trong body\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.tenantId).to.eql(pm.environment.get('tenantId'));",
+                  "    pm.expect(order.tenantId).to.not.eql('someone-elses-tenant');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Ghi đơn khi không có tenant thì không tạo gì",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Mã 500 chỉ chứng tỏ người gọi bị từ chối; nó chưa chứng minh được rằng không có gì được ghi xuống — đó là hai khẳng định khác nhau. Muốn kiểm chứng vế thứ hai thì phải đếm số bản ghi trước và sau, xem docs/local-testing.md kịch bản 2. [TC-ORD-027, TC-ORD-028]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 1,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đọc đơn không tồn tại qua gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/orders/{{unknownGuid}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "orders",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "404 chứ không phải 502: downstream đã trả lời đúng, chỉ là request hỏi một thứ không có thật. Nhầm hai trường hợp này là làm mất khả năng phân biệt 'dịch vụ hỏng' với 'dữ liệu không tồn tại'. [TC-CMN-036]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Party",
+      "description": "Parties service. Bảng dữ liệu rỗng và không có endpoint tạo party, nên từ Postman chỉ kiểm chứng được nhánh 404 và nhánh thiếu tenant. Gọi thẳng service nên mỗi request cần cả {{accessToken}} lẫn header tenant.",
+      "item": [
+        {
+          "name": "Health live — tiến trình còn sống",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{partiesUrl}}/health/live",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PTY-001]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Health ready — kết nối tới database riêng",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{partiesUrl}}/health/ready",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PTY-004].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PTY-005]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Viết theo kiểu chấp nhận cả hai trạng thái, để bộ collection chạy được cả khi bạn",
+                  "// đang cố tình tắt database để quan sát hành vi.",
+                  "pm.test(\"readiness trả 200 khi database sống, hoặc 503 khi database tắt\", function () {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 503) {",
+                  "    pm.test(\"khi 503 thì check self-database phải là Unhealthy\", function () {",
+                  "        const body = pm.response.json();",
+                  "        const self = body.checks.find(function (c) { return c.name === 'self-database'; });",
+                  "        pm.expect(self, 'không tìm thấy check tên self-database').to.not.be.undefined;",
+                  "        pm.expect(self.status).to.eql('Unhealthy');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đọc party không tồn tại",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{partiesUrl}}/parties/{{unknownGuid}}",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "parties",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "LƯU Ý: bảng Parties không có dữ liệu seed và parties service cũng không có endpoint tạo party — nó chỉ phơi ra mỗi GET theo id. Vì vậy từ Postman chỉ kiểm chứng được nhánh 404; trường hợp đọc thành công (TC-PTY-002 và TC-CMN-037) đòi hỏi tự chèn một bản ghi vào localhost,14330 trước bằng SQL client. [TC-PTY-003]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thiếu header tenant thì thất bại rõ ràng",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{partiesUrl}}/parties/{{unknownGuid}}",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "parties",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "500 chứ không phải 404: không phân giải được tenant thì thất bại ngay từ lúc dựng DbContext, trước cả khi kịp tra cứu xem party có tồn tại hay không. [TC-PTY-008]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đọc party không tồn tại qua gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/parties/{{unknownGuid}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "parties",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "Route party qua BFF cũng trả 404 giống khi gọi thẳng. [TC-CMN-038]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Product",
+      "description": "Catalog sản phẩm: dữ liệu seed theo migration và cổng chặn tenant. Gọi thẳng service nên mỗi request cần cả {{accessToken}} lẫn header tenant (trừ hai request Health).",
+      "item": [
+        {
+          "name": "Health live — tiến trình còn sống",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{productsUrl}}/health/live",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PRD-001]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Health ready — kết nối tới database riêng",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{productsUrl}}/health/ready",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PRD-007].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PRD-008]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Viết theo kiểu chấp nhận cả hai trạng thái, để bộ collection chạy được cả khi bạn",
+                  "// đang cố tình tắt database để quan sát hành vi.",
+                  "pm.test(\"readiness trả 200 khi database sống, hoặc 503 khi database tắt\", function () {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 503) {",
+                  "    pm.test(\"khi 503 thì check self-database phải là Unhealthy\", function () {",
+                  "        const body = pm.response.json();",
+                  "        const self = body.checks.find(function (c) { return c.name === 'self-database'; });",
+                  "        pm.expect(self, 'không tìm thấy check tên self-database').to.not.be.undefined;",
+                  "        pm.expect(self.status).to.eql('Unhealthy');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Danh sách sản phẩm",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{productsUrl}}/products",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "Ba sản phẩm này do migration seed chứ không phải nhập tay, và mã của chúng cố định qua mọi lần dựng lại database — nhờ vậy tài liệu demo và kịch bản Playwright mới trỏ tới chúng bằng mã cứng được. [TC-PRD-002, TC-PRD-004, TC-PRD-005, TC-PRD-006]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"có đủ ba sản phẩm seed, đúng mã và đúng giá\", function () {",
+                  "    const products = pm.response.json();",
+                  "    const expected = {};",
+                  "    expected[pm.collectionVariables.get('notebookId')] = 12.5;",
+                  "    expected[pm.collectionVariables.get('pourOverId')] = 48;",
+                  "    expected[pm.collectionVariables.get('apronId')] = 34.25;",
+                  "    Object.keys(expected).forEach(function (id) {",
+                  "        const found = products.find(function (p) { return p.id === id; });",
+                  "        pm.expect(found, 'thiếu sản phẩm ' + id).to.not.be.undefined;",
+                  "        pm.expect(Number(found.price)).to.eql(expected[id]);",
+                  "    });",
+                  "});",
+                  "",
+                  "pm.test(\"mọi sản phẩm đều có tên và giá lớn hơn 0\", function () {",
+                  "    pm.response.json().forEach(function (p) {",
+                  "        pm.expect(p.name).to.be.a('string').and.not.empty;",
+                  "        pm.expect(Number(p.price)).to.be.above(0);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thiếu header tenant thì không phục vụ catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{productsUrl}}/products",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "Database vẫn sống và vẫn có dữ liệu — nếu không tồn tại cổng chặn tenant thì request này sẽ trả 200 kèm catalog. Chính vì vậy, 500 ở đây là bằng chứng cổng chặn có thật, chứ không phải hệ quả của một lỗi nào khác. [TC-PRD-011]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 500\", function () {",
+                  "    pm.response.to.have.status(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Common",
+      "description": "Những gì không thuộc riêng một domain nào: BFF, hợp đồng OpenAPI sinh tự động, và các kịch bản đi qua tầng tổng hợp. Request 'qua gateway/BFF' chỉ cần {{accessToken}}; request 'gọi thẳng có header' trong folder này cần cả token lẫn header tenant/subject. Health/OpenAPI là anonymous.",
+      "item": [
+        {
+          "name": "BFF health live — tiến trình còn sống",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{bffUrl}}/health/live",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Tiến trình BFF còn sống. Không có test case tự động nào trong docs/test-cases-2026-08-21.xlsx phủ endpoint này: bộ test của BFF không có HealthCheckTests như bốn domain service."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "BFF health ready — không chạm database nào",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{bffUrl}}/health/ready",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "BFF không sở hữu database nào nên readiness của nó không mở kết nối tới đâu cả — nó luôn 200 kể cả khi bạn tắt hết bốn database. Muốn thấy hậu quả của việc tắt database thì nhìn vào readiness của từng domain service."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Tài liệu OpenAPI của BFF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{bffUrl}}/openapi/v1.json",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "openapi",
+                "v1.json"
+              ]
+            },
+            "description": "Tài liệu này là hợp đồng sinh ra API client của frontend, nên một tài liệu thiếu sót là lỗi thật chứ không phải chuyện tài liệu cho đẹp. Nó chỉ được publish ở môi trường Development — stack local chạy Development nên gọi được, còn stack mặc định (Production) thì trả 404.\n\n[TC-CMN-031, TC-CMN-032, TC-CMN-033, TC-CMN-034]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"mô tả đủ 7 route phía client\", function () {",
+                  "    const paths = Object.keys(pm.response.json().paths);",
+                  "    ['/bff/products', '/bff/basket', '/bff/basket/items', '/bff/baskets/{basketId}',",
+                  "     '/bff/checkout', '/bff/orders/{orderId}', '/bff/parties/{partyId}'].forEach(function (p) {",
+                  "        pm.expect(paths, 'tài liệu thiếu ' + p).to.include(p);",
+                  "    });",
+                  "});",
+                  "",
+                  "// Mọi route đều có thể hỏng vì downstream, nên mọi route đều phải khai báo điều đó.",
+                  "pm.test(\"mỗi route GET đều khai báo 502 và 504\", function () {",
+                  "    const paths = pm.response.json().paths;",
+                  "    ['/bff/products', '/bff/baskets/{basketId}', '/bff/orders/{orderId}', '/bff/parties/{partyId}']",
+                  "        .forEach(function (p) {",
+                  "            const codes = Object.keys(paths[p].get.responses);",
+                  "            pm.expect(codes, p + ' thiếu 502').to.include('502');",
+                  "            pm.expect(codes, p + ' thiếu 504').to.include('504');",
+                  "        });",
+                  "});",
+                  "",
+                  "pm.test(\"các route theo id đều khai báo 404\", function () {",
+                  "    const paths = pm.response.json().paths;",
+                  "    ['/bff/baskets/{basketId}', '/bff/orders/{orderId}', '/bff/parties/{partyId}']",
+                  "        .forEach(function (p) {",
+                  "            pm.expect(Object.keys(paths[p].get.responses), p + ' thiếu 404').to.include('404');",
+                  "        });",
+                  "});",
+                  "",
+                  "pm.test(\"schema ProductSummary có đủ id, name, price\", function () {",
+                  "    const schemas = pm.response.json().components.schemas;",
+                  "    pm.expect(schemas).to.have.property('ProductListResponse');",
+                  "    pm.expect(schemas.ProductListResponse.properties).to.have.property('items');",
+                  "    ['id', 'name', 'price'].forEach(function (f) {",
+                  "        pm.expect(schemas.ProductSummary.properties, 'thiếu ' + f).to.have.property(f);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "BFF: danh sách sản phẩm, gọi thẳng có header",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{bffUrl}}/bff/products",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Gọi thẳng BFF thì phải tự mang header, vì BFF chỉ chuyển tiếp chứ không tự phân giải danh tính. Hợp đồng bọc danh sách trong đối tượng có items chứ không trả mảng trần, để giao diện luôn đọc được items mà không phải phân nhánh theo hình dạng phản hồi. [TC-CMN-039, TC-CMN-043]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"trả về đối tượng bọc ngoài có items chứ không phải mảng trần\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('items').that.is.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "BFF: thiếu header thì downstream từ chối",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{bffUrl}}/bff/products",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "BFF không bịa ra tenant khi chính nó không có: nó gọi xuống products service mà không kèm header, products service từ chối, và BFF báo lại thành lỗi downstream.\n\nKết quả là 502 (hoặc 504 nếu chậm), chứ tuyệt đối không phải 200 kèm dữ liệu của một tenant mặc định nào đó. [TC-CMN-044]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"thất bại rõ ràng (502 hoặc 504), không bao giờ là 200\", function () {",
+                  "    pm.expect([502, 504]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "BFF: giỏ hiện tại, gọi thẳng có header",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{bffUrl}}/bff/basket",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Giỏ được phân giải từ header subject mà BFF nhận được và chuyển tiếp xuống baskets service. [TC-CMN-011, TC-CMN-041]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"giỏ thuộc về đúng người gọi\", function () {",
+                  "    pm.expect(pm.response.json().customerRef).to.eql(pm.environment.get('subjectId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Giá do client tự khai bị bỏ qua",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Client cố tình gửi kèm unitPrice 0.01. Giá được ghi nhận phải là 12.50 lấy từ catalog — nếu không, chính storefront cũng có thể tự đặt giá cho mình, và một giá do client chọn là một khoản giảm giá do client chọn. [TC-CMN-013]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 1,\n  \"unitPrice\": 0.01\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"giá ghi nhận là 12.50 chứ không phải 0.01 mà client gửi lên\", function () {",
+                  "    const line = pm.response.json().items.find(function (i) {",
+                  "        return i.productId === pm.collectionVariables.get('notebookId');",
+                  "    });",
+                  "    pm.expect(Number(line.unitPrice)).to.eql(12.5);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thêm sản phẩm không tồn tại",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Sản phẩm không có trong catalog thì không có giá để tra ra, nên không có gì để thêm. 404 chứ không phải 502: downstream trả lời đúng, chỉ là request sai. [TC-CMN-015]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"11111111-1111-4111-8111-111111111111\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Thêm hàng với số lượng 0 qua BFF",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Luật số lượng tối thiểu được kiểm ở cả tầng BFF chứ không chỉ trong domain. [TC-CMN-016]",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{notebookId}}\",\n  \"quantity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Đọc giỏ theo id không tồn tại qua gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/baskets/{{unknownGuid}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "baskets",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "Một 404 từ downstream phải nổi lên thành 404, không được biến thành 502 hay 200 rỗng. [TC-CMN-018]"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Dọn giỏ sau khi thử xong",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Các request phía trên đã thêm hàng thật vào giỏ. Dọn lại để lần chạy sau bắt đầu từ trạng thái sạch — đây là nửa còn lại của việc giữ cho toàn bộ collection chạy lại được nhiều lần mà kết quả không đổi. Trả 204 hay 409 đều là thành công."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"giỏ đã về trạng thái rỗng\", function () {",
+                  "    pm.expect([204, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Sinh một correlation id mới cho mỗi request, để khi cần thì tìm lại đúng",
+          "// request đó trong log của các service. Dùng upsert thay vì add để nếu một",
+          "// request nào đó tự đặt header này thì giá trị của nó bị thay chứ không bị",
+          "// gửi kèm thành hai header trùng tên.",
+          "pm.request.headers.upsert({",
+          "    key: 'X-Correlation-Id',",
+          "    value: pm.variables.replaceIn('{{$guid}}')",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "notebookId",
+      "value": "9f8d6b1e-0001-4000-8000-000000000001",
+      "type": "string"
+    },
+    {
+      "key": "pourOverId",
+      "value": "9f8d6b1e-0001-4000-8000-000000000002",
+      "type": "string"
+    },
+    {
+      "key": "apronId",
+      "value": "9f8d6b1e-0001-4000-8000-000000000003",
+      "type": "string"
+    },
+    {
+      "key": "unknownGuid",
+      "value": "00000000-0000-4000-8000-000000000000",
+      "type": "string"
+    },
+    {
+      "key": "directOrderId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
