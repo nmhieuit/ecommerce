@@ -4,6 +4,7 @@ using IntegrationTestSupport;
 using Microsoft.Extensions.DependencyInjection;
 using ProductsApi::Products.Api.Data;
 using ServiceDefaults;
+using Tenancy;
 
 namespace Bff.Api.IntegrationTests;
 
@@ -24,6 +25,16 @@ namespace Bff.Api.IntegrationTests;
 [Collection(DownstreamServicesCollectionDefinition.Name)]
 public class CorrelationPropagationTests(DownstreamServicesFixture fixture)
 {
+    /// <summary>
+    /// An unresolved tenant would make Products throw <c>MissingTenantContextException</c>
+    /// (contracts/tenant-id-header.md) before ever answering — turning this test's request into one
+    /// the resilience pipeline treats as failed and retries, which would multiply
+    /// <see cref="OutboundCorrelationIdRecorder.Observed"/> by the retry count instead of leaving it
+    /// at one call per logical request. A resolved tenant keeps this suite about correlation ID
+    /// propagation only, not an incidental proof of the resilience pipeline's retry budget.
+    /// </summary>
+    private const string ResolvedTenant = "contoso";
+
     [Fact]
     public async Task TheBffsOutboundCall_CarriesTheCorrelationIdTheBffReceived()
     {
@@ -37,6 +48,7 @@ public class CorrelationPropagationTests(DownstreamServicesFixture fixture)
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
         request.Headers.Add(CorrelationIdMiddleware.HeaderName, supplied);
+        request.Headers.Add(TenantContextMiddleware.HeaderName, ResolvedTenant);
 
         await client.SendAsync(request);
 
@@ -70,6 +82,7 @@ public class CorrelationPropagationTests(DownstreamServicesFixture fixture)
             var client = bff.CreateClient().UseTestBearerToken();
             using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
             request.Headers.Add(CorrelationIdMiddleware.HeaderName, correlationId);
+            request.Headers.Add(TenantContextMiddleware.HeaderName, ResolvedTenant);
             await client.SendAsync(request);
         }));
 
