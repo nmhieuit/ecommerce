@@ -75,6 +75,7 @@
     <Project Path="tests/ContainerConventionTests/ContainerConventionTests.csproj" />
     <Project Path="tests/ContractCoverageTests/ContractCoverageTests.csproj" />
     <Project Path="tests/CrossServiceIsolation.Tests/CrossServiceIsolation.Tests.csproj" />
+    <Project Path="tests/DeploymentManifestConventionTests/DeploymentManifestConventionTests.csproj" />
     <Project Path="tests/StructureConventionTests/StructureConventionTests.csproj" />
   </Folder>
 </Solution>

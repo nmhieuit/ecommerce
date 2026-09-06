@@ -1,0 +1,39 @@
+---
+# Giá trị mặc định probe, tách theo nhóm depends_on_database (research.md Quyết định 2).
+#
+# Nhóm db_backed.readiness tái sử dụng chính xác giá trị healthcheck dùng chung
+# (&service-healthcheck) trong docker-compose.yml: interval 5s -> period_seconds, timeout 5s ->
+# timeout_seconds, retries 20 -> failure_threshold, start_period 10s -> initial_delay_seconds. Đây
+# là ngưỡng đã được kiểm chứng qua vận hành local cho việc SQL Server cần thời gian phục hồi sau
+# restart — xem comment tại healthcheck của service sqlserver trong docker-compose.yml.
+#
+# Nhóm stateless dùng cho gateway/bff: không chờ kết nối cơ sở dữ liệu nào, nên initial_delay và
+# failure_threshold của readiness có thể ngắn hơn nhiều mà không rủi ro false positive.
+#
+# Liveness KHÔNG phụ thuộc dependency ngoài ở cả hai nhóm (FR-003) — failure_threshold thấp hơn hẳn
+# readiness của nhóm db_backed vì liveness không cần dung sai cho thời gian phục hồi cơ sở dữ liệu,
+# chỉ cần dung sai cho việc tiến trình khởi động xong.
+probe_defaults:
+  db_backed:
+    readiness:
+      initial_delay_seconds: 10
+      period_seconds: 5
+      timeout_seconds: 5
+      failure_threshold: 20
+    liveness:
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      failure_threshold: 3
+
+  stateless:
+    readiness:
+      initial_delay_seconds: 2
+      period_seconds: 5
+      timeout_seconds: 3
+      failure_threshold: 3
+    liveness:
+      initial_delay_seconds: 5
+      period_seconds: 10
+      timeout_seconds: 5
+      failure_threshold: 3
