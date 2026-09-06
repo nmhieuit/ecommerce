@@ -50,14 +50,43 @@ public sealed class CorrelationIdMiddleware
         }
     }
 
+    /// <summary>Longer than any real caller needs (a GUID with dashes is 36), short enough to bound log growth from a single misbehaving/malicious value.</summary>
+    private const int MaxLength = 128;
+
     private static string ResolveCorrelationId(HttpContext context)
     {
         if (context.Request.Headers.TryGetValue(HeaderName, out var existing) &&
-            !string.IsNullOrWhiteSpace(existing))
+            !string.IsNullOrWhiteSpace(existing) &&
+            IsValidCorrelationId(existing.ToString()))
         {
             return existing.ToString();
         }
 
         return Guid.NewGuid().ToString("n");
+    }
+
+    /// <summary>
+    /// Deliberately not a GUID-format check: a caller may supply any opaque token (research.md
+    /// Decision 2 of 016-correlation-id-propagation), so this only excludes what would actually be
+    /// harmful once the value is pushed unfiltered into every structured log line for the request —
+    /// a control character (which could forge a second, fake log line — CRLF injection) or an
+    /// unbounded length (which could bloat every log entry the request touches).
+    /// </summary>
+    private static bool IsValidCorrelationId(string value)
+    {
+        if (value.Length > MaxLength)
+        {
+            return false;
+        }
+
+        foreach (var c in value)
+        {
+            if (c < '\x20' || c == '\x7f')
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -177,6 +177,29 @@ public class StorefrontCorsTests
             + "would be blocked by the browser before any request left it.");
     }
 
+    /// <summary>
+    /// 016-correlation-id-propagation research.md Decision 5: <c>Access-Control-Expose-Headers</c>
+    /// is what lets the SPA's own JS read <c>X-Correlation-Id</c> via <c>response.headers.get(...)</c>
+    /// — DevTools' Network tab shows the header regardless, so this is specifically about script
+    /// access, and only the actual (non-preflight) response carries this header, unlike the other
+    /// assertions in this file.
+    /// </summary>
+    [Fact]
+    public async Task AnActualCrossOriginResponse_ExposesTheCorrelationIdHeaderToScript()
+    {
+        await using var gateway = CreateGateway();
+        var client = gateway.CreateClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
+        request.Headers.Add("Origin", StorefrontOrigin);
+
+        var response = await client.SendAsync(request);
+
+        Assert.Contains(
+            "X-Correlation-Id",
+            response.Headers.GetValues("Access-Control-Expose-Headers"));
+    }
+
     private static WebApplicationFactory<Program> CreateGateway(params string[] origins)
     {
         var configured = origins.Length == 0 ? [StorefrontOrigin] : origins;

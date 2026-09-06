@@ -1,3 +1,4 @@
+using ServiceDefaults;
 using Tenancy;
 
 namespace Bff.Api.DownstreamClients;
@@ -10,18 +11,23 @@ namespace Bff.Api.DownstreamClients;
 /// header: each domain service now validates the bearer token independently (spec FR-004), so the
 /// same token the BFF itself was authenticated with must reach it, or every real downstream call
 /// would be rejected as unauthenticated the moment the domain service enforces its own
-/// <c>FallbackPolicy</c>.
+/// <c>FallbackPolicy</c>. Since 016-correlation-id-propagation, also relays <c>X-Correlation-Id</c>
+/// — constitution Principle VII requires it propagated across every synchronous call, and this hop
+/// is where that was silently breaking (research.md Decision 1 of that feature).
 /// </summary>
 /// <remarks>
 /// <para>
-/// The type name predates the subject header and is kept so that the two propagation contracts,
-/// the plan, and the tasks that reference it still point at the right file. It relays both headers.
+/// The type name predates the subject and correlation ID headers and is kept so that the
+/// propagation contracts, plans, and tasks that reference it still point at the right file. It
+/// relays all four now.
 /// </para>
 /// <para>
 /// This exists because a typed <see cref="HttpClient"/> forwards nothing by itself. YARP copies
 /// inbound headers on the gateway → BFF hop for free, which makes it easy to assume the whole chain
 /// works; without this handler the BFF → domain-service hop would silently drop the tenant
-/// (research.md Decision 4).
+/// (research.md Decision 4) — and, before 016-correlation-id-propagation, silently dropped the
+/// correlation ID the same way: every domain service reachable only through the BFF minted its own
+/// instead of carrying the one generated at the edge.
 /// </para>
 /// <para>
 /// The tenant is read through <see cref="IHttpContextAccessor"/> rather than by injecting
@@ -30,7 +36,8 @@ namespace Bff.Api.DownstreamClients;
 /// lifetime, so a scoped service injected here would be captured from whichever request happened to
 /// create the handler — and every later request would then be stamped with that request's tenant.
 /// For a tenant identifier, that failure mode is cross-tenant data access, so it is worth the
-/// indirection.
+/// indirection. The correlation ID is read the same way, off <see cref="HttpContext.Items"/> fresh
+/// on every call, for the same reason (016-correlation-id-propagation research.md Decision 7).
 /// </para>
 /// </remarks>
 public sealed class TenantPropagationHandler(IHttpContextAccessor httpContextAccessor) : DelegatingHandler
@@ -61,6 +68,15 @@ public sealed class TenantPropagationHandler(IHttpContextAccessor httpContextAcc
             request,
             "Authorization",
             httpContext?.Request.Headers.Authorization.ToString());
+
+        // Read from HttpContext.Items, not re-resolved: this is the exact value
+        // CorrelationIdMiddleware settled on for this request (generated or preserved from the
+        // caller), the same source Bff.Api.ErrorHandling.DownstreamExceptionHandler reads to put a
+        // correlation ID in a ProblemDetails body.
+        Relay(
+            request,
+            CorrelationIdMiddleware.HeaderName,
+            httpContext?.Items[CorrelationIdMiddleware.HeaderName] as string);
 
         return base.SendAsync(request, cancellationToken);
     }
