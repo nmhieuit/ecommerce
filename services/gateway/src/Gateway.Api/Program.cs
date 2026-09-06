@@ -24,13 +24,20 @@ builder.Services.AddToggleGatedIdentity(builder.Configuration);
 //
 // Explicit origins, not a wildcard: the client sends credentials, and the CORS specification
 // forbids `*` on a credentialed request.
+//
+// WithExposedHeaders(X-Correlation-Id): without it, the browser still shows the header in
+// DevTools' Network tab (that view is never subject to CORS), but the SPA's own JS reading
+// response.headers.get(...) would get null — X-Correlation-Id is not one of the safelisted
+// response headers a browser exposes to script by default (016-correlation-id-propagation
+// research.md Decision 5; contracts/spa-correlation-visibility-contract.md).
 builder.Services.AddCors(options => options.AddPolicy(
     StorefrontCorsPolicy,
     policy => policy
         .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .AllowCredentials()));
+        .AllowCredentials()
+        .WithExposedHeaders(CorrelationIdMiddleware.HeaderName)));
 
 // The gateway's whole routing surface, loaded from the ReverseProxy section rather than defined
 // in code (research.md Decision 2), so the route table stays reviewable as data and swappable per

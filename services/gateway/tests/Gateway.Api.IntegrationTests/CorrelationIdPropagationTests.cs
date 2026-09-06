@@ -1,6 +1,9 @@
+extern alias BffApi;
+
 using System.Net.Http.Json;
 using System.Text.Json;
 using IntegrationTestSupport;
+using Microsoft.AspNetCore.Mvc.Testing;
 using ServiceDefaults;
 
 namespace Gateway.Api.IntegrationTests;
@@ -22,7 +25,7 @@ public class CorrelationIdPropagationTests
     public async Task AGeneratedCorrelationId_ReachesTheBff_AndMatchesWhatTheCallerIsGiven()
     {
         await using var bff = GatewayTestHost.CreateBff();
-        await using var gateway = GatewayTestHost.CreateGateway(bff);
+        await using var gateway = CreateGatewayWithTestJwtBearer(bff);
         var client = gateway.CreateClient().UseTestBearerToken();
 
         // No inbound header: the gateway must generate one and forward it. The route fails because
@@ -49,7 +52,7 @@ public class CorrelationIdPropagationTests
         const string supplied = "caller-supplied-correlation-id";
 
         await using var bff = GatewayTestHost.CreateBff();
-        await using var gateway = GatewayTestHost.CreateGateway(bff);
+        await using var gateway = CreateGatewayWithTestJwtBearer(bff);
         var client = gateway.CreateClient().UseTestBearerToken();
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
@@ -64,4 +67,71 @@ public class CorrelationIdPropagationTests
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(supplied, problem.GetProperty("correlationId").GetString());
     }
+
+    /// <summary>
+    /// research.md Decision 2: a value a client controls must never reach a structured log
+    /// unfiltered — <c>\r\n</c> inside it could forge a second, fake log line.
+    /// </summary>
+    [Fact]
+    public async Task ACorrelationIdContainingControlCharacters_IsReplacedWithAGeneratedOne()
+    {
+        await using var bff = GatewayTestHost.CreateBff();
+        await using var gateway = CreateGatewayWithTestJwtBearer(bff);
+        var client = gateway.CreateClient().UseTestBearerToken();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
+        // HttpRequestMessage rejects a literal CR/LF in a header value outright, so the attack this
+        // guards against is smuggled via UTF-8 bytes on the wire rather than System.Net's own header
+        // API — TryAddWithoutValidation is what lets a malicious/misbehaving client actually send it.
+        request.Headers.TryAddWithoutValidation(CorrelationIdMiddleware.HeaderName, "bad\r\nvalue");
+
+        var response = await client.SendAsync(request);
+
+        var callerFacingId = Assert.Single(
+            response.Headers.GetValues(CorrelationIdMiddleware.HeaderName));
+        Assert.DoesNotContain('\r', callerFacingId);
+        Assert.DoesNotContain('\n', callerFacingId);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(callerFacingId, problem.GetProperty("correlationId").GetString());
+    }
+
+    /// <summary>research.md Decision 2: an unbounded client-supplied value could bloat every log line it touches indefinitely.</summary>
+    [Fact]
+    public async Task ACorrelationIdLongerThan128Characters_IsReplacedWithAGeneratedOne()
+    {
+        var tooLong = new string('a', 129);
+
+        await using var bff = GatewayTestHost.CreateBff();
+        await using var gateway = CreateGatewayWithTestJwtBearer(bff);
+        var client = gateway.CreateClient().UseTestBearerToken();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
+        request.Headers.Add(CorrelationIdMiddleware.HeaderName, tooLong);
+
+        var response = await client.SendAsync(request);
+
+        var callerFacingId = Assert.Single(
+            response.Headers.GetValues(CorrelationIdMiddleware.HeaderName));
+        Assert.NotEqual(tooLong, callerFacingId);
+        Assert.True(callerFacingId.Length <= 128);
+
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(callerFacingId, problem.GetProperty("correlationId").GetString());
+    }
+
+    /// <summary>
+    /// Every test in this class sends a request the gateway itself must authenticate (Development's
+    /// default <c>FeatureToggles:IdentityServerAuthCutover</c> is <see langword="true"/> —
+    /// <c>appsettings.Development.json</c> — so the gateway's own <c>JwtBearer</c> scheme runs, not
+    /// just the BFF's). <see cref="GatewayTestHost.CreateGateway"/> alone only wires the in-process
+    /// forwarder to the BFF; without this, the gateway would attempt a real OIDC discovery/JWKS
+    /// fetch against its configured (non-running, in tests) <c>Authority</c> and reject every
+    /// request as unauthenticated before it ever reached the correlation ID logic under test —
+    /// mirroring the bypass <c>JwtBearerAuthenticationTests.CreateGatewayWithTestJwtBearer</c>
+    /// already uses for the same reason.
+    /// </summary>
+    private static WebApplicationFactory<Program> CreateGatewayWithTestJwtBearer(
+        WebApplicationFactory<BffApi::Program> bff) =>
+        GatewayTestHost.CreateGateway(bff).WithWebHostBuilder(builder => builder.UseTestJwtBearer());
 }

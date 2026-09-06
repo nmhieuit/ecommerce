@@ -26,6 +26,13 @@ export class ApiError extends Error {
     readonly status: number,
     readonly url: string,
     readonly body: unknown,
+    /**
+     * The `X-Correlation-Id` the gateway put on this response, or `null` when the response never
+     * arrived (a network error) or — unexpectedly — carried none. Lets a future error report or
+     * support ticket quote the one value that ties this failure to the backend's own logs
+     * (016-correlation-id-propagation spec US2 AC2; contracts/spa-correlation-visibility-contract.md).
+     */
+    readonly correlationId: string | null,
   ) {
     super(`Request to ${url} failed with status ${status}.`);
     this.name = 'ApiError';
@@ -69,7 +76,7 @@ export async function bffFetch<TResponse>(
   const body: unknown = text.length > 0 ? JSON.parse(text) : undefined;
 
   if (!response.ok) {
-    throw new ApiError(response.status, url, body);
+    throw new ApiError(response.status, url, body, response.headers.get('X-Correlation-Id'));
   }
 
   return { data: body, status: response.status } as TResponse;
