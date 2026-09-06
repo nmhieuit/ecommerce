@@ -6,9 +6,12 @@
 # noise buries the real failures the stack's health gates are meant to surface
 # (005-one-command-local-run research.md Decision 10).
 #
-# This is the collection point, not the backend. Elastic is the backend, and standing it up is
-# Phase 3 work (SCRUM-25). Here the traces go to the collector's own log, which is enough to read a
-# request's correlation id, tenant, and subject across hops while developing.
+# This is the collection point, not the only backend. Elastic (docker-compose.yml's
+# `elasticsearch`/`kibana` services) is the durable backend a human queries in Kibana
+# (017-otel-servicedefaults-elastic). The `debug` exporter stays alongside it, unchanged: it is
+# what scripts/demo.ps1 parses to prove which services served a run, and that mechanism must not
+# break just because a second, human-facing destination was added (research.md Decision 4 of that
+# feature).
 
 receivers:
   otlp:
@@ -30,20 +33,29 @@ exporters:
   debug:
     verbosity: normal
 
+  # Added alongside `debug`, not in place of it (research.md Decision 4 of
+  # 017-otel-servicedefaults-elastic). `mode: otel` writes OTel-native, ECS-mapped data streams
+  # (`traces-generic.otel-default`, `metrics-generic.otel-default`, `logs-generic.default`) that
+  # Kibana's Observability apps read directly — no separate APM Server needed.
+  elasticsearch:
+    endpoints: [http://elasticsearch:9200]
+    mapping:
+      mode: otel
+
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [debug, elasticsearch]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [debug, elasticsearch]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [debug, elasticsearch]
 
   telemetry:
     logs:
