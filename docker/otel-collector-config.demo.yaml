@@ -13,8 +13,9 @@
 # `ResourceTraces #0 service.name=Orders.Api` — in three lines per span, where `detailed` spends
 # about twenty saying the same thing.
 #
-# This is a collection point, not a backend. Elastic is the backend and standing it up is Phase 3
-# work (SCRUM-25).
+# This is a collection point, not the only backend. Elastic is the durable backend
+# (017-otel-servicedefaults-elastic) — see the `elasticsearch` exporter below, added alongside
+# `debug` so this file's own parsing story (the header above) keeps working unchanged.
 
 receivers:
   otlp:
@@ -34,20 +35,25 @@ exporters:
   debug:
     verbosity: normal
 
+  elasticsearch:
+    endpoints: [http://elasticsearch:9200]
+    mapping:
+      mode: otel
+
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [debug, elasticsearch]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [debug, elasticsearch]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [debug, elasticsearch]
 
   telemetry:
     logs:

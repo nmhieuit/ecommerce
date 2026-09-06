@@ -44,6 +44,8 @@ Test case ids refer to [`test-cases-2026-08-21.xlsx`](test-cases-2026-08-21.xlsx
 | RabbitMQ | `localhost:5672` | nothing connects to it yet |
 | RabbitMQ UI | http://localhost:15672 | `guest` / `guest` |
 | OTel collector | `localhost:4317` (gRPC), `localhost:4318` (HTTP) | traces go to its own log |
+| Elasticsearch | http://localhost:9200 | no auth (017-otel-servicedefaults-elastic) |
+| Kibana | http://localhost:5601 | no auth — Observability app reads the traces/metrics/logs the collector forwards |
 
 Every service runs as `ASPNETCORE_ENVIRONMENT=Development` here, which is what publishes the BFF's
 OpenAPI document. `docker-compose.yml` runs them as Production.

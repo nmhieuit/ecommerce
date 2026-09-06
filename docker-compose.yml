@@ -27,6 +27,9 @@ volumes:
   # "I want to start over" (spec FR-007, FR-008).
   sqlserver-data:
   rabbitmq-data:
+  # Telemetry, not application data — but still worth surviving `down` so Kibana's own saved state
+  # (data views, etc.) doesn't reset every time (017-otel-servicedefaults-elastic).
+  elasticsearch-data:
 
 services:
   # ---------------------------------------------------------------- dependencies
@@ -88,12 +91,62 @@ services:
     # Also unused by any service — see the note on redis above. Its management interface is
     # published only under the `debug` profile.
 
+  # Backend for the collector below (017-otel-servicedefaults-elastic). Single-node, security
+  # disabled — the same local-dev posture every other datastore in this file already has (SQL
+  # Server's `sa`/plaintext password, RabbitMQ's guest/guest, Redis unauthenticated). This cluster
+  # carries only the platform's own telemetry, never tenant/business data, so it does not touch
+  # Principle V/VI the way a real datastore would (research.md Decision 5 of that feature).
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.4
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      # Bounded so a JVM heap doesn't compete with SQL Server/other containers on a dev machine —
+      # not a production sizing decision (constitution Principle VIII's "explicit budget" spirit,
+      # applied here to a local resource floor rather than a request-path SLO).
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks: [backbone]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -Eq '\"status\":\"(green|yellow)\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.4.4
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    networks: [backbone]
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5601/api/status | grep -q '\"level\":\"available\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    # No published port here — the default stack keeps exactly two published ports (storefront,
+    # gateway; spec 004 SC-010). `docker-compose.local.yml` republishes 5601 for by-hand use.
+
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    # Pinned rather than `latest` (was `otel/opentelemetry-collector-contrib:latest` before
+    # 017-otel-servicedefaults-elastic): the `elasticsearch` exporter's config surface has changed
+    # across contrib releases, so floating on `latest` means the exporter config below could
+    # silently break on the next `docker compose pull`. Same reasoning that already pins the
+    # OpenTelemetry NuGet packages in Directory.Packages.props instead of floating (research.md
+    # Decision 7 of that feature).
+    image: otel/opentelemetry-collector-contrib:0.160.0
     command: ["--config=/etc/otel/config.yaml"]
     volumes:
       - ./docker/otel-collector-config.yaml:/etc/otel/config.yaml:ro
     networks: [backbone]
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
     # No healthcheck, and that is a limitation rather than an oversight: the collector image is
     # distroless — it has no shell and no probe tool, so there is nothing to run a check with.
     # `--wait` still gates on the container reaching a running state, which is a weaker guarantee

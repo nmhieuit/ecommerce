@@ -47,6 +47,8 @@
 #   rabbitmq           15672 → 15672     management UI, guest/guest
 #   otel-collector      4317 → 4317      OTLP gRPC
 #   otel-collector      4318 → 4318      OTLP HTTP
+#   elasticsearch       9200 → 9200      http://localhost:9200 (017-otel-servicedefaults-elastic)
+#   kibana              5601 → 5601      http://localhost:5601
 #
 # These are the ports the repository already uses everywhere else: the same ones
 # docker-compose.debug.yml publishes, the same ones docker-compose.deps.yml gives the databases,
@@ -74,6 +76,7 @@ volumes:
   local-orders-db-data:
   local-identity-db-data:
   local-rabbitmq-data:
+  local-es-data:
 
 # The database servers are identical apart from their port and volume, so the parts that must not
 # drift are declared once.
@@ -182,8 +185,50 @@ services:
     # which is why docker-compose.yml keeps it behind an override — and why this file is for local
     # experimentation only.
 
+  # Backend for the collector below (017-otel-servicedefaults-elastic). Single-node, security
+  # disabled — same local-dev posture as every other datastore in this file (SQL Server's
+  # `sa`/plaintext password, RabbitMQ's guest/guest, Redis unauthenticated). Mirrors
+  # docker-compose.yml's `elasticsearch`/`kibana` services exactly, plus the published ports this
+  # file's "every port published" purpose calls for.
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.4
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - local-es-data:/usr/share/elasticsearch/data
+    networks: [backbone]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -Eq '\"status\":\"(green|yellow)\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.4.4
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks: [backbone]
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5601/api/status | grep -q '\"level\":\"available\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    # Pinned rather than `latest` — see docker-compose.yml's otel-collector for the rationale
+    # (research.md Decision 7 of 017-otel-servicedefaults-elastic).
+    image: otel/opentelemetry-collector-contrib:0.160.0
     command: ["--config=/etc/otel/config.yaml"]
     ports:
       - "4317:4317"
@@ -191,6 +236,9 @@ services:
     volumes:
       - ./docker/otel-collector-config.yaml:/etc/otel/config.yaml:ro
     networks: [backbone]
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
     # No healthcheck: the collector image is distroless — no shell, no probe tool, nothing to run a
     # check with. `--wait` still gates on the container reaching a running state, which is weaker
     # than the gates above.
