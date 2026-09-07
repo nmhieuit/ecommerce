@@ -63,7 +63,14 @@ sẵn có của nền tảng) vẫn là việc riêng, chưa thực hiện (ghi 
   trên cùng một Jenkins agent (một host) làm tranh chấp tài nguyên Docker, khiến một Testcontainers
   SQL Server khởi động timeout ở một trong hai lượt chạy song song.
 
-### 2.2. `Jenkinsfile` — 5 stage tuần tự
+### 2.2. `Jenkinsfile` — 5 stage tuần tự (tại thời điểm spec 013)
+
+*(Cập nhật: sau khi spec `018-cluster-secret-store` và `019-liveness-readiness-probes` merge,
+`Jenkinsfile` hiện có 9 stage — thêm `secret scan`/`image secret scan` (2 check GitHub mới,
+`ci/secret-scan`/`ci/image-secret-scan`, LUÔN chạy, không bị `CI_FAST_ITERATION` bỏ qua) và
+`deployment manifest lint` (không publish check GitHub riêng). Bảng dưới đây vẫn đúng cho 5 stage gốc
+của spec này; bảng đầy đủ 9 stage xem
+[07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md § 7](../onboarding/07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md#7-thất-bại-chặn-gì--phần-cần-xác-nhận-không-suy-đoán).)*
 
 | Stage | Tên check GitHub | Thất bại khi nào |
 |---|---|---|

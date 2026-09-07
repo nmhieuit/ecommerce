@@ -1,0 +1,52 @@
+<mxfile host="65bd71144e">
+    <diagram id="otel-servicedefaults-elastic-flow-nghiep-vu" name="Từ 1 đơn hàng thật tới 1 màn hình Kibana duy nhất">
+        <mxGraphModel dx="1699" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="600" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Từ 1 đơn hàng thật tới 1 màn hình Kibana duy nhất — thay vì phải xem từng bộ phận riêng lẻ" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="20" width="1100" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="n1" value="1. Khách hàng đặt 1 đơn hàng —&#xa;yêu cầu đi qua Gateway → BFF →&#xa;Orders như bình thường" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="90" width="240" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="n2" value="2. Mỗi bộ phận tự động gửi&#xa;trace + metric + log có cấu trúc&#xa;về kho tập trung, ngay lúc xử lý" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="90" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="n3" value="3. Đội vận hành mở 1 màn hình&#xa;duy nhất (Kibana), tra theo mã&#xa;theo dõi của đơn hàng đó" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="650" y="90" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="d1" value="Có dấu hiệu&#xa;bất thường?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="970" y="70" width="170" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="n4a" value="4a. Xác nhận hệ thống ổn —&#xa;không cần hành động gì" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="1190" y="30" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="n4b" value="4b. Thấy ngay bước nào chậm/lỗi&#xa;— điều tra tập trung đúng chỗ,&#xa;không phải đoán rồi kiểm tra&#xa;từng bộ phận riêng lẻ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="1190" y="140" width="220" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="note1" value="Trước đây phải vào TỪNG bộ phận riêng lẻ để xem — chậm, dễ bỏ sót, không trả lời nhanh được &quot;chậm ở bước nào&quot;." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="220" width="580" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="note2" value="Đã kiểm chứng thật: gỡ tạm thành phần dùng chung khỏi 1 bộ phận → bộ phận đó thật sự mất khả năng gửi báo cáo, chứng minh nó thực sự cần thiết, không phải cấu hình trang trí." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="650" y="220" width="500" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n1" target="n2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n2" target="n3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n3" target="d1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4a" value="Không" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=11;fontColor=#2d6a2d;" parent="1" source="d1" target="n4a" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4b" value="Có" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=11;fontColor=#b85450;" parent="1" source="d1" target="n4b" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

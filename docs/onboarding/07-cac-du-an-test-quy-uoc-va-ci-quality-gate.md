@@ -1,6 +1,6 @@
 # 07 — Các dự án test quy ước & CI quality gate
 
-> Đọc [01-tong-quan-kien-truc.md](01-tong-quan-kien-truc.md) trước nếu chưa quen khái niệm .NET cơ bản. Tài liệu này giải thích 4 dự án nằm trong thư mục `tests/` ở gốc repo — khác hẳn `services/*/tests/` (test của riêng 1 service) — và cách chúng vận hành trong build/CI.
+> Đọc [01-tong-quan-kien-truc.md](01-tong-quan-kien-truc.md) trước nếu chưa quen khái niệm .NET cơ bản. Tài liệu này giải thích 5 dự án nằm trong thư mục `tests/` ở gốc repo — khác hẳn `services/*/tests/` (test của riêng 1 service) — và cách chúng vận hành trong build/CI. (Cập nhật: dự án thứ 5, `DeploymentManifestConventionTests`, mới merge vào `master` sau khi 4 phần đầu của tài liệu này được viết — spec `019-liveness-readiness-probes`.)
 >
 > **Lưu ý quan trọng về phương pháp:** một số câu hỏi trong tài liệu này KHÔNG thể trả lời chỉ bằng cách đọc code — cần xác nhận từ bạn hoặc từ trạng thái sống trên GitHub mà tôi không truy cập được (không có `gh` CLI, và trình duyệt trong môi trường này chưa đăng nhập GitHub nên không mở được trang settings riêng tư). Những chỗ đó được đánh dấu rõ **[Theo bạn xác nhận]** thay vì viết như một sự thật đã tự kiểm chứng.
 
@@ -63,45 +63,71 @@ Ví dụ vi phạm: nếu file `pacts/orders-basketcheckedout.json` (đã thấy
 
 **Cơ chế:** cả 4 đều tĩnh (regex/chuỗi), không khởi động service hay Docker nào.
 
-## 5. Chạy ở đâu trong build/CI — đã xác minh trực tiếp, không suy đoán
+## 5. `tests/DeploymentManifestConventionTests` — mọi service phải khai báo đúng liveness/readiness probe (mới, spec 019)
 
-Tôi đã chạy đúng logic phân loại của [`scripts/ci/run-dotnet-tests.sh`](../../scripts/ci/run-dotnet-tests.sh) (dựa vào TÊN project, không phải nội dung) trên tên thật của 4 project:
+**Kiểm tra điều gì:** khác hẳn 4 dự án trên (chỉ đọc file .NET/Docker tĩnh), dự án này kiểm tra 1 file **ngoài hệ sinh thái .NET hoàn toàn** — [`deploy/ansible/roles/service_deployment/templates/deployment.yaml.j2`](../../deploy/ansible/roles/service_deployment/templates/deployment.yaml.j2), template Jinja2 dùng để Ansible render ra Deployment manifest K8s thật cho cả 7 service. [`ProbeDeclarationTests.cs`](../../tests/DeploymentManifestConventionTests/ProbeDeclarationTests.cs) khẳng định (trích rút gọn):
+```csharp
+[Theory]
+[MemberData(nameof(Services))]
+public void AllServices_DeclareBothProbes(string serviceName)
+{
+    var container = SingleContainer(ManifestFixture.RenderAll(RepoRoot), serviceName);
+    Assert.NotNull(container.LivenessProbe);
+    Assert.NotNull(container.ReadinessProbe);
+}
+```
+Chi tiết đáng nhớ: có 1 test riêng khẳng định **liveness KHÔNG BAO GIỜ trỏ vào path readiness** (`/health/ready`) — kể cả với 5 service có database. Lý do (đã có nền tảng khái niệm ở [01](01-tong-quan-kien-truc.md#5-gateway-là-ngoại-lệ--vì-sao-nó-không-tự-gọi-addidentityvalidation) và [Tài liệu 03](03-giai-doan-1-nen-tang-dich-vu-va-routing.md) về `/health/live` vs `/health/ready`): nếu liveness dùng nhầm path readiness, 1 lần database chỉ tạm chậm (không phải service chết) sẽ khiến K8s **restart nhầm cả Pod** thay vì chỉ tạm rút nó khỏi load balancer — biến 1 sự cố tạm thời của dependency thành downtime thật của chính service. Test `ReadinessDefaults_DifferByDependencyGroup` cũng khẳng định service có database (`orders`) phải có `failureThreshold` readiness **cao hơn** service không trạng thái (`gateway`) — tái dùng đúng ngưỡng chịu đựng thời gian phục hồi của SQL Server đã thấy ở `docker-compose.yml` ([01](01-tong-quan-kien-truc.md)), không phải 1 con số tự nghĩ ra.
+
+**Cơ chế — KHÁC HẲN 4 dự án kia:** không chỉ đọc text — [`ManifestFixture.cs`](../../tests/DeploymentManifestConventionTests/ManifestFixture.cs) thật sự **tự render** template Jinja2 đó (1 bộ render Jinja2 tối giản viết bằng C#, `ProbeTemplateRenderer.cs`, mô phỏng đúng cách Ansible sẽ thay biến), ghép biến từ [`deploy/ansible/roles/service_deployment/defaults/main.yml`](../../deploy/ansible/roles/service_deployment/defaults/main.yml) (giá trị mặc định theo nhóm — có DB hay không) + [`inventories/services.yml`](../../deploy/ansible/inventories/services.yml) (override riêng từng service nếu có), rồi parse kết quả YAML render ra thành `DeploymentManifest` để assert. Comment gốc: *"đây là nơi DUY NHẤT 1 thay đổi hình dạng của 1 trong 2 file YAML kia phải được phản ánh lại — cùng triết lý `DockerfileReferenceScanner` là nơi duy nhất biết hình dạng dòng `COPY` của Dockerfile."*
+
+**Có 1 lớp kiểm tra THỨ HAI, độc lập, không phải C#:** stage Jenkins `deployment manifest lint` (xem mục 7) chạy [`scripts/ci/lint-deployment-manifests.sh`](../../scripts/ci/lint-deployment-manifests.sh) — dùng **Ansible thật** (`ansible-playbook --check --diff`, không chạm cluster nào) để render, rồi **kubeconform** để validate kết quả khớp đúng OpenAPI schema thật của Kubernetes. 2 lớp bổ sung cho nhau: `DeploymentManifestConventionTests` (C#, nhanh, không cần cài Ansible) kiểm tra ĐÚNG QUY ƯỚC nghiệp vụ (2 probe, path đúng, ngưỡng theo nhóm dependency); `lint-deployment-manifests.sh` (chậm hơn, cần Ansible + kubeconform) kiểm tra bản render THẬT có hợp lệ với K8s hay không — 1 lỗi cú pháp YAML tinh vi có thể lọt qua C# renderer tự viết nhưng không lọt qua Ansible/kubeconform thật.
+
+## 6. Chạy ở đâu trong build/CI — đã xác minh trực tiếp, không suy đoán
+
+Tôi đã chạy đúng logic phân loại của [`scripts/ci/run-dotnet-tests.sh`](../../scripts/ci/run-dotnet-tests.sh) (dựa vào TÊN project, không phải nội dung) trên tên thật của 5 project:
 ```
 contract  (khớp *ContractTests.csproj):      (none)
 integration (khớp *IntegrationTest*):         (none)
 unit (còn lại):  ContainerConventionTests.csproj, ContractCoverageTests.csproj,
-                 CrossServiceIsolation.Tests.csproj, StructureConventionTests.csproj
+                 CrossServiceIsolation.Tests.csproj, StructureConventionTests.csproj,
+                 DeploymentManifestConventionTests.csproj
 ```
-Cả 4 dự án đều rơi vào tier **`unit`** — không phải vì chúng "giống unit test" về bản chất, mà thuần tuý vì tên file không khớp 2 pattern kia. Cả 4 cũng có mặt trong [`Ecommerce.slnx`](../../Ecommerce.slnx) (đã kiểm tra trực tiếp), nên được compile ở stage `build`, rồi được `scripts/ci/run-dotnet-tests.sh unit` phát hiện và chạy ở stage `unit tests` của [`Jenkinsfile`](../../Jenkinsfile) — 2 stage này **không** nằm sau điều kiện `when` nào, nên luôn chạy trên mọi lần build (khác với 3 stage integration/contract/SonarQube — xem mục dưới).
+Cả 5 dự án đều rơi vào tier **`unit`** — không phải vì chúng "giống unit test" về bản chất, mà thuần tuý vì tên file không khớp 2 pattern kia. Cả 5 cũng có mặt trong [`Ecommerce.slnx`](../../Ecommerce.slnx) (đã kiểm tra trực tiếp), nên được compile ở stage `build`, rồi được `scripts/ci/run-dotnet-tests.sh unit` phát hiện và chạy ở stage `unit tests` của [`Jenkinsfile`](../../Jenkinsfile) — stage này **không** nằm sau điều kiện `when` nào, nên luôn chạy trên mọi lần build.
 
-## 6. Thất bại chặn gì — phần cần xác nhận, không suy đoán
+## 7. Thất bại chặn gì — phần cần xác nhận, không suy đoán
 
 Đây là phần tôi **không thể tự xác minh chỉ bằng đọc code**, và bạn đã xác nhận trực tiếp, nên trình bày đúng như vậy thay vì như 1 sự thật tôi tự kiểm chứng:
 
-- **Trong file Jenkinsfile** (dòng 87): `CI_FAST_ITERATION = 'true'` hiện đang làm 3/5 stage (`integration tests`, `contract tests`, `sonarqube quality gate`) bị `when` chặn không chạy — đây là sự thật đọc trực tiếp từ code, không ảnh hưởng tới 4 dự án trong tài liệu này (chúng chạy ở stage `unit tests`, không bị chặn).
-- **[Theo bạn xác nhận]** Trên GitHub, bạn đã **gỡ cả 5 required status check** khỏi cấu hình branch protection để không làm chậm các PR mới — toàn bộ source code (`Jenkinsfile`, `scripts/ci/setup-branch-protection.sh`) vẫn giữ nguyên thiết kế "5 check bắt buộc", nhưng thiết kế đó **hiện không còn được GitHub thực thi**. Branch protection vẫn tồn tại (không bị tắt hoàn toàn) — chỉ riêng phần yêu cầu status check (quality gate) bị gỡ.
-- **Hệ quả thực tế:** thất bại của 4 dự án trong tài liệu này (hay bất kỳ stage nào khác) hiện **không tự động chặn merge PR** trên GitHub nữa — Jenkins vẫn có thể chạy và báo đỏ, nhưng đó chỉ còn là tín hiệu để người review tự nhìn vào, không phải rào chặn tự động như thiết kế gốc của spec `013-sonarqube-merge-blocker` (`enforce_admins: true`, `required_status_checks.contexts` liệt kê đủ 5 tên trong `scripts/ci/setup-branch-protection.sh`).
-- Tôi đã thử mở trực tiếp `github.com/nmhieuit/ecommerce/settings/branches` bằng trình duyệt để tự xác nhận, nhưng phiên trình duyệt trong môi trường này **chưa đăng nhập GitHub** (thấy nút "Sign in" ở góc phải) nên không truy cập được trang cấu hình riêng tư đó — không có bằng chứng độc lập nào khác ngoài xác nhận trực tiếp của bạn ở trên.
+- **Trong file Jenkinsfile hiện tại** (đã đọc lại toàn văn — pipeline giờ có **9 stage**, không còn 5 như lúc phần này viết lần đầu, do 2 spec mới merge sau đó thêm vào: `018-cluster-secret-store` thêm `secret scan`/`image secret scan`; `019-liveness-readiness-probes` thêm `deployment manifest lint`): `CI_FAST_ITERATION = 'true'` làm **4** stage bị `when` chặn không chạy — `integration tests`, `contract tests`, `deployment manifest lint`, `sonarqube quality gate`. Hai stage mới `secret scan`/`image secret scan` **không** nằm sau điều kiện này — comment trong code nói rõ lý do: *"neither needs Docker/Testcontainers, so skipping them buys no iteration speed, and a secret-scanning gate that is sometimes off defeats its own purpose"* — tức 2 stage quét bí mật này được cố tình thiết kế để LUÔN chạy, không phụ thuộc cờ tăng tốc CI.
+- **[Theo bạn xác nhận — ở lần đọc trước]** Bạn đã gỡ cả 5 required status check GỐC khỏi branch protection. Tôi **chưa hỏi lại** liệu điều đó có còn đúng cho 2 check mới (`ci/secret-scan`, `ci/image-secret-scan`) — 2 check này ra đời SAU lần bạn xác nhận, nên tôi không có cơ sở khẳng định chúng có đang là required check hay không; đây là điểm cần bạn xác nhận riêng nếu muốn biết chắc.
+- Stage `deployment manifest lint` (mục 5) **không publish check GitHub nào cả** — không gọi `checkStarted`/`checkPassed` như 5 stage kia. Comment gốc: *"Not wired into the required-check contract... but a failure here still fails this stage and therefore the build, the same way any other `sh` step does"* — nghĩa là nó vẫn có thể làm **cả pipeline Jenkins đỏ** (build fail), nhưng không xuất hiện thành 1 status check riêng biệt trên PR GitHub như 5+2 cái kia.
+- Tôi vẫn không có `gh` CLI hay phiên trình duyệt đã đăng nhập GitHub trong môi trường này để tự kiểm chứng cấu hình branch protection sống — mọi điều ở trên về trạng thái GitHub vẫn chỉ dựa trên xác nhận trực tiếp của bạn từ trước, không phải tôi tự xác minh lại.
 
-## Bảng tổng kết — thứ tự thực chạy trong pipeline (đã xác minh trực tiếp)
+## Bảng tổng kết — thứ tự thực chạy trong pipeline (đã xác minh trực tiếp, cập nhật 9 stage)
 
-| # | Tên | Thuộc dự án | Stage Jenkins | Bị `CI_FAST_ITERATION` chặn? |
-|---|---|---|---|---|
-| 1 | `dotnet build` (biên dịch, gồm cả 4 dự án dưới) | — | `build` | Không |
-| 2 | `VerticalSliceStructureScanner` | `StructureConventionTests` | `unit tests` | Không |
-| 2 | `DockerfileReferenceScanner` | `ContainerConventionTests` | `unit tests` | Không |
-| 2 | `ContractCoverageScanner` | `ContractCoverageTests` | `unit tests` | Không |
-| 2 | `ConnectionStringScanner` | `CrossServiceIsolation.Tests` | `unit tests` | Không |
-| 2 | `TenantGatedConnectionScanner` | `CrossServiceIsolation.Tests` | `unit tests` | Không |
-| 2 | `AuthenticatedByDefaultScanner` | `CrossServiceIsolation.Tests` | `unit tests` | Không |
-| 2 | `AuthorizationPolicyDeclaredScanner` | `CrossServiceIsolation.Tests` | `unit tests` | Không |
-| 3 | Integration tests (Testcontainers) | `services/*/tests/*.IntegrationTests` | `integration tests` | **Có** (hiện đang skip) |
-| 4 | Contract tests (Pact) | `services/*/tests/*.ContractTests` | `contract tests` | **Có** (hiện đang skip) |
-| 5 | Phân tích + Quality Gate SonarQube | toàn repo | `sonarqube quality gate` | **Có** (hiện đang skip) |
+| # | Tên | Thuộc dự án | Stage Jenkins | Bị `CI_FAST_ITERATION` chặn? | Publish check GitHub? |
+|---|---|---|---|---|---|
+| 0 | `sonarqube: begin analysis` | — | `sonarqube: begin analysis` | **Có** (skip) | `ci/sonarqube-quality-gate` (pending) |
+| 1 | `dotnet build` (biên dịch, gồm cả 5 dự án dưới) | — | `build` | Không | `ci/build` |
+| 2 | gitleaks (toàn bộ lịch sử git) | — | `secret scan` | **Không** (luôn chạy) | `ci/secret-scan` |
+| 3 | Trivy (image đã build) | — | `image secret scan` | **Không** (luôn chạy) | `ci/image-secret-scan` |
+| 4 | `VerticalSliceStructureScanner` | `StructureConventionTests` | `unit tests` | Không | `ci/unit-tests` |
+| 4 | `DockerfileReferenceScanner` | `ContainerConventionTests` | `unit tests` | Không | `ci/unit-tests` |
+| 4 | `ContractCoverageScanner` | `ContractCoverageTests` | `unit tests` | Không | `ci/unit-tests` |
+| 4 | `ConnectionStringScanner` | `CrossServiceIsolation.Tests` | `unit tests` | Không | `ci/unit-tests` |
+| 4 | `TenantGatedConnectionScanner` | `CrossServiceIsolation.Tests` | `unit tests` | Không | `ci/unit-tests` |
+| 4 | `AuthenticatedByDefaultScanner` | `CrossServiceIsolation.Tests` | `unit tests` | Không | `ci/unit-tests` |
+| 4 | `AuthorizationPolicyDeclaredScanner` | `CrossServiceIsolation.Tests` | `unit tests` | Không | `ci/unit-tests` |
+| 4 | `ProbeDeclarationTests`/`RolloutStrategyTests`/`ServiceInventoryTests`/`LivenessRestartTests` (render Jinja2 mô phỏng bằng C#) | `DeploymentManifestConventionTests` | `unit tests` | Không | `ci/unit-tests` |
+| 5 | Integration tests (Testcontainers) | `services/*/tests/*.IntegrationTests` | `integration tests` | **Có** (skip) | `ci/integration-tests` |
+| 6 | Contract tests (Pact) | `services/*/tests/*.ContractTests` | `contract tests` | **Có** (skip) | `ci/contract-tests` |
+| 7 | `ansible-lint` + render Ansible thật + `kubeconform` | `deploy/ansible/` | `deployment manifest lint` | **Có** (skip) | *(không có — xem mục trên)* |
+| 8 | Phân tích + Quality Gate SonarQube | toàn repo | `sonarqube quality gate` | **Có** (skip) | `ci/sonarqube-quality-gate` |
 
-Xếp hạng "#2" của 6 scanner ngang nhau vì `dotnet test` chạy TOÀN BỘ project trong tier `unit` — thứ tự thật giữa chúng phụ thuộc thứ tự `find` liệt kê file trên đĩa của máy CI tại thời điểm chạy (không cố định, không có ý nghĩa ưu tiên nào được thiết kế). Đây không phải điểm tôi suy đoán — đọc thẳng [`run-dotnet-tests.sh`](../../scripts/ci/run-dotnet-tests.sh): script gọi `dotnet test` tuần tự cho từng project trong biến `$projects` (kết quả của `find . -name '*Tests.csproj' | ... | sort`), nên thứ tự thật là theo **tên project sắp xếp bảng chữ cái** (`sort`) — nếu bạn cần thứ tự chính xác 100% cho 1 lần chạy CI cụ thể, cách chắc chắn nhất là đọc log Jenkins của lần chạy đó, tôi không có quyền truy cập log CI thật từ đây.
+Xếp hạng "#4" của 8 scanner ngang nhau vì `dotnet test` chạy TOÀN BỘ project trong tier `unit` — thứ tự thật giữa chúng phụ thuộc thứ tự `find` liệt kê file trên đĩa của máy CI tại thời điểm chạy (không cố định, không có ý nghĩa ưu tiên nào được thiết kế). Đây không phải điểm tôi suy đoán — đọc thẳng [`run-dotnet-tests.sh`](../../scripts/ci/run-dotnet-tests.sh): script gọi `dotnet test` tuần tự cho từng project trong biến `$projects` (kết quả của `find . -name '*Tests.csproj' | ... | sort`), nên thứ tự thật là theo **tên project sắp xếp bảng chữ cái** (`sort`) — nếu bạn cần thứ tự chính xác 100% cho 1 lần chạy CI cụ thể, cách chắc chắn nhất là đọc log Jenkins của lần chạy đó, tôi không có quyền truy cập log CI thật từ đây.
 
 ## Đi đâu tiếp theo
 
 - [06-giai-doan-4-chat-luong-bao-mat-xac-thuc.md](06-giai-doan-4-chat-luong-bao-mat-xac-thuc.md) — bối cảnh đầy đủ của SonarQube/Jenkinsfile/branch protection được xây ban đầu.
-- `scripts/ci/setup-branch-protection.sh` — script định nghĩa cấu hình 5-check gốc; chạy lại nếu muốn khôi phục quality gate làm merge blocker.
+- [11-trien-khai-k8s-va-secret-store.md](11-trien-khai-k8s-va-secret-store.md) — `deploy/k8s/`, `deploy/ansible/`, và `RequiredSecretsValidation.cs` đứng sau dự án test thứ 5 ở tài liệu này.
+- `scripts/ci/setup-branch-protection.sh` — script định nghĩa cấu hình 5-check gốc; chạy lại nếu muốn khôi phục quality gate làm merge blocker (chưa tính 2 check `secret-scan`/`image-secret-scan` mới, xem mục 7).

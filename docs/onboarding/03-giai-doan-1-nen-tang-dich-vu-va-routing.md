@@ -26,6 +26,8 @@ public async Task InvokeAsync(HttpContext context)
 ```
 Dòng `context.Request.Headers[HeaderName] = correlationId` là điểm hay nhất của file này: ghi ID vào chính **request** đang xử lý, không chỉ trả về response. Lý do: gateway dùng YARP để forward request sang BFF, và YARP **copy nguyên request headers** khi forward — nên nếu service A sinh ra 1 correlation ID và ghi vào request của chính nó, request đó (đã được forward tiếp) sẽ mang ID đó sang service B. Nếu chỉ ghi vào response, ID sẽ dừng lại ở A, và B sẽ tự sinh ra 1 ID khác — mất khả năng lần theo 1 request xuyên suốt nhiều service (log của A và log của B sẽ không có gì chung để join lại).
 
+(Cập nhật từ spec 016-correlation-id-propagation: `ResolveCorrelationId` giờ còn validate giá trị client tự gửi lên qua header — từ chối nếu dài hơn 128 ký tự hoặc chứa ký tự điều khiển (kể cả CRLF), tự sinh 1 Guid mới thay thế nếu không hợp lệ. Lý do: giá trị này được ghi thẳng vào mọi dòng log có cấu trúc — 1 client gửi `X-Correlation-Id` chứa CRLF có thể "giả" thêm 1 dòng log giả mạo nếu không lọc trước.)
+
 Mọi service gọi 2 dòng dùng chung này trong `Program.cs` (đã thấy ở Tài liệu 2):
 ```csharp
 builder.AddServiceDefaults();  // đăng ký OpenTelemetry + DI

@@ -1,0 +1,57 @@
+<mxfile host="65bd71144e">
+    <diagram id="liveness-readiness-probes-sequence" name="Trình tự — rolling update an toàn nhờ maxUnavailable:0">
+        <mxGraphModel dx="1232" dy="448" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Trình tự — rolling update không mất traffic, nhờ maxUnavailable: 0 + readiness probe" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1100" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_k8s" value="Kubernetes&#xa;(Deployment controller)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="220" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_old" value="Pod cũ (v1)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="60" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_new" value="Pod mới (v2)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="60" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_traffic" value="Traffic người dùng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="60" width="220" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1"><mxGeometry relative="1" as="geometry"><mxPoint x="140" y="105" as="sourcePoint"/><mxPoint x="140" y="560" as="targetPoint"/></mxGeometry></mxCell>
+                <mxCell id="l2" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1"><mxGeometry relative="1" as="geometry"><mxPoint x="420" y="105" as="sourcePoint"/><mxPoint x="420" y="560" as="targetPoint"/></mxGeometry></mxCell>
+                <mxCell id="l3" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1"><mxGeometry relative="1" as="geometry"><mxPoint x="680" y="105" as="sourcePoint"/><mxPoint x="680" y="560" as="targetPoint"/></mxGeometry></mxCell>
+                <mxCell id="l4" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1"><mxGeometry relative="1" as="geometry"><mxPoint x="960" y="105" as="sourcePoint"/><mxPoint x="960" y="560" as="targetPoint"/></mxGeometry></mxCell>
+                <mxCell id="a1" value="1. Pod cũ (v1) đang phục vụ traffic bình thường, readiness đang PASS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="130" width="740" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="a2" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1"><mxGeometry relative="1" as="geometry"><mxPoint x="140" y="200" as="sourcePoint"/><mxPoint x="680" y="200" as="targetPoint"/></mxGeometry></mxCell>
+                <mxCell id="a2t" value="2. Deploy phiên bản mới — tạo pod v2 (maxSurge:1)" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="182" width="500" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="box_new" value="3. Pod v2 khởi động — readiness probe CHƯA pass&#xa;    (đang chờ dependency sẵn sàng theo initialDelaySeconds)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;fontSize=9;verticalAlign=top;align=left;spacingLeft=8;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="220" width="330" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="a4" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1"><mxGeometry relative="1" as="geometry"><mxPoint x="850" y="300" as="sourcePoint"/><mxPoint x="420" y="300" as="targetPoint"/></mxGeometry></mxCell>
+                <mxCell id="a4t" value="4. TOÀN BỘ traffic vẫn định tuyến vào pod CŨ (v1) — v2 chưa nhận gì" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="282" width="500" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a5" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1"><mxGeometry relative="1" as="geometry"><mxPoint x="680" y="350" as="sourcePoint"/><mxPoint x="420" y="350" as="targetPoint"/></mxGeometry></mxCell>
+                <mxCell id="a5t" value="5. readinessProbe pass → K8s thêm v2 vào endpoint nhận traffic" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="332" width="500" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a6" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1"><mxGeometry relative="1" as="geometry"><mxPoint x="140" y="400" as="sourcePoint"/><mxPoint x="420" y="400" as="targetPoint"/></mxGeometry></mxCell>
+                <mxCell id="a6t" value="6. maxUnavailable:0 → CHỈ SAU (5), K8s mới rút pod v1 khỏi endpoint" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="150" y="382" width="600" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a7" value="7. Từ đây, traffic 100% vào v2 — không có khoảnh khắc nào &quot;không ai phục vụ&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="440" width="480" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Kubernetes mặc định cho phép maxUnavailable 25% (rút pod cũ TRƯỚC khi pod mới sẵn sàng) — deployment.yaml.j2 khai báo 0 tường minh, đã kiểm chứng bằng RolloutStrategyTests.cs." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="500" width="1150" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

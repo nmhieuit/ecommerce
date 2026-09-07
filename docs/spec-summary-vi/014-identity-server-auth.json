@@ -1,0 +1,28 @@
+{
+  "title": "Máy chủ định danh thật thay thế người dùng giả lập",
+  "items": {
+    "FR-001": "Hệ thống PHẢI cung cấp một máy chủ định danh xác thực người dùng và phát hành token khi đăng nhập thành công, thay thế người dùng giả lập được gán cứng ở Phase 1.",
+    "FR-002": "Mọi token được phát hành PHẢI chứa danh tính đã xác minh của người dùng và thông tin tenant của họ.",
+    "FR-003": "Gateway PHẢI xác thực token của mọi yêu cầu đến trước khi chuyển tiếp yêu cầu đó.",
+    "FR-004": "Mỗi dịch vụ ở tầng dưới PHẢI tự xác thực token của yêu cầu một cách độc lập, không dựa vào việc gateway đã xác thực từ trước.",
+    "FR-005": "Một dịch vụ ở tầng dưới PHẢI từ chối một token bị giả mạo hoặc không hợp lệ ngay cả khi yêu cầu đến trực tiếp, bỏ qua gateway.",
+    "FR-006": "Hệ thống PHẢI từ chối các token đã hết hạn với một sự từ chối rõ ràng, minh bạch, thay vì thất bại âm thầm hoặc lỗi chung chung.",
+    "FR-007": "Sau khi tính năng này hoàn thành, định danh tenant dùng để truy cập lưu trữ dữ liệu PHẢI được lấy từ thông tin tenant trong token đã xác minh, thay vì phần gán cứng ở Phase 1.",
+    "FR-008": "Cơ chế lan truyền định danh tenant đã được xác định từ gateway → BFF → các dịch vụ PHẢI giữ nguyên, không thay đổi bởi tính năng này — chỉ có nguồn xác định thay đổi, theo đúng thiết kế ban đầu của phần giả lập ở Phase 1.",
+    "FR-009": "Việc truy cập lưu trữ dữ liệu PHẢI tiếp tục yêu cầu một định danh tenant đã được xác định, không có tenant mặc định hay dự phòng nào, đúng như đã được thực thi cho phần giả lập ở Phase 1.",
+    "FR-010": "Một yêu cầu có token không chứa thông tin tenant, hoặc thông tin tenant không thể phân tích hay sai định dạng, PHẢI được xem như chưa xác định được tenant — việc truy cập lưu trữ dữ liệu KHÔNG được phép tiếp tục.",
+    "FR-011": "Một yêu cầu hoàn toàn không có token PHẢI bị từ chối theo cùng cách một token không hợp lệ bị từ chối (mặc định từ chối, không bao giờ có danh tính mặc định).",
+    "US1-KB1": "Với điều kiện máy chủ định danh đang hoạt động và người dùng có thông tin đăng nhập hợp lệ, Khi họ đăng nhập, Thì một token được phát hành chứa danh tính đã xác minh và thông tin tenant của họ.",
+    "US1-KB2": "Với điều kiện một token hợp lệ từ lần đăng nhập thành công, Khi token đó được gửi đến nền tảng, Thì các yêu cầu của người dùng được xử lý như đến từ một danh tính thực sự, đã được xác minh — không phải người dùng giả lập của Phase 1.",
+    "US2-KB1": "Với điều kiện một yêu cầu mang theo token hợp lệ, Khi yêu cầu đó đến gateway, Thì gateway xác thực token trước khi chuyển tiếp.",
+    "US2-KB2": "Với điều kiện một yêu cầu đến được một dịch vụ ở tầng dưới, Khi dịch vụ xử lý yêu cầu đó, Thì dịch vụ tự xác thực token một cách độc lập, bất kể yêu cầu có đi qua gateway hay không.",
+    "US2-KB3": "Với điều kiện một token bị giả mạo được gửi trực tiếp đến một dịch vụ, bỏ qua gateway, Khi dịch vụ nhận được yêu cầu đó, Thì dịch vụ tự từ chối yêu cầu.",
+    "US3-KB1": "Với điều kiện một token đã hết hạn, Khi token đó được gửi đến gateway hoặc một dịch vụ, Thì yêu cầu bị từ chối với một phản hồi \"không được phép\" rõ ràng.",
+    "US3-KB2": "Với điều kiện một token hết hạn bị từ chối, Khi phản hồi đó được kiểm tra, Thì phản hồi rõ ràng, minh bạch và không giống với một thất bại chung chung hay âm thầm.",
+    "SC-001": "100% các lượt đăng nhập thành công tạo ra một token chứa danh tính và thông tin tenant đã xác minh.",
+    "SC-002": "100% các token bị giả mạo được gửi trực tiếp đến một dịch vụ ở tầng dưới, bỏ qua gateway, bị chính dịch vụ đó từ chối một cách độc lập.",
+    "SC-003": "100% các token đã hết hạn bị từ chối với một phản hồi \"không được phép\" rõ ràng, không có trường hợp thất bại âm thầm nào, trên toàn bộ các dịch vụ.",
+    "SC-004": "Việc chuyển nguồn xác định tenant từ phần gán cứng ở Phase 1 sang thông tin tenant trong token không đòi hỏi bất kỳ thay đổi nào đối với cơ chế lan truyền tenant hoặc việc thực thi kiểm tra tenant ở tầng lưu trữ dữ liệu của bất kỳ dịch vụ nào.",
+    "SC-005": "Mọi dịch vụ có thể truy cập từ bên ngoài tiếp tục từ chối 100% các yêu cầu không xác định được tenant, không có ngoại lệ nào — cùng một đảm bảo mà Phase 1 đã cung cấp, nay được hỗ trợ bởi token thực sự."
+  }
+}

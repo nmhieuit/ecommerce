@@ -62,13 +62,14 @@ Ràng buộc liên service đáng nhớ: comment trong code nói `TotalRequestTi
 
 ### Lan truyền tenant/subject/token: 1 handler chèn vào MỌI request outbound
 
-[`TenantPropagationHandler.cs`](../../services/bff/src/Bff.Api/DownstreamClients/TenantPropagationHandler.cs) — 1 `DelegatingHandler` gắn vào pipeline của cả 4 client, chèn lại 3 header trước khi gửi:
+[`TenantPropagationHandler.cs`](../../services/bff/src/Bff.Api/DownstreamClients/TenantPropagationHandler.cs) — 1 `DelegatingHandler` gắn vào pipeline của cả 4 client, chèn lại 4 header trước khi gửi (cập nhật từ spec 016-correlation-id-propagation: thêm header thứ 4 so với bản đọc trước đó):
 ```csharp
 Relay(request, TenantContextMiddleware.HeaderName, requestServices?.GetService<TenantContext>()?.TenantId);
 Relay(request, CallerContextMiddleware.HeaderName, requestServices?.GetService<CallerContext>()?.SubjectId);
 Relay(request, "Authorization", httpContext?.Request.Headers.Authorization.ToString());
+Relay(request, CorrelationIdMiddleware.HeaderName, httpContext?.Items[CorrelationIdMiddleware.HeaderName] as string);
 ```
-Comment giải thích lý do phải làm thủ công: *"1 `HttpClient` thường không tự forward gì cả. YARP tự copy header ở chặng gateway → BFF, khiến người ta dễ tưởng cả chuỗi đều tự động — thiếu handler này thì chặng BFF → domain service sẽ âm thầm làm rơi mất tenant."* Kể từ tính năng 014, cùng handler này cũng lan truyền lại **nguyên vẹn** header `Authorization` — vì mỗi domain service tự xác thực token độc lập (đã giải thích ở [01](01-tong-quan-kien-truc.md#6-vì-sao-mỗi-service-tự-xác-thực-không-tin-gateway)), thiếu bước này thì mọi request downstream thật sẽ bị chính domain service đó từ chối vì không có token.
+Comment giải thích lý do phải làm thủ công: *"1 `HttpClient` thường không tự forward gì cả. YARP tự copy header ở chặng gateway → BFF, khiến người ta dễ tưởng cả chuỗi đều tự động — thiếu handler này thì chặng BFF → domain service sẽ âm thầm làm rơi mất tenant."* Kể từ tính năng 014, cùng handler này cũng lan truyền lại **nguyên vẹn** header `Authorization` — vì mỗi domain service tự xác thực token độc lập (đã giải thích ở [01](01-tong-quan-kien-truc.md#6-vì-sao-mỗi-service-tự-xác-thực-không-tin-gateway)), thiếu bước này thì mọi request downstream thật sẽ bị chính domain service đó từ chối vì không có token. Kể từ spec 016, cùng handler còn lan truyền `X-Correlation-Id` — trước đó, comment gốc ghi nhận đây từng là 1 lỗ hổng thật: *"mọi domain service chỉ gọi được qua BFF từng tự sinh ID riêng của nó thay vì mang theo ID sinh ra ở edge"* — nghĩa là trước spec 016, log của gateway/BFF và log của 4 service phía sau BFF **không hề nối được với nhau** qua cùng 1 correlation ID, dù cơ chế `CorrelationIdMiddleware` (Tài liệu 3) đã tồn tại từ sớm ở từng service riêng lẻ.
 
 Chi tiết kỹ thuật tinh tế: tenant được đọc qua `IHttpContextAccessor` thay vì inject thẳng `TenantContext` — vì `IHttpClientFactory` dựng và **tái sử dụng** message handler qua nhiều request khác nhau; nếu inject 1 service scoped trực tiếp, nó sẽ bị "chốt cứng" vào tenant của request đầu tiên tạo ra handler đó, và MỌI request sau sẽ vô tình mang tenant của người khác — comment gọi thẳng đây là rủi ro "truy cập dữ liệu chéo tenant" nếu làm sai.
 
@@ -119,18 +120,17 @@ Chuỗi suy luận đầy đủ, xác minh từng bước:
 
 `docker-compose.yml` (bản gần production, đã đọc ở trên) thì **không** cần bước 3 này — vì nó không set `ASPNETCORE_ENVIRONMENT: Development`, nên không bao giờ nạp `appsettings.Development.json`, nên 4 `BaseUrl` gốc trong `appsettings.json` (đã đúng sẵn là hostname Compose) không hề bị ghi đè sai.
 
-## Phần 4 — Kubernetes trong tương lai: PHÂN TÍCH, không phải mô tả cấu hình có sẵn
+## Phần 4 — Kubernetes: đã có thật, chuyển sang tài liệu riêng
 
-**Đã kiểm tra trực tiếp: repo này hiện KHÔNG CÓ bất kỳ file K8s/Helm/manifest nào** (không thư mục `k8s/`, không file `*.yaml` kiểu Deployment/Service nào trong toàn repo). Mọi nội dung dưới đây là **phân tích mã nguồn hiện tại** để trả lời "có sẵn sàng cho K8s không" — không phải mô tả cấu hình đã tồn tại.
+Phần này lúc viết lần đầu có tên "Kubernetes trong tương lai: PHÂN TÍCH, không phải mô tả cấu hình có sẵn", dựa trên việc lúc đó repo hoàn toàn chưa có file K8s nào. **Điều đó không còn đúng** — 2 spec mới (`018-cluster-secret-store`, `019-liveness-readiness-probes`) đã merge sau đó, thêm thật `deploy/k8s/` (contract `ExternalSecret`) và `deploy/ansible/` (template Deployment K8s thật, có liveness/readiness probe). Nội dung phân tích đầy đủ giờ chuyển sang [11-trien-khai-k8s-va-secret-store.md](11-trien-khai-k8s-va-secret-store.md) — không lặp lại ở đây.
 
-**Điểm thuận lợi đã thấy trong code (Phần 2-3):** toàn bộ cơ chế xác định địa chỉ downstream đã **tách khỏi code**, đi qua đúng 1 kênh — cấu hình đọc bằng key `Services:{ServiceName}:BaseUrl`, nạp bằng biến môi trường theo quy ước `Services__{ServiceName}__BaseUrl`. Đây chính xác là cơ chế K8s cũng dùng để cấp phát địa chỉ (biến môi trường bơm từ `ConfigMap`/`Deployment.spec.containers[].env`, trỏ tới DNS nội bộ cluster của 1 `Service` K8s) — **không có dòng code C# nào cần sửa** để chuyển sang K8s, chỉ cần thay giá trị biến môi trường lúc triển khai. Ví dụ MINH HOẠ (không phải giá trị thật, vì chưa có manifest nào): `Services__ProductsApi__BaseUrl=http://products-api.default.svc.cluster.local:8080` hoặc ngắn gọn `http://products-api:8080` nếu cùng namespace — tên `products-api` ở đây là tên 1 K8s `Service` GIẢ ĐỊNH, không phải trích dẫn từ file thật nào trong repo.
-
-**Điểm cần xem lại — sự khác biệt giữa cách Compose và K8s xử lý "chờ downstream sẵn sàng":** Phần 1.2 đã chỉ ra `depends_on: condition: service_healthy` của Docker Compose là cơ chế **hạ tầng**, không phải code, đảm bảo BFF chỉ khởi động sau khi cả 4 downstream đã healthy. Kubernetes **không có khái niệm `depends_on` tương đương** cho `Deployment` — các Pod khởi động độc lập, không đảm bảo thứ tự. Đây KHÔNG phải vấn đề với code BFF hiện tại — vì (Phần 1.2) chính code BFF vốn đã KHÔNG cần downstream sẵn sàng lúc khởi động (chỉ validate cấu hình, không ping thử), và cơ chế resilience/circuit-breaker (Phần 2) vốn được thiết kế để xử lý downstream tạm thời chưa sẵn sàng ở TỪNG REQUEST — đây chính xác là mô hình K8s khuyến khích (đừng dựa vào thứ tự khởi động, hãy chịu lỗi mỗi request). Nói cách khác: quyết định thiết kế "BFF không tự kiểm tra downstream lúc start" tưởng như chỉ để đơn giản hoá code, hoá ra lại khớp tự nhiên với mô hình K8s hơn là với Docker Compose.
-
-**Về nhiều bản sao (multiple replicas):** không tìm thấy bằng chứng nào trong code đã đọc (Phần 2) giả định BFF chỉ có 1 instance — không có state cục bộ (BFF không sở hữu database, đã xác nhận ở [01](01-tong-quan-kien-truc.md)), mỗi request tự đọc lại tenant/token từ chính request đó (Phần 2, `TenantPropagationHandler`) chứ không giữ trạng thái giữa các request. Đây là quan sát dựa trên những gì đã đọc trong tài liệu này, không phải đã rà soát toàn bộ codebase BFF — nếu cần khẳng định chắc chắn 100% an toàn khi chạy nhiều replica, nên rà thêm các phần chưa đọc ở đây (`Features/*/Endpoints.cs` còn lại) trước khi kết luận.
+2 kết luận PHÂN TÍCH cũ của phần này vẫn còn giá trị và đã được xác nhận đúng bởi code K8s thật (xem tài liệu 11 để đối chiếu):
+- Cơ chế đọc địa chỉ downstream qua `Services__{ServiceName}__BaseUrl` (Phần 2-3 ở trên) không cần sửa gì để chạy trên K8s — đúng như dự đoán, vì K8s cũng cấp phát địa chỉ qua biến môi trường.
+- BFF vốn không tự kiểm tra downstream sẵn sàng lúc khởi động (Phần 1.2) — khớp tự nhiên với triết lý K8s (không có `depends_on`, chịu lỗi mỗi request) hơn là với Docker Compose.
 
 ## Đi đâu tiếp theo
 
 - [01-tong-quan-kien-truc.md](01-tong-quan-kien-truc.md) — luồng request tổng thể qua gateway/BFF.
 - [06-giai-doan-4-chat-luong-bao-mat-xac-thuc.md](06-giai-doan-4-chat-luong-bao-mat-xac-thuc.md) — cơ chế DNS nội bộ Docker Compose áp dụng y hệt cho `identity-api`.
 - [08-chien-luoc-test-unit-integration-va-playwright.md](08-chien-luoc-test-unit-integration-va-playwright.md) — cách `DownstreamUnavailableTests.cs` kiểm chứng đúng cơ chế lỗi 502/504 mô tả ở Phần 2.
+- [11-trien-khai-k8s-va-secret-store.md](11-trien-khai-k8s-va-secret-store.md) — K8s/secret store/probe thật, tiếp nối trực tiếp từ Phần 4 (cũ) ở trên.

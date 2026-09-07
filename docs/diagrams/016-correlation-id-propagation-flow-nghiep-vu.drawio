@@ -1,0 +1,79 @@
+<mxfile host="65bd71144e">
+    <diagram id="correlation-id-propagation-flow-nghiep-vu" name="Mã theo dõi — từ lúc vào cổng chính tới lúc điều tra sự cố">
+        <mxGraphModel dx="1232" dy="465" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Mã theo dõi (Correlation ID) — từ lúc yêu cầu vào cổng chính tới lúc dùng để điều tra sự cố" style="text;html=1;fontStyle=1;fontSize=16;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="20" width="1100" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="n1" value="1. Khách hàng thao tác&#xa;(ví dụ: đặt đơn hàng)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="90" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="d1" value="Yêu cầu đã mang&#xa;sẵn mã theo dõi?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="70" width="180" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="n2a" value="2a. Giữ nguyên mã đã có" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="30" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="n2b" value="2b. Cổng chính tự sinh&#xa;mã mới" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="130" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="n3" value="3. Mã đi theo yêu cầu qua tầng&#xa;tổng hợp, tới đúng bộ phận xử lý —&#xa;mỗi bộ phận ghi log kèm mã này" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="70" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="n4" value="4. Nếu hành động kích hoạt xử lý nền&#xa;(bất đồng bộ) — mã vẫn đi theo,&#xa;không đứt đoạn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="220" width="260" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="n5" value="5. Mã trả về cho trình duyệt —&#xa;xem được trên công cụ kiểm tra&#xa;mạng, không chỉ đội kỹ thuật thấy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="280" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="n6" value="6. Khi có sự cố: người điều tra lấy&#xa;đúng mã (từ trình duyệt hoặc báo cáo&#xa;người dùng), tra trên log tập trung" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="280" width="280" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="n7" value="7. Thấy toàn bộ hành trình,&#xa;đúng thứ tự, không thiếu bộ&#xa;phận nào — kể cả bước nền" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="700" y="280" width="280" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="note1" value="Mỗi request đồng thời có mã riêng biệt, không lẫn lộn trong log dù chạy song song (đã kiểm chứng thật bằng cách gửi nhiều request cùng lúc)." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="380" width="400" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n1" target="d1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2a" value="Có" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=11;fontColor=#2d6a2d;" parent="1" source="d1" target="n2a" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2b" value="Chưa" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=11;fontColor=#b85450;" parent="1" source="d1" target="n2b" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3a" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n2a" target="n3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3b" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n2b" target="n3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n3" target="n4" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="980" y="200"/>
+                            <mxPoint x="1130" y="200"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n3" target="n5" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="160" y="200"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n5" target="n6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=10;" parent="1" source="n6" target="n7" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
