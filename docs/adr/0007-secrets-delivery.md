@@ -61,3 +61,24 @@ Option C technically satisfies the constitution's letter but not its spirit — 
 1. [ ] Deploy self-hosted Vault with HA storage backend via Ansible
 2. [ ] Install ESO and define the first `SecretStore`/`ExternalSecret` for one service as a pilot
 3. [ ] Define dynamic-credential policies for SQL Server and RabbitMQ access
+
+## Amendment (2026-09-06): the application-side contract shipped; Vault/ESO itself still has not
+
+`specs/018-cluster-secret-store` (Jira SCRUM-27) implemented the half of this decision that does
+not require the infrastructure above to exist yet: every backend service's committed
+`appsettings.Development.json` no longer carries a literal database password (previously
+`Password=Change_Me_Local_Dev_Only!`, removed in favour of a local `dotnet user-secrets` workflow);
+`shared/ServiceDefaults/RequiredSecretsValidation.cs` adds fail-fast startup validation
+(`AddRequiredSecretsValidation`) so a service that never received its secret refuses to start
+instead of limping along on a credential-less connection string; a `ci/secret-scan` gitleaks stage
+and a `ci/image-secret-scan` Trivy stage were added to the Jenkins pipeline
+(`specs/018-cluster-secret-store/contracts/ci-secret-scan-stage-contract.md`); and
+`deploy/k8s/<service>/{external-secret.yaml,secret.example.yaml}` were authored as the reviewable
+manifest contract this ADR's ESO decision implies, for orders/baskets/parties/products/identity.
+
+This action items list above is unchanged and still fully open — no Vault instance and no ESO
+installation exist anywhere for this platform as of this amendment. The application code now
+depends on exactly the shape of `Secret` object Action Item 2 describes, but nothing yet produces
+one outside of manual `kubectl apply` against a placeholder-example. See
+`specs/018-cluster-secret-store/research.md` Decision 1 for the scope boundary reasoning, and
+`deploy/k8s/README.md` for what does and does not exist in this repository today.

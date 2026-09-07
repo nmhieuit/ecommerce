@@ -82,6 +82,12 @@ pipeline {
         CHECK_CONTRACT = 'ci/contract-tests'
         CHECK_QUALITY_GATE = 'ci/sonarqube-quality-gate'
 
+        // specs/018-cluster-secret-store/contracts/ci-secret-scan-stage-contract.md — not gated by
+        // CI_FAST_ITERATION below: neither needs Docker/Testcontainers, so skipping them buys no
+        // iteration speed, and a secret-scanning gate that is sometimes off defeats its own purpose.
+        CHECK_SECRET_SCAN = 'ci/secret-scan'
+        CHECK_IMAGE_SECRET_SCAN = 'ci/image-secret-scan'
+
         // TEMP (see banner above) — 'true' stubs sonarqube/integration/contract; set to 'false'
         // (or remove this line) for the real, final run before closing out Phase 3.
         CI_FAST_ITERATION = 'true'
@@ -120,6 +126,33 @@ pipeline {
             post {
                 success { checkPassed(env.CHECK_BUILD, 'Solution and frontend workspace built.') }
                 failure { checkFailed(env.CHECK_BUILD, 'Build failed — see the Jenkins console log.') }
+            }
+        }
+
+        // specs/018-cluster-secret-store/contracts/ci-secret-scan-stage-contract.md — full git
+        // history, independent of the 'build' stage above, so it runs regardless of build outcome.
+        stage('secret scan') {
+            steps {
+                checkStarted(env.CHECK_SECRET_SCAN)
+                sh 'scripts/ci/run-secret-scan.sh'
+            }
+            post {
+                success { checkPassed(env.CHECK_SECRET_SCAN, 'No secrets found across the full git history.') }
+                failure { checkFailed(env.CHECK_SECRET_SCAN, 'gitleaks found a secret — see the Jenkins console log and artifacts/secret-scan/gitleaks-report.json.') }
+            }
+        }
+
+        // Needs the images the 'build' stage's `dotnet publish`-backed Dockerfiles produce, so it
+        // runs after 'build'. Unlike 'secret scan' above, this stage's own step performs the
+        // `docker build` — the pipeline does not otherwise build container images anywhere yet.
+        stage('image secret scan') {
+            steps {
+                checkStarted(env.CHECK_IMAGE_SECRET_SCAN)
+                sh 'scripts/ci/run-image-secret-scan.sh'
+            }
+            post {
+                success { checkPassed(env.CHECK_IMAGE_SECRET_SCAN, 'No secrets found in any service image filesystem.') }
+                failure { checkFailed(env.CHECK_IMAGE_SECRET_SCAN, 'Trivy found a secret in a built image — see the Jenkins console log.') }
             }
         }
 

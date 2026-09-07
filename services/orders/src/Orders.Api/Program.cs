@@ -9,6 +9,10 @@ using Tenancy;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
+// specs/018-cluster-secret-store FR-007: fail fast at startup if the cluster never injected this
+// service's database credential, instead of starting and only discovering it on the first request.
+builder.AddRequiredSecretsValidation(RequiredSecret.ConnectionString("OrdersDb"));
+
 // Independent token validation (014-identity-server-auth spec US2/FR-004) — this service does not
 // trust that the gateway already authenticated the request; it validates the token itself.
 // FallbackPolicy denies by default (research.md Decision 6), so every endpoint requires it unless

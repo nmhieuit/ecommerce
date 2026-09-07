@@ -45,5 +45,6 @@ public class AuthorizationPolicyTests
     }
 
     private static WebApplicationFactory<Program> CreateFactory() =>
-        new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseTestJwtBearer());
+        new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+            builder.UseTestJwtBearer().UseUnreachableRequiredSecret("ProductsDb"));
 }
