@@ -1,0 +1,38 @@
+---
+# service_name và service_vars đều được truyền vào từ deploy.yml (một lượt lặp cho mỗi entry của
+# inventories/services.yml). Logic resolve ở đây PHẢI khớp với
+# tests/DeploymentManifestConventionTests/ManifestFixture.cs — đó là bộ test xác nhận đúng cấu trúc
+# manifest mà role này tạo ra.
+- name: Xác định nhóm giá trị mặc định probe (db_backed hay stateless)
+  ansible.builtin.set_fact:
+    probe_group: "{{ 'db_backed' if service_vars.depends_on_database else 'stateless' }}"
+
+- name: Ghép giá trị mặc định của nhóm với override riêng của service (nếu có) — FR-004, FR-007
+  ansible.builtin.set_fact:
+    resolved_readiness: "{{ service_vars.probe_timing_overrides | default(probe_defaults[probe_group].readiness) }}"
+    resolved_liveness: "{{ service_vars.probe_timing_overrides | default(probe_defaults[probe_group].liveness) }}"
+
+- name: Render manifest Deployment cho {{ service_name }}
+  ansible.builtin.template:
+    src: deployment.yaml.j2
+    dest: "{{ playbook_dir }}/.rendered/{{ service_name }}.deployment.yaml"
+    mode: "0644"
+  vars:
+    image: "{{ service_vars.image | default(service_name + ':latest') }}"
+    container_port: "{{ service_vars.container_port }}"
+    liveness_path: /health/live
+    readiness_path: /health/ready
+    readiness_initial_delay_seconds: "{{ resolved_readiness.initial_delay_seconds }}"
+    readiness_period_seconds: "{{ resolved_readiness.period_seconds }}"
+    readiness_timeout_seconds: "{{ resolved_readiness.timeout_seconds }}"
+    readiness_failure_threshold: "{{ resolved_readiness.failure_threshold }}"
+    liveness_initial_delay_seconds: "{{ resolved_liveness.initial_delay_seconds }}"
+    liveness_period_seconds: "{{ resolved_liveness.period_seconds }}"
+    liveness_timeout_seconds: "{{ resolved_liveness.timeout_seconds }}"
+    liveness_failure_threshold: "{{ resolved_liveness.failure_threshold }}"
+
+- name: Áp dụng manifest {{ service_name }} vào cluster
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ playbook_dir }}/.rendered/{{ service_name }}.deployment.yaml"
+    kubeconfig: "{{ kubeconfig | default(omit) }}"

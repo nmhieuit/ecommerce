@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ service_name }}
+  labels:
+    app: {{ service_name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ service_name }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: {{ service_name }}
+    spec:
+      containers:
+        - name: {{ service_name }}
+          image: "{{ image }}"
+          ports:
+            - containerPort: {{ container_port }}
+          livenessProbe:
+            httpGet:
+              path: {{ liveness_path }}
+              port: {{ container_port }}
+            initialDelaySeconds: {{ liveness_initial_delay_seconds }}
+            periodSeconds: {{ liveness_period_seconds }}
+            timeoutSeconds: {{ liveness_timeout_seconds }}
+            failureThreshold: {{ liveness_failure_threshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ readiness_path }}
+              port: {{ container_port }}
+            initialDelaySeconds: {{ readiness_initial_delay_seconds }}
+            periodSeconds: {{ readiness_period_seconds }}
+            timeoutSeconds: {{ readiness_timeout_seconds }}
+            failureThreshold: {{ readiness_failure_threshold }}

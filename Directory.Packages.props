@@ -71,6 +71,10 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
+    <!-- 019-liveness-readiness-probes: parses the rendered Kubernetes Deployment YAML in
+         DeploymentManifestConventionTests, the same way ContainerConventionTests reads Dockerfiles
+         as plain text — no Ansible/kubectl install required to run the suite. -->
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <!-- Consumer-driven contract testing (ADR-0006; 011-consumer-contract-tests research.md
          Decision 1). Referenced only by the *.Api.ContractTests projects: it ships both the
          HTTP-pact DSL the BFF-facing boundaries use and the message-pact DSL the BasketCheckedOut

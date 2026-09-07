@@ -1,0 +1,23 @@
+---
+# Playbook gốc cho 019-liveness-readiness-probes.
+#
+# Đọc specs/019-liveness-readiness-probes/contracts/service-deployment-vars.md để biết schema đầy
+# đủ của mỗi entry trong inventories/services.yml. Mỗi service được xử lý bằng một lượt lặp riêng
+# của role service_deployment — không có vòng lặp Jinja2 nào bên trong template, nên
+# deployment.yaml.j2 chỉ cần nội suy biến đơn giản (xem tests/DeploymentManifestConventionTests).
+- name: Triển khai Deployment (kèm liveness/readiness probe) cho mọi service
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - inventories/services.yml
+  tasks:
+    - name: Áp dụng manifest cho từng service trong inventory
+      ansible.builtin.include_role:
+        name: service_deployment
+      loop: "{{ services | dict2items }}"
+      loop_control:
+        loop_var: service_entry
+      vars:
+        service_name: "{{ service_entry.key }}"
+        service_vars: "{{ service_entry.value }}"

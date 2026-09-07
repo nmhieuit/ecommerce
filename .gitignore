@@ -67,3 +67,6 @@ artifacts/
 # Local CI credentials (012-sonarqube-quality-gate). Never committed: these are real tokens for
 # the local Jenkins/SonarQube stack in docker-compose.ci.yml.
 .ci-secrets/
+
+# Ansible (019-liveness-readiness-probes)
+*.retry

@@ -203,6 +203,18 @@ pipeline {
             }
         }
 
+        stage('deployment manifest lint') {
+            // 019-liveness-readiness-probes: static validation of deploy/ansible/ (ansible-lint +
+            // kubeconform per service). Not wired into the required-check contract in
+            // contracts/pipeline-stage-contract.md — that registry belongs to 012-sonarqube-
+            // quality-gate and is out of this feature's scope — but a failure here still fails this
+            // stage and therefore the build, the same way any other `sh` step does.
+            when { environment name: 'CI_FAST_ITERATION', value: 'false' }
+            steps {
+                sh 'scripts/ci/lint-deployment-manifests.sh'
+            }
+        }
+
         stage('sonarqube quality gate') {
             when { environment name: 'CI_FAST_ITERATION', value: 'false' }
             steps {

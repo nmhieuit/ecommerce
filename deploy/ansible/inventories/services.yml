@@ -1,0 +1,38 @@
+---
+# Biến triển khai cho từng service — schema:
+# specs/019-liveness-readiness-probes/contracts/service-deployment-vars.md
+#
+# container_port: 8080 cho mọi service, khớp cổng nội bộ container mà mọi Dockerfile/docker-compose
+# hiện có đang dùng (xem healthcheck "http://localhost:8080/health/ready" trong docker-compose.yml).
+#
+# depends_on_database: true cho 5 service sở hữu cơ sở dữ liệu riêng; false cho gateway/bff — hai
+# lớp cổng/tổng hợp không trạng thái, readiness của chúng "Healthy" ngay khi tiến trình chạy (xem
+# Gateway.Api/Bff.Api HealthCheckEndpoints.cs — AddHealthChecks() không đăng ký check nào).
+services:
+  parties:
+    container_port: 8080
+    depends_on_database: true
+
+  products:
+    container_port: 8080
+    depends_on_database: true
+
+  baskets:
+    container_port: 8080
+    depends_on_database: true
+
+  orders:
+    container_port: 8080
+    depends_on_database: true
+
+  identity:
+    container_port: 8080
+    depends_on_database: true
+
+  gateway:
+    container_port: 8080
+    depends_on_database: false
+
+  bff:
+    container_port: 8080
+    depends_on_database: false
