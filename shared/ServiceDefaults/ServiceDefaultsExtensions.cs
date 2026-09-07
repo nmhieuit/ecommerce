@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -66,5 +67,25 @@ public static class ServiceDefaultsExtensions
     {
         app.UseMiddleware<CorrelationIdMiddleware>();
         return app;
+    }
+
+    /// <summary>
+    /// Declares the secrets this service cannot start without (specs/018-cluster-secret-store
+    /// FR-002/FR-007; constitution Principle VI). Registers <see cref="RequiredSecretsValidator"/>
+    /// and calls <c>ValidateOnStart()</c>, so the generic host validates every declared secret
+    /// during startup — before <c>app.Run()</c> ever accepts a request — and fails with a
+    /// structured error naming the missing secret(s) if any are absent or blank. Call once per
+    /// service, right after <see cref="AddServiceDefaults{TBuilder}"/>, passing every secret that
+    /// service's own configuration requires (e.g. <c>RequiredSecret.ConnectionString("OrdersDb")</c>).
+    /// </summary>
+    public static TBuilder AddRequiredSecretsValidation<TBuilder>(this TBuilder builder, params RequiredSecret[] secrets)
+        where TBuilder : IHostApplicationBuilder
+    {
+        builder.Services.AddSingleton<IValidateOptions<RequiredSecretsOptions>, RequiredSecretsValidator>();
+        builder.Services.AddOptions<RequiredSecretsOptions>()
+            .Configure(options => options.Secrets = secrets)
+            .ValidateOnStart();
+
+        return builder;
     }
 }

@@ -31,6 +31,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- specs/018-cluster-secret-store: backs the dotnet user-secrets workflow documented in
+         appsettings.Development.json, so a local `dotnet run` (outside docker-compose) can supply
+         ConnectionStrings:BasketsDb without committing a credential. -->
+    <UserSecretsId>ebc75432-eef6-4262-94c1-07694a313790</UserSecretsId>
   </PropertyGroup>
 
 </Project>

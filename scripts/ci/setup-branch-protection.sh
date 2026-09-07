@@ -23,6 +23,13 @@
 # `enforce_admins: true` is the setting that removes the override path for every role, including
 # repository admins. Without it the pipeline is advisory, not a gate.
 #
+# specs/018-cluster-secret-store (2026-09-06): added ci/secret-scan and ci/image-secret-scan to the
+# contexts list below (contracts/ci-secret-scan-stage-contract.md). This file was edited as part of
+# implementing that feature, but re-running this script against the live repository — an action
+# visible to every collaborator and affecting real branch-protection settings — was deliberately
+# NOT performed by that implementation session; a repository administrator must run it (tasks.md
+# T036), same as every prior update to this contexts list.
+#
 # `required_approving_review_count` is 0, not 1, and that is deliberate. nmhieuit/ecommerce has
 # exactly one collaborator, and GitHub does not let anyone approve their own pull request — so
 # requiring one approval would make every PR permanently unmergeable regardless of whether CI
@@ -78,7 +85,9 @@ gh api \
       "ci/unit-tests",
       "ci/integration-tests",
       "ci/contract-tests",
-      "ci/sonarqube-quality-gate"
+      "ci/sonarqube-quality-gate",
+      "ci/secret-scan",
+      "ci/image-secret-scan"
     ]
   },
   "enforce_admins": true,
@@ -98,4 +107,4 @@ echo
 echo "Applied. Verify the result:"
 echo "  gh api repos/${REPO}/branches/${BRANCH}/protection | jq '.required_status_checks.contexts, .enforce_admins'"
 echo
-echo "Expected: all five ci/* checks listed, and enforce_admins.enabled = true."
+echo "Expected: all seven ci/* checks listed, and enforce_admins.enabled = true."

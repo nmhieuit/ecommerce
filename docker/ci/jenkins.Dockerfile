@@ -7,10 +7,18 @@
 # container was recreated from docker-compose.ci.yml's plain `jenkins/jenkins:lts-jdk17`. Captured
 # from that image's actual build history (`docker history ecomerce-ci-jenkins:local --no-trunc`)
 # after diagnosing a `dotnet: not found` failure caused by exactly that loss.
+#
+# gitleaks and Trivy (specs/018-cluster-secret-store) are installed as pinned static binaries
+# rather than through apt — neither ships a Debian package in the base image's repositories, and a
+# pinned release download keeps the two new CI stages (ci/secret-scan, ci/image-secret-scan;
+# contracts/ci-secret-scan-stage-contract.md) reproducible the same way the .NET SDK install below
+# already is.
 FROM jenkins/jenkins:lts-jdk17
 
 ARG DOTNET_VERSION=10.0
 ARG NODE_MAJOR=22
+ARG GITLEAKS_VERSION=8.21.2
+ARG TRIVY_VERSION=0.58.1
 
 USER root
 
@@ -36,6 +44,21 @@ RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
     && /tmp/dotnet-install.sh --channel "${DOTNET_VERSION}" --install-dir "${DOTNET_ROOT}" \
     && rm /tmp/dotnet-install.sh \
     && ln -s "${DOTNET_ROOT}/dotnet" /usr/local/bin/dotnet
+
+# gitleaks — scripts/ci/run-secret-scan.sh (ci/secret-scan stage, git-history secret scanning).
+RUN curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+        -o /tmp/gitleaks.tar.gz \
+    && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
+    && rm /tmp/gitleaks.tar.gz \
+    && chmod +x /usr/local/bin/gitleaks
+
+# Trivy — scripts/ci/run-image-secret-scan.sh (ci/image-secret-scan stage, container image secret
+# scanning; also earmarked by ADR-0012 Action Item 4 for the still-open CVE vulnerability stage).
+RUN curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+        -o /tmp/trivy.tar.gz \
+    && tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy \
+    && rm /tmp/trivy.tar.gz \
+    && chmod +x /usr/local/bin/trivy
 
 # COREPACK_HOME must live outside /var/jenkins_home: that path is a named Docker volume, mounted
 # over whatever the image ships there, so anything baked in under it at build time is invisible at

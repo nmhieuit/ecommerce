@@ -68,6 +68,7 @@
     <Project Path="shared/IntegrationTestSupport/IntegrationTestSupport.csproj" />
     <Project Path="shared/IntegrationTestSupport.Tests/IntegrationTestSupport.Tests.csproj" />
     <Project Path="shared/ServiceDefaults/ServiceDefaults.csproj" />
+    <Project Path="shared/ServiceDefaults.UnitTests/ServiceDefaults.UnitTests.csproj" />
     <Project Path="shared/Tenancy/Tenancy.csproj" />
     <Project Path="shared/Tenancy.UnitTests/Tenancy.UnitTests.csproj" />
   </Folder>

@@ -8,6 +8,10 @@ using ServiceDefaults;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
+// specs/018-cluster-secret-store FR-007: fail fast at startup if the cluster never injected this
+// service's database credential, instead of starting and only discovering it on the first request.
+builder.AddRequiredSecretsValidation(RequiredSecret.ConnectionString("IdentityDb"));
+
 // Read lazily, inside each options callback below, rather than once into a local here — a
 // WebApplicationFactory-based test injects its connection-string override onto builder.Configuration
 // only at Build() time, so a value captured any earlier would miss it and silently fall back to the

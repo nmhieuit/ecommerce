@@ -1,0 +1,41 @@
+# gitleaks configuration for the ecommerce monorepo.
+#
+# specs/018-cluster-secret-store — Jira SCRUM-27 / constitution Principle VI ("Secure by Default").
+# Extends gitleaks' built-in default ruleset (broad coverage of API keys, private keys, cloud
+# provider tokens, etc.) — see contracts/ci-secret-scan-stage-contract.md.
+# scripts/ci/run-secret-scan.sh invokes this file via `gitleaks detect --config .gitleaks.toml`.
+
+[extend]
+useDefault = true
+
+# The default ruleset alone does NOT reliably flag a low-entropy, human-readable connection-string
+# password (verified empirically: `gitleaks detect` against this repo's full history, before this
+# rule existed, reported "no leaks found" even though appsettings.Development.json committed
+# `Password=Change_Me_Local_Dev_Only!` for months — specs/018-cluster-secret-store research.md
+# Decision 5). This rule targets the ADO.NET/SQL Server `Password=`/`Pwd=` convention every service
+# in this repo uses, so the ci/secret-scan gate (contracts/ci-secret-scan-stage-contract.md) has
+# real teeth against the exact pattern this feature exists to catch, not just what gitleaks ships
+# with by default.
+[[rules]]
+id = "connection-string-password"
+description = "Password embedded directly in a connection string (Password=... / Pwd=...)"
+# Non-capturing group: a capture group here would make gitleaks report only that group's text as
+# the finding's "Secret" (e.g. just the literal word "Password") instead of the whole
+# `Password=<value>` match, which both under-reports the finding and breaks the allowlist regex
+# below (matched against the finding's Secret/Match text, not the source line).
+regex = '''(?i)\b(?:password|pwd)\s*=\s*[^;"'<>$\s][^;"'<>$\s]{3,}'''
+tags = ["secret", "connection-string"]
+
+# Excludes two confirmed-safe shapes, not real credentials:
+#   - `Password=<placeholder text>` / `Password=${ENV_VAR}` — already unmatchable by the regex
+#     itself (values starting with `<` or `$` cannot match the leading character class), used in
+#     appsettings.Development.json's dotnet-user-secrets guidance and in docker-compose*.yml's
+#     `${MSSQL_SA_PASSWORD}` env-var reference. No allowlist entry needed for these — the regex
+#     shape already excludes them.
+#   - `Password=wrong` — the literal, deliberately-unreachable fixture value used by every
+#     services/*/tests/*.IntegrationTests/ReadinessTests.cs to prove a health check fails against a
+#     bad connection. This one DOES match the regex shape, so it needs an explicit, reviewed
+#     allowlist entry rather than a broader regex change that would weaken the rule generally.
+[rules.allowlist]
+description = "ReadinessTests.cs fixture: Password=wrong is a deliberately-invalid test value, never a real credential"
+regexes = ['''(?i)password\s*=\s*wrong\b''']
