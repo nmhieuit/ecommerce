@@ -121,8 +121,10 @@ mà không tự kiểm tra lại ít nhất 1 lần:
 
 ## Việc cần làm ở bước triển khai (không thuộc phạm vi thiết kế này)
 
-- [ ] Xác nhận cú pháp Lens Formula thật cho Error-rate (tỉ lệ 2 count có điều kiện KQL)
-- [ ] Xác nhận tính năng "Customize time range" theo panel còn đúng tên/vị trí ở phiên bản Kibana này
-- [ ] Xác nhận hành vi Collapsible section
-- [ ] Xác nhận cách Lens Formula xử lý mẫu số 0
-- [ ] Đặt tên và lưu dashboard, đặt tên gợi nhớ (vd `SLO vận hành hằng ngày — 7 service`)
+**Đã hoàn tất** — xem kết quả thật ở [`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../../kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md).
+
+- [x] Xác nhận cú pháp Lens Formula thật cho Error-rate (tỉ lệ 2 count có điều kiện KQL)
+- [x] Xác nhận tính năng "Customize time range" theo panel còn đúng tên/vị trí ở phiên bản Kibana này
+- [x] Xác nhận hành vi Collapsible section
+- [x] Xác nhận cách Lens Formula xử lý mẫu số 0
+- [x] Đặt tên và lưu dashboard, đặt tên gợi nhớ (vd `SLO vận hành hằng ngày — 7 service`)

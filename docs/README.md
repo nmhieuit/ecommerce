@@ -47,6 +47,12 @@ logic tính tiền `Basket.cs`/`Order.cs`), có bản dịch `test-first-commits
 → [`roadmap.md`](roadmap.md) (lộ trình theo giai đoạn) và [`tech-stack-decisions.md`](tech-stack-decisions.md)
 (bảng tổng hợp công nghệ đã chọn, dẫn sang từng ADR).
 
+**Bạn chưa có kinh nghiệm với Kibana/Elasticsearch, muốn tự tay học cách quan sát hệ thống (traces,
+metrics, logs, các sự kiện liên quan bảo mật)?**
+→ [`docs/kibana-quan-sat-he-thong/`](kibana-quan-sat-he-thong/) — 7 file hands-on, đọc theo số
+`00`→`06`, mọi lệnh/field/thao tác đều lấy trực tiếp từ dữ liệu thật và chính giao diện Kibana đang
+chạy trên máy bạn, không phải ví dụ Kibana chung chung.
+
 ## Vì sao có 2 tài liệu tưởng như trùng nhau: `docs/summary/` vs `docs/onboarding/`
 
 Không trùng — khác góc nhìn:
