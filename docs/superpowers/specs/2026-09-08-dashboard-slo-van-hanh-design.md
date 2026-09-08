@@ -90,6 +90,10 @@ minutes" mặc định lúc demo.
 "Add panel" → "Collapsible section"), đặt tên "Đào sâu khi có báo động", thu gọn mặc định. Chưa tự tay
 xác nhận hành vi collapse/expand hoạt động đúng ra sao ở phiên bản Kibana này.
 
+**Cập nhật sau khi build**: đã verify — Collapsible section KHÔNG thực sự ẩn nội dung panel bên
+trong ở chế độ View (chỉ đổi trạng thái header), xem chi tiết và bằng chứng ở
+[`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../../kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md).
+
 ## Trường hợp biên & rủi ro đã biết
 
 - **Cách hiển thị cột "Ngưỡng" — chưa chốt cơ chế**: Lens Table vốn dựng từ aggregation trên dữ liệu

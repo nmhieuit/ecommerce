@@ -115,6 +115,23 @@ Kết quả thật: `1 / 7687 = 0.01%`, Kibana (cùng khoảng, refresh ngay sau
 Đối chiếu Latency p95/p99 (Task 2 Bước 5) — cùng service, cùng khoảng, dùng `percentiles` aggregation
 thô qua `_search` trên field `duration`:
 
+```powershell
+$latBody = @{
+  size = 0
+  query = @{ bool = @{ must = @(
+    @{ term = @{ "resource.attributes.service.name" = $svc } }
+    @{ range = @{ "@timestamp" = @{ gte = "now-24h" } } }
+  ) } }
+  aggs = @{ p = @{ percentiles = @{ field = "duration"; percents = @(95, 99) } } }
+} | ConvertTo-Json -Depth 10
+$lat = Invoke-RestMethod -Uri "$EsBase/traces-generic.otel-default*/_search" -Method Post -Body $latBody -ContentType "application/json"
+$p95ms = $lat.aggregations.p.values.'95.0' / 1000000
+$p99ms = $lat.aggregations.p.values.'99.0' / 1000000
+Write-Output "p95 = $p95ms ms, p99 = $p99ms ms"
+```
+
+Kết quả thật chạy lệnh trên (`$svc = "Orders.Api"`):
+
 ```
 p95 = 27.1438818702788 ms  → làm tròn 27 ms
 p99 = 389.487010515074 ms  → làm tròn 389 ms
