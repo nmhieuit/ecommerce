@@ -7,6 +7,7 @@
 
 service:
   name: identity
+  classification: internal-service-api
   description: >-
     Central identity server (ADR-0001: Duende IdentityServer). Authenticates users and issues
     tokens carrying verified identity and tenant claims, replacing the Phase 1 hardcoded stub

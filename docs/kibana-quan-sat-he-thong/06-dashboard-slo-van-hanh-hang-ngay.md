@@ -6,6 +6,11 @@
 Thiết kế đầy đủ: [`docs/superpowers/specs/2026-09-08-dashboard-slo-van-hanh-design.md`](../superpowers/specs/2026-09-08-dashboard-slo-van-hanh-design.md).
 Mã nguồn export thật: [`dashboards/slo-van-hanh-hang-ngay.ndjson`](dashboards/slo-van-hanh-hang-ngay.ndjson).
 
+Kể từ SCRUM-29, dashboard này được chính thức hoá làm cơ chế đo lường liên tục (User Story 3) của đặc
+tả [`specs/021-declare-service-slos/`](../../specs/021-declare-service-slos/spec.md) — hợp đồng (bất
+biến bắt buộc) tại [`contracts/continuous-measurement-contract.md`](../../specs/021-declare-service-slos/contracts/continuous-measurement-contract.md),
+đã xác thực lại trên dữ liệu thật tại [`tasks.md`](../../specs/021-declare-service-slos/tasks.md) T011–T014.
+
 Dashboard thật: **`SLO vận hành hằng ngày — 7 service`** (id `e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`),
 đã dựng đủ 3 tầng đúng thiết kế gốc, tổng cộng **8 panel cấp cao nhất** (không phải `5` như dự kiến ban
 đầu — xem mục "Đã xác nhận thật lúc build" bên dưới).
