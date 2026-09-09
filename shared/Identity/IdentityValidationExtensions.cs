@@ -59,6 +59,11 @@ public static class IdentityValidationExtensions
                 ClearUnauthorizedResponseEvents.Configure(jwtOptions);
             });
 
+        // 020-timeouts-retry-circuit-breaker (research.md Decision 4): the OIDC discovery/JWKS
+        // fetch above is an outbound call like any other and must not rely on the framework's
+        // implicit default HttpClient.
+        services.AddIdentityBackchannelResilience(JwtBearerDefaults.AuthenticationScheme);
+
         services.Configure<AuthorizationToggleOptions>(
             configuration.GetSection(AuthorizationToggleOptions.ConfigSectionName));
         services.AddSingleton<IAuthorizationHandler, RequireApiScopeAuthorizationHandler>();

@@ -78,6 +78,7 @@
     <Project Path="tests/CrossServiceIsolation.Tests/CrossServiceIsolation.Tests.csproj" />
     <Project Path="tests/DeploymentManifestConventionTests/DeploymentManifestConventionTests.csproj" />
     <Project Path="tests/ServiceManifestSloConventionTests/ServiceManifestSloConventionTests.csproj" />
+    <Project Path="tests/ResilienceCoverageTests/ResilienceCoverageTests.csproj" />
     <Project Path="tests/StructureConventionTests/StructureConventionTests.csproj" />
   </Folder>
 </Solution>

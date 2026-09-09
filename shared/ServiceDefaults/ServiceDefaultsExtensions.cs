@@ -35,11 +35,20 @@ public static class ServiceDefaultsExtensions
             .WithTracing(tracing => tracing
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
+                // 020-timeouts-retry-circuit-breaker (research.md Decision 6): every attempt,
+                // retry, and circuit-breaker state change Microsoft.Extensions.Http.Resilience
+                // (Polly v8) makes is emitted under this activity source. Without it, resilience
+                // events happen but never reach Elastic — only the final outcome would, via the
+                // HttpClient instrumentation above, which cannot distinguish "failed on the first
+                // try" from "failed after two retries and an open circuit" (spec FR-008).
+                .AddSource("Polly")
                 .AddOtlpExporter())
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation()
+                // See the "Polly" activity source above — same reasoning, for the meter side.
+                .AddMeter("Polly")
                 .AddOtlpExporter());
 
         builder.Logging.AddOpenTelemetry(logging =>

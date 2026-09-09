@@ -13,6 +13,10 @@
     <!-- Unlike Cookies/Negotiate, JwtBearer does not ship in the shared framework above — it needs
          its own package reference (verified: build fails with CS0234 without it). -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <!-- 020-timeouts-retry-circuit-breaker (research.md Decision 4): wraps the JwtBearer backchannel
+         HttpClient (OIDC discovery + JWKS fetch against the identity server) with an explicit
+         timeout, retry, and circuit breaker instead of the framework's implicit default. -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
   </ItemGroup>
 
 </Project>
