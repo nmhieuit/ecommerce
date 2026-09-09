@@ -76,6 +76,3 @@ tình huống design-time, tách biệt khỏi luồng request thật.
   thiếu tenant): [`docs/diagrams/003-stub-identity-tenant-context-sequence.drawio`](../diagrams/003-stub-identity-tenant-context-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/003-stub-identity-tenant-context-flow-nghiep-vu.drawio`](../diagrams/003-stub-identity-tenant-context-flow-nghiep-vu.drawio)
-
-Sơ đồ tổng thể 3 nhóm kiến trúc của toàn nền tảng (bao gồm tenancy) xem
-[`docs/diagrams/kien-truc-3-nhom.drawio`](../diagrams/kien-truc-3-nhom.drawio).

@@ -23,7 +23,7 @@ Ví dụ cụ thể, đúng luồng đã thấy ở [05](05-giai-doan-3-hop-dong
 
 ## 2. Cơ chế này có ĐANG THỰC SỰ chặn được gì tính đến hiện tại không?
 
-Đối chiếu trực tiếp với phát hiện ở [07](07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md), đọc lại [`Jenkinsfile`](../../Jenkinsfile) **tại đúng thời điểm viết tài liệu này** (dòng 87, chưa đổi kể từ lần đọc ở tài liệu 07):
+Đối chiếu trực tiếp với phát hiện ở [07](07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md), đọc lại [`Jenkinsfile`](../../Jenkinsfile) **tại đúng thời điểm viết tài liệu này** (dòng 93 — số dòng đã dịch xuống so với lần đọc trước vì `Jenkinsfile` có thêm stage mới từ spec 018/019, xem [07](07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md); giá trị bản thân không đổi):
 ```groovy
 CI_FAST_ITERATION = 'true'
 ```
@@ -55,7 +55,7 @@ private static bool IsDownstreamFailure(Exception exception) => exception is
 
 ## 4. "Trước khi deploy lên stage" — cần gì để thật sự chặn kịp thời điểm đó?
 
-Thứ tự 5 stage thật trong [`Jenkinsfile`](../../Jenkinsfile): `sonarqube: begin analysis` → `build` → `unit tests` → `integration tests` → `contract tests` → `sonarqube quality gate`. Stage `contract tests` chạy `scripts/ci/run-dotnet-tests.sh contract` — script này tự tìm mọi `*ContractTests.csproj` (đã xác nhận cơ chế phát hiện theo tên ở [07](07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md)) và chạy `dotnet test`, tức là chạy đúng `OrdersProviderPactTests`/tương tự ở mọi service.
+`Jenkinsfile` hiện có **9 stage** (cập nhật từ 5 lúc phần này viết lần đầu — 2 spec `018-cluster-secret-store`/`019-liveness-readiness-probes` merge sau đó thêm `secret scan`/`image secret scan`/`deployment manifest lint`, bảng đầy đủ ở [07](07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md)); riêng thứ tự và vị trí của `contract tests` không đổi: `sonarqube: begin analysis` → `build` → `secret scan` → `image secret scan` → `unit tests` → `integration tests` → **`contract tests`** → `deployment manifest lint` → `sonarqube quality gate`. Stage `contract tests` chạy `scripts/ci/run-dotnet-tests.sh contract` — script này tự tìm mọi `*ContractTests.csproj` (đã xác nhận cơ chế phát hiện theo tên ở [07](07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md)) và chạy `dotnet test`, tức là chạy đúng `OrdersProviderPactTests`/tương tự ở mọi service.
 
 Để bảo đảm KHÔNG THỂ deploy lên stage khi có breaking change, dựa trên bằng chứng đã có (Phần 2), cần **đồng thời cả 3 điều kiện** sau — thiếu 1 trong 3 là hổng:
 1. `CI_FAST_ITERATION` phải là `'false'` (hoặc dòng đó bị xoá khỏi `Jenkinsfile`) — nếu không, stage `contract tests` không chạy dòng nào cả.

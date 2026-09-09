@@ -1,0 +1,79 @@
+<mxfile host="65bd71144e">
+    <diagram id="otel-servicedefaults-elastic-sequence" name="Trình tự — telemetry rời khỏi service tới lúc SRE tra được">
+        <mxGraphModel dx="1232" dy="448" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="650" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Trình tự — telemetry rời khỏi 1 service, qua collector, tới lúc SRE tra được trên Kibana" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1100" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_orders" value="Orders.Api&#xa;(ServiceDefaults)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="200" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_collector" value="otel-collector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="60" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_es" value="Elasticsearch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="580" y="60" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_kibana" value="Kibana" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="60" width="180" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="h_sre" value="SRE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1100" y="60" width="150" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="130" y="105" as="sourcePoint"/><mxPoint x="130" y="560" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="l2" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="410" y="105" as="sourcePoint"/><mxPoint x="410" y="560" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="l3" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="670" y="105" as="sourcePoint"/><mxPoint x="670" y="560" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="l4" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="930" y="105" as="sourcePoint"/><mxPoint x="930" y="560" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="l5" style="endArrow=none;dashed=1;html=1;strokeColor=#999999;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="1175" y="105" as="sourcePoint"/><mxPoint x="1175" y="560" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="box1" value="1. Xử lý 1 request thật (đặt đơn hàng) — AddAspNetCoreInstrumentation() tự sinh trace/span, ILogger ghi structured log kèm CorrelationId/TenantId" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;dashed=1;fontSize=9;verticalAlign=top;align=left;spacingLeft=8;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="140" width="280" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="a1" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="130" y="250" as="sourcePoint"/><mxPoint x="410" y="250" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="a1t" value="2. OTLP export (gRPC 4317 / HTTP 4318) — trace + metric + log" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="140" y="232" width="400" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a2" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="410" y="300" as="sourcePoint"/><mxPoint x="670" y="300" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="a2t" value="3. elasticsearch exporter — pin phiên bản, không dùng :latest" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="282" width="400" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a3" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="670" y="350" as="sourcePoint"/><mxPoint x="930" y="350" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="a3t" value="4. Index hoá — sẵn sàng để truy vấn" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="332" width="300" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a4" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="1175" y="400" as="sourcePoint"/><mxPoint x="930" y="400" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="a4t" value="5. SRE tra theo CorrelationId trên Kibana" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="950" y="382" width="330" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="a5" style="endArrow=block;html=1;fontSize=10;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry"><mxPoint x="930" y="450" as="sourcePoint"/><mxPoint x="1175" y="450" as="targetPoint"/></mxGeometry>
+                </mxCell>
+                <mxCell id="a5t" value="6. Trả về đủ trace + metric + structured log của toàn hành trình" style="text;html=1;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="950" y="432" width="400" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Thử nghiệm đã kiểm chứng: gỡ ServiceDefaults khỏi Orders.Api tạm thời → bước (2) không còn xảy ra nữa — chứng minh dây chuyền này thực sự chịu tải, không phải trang trí." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="500" width="1150" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -167,7 +167,9 @@ Commit: `be79cbf Implement authorization policy tests and enforce authorization 
 
 Commit thực thi chính: `e334c24 feat: Implement SonarQube quality gate enforcement in CI pipeline` (lúc đó spec còn mang số cũ `012-sonarqube-quality-gate`, sau đổi thành `013-sonarqube-merge-blocker` — thấy qua `docs/adr/0012-ci-quality-gate-enforcement.md` và việc `specs/013-...` sau này chỉ còn chứa tài liệu, không có commit code mới).
 
-Đây không phải code trong `shared/` hay 1 service cụ thể — mà là **pipeline CI** áp dụng cho toàn repo, định nghĩa trong `Jenkinsfile` (5 bước tuần tự: build → unit test → integration test → contract test → phân tích SonarQube). Sau bước phân tích, **Quality Gate** của SonarQube phải xanh thì PR mới merge được — đây là ý nghĩa "merge blocker" trong tên spec.
+Đây không phải code trong `shared/` hay 1 service cụ thể — mà là **pipeline CI** áp dụng cho toàn repo, định nghĩa trong `Jenkinsfile`. **Tại thời điểm spec 013 hoàn thành**, đây là 5 bước tuần tự: build → unit test → integration test → contract test → phân tích SonarQube. Sau bước phân tích, **Quality Gate** của SonarQube phải xanh thì PR mới merge được — đây là ý nghĩa "merge blocker" trong tên spec.
+
+*(Cập nhật: `Jenkinsfile` hiện tại — sau khi 2 spec `018-cluster-secret-store` và `019-liveness-readiness-probes` merge — có tới 9 stage, không còn 5. Bảng đầy đủ, thứ tự thật, và stage nào bị `CI_FAST_ITERATION` tạm skip nằm ở [07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md § 6-7](07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md#7-thất-bại-chặn-gì--phần-cần-xác-nhận-không-suy-đoán) — không lặp lại ở đây, vì đó không còn thuộc phạm vi kỹ thuật của riêng spec 013.)*
 
 Chi tiết dễ gây nhầm lẫn nhất: [`scripts/ci/sonar-begin.sh`](../../scripts/ci/sonar-begin.sh) — SonarScanner cho .NET nhận cấu hình qua tham số dòng lệnh (`/d:key=value`), **không tự đọc** file `.properties` như bản CLI thường. Script này đọc [`sonar-scanner.properties`](../../sonar-scanner.properties) rồi tự dịch từng dòng thành tham số `/d:`:
 ```sh

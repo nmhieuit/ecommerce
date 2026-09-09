@@ -1,0 +1,52 @@
+<mxfile host="65bd71144e">
+    <diagram id="otel-servicedefaults-elastic-component" name="Kiến trúc thành phần — telemetry qua ServiceDefaults tới Elastic">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="800" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kiến trúc thành phần — mọi service phát traces/metrics/structured logs qua 1 ServiceDefaults dùng chung, đổ về Elastic" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1350" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="svc_grp" value="7 service (gateway/bff/4 domain/identity)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="70" width="360" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="sd_add" value="builder.AddServiceDefaults()&#xa;AddOpenTelemetry().WithTracing()/.WithMetrics()&#xa;.AddOtlpExporter() — ĐĂNG KÝ DUY NHẤT 1 NƠI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="100" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="sd_log" value="builder.Logging.AddOpenTelemetry()&#xa;IncludeScopes=true → CorrelationId/Tenant/&#xa;Subject tự kèm vào MỌI dòng log" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="180" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="sd_no_bespoke" value="KHÔNG service nào tự cấu hình OTel riêng —&#xa;đã kiểm chứng: gỡ ServiceDefaults khỏi 1 service&#xa;→ service đó THẬT SỰ mất telemetry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="260" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="collector" value="otel-collector (Docker container)&#xa;image pin cứng phiên bản (không dùng :latest)&#xa;— cấu hình exporter dễ đổi giữa các bản contrib" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="460" y="130" width="300" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="es" value="Elasticsearch&#xa;single-node, security tắt (chỉ local dev)&#xa;lưu telemetry của TOÀN NỀN TẢNG, không lưu&#xa;dữ liệu nghiệp vụ/tenant" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="90" width="300" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="kibana" value="Kibana&#xa;giao diện SRE tra cứu — 1 mã Correlation ID&#xa;→ trace + metric + log của cả hành trình" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="200" width="300" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="sre" value="SRE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1200" y="220" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Chỉ chạy trên máy phát triển qua Docker Compose (docker-compose.local.yml/docker-compose.yml) — CHƯA phải hạ tầng vận hành thật cho môi trường production." style="text;html=1;fontSize=10;fontColor=#b85450;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="330" width="1120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="OTLP gRPC/HTTP (4317/4318)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="svc_grp" target="collector" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="elasticsearch exporter" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="collector" target="es" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="es" target="kibana" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="tra cứu Kibana" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="sre" target="kibana" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -65,6 +65,3 @@ nào cho phép — không phải một runtime check, mà một đảm bảo có
   [`docs/diagrams/001-scaffold-service-shells-sequence.drawio`](../diagrams/001-scaffold-service-shells-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio`](../diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio)
-
-Sơ đồ kiến trúc tổng thể của nền tảng (bao gồm cả bốn service này trong bối cảnh gateway/BFF) xem
-[`docs/diagrams/kien-truc-3-nhom.drawio`](../diagrams/kien-truc-3-nhom.drawio).

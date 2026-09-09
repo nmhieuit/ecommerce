@@ -1,0 +1,61 @@
+<mxfile host="65bd71144e">
+    <diagram id="liveness-readiness-probes-component" name="Kiến trúc thành phần — template Ansible render Deployment K8s có probe">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1550" pageHeight="850" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kiến trúc thành phần — Ansible render Deployment K8s có liveness/readiness probe, 2 lớp kiểm tra độc lập" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1400" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="inv" value="deploy/ansible/inventories/services.yml&#xa;7 service + override riêng (nếu có)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="70" width="300" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="defaults" value="roles/service_deployment/defaults/main.yml&#xa;probe_defaults: db_backed (5 service) vs&#xa;stateless (gateway/bff) — số tái dùng từ&#xa;healthcheck docker-compose.yml đã kiểm chứng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="170" width="300" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="template" value="templates/deployment.yaml.j2&#xa;Jinja2 — livenessProbe/readinessProbe,&#xa;strategy: RollingUpdate maxUnavailable:0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="120" width="320" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="rendered" value="Deployment K8s đã render&#xa;(YAML thật cho từng service)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="140" width="280" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="k8s_future" value="Kubernetes cluster thật&#xa;CHƯA TỒN TẠI — chỉ mô phỏng/lint" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;dashed=1;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="1150" y="140" width="300" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="test_grp" value="Lớp kiểm tra 1 — C#, nhanh, không cần Ansible" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="320" width="500" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="csharp_test" value="tests/DeploymentManifestConventionTests&#xa;ManifestFixture — TỰ render Jinja2 bằng C#&#xa;(mô phỏng, không gọi Ansible thật) rồi parse YAML,&#xa;assert quy ước (2 probe, path đúng, ngưỡng đúng nhóm)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="355" width="460" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="test_grp2" value="Lớp kiểm tra 2 — Ansible + kubeconform thật, chậm hơn" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="320" width="560" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="ansible_lint" value="scripts/ci/lint-deployment-manifests.sh&#xa;ansible-lint (quy ước Ansible) + ansible-playbook&#xa;--check --diff (render thật) + kubeconform (validate&#xa;đúng OpenAPI schema K8s thật)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="355" width="520" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Stage 'deployment manifest lint' trong Jenkinsfile chạy lớp kiểm tra 2 — KHÔNG publish status check GitHub riêng (khác 7 stage khác), nhưng vẫn làm đỏ cả pipeline nếu fail." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="490" width="1100" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="inv" target="template" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="defaults" target="template" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="template" target="rendered" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="chưa từng apply" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;strokeColor=#b85450;fontColor=#b85450;" parent="1" source="rendered" target="k8s_future" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="đọc" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="template" target="csharp_test" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="render thật + validate" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="template" target="ansible_lint" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

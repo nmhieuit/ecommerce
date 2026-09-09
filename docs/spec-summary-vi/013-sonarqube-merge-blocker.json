@@ -1,0 +1,23 @@
+{
+  "title": "Cổng chất lượng SonarQube chặn merge Pull Request",
+  "items": {
+    "FR-001": "Hệ thống PHẢI tự động khởi chạy pipeline khi một PR được mở hoặc cập nhật (push commit mới) nhắm tới nhánh được bảo vệ.",
+    "FR-002": "Pipeline PHẢI thực thi các bước theo đúng trình tự: build → unit test → integration test → contract test → cổng chất lượng SonarQube.",
+    "FR-003": "Hệ thống PHẢI chặn merge PR khi cổng chất lượng SonarQube thất bại, và không được cung cấp bất kỳ cơ chế nào (kể cả cho vai trò quản trị) để merge bất chấp kết quả đó.",
+    "FR-004": "Hệ thống PHẢI chặn merge PR khi bất kỳ bước nào trước cổng chất lượng (build, unit test, integration test, contract test) thất bại.",
+    "FR-005": "Hệ thống PHẢI hiển thị trên PR các chỉ số chất lượng mã nguồn (độ phủ kiểm thử, tỷ lệ trùng lặp mã, số lượng code smell) sau khi cổng chất lượng chạy xong.",
+    "FR-006": "Hệ thống PHẢI phân biệt rõ trên trạng thái PR giữa \"thất bại ở bước pipeline khác\" và \"thất bại ở cổng chất lượng SonarQube\", để người xem biết chính xác nguyên nhân bị chặn.",
+    "FR-007": "Hệ thống PHẢI tự động chạy lại toàn bộ chuỗi pipeline (bao gồm cổng chất lượng) mỗi khi có commit mới được push vào PR đang mở.",
+    "FR-008": "Hệ thống PHẢI mở khóa merge ngay khi lần chạy lại gần nhất của cổng chất lượng đạt, mà không cần thao tác thủ công.",
+    "FR-009": "Hệ thống PHẢI ghi nhận (log) mọi lần merge thành công, bao gồm việc xác nhận rằng cổng chất lượng đã đạt tại thời điểm merge, để phục vụ kiểm tra/audit sau này.",
+    "US1-KB1": "Với điều kiện một PR được mở nhắm tới nhánh được bảo vệ, Khi pipeline chạy tới bước cổng chất lượng SonarQube và cổng đó thất bại, Thì PR bị chặn merge và không có đường vòng nào để merge được.",
+    "US1-KB2": "Với điều kiện một PR đang bị chặn merge do cổng chất lượng thất bại, Khi một người có quyền quản trị (admin) cố gắng merge trực tiếp, Thì hành động đó bị từ chối bởi cấu hình bảo vệ nhánh (không tồn tại tùy chọn \"merge bất chấp\" cho vai trò này).",
+    "US2-KB1": "Với điều kiện cổng chất lượng đã chạy xong (đạt hoặc không đạt), Khi tôi xem trạng thái của PR, Thì tôi thấy các chỉ số chất lượng (độ phủ kiểm thử, tỷ lệ trùng lặp, số code smell) hiển thị ngay trên PR.",
+    "US3-KB1": "Với điều kiện một PR đang bị chặn merge do cổng chất lượng thất bại, Khi tôi push commit mới khắc phục vấn đề, Thì pipeline tự động chạy lại từ đầu và cổng chất lượng được đánh giá lại.",
+    "US3-KB2": "Với điều kiện cổng chất lượng đánh giá lại và đạt, Khi tôi kiểm tra PR, Thì PR không còn bị chặn merge nữa.",
+    "SC-001": "100% các PR nhắm tới nhánh được bảo vệ tự động kích hoạt đầy đủ chuỗi pipeline (build → unit test → integration test → contract test → cổng chất lượng) mà không cần ai kích hoạt thủ công.",
+    "SC-002": "0% số PR có cổng chất lượng thất bại được merge thành công vào nhánh được bảo vệ, kể cả khi người thử merge có quyền quản trị.",
+    "SC-003": "Người xem PR có thể biết chỉ số chất lượng (coverage, duplication, code smell) ngay trên PR, không cần rời khỏi trang PR hoặc đăng nhập vào hệ thống SonarQube.",
+    "SC-004": "Sau khi khắc phục nguyên nhân khiến cổng chất lượng thất bại và push lại, PR được mở khóa merge trong đúng một lần chạy pipeline tiếp theo, không cần can thiệp thủ công."
+  }
+}

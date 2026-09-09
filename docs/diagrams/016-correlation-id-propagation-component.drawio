@@ -1,0 +1,66 @@
+<mxfile host="65bd71144e">
+    <diagram id="correlation-id-propagation-component" name="Kiến trúc thành phần — mã theo dõi lan truyền từ edge tới frontend">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="850" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kiến trúc thành phần — mã theo dõi (Correlation ID) lan truyền từ gateway tới frontend, xuyên cả nhánh bất đồng bộ" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1300" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="spa" value="Frontend SPA&#xa;fetcher.ts đọc header X-Correlation-Id&#xa;từ response, hiển thị được trên DevTools" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="80" width="260" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_grp" value="Gateway.Api" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="60" width="330" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_cid" value="CorrelationIdMiddleware (shared/ServiceDefaults)&#xa;sinh/giữ mã, validate độ dài + ký tự điều khiển" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="95" width="290" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_cors" value="AddCors().WithExposedHeaders(X-Correlation-Id)&#xa;— mở cho JS trình duyệt đọc được header này" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="165" width="290" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff_grp" value="Bff.Api" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;verticalAlign=top;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="740" y="60" width="330" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff_cid" value="CorrelationIdMiddleware (dùng chung, y hệt Gateway)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="95" width="290" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff_tph" value="TenantPropagationHandler&#xa;đọc HttpContext.Items, relay X-Correlation-Id&#xa;(cùng chỗ relay Tenant/Subject/Authorization)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="760" y="165" width="290" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="dom_grp" value="Baskets / Orders / Parties / Products.Api&#xa;mỗi service: CorrelationIdMiddleware dùng chung" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="95" width="300" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="rabbit" value="RabbitMQ / OrderPlaced consumer (bất đồng bộ)&#xa;mã theo dõi vẫn phải có mặt ở log của bước này&#xa;(SC yêu cầu — không đứt đoạn sync→async)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="220" width="300" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="elastic" value="Elastic — mọi log kèm CorrelationId trong logging scope&#xa;(BeginScope) — tra 1 mã, thấy toàn bộ hành trình" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="330" width="1060" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Trước tính năng này: mỗi domain service chỉ gọi được qua BFF từng TỰ SINH mã riêng — log Gateway/BFF và log 4 domain service KHÔNG nối được với nhau.&#xa;TenantPropagationHandler (ô cam) là nơi lỗ hổng đó được vá — cùng cơ chế relay header đã dùng cho Tenant/Subject/Authorization từ trước, thêm 1 dòng cho Correlation ID." style="text;html=1;fontSize=9;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="410" width="1060" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="request (có/chưa có&#xa;X-Correlation-Id)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="spa" target="gw_grp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="YARP forward (copy header)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="gw_grp" target="bff_grp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="HttpClient (TenantPropagationHandler&#xa;relay tường minh, không tự động)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="bff_grp" target="dom_grp" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="ghi vào Activity/OrderPlaced event" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="dom_grp" target="rabbit" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="response echo lại&#xa;X-Correlation-Id" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="gw_grp" target="spa" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="500" y="40"/>
+                            <mxPoint x="160" y="40"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

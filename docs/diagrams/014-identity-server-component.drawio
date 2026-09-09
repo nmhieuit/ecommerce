@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="identity-server-component" name="Kiến trúc thành phần — máy chủ định danh + phòng thủ theo chiều sâu">
-        <mxGraphModel dx="1232" dy="1348" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
+        <mxGraphModel dx="1449" dy="1447" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -69,11 +69,14 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e_jwks1" value="JWKS fetch (cached, độc lập)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;strokeColor=#82b366;exitX=1;exitY=0.3;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="gw_two" target="identity_api" edge="1">
+                <mxCell id="e_jwks1" value="JWKS fetch (cached, độc lập)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;strokeColor=#82b366;exitX=0;exitY=0.25;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" parent="1" source="gw_two" target="identity_api" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="380" y="428"/>
-                            <mxPoint x="380" y="120"/>
+                            <mxPoint x="60" y="428"/>
+                            <mxPoint x="40" y="428"/>
+                            <mxPoint x="40" y="270"/>
+                            <mxPoint x="540" y="270"/>
+                            <mxPoint x="540" y="120"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
@@ -84,10 +87,14 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e_fwd1" value="forward Authorization header&#xa;nguyên vẹn (YARP)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="gw_grp" target="bff_grp" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry y="-20" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e_fwd2" value="forward Authorization header&#xa;(TenantPropagationHandler)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="bff_grp" target="dom_grp" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry y="-20" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
                 </mxCell>
             </root>
         </mxGraphModel>

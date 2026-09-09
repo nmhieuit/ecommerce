@@ -1,0 +1,30 @@
+{
+  "title": "Phát telemetry OTel (traces/metrics/logs) qua ServiceDefaults tới Elastic",
+  "items": {
+    "FR-001": "Mọi service trong nền tảng PHẢI khởi tạo OpenTelemetry (traces, metrics, structured logs) thông qua một thành phần ServiceDefaults dùng chung duy nhất; không service nào được tự cấu hình OTel riêng lẻ, hand-rolled cho chính nó.",
+    "FR-002": "Thành phần ServiceDefaults PHẢI xuất traces, metrics, và structured logs tới Elastic stack cho mọi service sử dụng nó.",
+    "FR-003": "Với một luồng xử lý xuyên suốt nhiều service (ví dụ đặt một đơn hàng), SRE PHẢI có thể tra cứu trong Elastic/Kibana và thấy trace, metrics, và structured log tương ứng cho từng hop tham gia xử lý luồng đó, kể cả hop xử lý bất đồng bộ.",
+    "FR-004": "Mọi log entry được ghi bởi bất kỳ service nào trong nền tảng PHẢI ở dạng có cấu trúc (structured/templated logging), không được là chuỗi bị nội suy trực tiếp (string interpolation).",
+    "FR-005": "Mọi log entry được ghi ra trong quá trình xử lý một request hoặc một message PHẢI mang theo định danh service, định danh tenant, và correlation ID tương ứng với luồng xử lý mà nó thuộc về.",
+    "FR-006": "Hệ thống PHẢI cho phép rà soát toàn bộ mã nguồn (ví dụ bằng công cụ tìm kiếm văn bản) để xác nhận không còn lời gọi log nào sử dụng chuỗi nội suy trong bất kỳ service nào.",
+    "FR-007": "Nếu ServiceDefaults bị gỡ bỏ hoặc không được tích hợp vào một service, service đó PHẢI mất khả năng phát traces, metrics, và structured logs tới Elastic một cách có thể quan sát rõ ràng — chứng minh ServiceDefaults là thành phần chịu tải thực sự, không phải lớp cấu hình có thể bỏ qua.",
+    "FR-008": "Traces, metrics, và structured logs PHẢI không chứa PII dưới bất kỳ hình thức nào, theo Nguyên tắc VI (Secure by Default) của hiến pháp nền tảng.",
+    "FR-009": "Metrics phát ra bởi ServiceDefaults PHẢI đủ để đo các SLO đã khai báo theo Nguyên tắc VIII (Performance and Resilience Budgets) — độ trễ (p95/p99), tỷ lệ lỗi, khả dụng — cho từng service.",
+    "FR-010": "Correlation ID được sinh và lan truyền theo cơ chế đã thiết lập ở tính năng lan truyền Correlation ID (016) PHẢI được ServiceDefaults đưa vào traces, metrics (dưới dạng thuộc tính/tag khi phù hợp), và mọi structured log entry một cách nhất quán.",
+    "US1-KB1": "Với điều kiện một đơn hàng được đặt và đi qua toàn bộ các service tham gia xử lý, Khi SRE tra cứu Elastic/Kibana theo correlation ID của đơn hàng đó, Thì SRE tìm thấy trace đầy đủ, liên tục, bao phủ tất cả các hop (bao gồm cả hop xử lý bất đồng bộ) mà không bị đứt đoạn ở bất kỳ service nào.",
+    "US1-KB2": "Với điều kiện cùng luồng xử lý đặt đơn hàng đó, Khi SRE tra cứu metrics trong Elastic, Thì SRE thấy các chỉ số (độ trễ, tỷ lệ lỗi, throughput...) được phát ra cho từng service tham gia.",
+    "US1-KB3": "Với điều kiện cùng luồng xử lý đó, Khi SRE tra cứu structured logs trong Elastic, Thì SRE thấy log entry tương ứng với từng hop, đủ chi tiết để hiểu diễn biến xử lý mà không cần xem log cục bộ trên từng service.",
+    "US2-KB1": "Với điều kiện một lời gọi log bất kỳ trong mã nguồn của bất kỳ service nào, Khi mã nguồn được rà soát, Thì lời gọi đó ghi log dưới dạng có cấu trúc (structured/templated), không phải chuỗi được nội suy trực tiếp (string interpolation).",
+    "US2-KB2": "Với điều kiện một log entry bất kỳ được ghi ra trong quá trình xử lý một request hoặc một message, Khi log entry đó được kiểm tra trong Elastic, Thì nó chứa định danh service, định danh tenant, và correlation ID tương ứng với luồng xử lý mà nó thuộc về.",
+    "US2-KB3": "Với điều kiện dữ liệu nhạy cảm (PII) có thể xuất hiện trong ngữ cảnh xử lý, Khi log được ghi ra, Thì log entry đó không chứa PII dưới bất kỳ hình thức nào.",
+    "US3-KB1": "Với điều kiện một service bất kỳ khởi động, Khi quá trình khởi tạo của service đó được kiểm tra, Thì service đó wiring OpenTelemetry thông qua thành phần ServiceDefaults dùng chung, không có cấu hình OTel riêng lẻ, tự viết cho service đó.",
+    "US3-KB2": "Với điều kiện ServiceDefaults bị gỡ bỏ tạm thời khỏi một service cụ thể (phục vụ kiểm thử), Khi service đó xử lý request, Thì service đó không còn phát traces, metrics, hay structured logs tới Elastic — xác nhận ServiceDefaults là thành phần chịu tải thực sự cho toàn bộ observability của service đó.",
+    "US3-KB3": "Với điều kiện ServiceDefaults được khôi phục lại cho service đó, Khi service khởi động lại, Thì service đó phát telemetry trở lại bình thường, nhất quán với các service khác.",
+    "SC-001": "Với một đơn hàng bất kỳ được đặt và đi qua toàn bộ các service tham gia, SRE tìm thấy trace đầy đủ của đơn hàng đó trong Elastic/Kibana trong vòng dưới 5 phút tra cứu, không bị đứt đoạn ở bất kỳ hop nào.",
+    "SC-002": "Khi rà soát toàn bộ mã nguồn của mọi service, 0 lời gọi log dạng chuỗi nội suy được phát hiện.",
+    "SC-003": "100% structured log entry được lấy mẫu kiểm tra trong Elastic đều mang đủ ba định danh: service, tenant, và correlation ID.",
+    "SC-004": "Khi ServiceDefaults bị gỡ tạm thời khỏi một service (phục vụ kiểm thử), 100% telemetry (traces, metrics, structured logs) của service đó biến mất khỏi Elastic ngay sau đó — xác nhận thành phần này là load-bearing.",
+    "SC-005": "Mọi service đang chạy đều expose đủ metrics để đo các SLO đã khai báo (độ trễ p95/p99, tỷ lệ lỗi) theo Nguyên tắc VIII của hiến pháp nền tảng, xác nhận được qua Elastic mà không cần công cụ đo bổ sung nào khác.",
+    "SC-006": "Không phát hiện PII trong bất kỳ mẫu trace hoặc log nào được rà soát trong Elastic."
+  }
+}
