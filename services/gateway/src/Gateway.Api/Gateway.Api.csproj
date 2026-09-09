@@ -11,6 +11,10 @@
     <!-- The reverse proxy itself (ADR-0002). The gateway's entire routing surface is this package
          plus the declarative ReverseProxy section in appsettings.json (research.md Decision 2). -->
     <PackageReference Include="Yarp.ReverseProxy" />
+    <!-- 020-timeouts-retry-circuit-breaker (research.md Decision 4): wraps the JwtBearer backchannel
+         HttpClient (OIDC discovery + JWKS fetch against the identity server) with an explicit
+         timeout, retry, and circuit breaker instead of the framework's implicit default. -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
   </ItemGroup>
 
   <!-- No health-check package reference: Microsoft.Extensions.Diagnostics.HealthChecks ships in the

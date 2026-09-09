@@ -60,6 +60,11 @@ public static class ToggleGatedAuthenticationExtensions
                 ClearUnauthorizedResponseEvents.Configure(jwtOptions);
             });
 
+        // 020-timeouts-retry-circuit-breaker (research.md Decision 4): same fix every other
+        // service gets from AddIdentityValidation() — the gateway just can't call that helper
+        // directly (see class remarks), so it calls the shared backchannel helper on its own scheme.
+        services.AddIdentityBackchannelResilience(JwtBearerDefaults.AuthenticationScheme);
+
         // Same ApiScope registration every other service gets from AddIdentityValidation()
         // (015-deny-by-default-authz, research.md Decision 1/2/5/6) — the gateway just can't call
         // that helper directly, since it needs the three-scheme registration above instead of the

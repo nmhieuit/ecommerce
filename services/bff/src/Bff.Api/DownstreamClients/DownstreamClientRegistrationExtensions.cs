@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Http.Resilience;
+using Polly;
+
 namespace Bff.Api.DownstreamClients;
 
 /// <summary>
@@ -32,6 +35,16 @@ public static class DownstreamClientRegistrationExtensions
     /// </summary>
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(200);
     private const int MaxRetryAttempts = 2;
+
+    /// <summary>
+    /// 020-timeouts-retry-circuit-breaker (spec FR-006; research.md Decision 5): the standard
+    /// handler's default <c>Retry.ShouldHandle</c> does not look at the request method at all, so a
+    /// write call (<c>POST /basket/items</c>, <c>POST /checkout</c>) that failed after the
+    /// downstream had already processed it could be retried and duplicate the side effect. No
+    /// idempotency-key mechanism exists in the system to make a retried write safe, so retry is
+    /// restricted to the methods that are safe by construction — reading twice changes nothing.
+    /// </summary>
+    private static readonly HashSet<HttpMethod> SafeToRetryMethods = [HttpMethod.Get, HttpMethod.Head];
 
     /// <summary>
     /// Adds all four typed clients with validated configuration and a standard resilience
@@ -83,6 +96,21 @@ public static class DownstreamClientRegistrationExtensions
 
                 resilience.Retry.MaxRetryAttempts = MaxRetryAttempts;
                 resilience.Retry.Delay = RetryDelay;
+
+                // Layered on top of the standard transient-failure predicate rather than replacing
+                // it: a call must still look transient (network/5xx/timeout) AND target a safe
+                // method before it is retried. GetRequestMessage() reads off the ResilienceContext,
+                // not Outcome.Result, because a transport failure (the common case here) never
+                // produces an HttpResponseMessage to read the original request off of.
+                resilience.Retry.ShouldHandle = args =>
+                {
+                    var method = args.Context.GetRequestMessage()?.Method;
+
+                    return ValueTask.FromResult(
+                        HttpClientResiliencePredicates.IsTransient(args.Outcome)
+                        && method is not null
+                        && SafeToRetryMethods.Contains(method));
+                };
 
                 // The breaker's sampling window must span at least two attempt timeouts, or it
                 // could trip on a single slow call rather than on a genuine failure rate.
