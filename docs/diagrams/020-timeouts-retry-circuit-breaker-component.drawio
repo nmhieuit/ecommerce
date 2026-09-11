@@ -1,0 +1,43 @@
+<mxfile host="65bd71144e">
+    <diagram id="timeouts-retry-circuit-breaker-component" name="Kiến trúc thành phần — 3 điểm gọi ra ngoài đã bọc resilience, scanner rà soát chung">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1550" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kiến trúc thành phần — Timeout/retry/circuit breaker cho 3 điểm gọi ra ngoài thật đang tồn tại" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1300" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw" value="Gateway (YARP) → BFF&#xa;ActivityTimeout: 10s (đã có từ 002)&#xa;+ MỚI: HealthCheck.Passive (TransportFailureRate)&#xa;+ MỚI: AvailableDestinationsPolicy=HealthyAndUnknown&#xa;(mặc định HealthyOrPanic không fail-fast thật — bug đã sửa)&#xa;KHÔNG retry (gateway không biết idempotency của route)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="80" width="440" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff" value="BFF → Products/Baskets/Orders/Parties&#xa;AddStandardResilienceHandler() (đã có từ 002:&#xa;timeout + retry + circuit breaker đầy đủ)&#xa;+ MỚI: SafeToRetryMethods = GET, HEAD only&#xa;(trước đây retry mù mọi method — rủi ro đơn&#xa;hàng/giỏ hàng trùng lặp khi POST bị retry)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="240" width="440" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="idp" value="Gateway + BFF + 4 domain service (6 nơi gọi)&#xa;→ Identity server (JwtBearer backchannel:&#xa;OIDC discovery + JWKS)&#xa;TRƯỚC: BackchannelTimeout mặc định ẩn (60s)&#xa;MỚI: HttpClient &quot;IdentityBackchannel&quot; riêng,&#xa;AddStandardResilienceHandler(), timeout 5s/15s&#xa;— sửa 1 lần ở shared/Identity, dùng chung cho cả 6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="400" width="440" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="scanner" value="tests/ResilienceCoverageTests&#xa;ResilienceCoverageScanner.cs — đọc file cấu hình&#xa;dạng text, xác nhận từng marker bắt buộc có mặt&#xa;đúng chỗ (ActivityTimeout, AddStandardResilienceHandler,&#xa;HealthCheck, Passive, AvailableDestinationsPolicy,&#xa;SafeToRetryMethods) — bắt lỗi cả với điểm gọi mới thêm sau" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="240" width="420" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="notexist" value="Service → service đồng bộ&#xa;(vd orders gọi thẳng products)&#xa;KHÔNG TỒN TẠI — đã rà soát toàn bộ&#xa;services/*/src, không có cuộc gọi nào" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;dashed=1;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="1050" y="80" width="400" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="broker" value="Service → broker (RabbitMQ/MassTransit publish)&#xa;NGOÀI PHẠM VI — BasketCheckedOutMapper.cs chỉ&#xa;dựng payload, chưa ai gọi. Thuộc SCRUM-31,&#xa;chưa bắt đầu (đã grep xác nhận: không có&#xa;AddMassTransit|IPublishEndpoint|IBus nào)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;dashed=1;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="1050" y="190" width="400" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="ResilienceCoverageScanner theo đúng khuôn mẫu ContractCoverageScanner đã có — rà soát dạng text, không cần dựng runtime thật để chạy test." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="580" width="950" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="gw" target="scanner" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="bff" target="scanner" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="idp" target="scanner" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
