@@ -83,3 +83,25 @@ trước (làm nóng EF model + connection pool). Đo lại đúng cách: reques
   [`docs/diagrams/002-gateway-bff-routing-sequence.drawio`](../diagrams/002-gateway-bff-routing-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio`](../diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio)
+
+## Amendment (2026-09-10): Gateway → BFF nay đã có circuit breaker thật
+
+Tại thời điểm viết tài liệu này, quyết định 3 ở mục 2 chỉ ghi nhận "BFF gọi downstream qua `HttpClient`
+có resilience handler chuẩn" — tức resilience mới có ở chặng BFF→service, **chưa có** ở chính chặng
+Gateway→BFF mà tài liệu này mô tả.
+
+[`020-timeouts-retry-circuit-breaker`](../../specs/020-timeouts-retry-circuit-breaker/) đã lấp khoảng
+này: gateway giờ bật `HealthCheck:Passive` của YARP trên cluster `bff-cluster` làm cơ chế circuit
+breaker — khi BFF liên tục lỗi/timeout, gateway tự "mở mạch" và trả lỗi ngay cho client thay vì tiếp
+tục thử kết nối thật mỗi lần (fail-fast). Cố ý **không thêm retry** ở tầng gateway — nó forward nguyên
+văn mọi method (kể cả `POST /checkout`) mà không biết ngữ nghĩa idempotency của route, khác BFF (nơi
+đã biết rõ từng downstream call).
+
+**Bug thật tìm được khi xác thực thủ công** (đáng nhắc lại ở đây vì đụng đúng chặng gateway→BFF):
+`AvailableDestinationsPolicy` mặc định của YARP là `HealthyOrPanic`, tự động coi MỌI destination "khả
+dụng" khi không còn destination nào khỏe mạnh — với cluster chỉ có 1 destination (`bff`), circuit
+breaker "mở" nhưng gateway vẫn âm thầm thử kết nối thật (vẫn `502`, không fail-fast). Đã sửa bằng cách
+đặt tường minh `AvailableDestinationsPolicy: "HealthyAndUnknown"`.
+
+Chi tiết đầy đủ (bao gồm chặng JwtBearer backchannel và việc thu hẹp retry ở BFF theo HTTP method), xem
+[`020_Architect_timeout retry circuit breaker cho cuộc gọi ra ngoài.md`](020_Architect_timeout%20retry%20circuit%20breaker%20cho%20cuộc%20gọi%20ra%20ngoài.md).
