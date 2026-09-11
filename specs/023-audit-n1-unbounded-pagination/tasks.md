@@ -138,11 +138,15 @@ Monorepo backend nhiều service hiện có (xem plan.md § Project Structure) �
 
 **Purpose**: Xác thực toàn diện cuối cùng, không thuộc riêng một user story nào
 
-- [ ] T021 [P] Cập nhật `specs/023-audit-n1-unbounded-pagination/contracts/query-coverage-inventory-contract.md` và `contracts/downstream-openapi.yaml`/`bff-openapi.yaml` nếu tên marker/tham số thực tế khác kế hoạch — phụ thuộc T009, T016, T020
-- [ ] T022 [P] Cập nhật XML-doc comment "Contract:" trong `CatalogEndpoints.cs` và `ProductsEndpoints.cs` (BFF) trỏ sang `specs/023-audit-n1-unbounded-pagination/contracts/...` thay vì `specs/002-gateway-bff-routing/contracts/...` — đúng tiền lệ mỗi feature chạm một contract thì code trỏ sang feature mới nhất chạm nó (ví dụ `BasketsEndpoints.cs` đã trỏ `specs/004`) — phụ thuộc T009
-- [ ] T023 [P] Thực hiện [quickstart.md](./quickstart.md) Bước 1–6 — phụ thuộc T009, T016, T020
-- [ ] T024 Build sạch toàn `Ecommerce.slnx` (0 lỗi/cảnh báo) — phụ thuộc T023
-- [ ] T025 [P] Rà soát lại spec.md Assumptions và research.md Decision 1: xác nhận `orders`/`parties` vẫn không có endpoint danh sách nào tại thời điểm tính năng này hoàn tất (grep `MapGet.*orders\b`, `MapGet.*parties\b`) — nếu có, ghi nhận là phát hiện ngoài phạm vi, không tự thêm task sửa
+- [X] T021 [P] Cập nhật `contracts/query-coverage-inventory-contract.md` và `contracts/downstream-openapi.yaml`/`bff-openapi.yaml` nếu tên marker/tham số thực tế khác kế hoạch — phụ thuộc T009, T016, T020.
+      **Kết quả xác nhận**: Đối chiếu từng dòng `query-coverage-inventory-contract.md` với `QueryCoverageScanner.ExpectedListEndpoints`/`ExpectedBoundedQuerySites` thật — khớp 100%, không có tên marker nào lệch kế hoạch ban đầu, không cần sửa. `downstream-openapi.yaml`/`bff-openapi.yaml` (viết ở `/speckit-plan`) cũng khớp implementation thật (query param `page`/`pageSize`/`ids`, response `PagedProductsResponse`/`ProductListResponse` với `items`/`page`/`pageSize`/`totalCount`) — không cần sửa.
+- [X] T022 [P] Cập nhật XML-doc comment "Contract:" trong `CatalogEndpoints.cs` và `ProductsEndpoints.cs` (BFF) trỏ sang `specs/023-audit-n1-unbounded-pagination/contracts/...` thay vì `specs/002-gateway-bff-routing/contracts/...` — đúng tiền lệ mỗi feature chạm một contract thì code trỏ sang feature mới nhất chạm nó (ví dụ `BasketsEndpoints.cs` đã trỏ `specs/004`) — phụ thuộc T009. `BasketsEndpoints.cs`'s pointer (`specs/004`) giữ nguyên — hình dạng `BasketResponse`/`BasketItem` không đổi, chỉ cách BFF lấy dữ liệu nội bộ đổi.
+- [X] T023 [P] Thực hiện [quickstart.md](./quickstart.md) Bước 1–6 — phụ thuộc T009, T016, T020.
+      **Kết quả xác nhận** (đã ghi vào quickstart.md "Kết quả xác thực trong phiên triển khai"): Bước 1 PASS thật (8/8); Bước 4 và 6 PASS thật (22/22 `Bff.Api.UnitTests`, không cần Docker); Bước 2/3/5 KHÔNG chạy được — Docker không khả dụng trong sandbox này (`Cannot open com.docker.service`), cần chạy trên máy có Docker trước khi merge.
+- [X] T024 Build sạch toàn `Ecommerce.slnx` (0 lỗi/cảnh báo) — phụ thuộc T023.
+      **Kết quả xác nhận**: `dotnet build Ecommerce.slnx` → Build succeeded, 0 Warning(s), 0 Error(s) (xác nhận lại nhiều lần trong phiên, lần cuối sau khi sửa T022).
+- [X] T025 [P] Rà soát lại spec.md Assumptions và research.md Decision 1: xác nhận `orders`/`parties` vẫn không có endpoint danh sách nào tại thời điểm tính năng này hoàn tất (grep `MapGet.*orders\b`, `MapGet.*parties\b`) — nếu có, ghi nhận là phát hiện ngoài phạm vi, không tự thêm task sửa.
+      **Kết quả xác nhận**: `OrderEndpoints.cs` chỉ có `MapGet("/orders/{orderId:guid}", ...)`, `PartyEndpoints.cs` chỉ có `MapGet("/parties/{partyId:guid}", ...)` — không có endpoint danh sách nào ở cả hai service, giả định ở research.md Decision 1 (#3/#4) vẫn đúng.
 
 ---
 

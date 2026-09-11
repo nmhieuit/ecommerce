@@ -83,3 +83,21 @@ phần của cùng bộ test batching, không phải một khoảng hở mới).
 
 Không có tài nguyên hạ tầng nào được tạo riêng ngoài container Testcontainers tự dọn khi test kết
 thúc. Không có migration nào cần rollback (spec/plan không đổi schema).
+
+## Kết quả xác thực trong phiên triển khai (2026-09-11)
+
+Docker Desktop không chạy được trong sandbox này (`Cannot open com.docker.service`), nên các bước
+cần Testcontainers (SQL Server thật) không chạy được. Kết quả thực tế:
+
+- **Bước 1** (`tests/QueryCoverageTests`): PASS thật (8/8).
+- **Bước 2, 3, 5** (cần SQL Server qua Testcontainers): KHÔNG chạy được trong sandbox này. Đã xác
+  nhận qua build sạch toàn `Ecommerce.slnx` (0 lỗi) và rà soát logic thủ công. **Cần chạy lại trên
+  máy có Docker trước khi merge**: `dotnet test services/products/tests/Products.Api.IntegrationTests`,
+  `dotnet test services/baskets/tests/Baskets.Api.IntegrationTests --filter BasketQueryCountTests`.
+- **Bước 4** (`services/bff/tests/Bff.Api.UnitTests` — không cần Docker, chỉ cần .NET): PASS thật
+  (22/22, gồm cả `ProductLookupBatchingTests` và `ProductsEndpointPaginationTests`).
+- **Bước 6** (basket rỗng không gọi products): PASS thật, đã gộp vào
+  `ProductLookupBatchingTests.RenderingEmptyBasket_DoesNotCallProductsClient` thay vì một filter
+  test riêng.
+- Bổ sung: `dotnet test services/bff/tests/Bff.Api.ContractTests --filter ProductsConsumerPactTests`
+  PASS thật (1/1) — xác nhận hợp đồng Pact `pacts/bff-products.json` đã cập nhật khớp envelope mới.

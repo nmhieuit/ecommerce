@@ -6,7 +6,10 @@ namespace Bff.Api.Features.Products;
 /// <summary>
 /// The client-facing product-listing capability, whole: route mapping and response shape live
 /// together in this one folder (spec SC-004, constitution's vertical-slice default).
-/// Contract: <c>specs/002-gateway-bff-routing/contracts/bff-openapi.yaml</c> — <c>/bff/products</c>.
+/// Contract: <c>specs/023-audit-n1-unbounded-pagination/contracts/bff-openapi.yaml</c> —
+/// <c>/bff/products</c>; page/pageSize forwarding and the Page/PageSize/TotalCount fields on
+/// <see cref="ProductListResponse"/> were added by 023-audit-n1-unbounded-pagination on top of the
+/// original shape from specs/002-gateway-bff-routing.
 /// </summary>
 /// <remarks>
 /// Spec FR-005 / SC-004: aggregation and shaping only. The handler calls one downstream client and

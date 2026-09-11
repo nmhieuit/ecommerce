@@ -8,8 +8,10 @@ namespace Products.Api.Features.Catalog;
 /// The catalog read capability, whole: route mapping and response shape live together in this one
 /// folder rather than being split across technical-layer folders (spec SC-004, constitution's
 /// vertical-slice default).
-/// Contract: <c>specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml</c> — this is the
-/// surface the BFF's product-listing route proxies (spec FR-004).
+/// Contract: <c>specs/023-audit-n1-unbounded-pagination/contracts/downstream-openapi.yaml</c> —
+/// this is the surface the BFF's product-listing route proxies (spec FR-004); the pagination
+/// query parameters and envelope response were added by 023-audit-n1-unbounded-pagination, which
+/// supersedes the original bare-array shape from specs/002-gateway-bff-routing.
 /// </summary>
 public static class CatalogEndpoints
 {
