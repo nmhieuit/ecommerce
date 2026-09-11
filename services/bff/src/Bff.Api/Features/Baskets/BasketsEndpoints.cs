@@ -52,7 +52,9 @@ public static class BasketsEndpoints
                 // The price is resolved here, from the catalog, and never taken from the request —
                 // a client-supplied price is a client-supplied discount. The request record has no
                 // price field at all, so there is nothing to accidentally trust.
-                var catalog = await products.GetProductsAsync(cancellationToken);
+                // A single bounded lookup (research.md Decision 4), not a full-catalog fetch
+                // searched client-side — the products service resolves exactly this one id.
+                var catalog = await products.GetProductsByIdsAsync([request.ProductId], cancellationToken);
                 var product = catalog.SingleOrDefault(entry => entry.Id == request.ProductId);
 
                 if (product is null)
@@ -108,8 +110,12 @@ public static class BasketsEndpoints
     /// <remarks>
     /// The catalog call is skipped entirely for an empty basket — there is nothing to name, and a
     /// first-time shopper's basket view should not depend on the products service being up.
+    /// Otherwise, exactly one bounded lookup for the basket's distinct product ids (research.md
+    /// Decision 4) — never a full-catalog fetch, and never one call per line item either: a basket
+    /// with five lines resolves in the same single call as a basket with one (spec FR-002, User
+    /// Story 2; Jira SCRUM-33 Test Scenario 2).
     /// </remarks>
-    private static async Task<BasketResponse> ToResponseAsync(
+    internal static async Task<BasketResponse> ToResponseAsync(
         BasketResource basket,
         ProductsApiClient products,
         CancellationToken cancellationToken)
@@ -119,7 +125,8 @@ public static class BasketsEndpoints
             return new BasketResponse(basket.Id, basket.CustomerRef, [], basket.Total);
         }
 
-        var namesById = (await products.GetProductsAsync(cancellationToken))
+        var distinctProductIds = basket.Items.Select(item => item.ProductId).Distinct().ToArray();
+        var namesById = (await products.GetProductsByIdsAsync(distinctProductIds, cancellationToken))
             .ToDictionary(product => product.Id, product => product.Name);
 
         return new BasketResponse(

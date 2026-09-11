@@ -22,6 +22,12 @@
          bypass belongs here rather than duplicated per service (mirrors the SqlServerFixture
          precedent above). -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <!-- QueryCountInterceptor (023-audit-n1-unbounded-pagination): DbCommandInterceptor/
+         CommandEventData live in the Relational package's Diagnostics namespace (ADO.NET
+         DbCommand is a relational concept) — any service's integration test project can attach
+         the interceptor to prove a query path stays at a fixed statement count as related-row
+         counts grow, mirroring the SqlServerFixture/TestJwtBearer precedent above. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
   <ItemGroup>

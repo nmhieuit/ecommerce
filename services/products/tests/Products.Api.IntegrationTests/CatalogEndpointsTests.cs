@@ -41,16 +41,17 @@ public class CatalogEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<S
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var products = await response.Content.ReadFromJsonAsync<ProductResponse[]>();
-        Assert.NotNull(products);
-        Assert.Equal(2, products.Length);
+        var page = await response.Content.ReadFromJsonAsync<PagedProductsResponse>();
+        Assert.NotNull(page);
+        Assert.Equal(2, page.Items.Count);
+        Assert.Equal(2, page.TotalCount);
 
         // Asserted field by field rather than by count alone: the BFF shapes ProductSummary
         // directly from these three fields, so a silently dropped or renamed one must fail here
         // rather than surfacing later as an empty column in the SPA.
         foreach (var expected in seeded)
         {
-            var actual = Assert.Single(products, product => product.Id == expected.Id);
+            var actual = Assert.Single(page.Items, product => product.Id == expected.Id);
             Assert.Equal(expected.Name, actual.Name);
             Assert.Equal(expected.Price, actual.Price);
         }
@@ -70,7 +71,10 @@ public class CatalogEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<S
         var response = await client.GetAsync("/products");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Empty((await response.Content.ReadFromJsonAsync<ProductResponse[]>())!);
+        var page = await response.Content.ReadFromJsonAsync<PagedProductsResponse>();
+        Assert.NotNull(page);
+        Assert.Empty(page.Items);
+        Assert.Equal(0, page.TotalCount);
     }
 
     /// <summary>
@@ -123,4 +127,7 @@ public class CatalogEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<S
     }
 
     private sealed record ProductResponse(Guid Id, string Name, decimal Price);
+
+    private sealed record PagedProductsResponse(
+        IReadOnlyList<ProductResponse> Items, int Page, int PageSize, int TotalCount);
 }
