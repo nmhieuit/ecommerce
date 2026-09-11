@@ -1,0 +1,110 @@
+# Downstream domain-service read contract — delta for this feature
+#
+# Constitution Principle II: "API and event contracts MUST be written and reviewed before
+# implementation." This file is the design-time reference for the ONE path this feature changes:
+# GET /products (products service). It supplements, rather than replaces,
+# specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml — every other path/schema there
+# (baskets, orders, parties) is unchanged by this feature and is NOT repeated here.
+#
+# research.md Decision 5: the response shape changes from a bare array to an envelope. This is a
+# shape change, but the contract has exactly one consumer (ProductsApiClient in the BFF,
+# regenerated in the same PR) — not an independently-versioned external contract, so no v2/
+# deprecation-window process applies here (see plan.md Constitution Check, Principle II row).
+
+openapi: 3.0.3
+info:
+  title: Products service read surface — pagination delta
+  version: "0.2.0"
+  description: >
+    Supplements specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml's /products path.
+    research.md Decisions 2-5 (offset paging, DefaultPageSize=20/MaxPageSize=100, bounded `ids`
+    filter, envelope response).
+
+paths:
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: >
+        Lists the product catalog, paginated. Replaces 002's unbounded listing (spec FR-001,
+        FR-004 — every collection endpoint MUST paginate and enforce its bound server-side).
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: 1-based page number. Defaults to 1 when omitted or less than 1.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          description: >
+            Requested page size. Server-clamps to [1, 100] — a caller-supplied value above 100 is
+            capped, never rejected (spec FR-004, Jira Test Scenario 3). Ignored when `ids` is
+            supplied.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: ids
+          in: query
+          required: false
+          description: >
+            Optional comma-separated product ids. When present, returns exactly the matching
+            products (bounded by the caller-supplied id set, not by page/pageSize) and `page`/
+            `pageSize` are ignored. Used by the BFF for basket rendering and add-item lookup
+            (research.md Decision 4) instead of fetching the full catalog.
+          schema:
+            type: string
+            example: "3fa85f64-5717-4562-b3fc-2c963f66afa6,7c9e6679-7425-40de-944b-e07fc1f90ae7"
+      responses:
+        "200":
+          description: >
+            A page of products (or, with `ids`, the exact matching set). An empty result returns
+            an empty `items` array, never 404.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedProductsResponse"
+
+components:
+  schemas:
+    PagedProductsResponse:
+      type: object
+      description: >
+        Replaces the bare `Product[]` response from specs/002's downstream-openapi.yaml
+        (data-model.md — "Paged Products Response").
+      required: [items, page, pageSize, totalCount]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        page:
+          type: integer
+          description: The page returned. Fixed at 1 when `ids` was supplied.
+        pageSize:
+          type: integer
+          description: The page size actually applied, after server-side clamping.
+        totalCount:
+          type: integer
+          description: >
+            Total records matching the query (full catalog count, or the count of ids that
+            matched) — NOT `items.length`. Lets a caller determine whether another page exists.
+
+    Product:
+      type: object
+      description: Unchanged from specs/002-gateway-bff-routing/contracts/downstream-openapi.yaml.
+      required: [id, name, price]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price:
+          type: number
+          format: decimal
