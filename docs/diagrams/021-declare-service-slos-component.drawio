@@ -1,0 +1,52 @@
+<mxfile host="65bd71144e">
+    <diagram id="declare-service-slos-component" name="Kiến trúc thành phần — khai báo SLO tự bảo vệ, dashboard đã có chính thức hoá">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="800" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kiến trúc thành phần — 7 service-manifest.yaml được test canh giữ, dashboard có sẵn được chính thức hoá" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1350" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="manifests" value="7× service-manifest.yaml&#xa;(parties, products, baskets, orders,&#xa;identity, gateway, bff)&#xa;service.classification: internal-service-api | client-facing-bff&#xa;slos: {latency.p95, latency.p99, error-rate.max-5xx-ratio, availability}&#xa;slos.justification (tuỳ chọn — hiện chưa service nào dùng)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="80" width="480" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="fixture" value="ServiceManifestFixture.cs&#xa;parse bằng YamlDotNet — không cần service nào&#xa;build/chạy, chỉ đọc file trên đĩa" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="100" width="380" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="t1" value="SloDeclarationTests&#xa;đủ 4 giá trị, không rỗng/placeholder,&#xa;classification hợp lệ, tên khớp thư mục&#xa;(T007: phát hiện identity thiếu classification)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="60" width="400" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="t2" value="SloDefaultComplianceTests&#xa;khớp hồ sơ mặc định theo classification,&#xa;trừ khi có slos.justification&#xa;(T008: 7/7 PASS ngay — bff không phải ngoại lệ)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="170" width="400" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="dashboard" value="Dashboard Kibana &quot;SLO vận hành hằng ngày — 7 service&quot;&#xa;ĐÃ CÓ SẴN (phiên trước) — nay được CHÍNH THỨC HOÁ&#xa;làm cơ chế đo lường liên tục chính thức (US3)&#xa;Nguồn: traces-generic.otel-default* (Elasticsearch), rolling 24h" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="280" width="480" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="contract" value="contracts/continuous-measurement-contract.md&#xa;bất biến bắt buộc dashboard phải thỏa — đối chiếu&#xa;được theo thời gian, không cần đọc lại nhật ký build" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="280" width="380" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="alert" value="Alert rule tự động&#xa;NGOÀI PHẠM VI — thuộc SCRUM-35&#xa;(chưa triển khai)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;dashed=1;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="290" width="300" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="manifests" target="fixture" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="fixture" target="t1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="fixture" target="t2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="ngưỡng để đối chiếu" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="manifests" target="dashboard" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="dashboard" target="contract" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="chưa xây" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;strokeColor=#b85450;fontColor=#b85450;" parent="1" source="dashboard" target="alert" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

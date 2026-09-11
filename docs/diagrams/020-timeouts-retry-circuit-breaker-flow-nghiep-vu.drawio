@@ -1,0 +1,43 @@
+<mxfile host="65bd71144e">
+    <diagram id="timeouts-retry-circuit-breaker-flow" name="Luồng nghiệp vụ — khách hàng vẫn nhận phản hồi rõ ràng khi 1 bộ phận gặp sự cố">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Khách hàng đặt hàng khi 1 bộ phận phía sau đang gặp sự cố — vẫn nhận phản hồi rõ ràng, không phải chờ mãi" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1200" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="s1" value="Khách hàng bấm &quot;Đặt hàng&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="90" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="s2" value="Bộ phận xử lý đơn hàng đang chậm/ngừng phản hồi (sự cố thật, ngoài dự kiến)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="90" width="260" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3a" value="TRƯỚC (không có bảo vệ):&#xa;khách hàng chờ rất lâu,&#xa;không biết đang xảy ra chuyện gì,&#xa;cuối cùng nhận lỗi kỹ thuật khó hiểu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="650" y="40" width="280" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3b" value="SAU (có 3 lớp bảo vệ):&#xa;hệ thống phát hiện sự cố nhanh,&#xa;trả lời NGAY trong 1 khoảng thời gian&#xa;đã định trước — khách hàng biết ngay&#xa;để thử lại sau, không phải đoán" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="650" y="150" width="280" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="s4" value="Các khách hàng khác — xem sản phẩm, xem giỏ hàng — KHÔNG bị ảnh hưởng, vẫn dùng bình thường (sự cố được khoanh vùng đúng chỗ)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="990" y="150" width="280" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="s5" value="Riêng hành động &quot;đặt hàng&quot;/&quot;thêm giỏ hàng&quot;: hệ thống KHÔNG tự thử lại ngầm — tránh nguy cơ tạo đơn hàng trùng nếu yêu cầu gốc thực ra đã thành công" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="300" width="500" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="s6" value="Xem sản phẩm/xem giỏ hàng: hệ thống TỰ ĐỘNG thử lại nếu gặp trục trặc thoáng qua — khách hàng thường không hề nhận ra đã có sự cố" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="300" width="410" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s1" target="s2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="thay đổi này mang lại" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s2" target="s3b" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s3b" target="s4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

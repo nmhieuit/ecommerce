@@ -1,0 +1,43 @@
+<mxfile host="65bd71144e">
+    <diagram id="timeouts-retry-circuit-breaker-sequence" name="Trình tự — circuit breaker gateway→BFF mở mạch rồi tự phục hồi">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="800" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Trình tự thật — Gateway → BFF: mở mạch sau ngưỡng lỗi, fail-fast, rồi tự phục hồi (half-open)" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1300" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="c1" value="Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="c2" value="Gateway (YARP,&#xa;passive health check)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="60" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="c3" value="BFF (đang không phản hồi&#xa;— giả lập sự cố)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="60" width="220" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r1" value="1. Request 1 → thử kết nối thật → hết ActivityTimeout (10s) → lỗi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="140" width="520" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="r2" value="2. Request 2 → cùng kịch bản → lỗi thứ 2 → vượt MinimalTotalCountThreshold" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="190" width="520" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="open" value="Passive health check đánh dấu &quot;bff&quot; = Unhealthy → circuit MỞ (open)&#xa;AvailableDestinationsPolicy=HealthyAndUnknown loại destination này khỏi routing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="250" width="520" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="r3" value="3. Request 3 → gateway KHÔNG thử kết nối thật → trả 503 ngay (đo được ~20ms)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="330" width="430" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="wait" value="Chờ hết ReactivationPeriod đã cấu hình" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="390" width="520" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="half" value="4. BFF đã phục hồi → request thăm dò tiếp theo thành công → circuit ĐÓNG trở lại, routing bình thường" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="260" y="450" width="520" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="bugnote" value="Bug đã sửa: mặc định YARP là AvailableDestinationsPolicy=HealthyOrPanic — coi MỌI destination &quot;available&quot; khi không còn cái nào khỏe mạnh, khiến bước 3 vẫn thử kết nối thật (vẫn 502, không fail-fast). Phải đặt tường minh HealthyAndUnknown mới đúng hành vi trên." style="text;html=1;fontSize=10;fontColor=#b85450;whiteSpace=wrap;align=left;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="520" width="900" height="55" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -6,7 +6,7 @@ nội dung kỹ thuật đã có ở nơi khác.
 ## Đi thẳng vào việc — theo vai trò
 
 **Bạn là Product Owner / quản lý sản phẩm, muốn biết 1 tính năng làm được gì, cho ai, lợi ích gì?**
-→ [`docs/summary/`](summary/) — đọc theo số tăng dần (`001_PO_*.md` → `019_PO_*.md`). Mỗi file viết
+→ [`docs/summary/`](summary/) — đọc theo số tăng dần (`001_PO_*.md` → `021_PO_*.md`). Mỗi file viết
 cho người không đọc code, có mục "Giới hạn hiện tại" trung thực về những gì CHƯA làm được.
 
 **Bạn là kỹ sư mới gia nhập dự án, cần đọc code hiểu hệ thống từ đầu?**
@@ -16,7 +16,7 @@ nghị". Khác `docs/architecture/`: đi theo TRÌNH TỰ LỊCH SỬ (giai đo�
 riêng lẻ.
 
 **Bạn là software architect / kỹ sư đã quen hệ thống, cần tra cứu sâu đúng 1 tính năng cụ thể?**
-→ [`docs/architecture/`](architecture/) — 1 file `0NN_Architect_*.md` cho mỗi spec (001-019, trừ 012
+→ [`docs/architecture/`](architecture/) — 1 file `0NN_Architect_*.md` cho mỗi spec (001-021, trừ 012
 đổi số thành 013). Có bảng kết quả test theo từng project, bằng chứng xác minh thật trích từ
 `tasks.md` của chính spec đó — không suy đoán.
 
@@ -32,8 +32,10 @@ Code. Mỗi spec có 3 file: `-component` (kiến trúc kỹ thuật), `-flow-ng
 dành cho PO), `-sequence` (trình tự kỹ thuật chi tiết).
 
 **Bạn cần bản tóm tắt FR/Acceptance Criteria/Success Criteria song song bản tiếng Anh gốc?**
-→ [`docs/spec-summary-vi/`](spec-summary-vi/) — file JSON, chỉ có 001-012 (từ spec 013 trở đi,
-`specs/0NN-*/spec.md` đã viết trực tiếp bằng tiếng Việt nên không cần bản tóm tắt riêng nữa).
+→ [`docs/spec-summary-vi/`](spec-summary-vi/) — file JSON, có đủ 001-021. **Đính chính**: ghi chú cũ ở
+đây từng nói "chỉ có 001-012, từ 013 trở đi không cần nữa vì `spec.md` đã viết tiếng Việt trực tiếp" —
+sai, đã kiểm tra lại thư mục thật và xác nhận việc viết file tóm tắt này vẫn tiếp tục đều đặn cho mọi
+spec, kể cả các spec 013+ đã viết `spec.md` bằng tiếng Việt.
 
 **Bạn cần quy tắc thực hành cụ thể (không phải kiến trúc) đang áp dụng cho 1 phần code?**
 → [`docs/engineering/`](engineering/) — hiện có `test-first-commits.md` (quy tắc TDD bắt buộc cho
