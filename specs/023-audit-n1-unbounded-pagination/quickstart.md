@@ -86,18 +86,34 @@ thúc. Không có migration nào cần rollback (spec/plan không đổi schema)
 
 ## Kết quả xác thực trong phiên triển khai (2026-09-11)
 
-Docker Desktop không chạy được trong sandbox này (`Cannot open com.docker.service`), nên các bước
-cần Testcontainers (SQL Server thật) không chạy được. Kết quả thực tế:
+Lần đầu Docker Desktop không chạy được trong sandbox (`Cannot open com.docker.service`); sau khi
+Docker Desktop được khởi động lại giữa phiên, toàn bộ bước cần Testcontainers đã chạy lại được thật:
 
 - **Bước 1** (`tests/QueryCoverageTests`): PASS thật (8/8).
-- **Bước 2, 3, 5** (cần SQL Server qua Testcontainers): KHÔNG chạy được trong sandbox này. Đã xác
-  nhận qua build sạch toàn `Ecommerce.slnx` (0 lỗi) và rà soát logic thủ công. **Cần chạy lại trên
-  máy có Docker trước khi merge**: `dotnet test services/products/tests/Products.Api.IntegrationTests`,
-  `dotnet test services/baskets/tests/Baskets.Api.IntegrationTests --filter BasketQueryCountTests`.
-- **Bước 4** (`services/bff/tests/Bff.Api.UnitTests` — không cần Docker, chỉ cần .NET): PASS thật
-  (22/22, gồm cả `ProductLookupBatchingTests` và `ProductsEndpointPaginationTests`).
+- **Bước 2** (`Products.Api.IntegrationTests`, seed 500 sản phẩm qua SQL Server thật): PASS thật —
+  **23/23** (toàn bộ suite, gồm `ProductListingPaginationTests` mới và 2 test có sẵn đã cập nhật
+  sang envelope mới).
+- **Bước 3** (ép trần `pageSize`): PASS thật, nằm trong 23/23 ở Bước 2 (cùng file/suite với Bước 2,
+  không phải một lần chạy tách biệt như dự kiến ban đầu trong quickstart).
+- **Bước 4** (`services/bff/tests/Bff.Api.UnitTests`): PASS thật (22/22).
+- **Bước 5** (`BasketQueryCountTests`, đếm câu lệnh SQL qua SQL Server thật): PASS thật khi chạy
+  riêng (1/1). Khi chạy chung cả suite `Baskets.Api.IntegrationTests` (28 test, nhiều class dùng
+  `SqlServerFixture` riêng), gặp một lần container SQL Server crash giữa chừng
+  (`Could not create tempdb... not enough disk space`, `DockerApiException: container ... is not
+  running`) khiến 3/28 test khác (không phải `BasketQueryCountTests`) fail — xác nhận là flake hạ
+  tầng do giới hạn tài nguyên đĩa của sandbox khi nhiều container SQL Server chạy nối tiếp nhau
+  trong cùng một lần `dotnet test`, không phải lỗi do tính năng này gây ra.
 - **Bước 6** (basket rỗng không gọi products): PASS thật, đã gộp vào
   `ProductLookupBatchingTests.RenderingEmptyBasket_DoesNotCallProductsClient` thay vì một filter
   test riêng.
 - Bổ sung: `dotnet test services/bff/tests/Bff.Api.ContractTests --filter ProductsConsumerPactTests`
   PASS thật (1/1) — xác nhận hợp đồng Pact `pacts/bff-products.json` đã cập nhật khớp envelope mới.
+
+**Phát hiện ngoài phạm vi (đã xác nhận không phải hồi quy)**: `Products.Api.ContractTests` và
+`Baskets.Api.ContractTests` (verify hợp đồng Pact ở tầng provider — service thật chạy Kestrel để
+verifier gọi vào) đều FAIL với `401 Unauthorized` trên mọi request, kể cả các route hoàn toàn không
+liên quan tới tính năng này (ví dụ `POST /baskets/current/clear`). Đã xác nhận bằng cách checkout về
+commit `10ea911` (ngay trước khi tính năng này bắt đầu sửa code) và chạy lại — **cùng lỗi 401 xảy ra
+y hệt trên baseline chưa sửa gì**, nên đây là một vấn đề có sẵn của môi trường sandbox này (nghi ngờ
+cùng họ với vấn đề "TestJwtBearer trong sandbox" mà 020-timeouts-retry-circuit-breaker's tasks.md
+T012 đã ghi nhận), KHÔNG PHẢI hồi quy do tính năng này gây ra, và nằm ngoài phạm vi SCRUM-33 để sửa.
