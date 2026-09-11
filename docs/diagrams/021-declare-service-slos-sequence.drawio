@@ -1,0 +1,58 @@
+<mxfile host="65bd71144e">
+    <diagram id="declare-service-slos-sequence" name="Trình tự thật — chứng minh ngân sách bị tiêu hao thể hiện rõ trên dashboard">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="750" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Trình tự thật (T013) — dồn tải giả lập lên Orders.Api, chứng minh dashboard phản ánh đúng ngân sách bị tiêu hao" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1300" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="c1" value="Người xác thực" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="c2" value="Orders.Api&#xa;(/health/ready)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="60" width="180" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="c3" value="Elasticsearch&#xa;(traces-generic.otel-default*)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="60" width="240" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="c4" value="Dashboard&#xa;&quot;SLO vận hành hằng ngày&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="990" y="60" width="240" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r1" value="1. Đo baseline 15 phút trước khi tạo tải&#xa;→ p95=157,9ms / p99=440,1ms (môi trường demo vốn hơi tải)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="140" width="540" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r2" value="2. Gửi 300 request đồng thời tới /health/ready&#xa;(tạo tranh chấp tài nguyên thật — không sửa code/rebuild)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="210" width="500" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r3" value="3. Mỗi span (duration thật) được ghi vào&#xa;traces-generic.otel-default* qua otel-collector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="280" width="540" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r4" value="4. Truy vấn lại trong 5 phút NGAY SAU burst&#xa;(323 request, tăng mạnh so với ~136/15 phút bình thường)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="350" width="540" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r5" value="5. Dashboard/Elasticsearch thô cho ra CÙNG kết quả:&#xa;p95 = 14.975,7 ms · p99 = 18.519,2 ms&#xa;— tăng ~95 lần, vượt xa ngân sách 150ms/500ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="990" y="420" width="330" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Không cần bước &quot;hoàn tác&quot; — không có thay đổi cấu hình/code nào được thực hiện, tải chỉ là traffic tạm thời, tự hết ngay sau khi burst kết thúc." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="520" width="900" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="c1" target="r1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r1" target="r2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r2" target="r3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r3" target="r4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r4" target="r5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
