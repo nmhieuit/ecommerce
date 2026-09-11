@@ -35,7 +35,7 @@ Monorepo backend nhiều service hiện có (xem plan.md § Project Structure) �
 
 **Purpose**: Chuẩn bị khung dự án test cần thiết cho toàn bộ tính năng (không có NuGet package mới — plan.md Technical Context)
 
-- [ ] T001 Tạo dự án xUnit `tests/QueryCoverageTests/QueryCoverageTests.csproj` theo đúng khuôn mẫu `tests/ResilienceCoverageTests/ResilienceCoverageTests.csproj` (không tham chiếu project service nào — đọc file dạng text), đăng ký dự án này trong `Ecommerce.slnx`
+- [X] T001 Tạo dự án xUnit `tests/QueryCoverageTests/QueryCoverageTests.csproj` theo đúng khuôn mẫu `tests/ResilienceCoverageTests/ResilienceCoverageTests.csproj` (không tham chiếu project service nào — đọc file dạng text), đăng ký dự án này trong `Ecommerce.slnx`
 
 ---
 
@@ -45,10 +45,12 @@ Monorepo backend nhiều service hiện có (xem plan.md § Project Structure) �
 
 **⚠️ CRITICAL**: Không user story nào được coi là hoàn tất trước khi phase này xong
 
-- [ ] T002 [P] Cài đặt khung `tests/QueryCoverageTests/QueryCoverageScanner.cs` theo đúng khuôn mẫu `tests/ResilienceCoverageTests/ResilienceCoverageScanner.cs`: record `ExpectedListEndpoint` (Name, SourceFile, RequiredMarkers), record `ExpectedBoundedQuerySite` (Name, SourceFile, RequiredMarkers), record `CoverageViolation`, record `CoverageScanResult`, hàm `LocateRepositoryRoot()`, và hai hàm `ScanListEndpoints(...)`/`ScanBoundedQuerySites(...)` đọc file dạng text và xác nhận từng marker trong `RequiredMarkers` xuất hiện trong `SourceFile` — `ExpectedListEndpoints`/`ExpectedBoundedQuerySites` khởi tạo RỖNG (populate dần theo từng story ở dưới, data-model.md "List/Bounded Query Site Inventory Entry") — phụ thuộc T001
-- [ ] T003 [P] Viết `tests/QueryCoverageTests/QueryCoverageTests.cs`: `Scan_ReportsNoViolations_ForCurrentInventory` (chạy với danh sách thật, rỗng ở bước này nên PASS vô nghĩa — có ý nghĩa khi US1-3 populate danh sách), `Scan_DetectsViolation_WhenMarkerMissing`, `Scan_DetectsViolation_WhenSourceFileMissing` (dùng fixture thư mục tạm, theo khuôn mẫu `ResilienceCoverageTests.cs`) — phụ thuộc T002
+- [X] T002 [P] Cài đặt khung `tests/QueryCoverageTests/QueryCoverageScanner.cs` theo đúng khuôn mẫu `tests/ResilienceCoverageTests/ResilienceCoverageScanner.cs`: record `ExpectedListEndpoint` (Name, SourceFile, RequiredMarkers), record `ExpectedBoundedQuerySite` (Name, SourceFile, RequiredMarkers), record `CoverageViolation`, record `CoverageScanResult`, hàm `LocateRepositoryRoot()`, và hai hàm `ScanListEndpoints(...)`/`ScanBoundedQuerySites(...)` đọc file dạng text và xác nhận từng marker trong `RequiredMarkers` xuất hiện trong `SourceFile` — phụ thuộc T001.
+      **Khác kế hoạch ban đầu**: điền sẵn cả 4 dòng (2 `ExpectedListEndpoints` của US1/US3, 2 `ExpectedBoundedQuerySites` của US2) ngay tại đây thay vì để rỗng rồi populate dần ở T006/T013/T018 — đơn giản hơn và vẫn đúng tinh thần Test-First (`dotnet test` xác nhận cả 4 dòng RED thật ngay từ Foundational, xem T003); T006/T013/T018 dưới đây đổi thành "xác nhận dòng đã có sẵn" thay vì "thêm dòng mới"
+- [X] T003 [P] Viết `tests/QueryCoverageTests/QueryCoverageTests.cs`: `ScanListEndpoints_ReportsNoViolations_ForCurrentInventory`, `ScanListEndpoints_ActuallyExaminesEveryExpectedEndpoint`, `ScanBoundedQuerySites_ReportsNoViolations_ForCurrentInventory`, `ScanBoundedQuerySites_ActuallyExaminesEveryExpectedSite`, cộng 4 test cho chính scanner (fixture thư mục tạm, theo khuôn mẫu `ResilienceCoverageTests.cs`) — phụ thuộc T002.
+      **Kết quả xác nhận**: `dotnet test tests/QueryCoverageTests` → 6/8 PASS (4 test cho scanner + 2 `ActuallyExamines*`), 2 FAIL đúng như kỳ vọng (`ScanListEndpoints_ReportsNoViolations_ForCurrentInventory`: thiếu `DefaultPageSize`/`MaxPageSize`/`page`/`pageSize`; `ScanBoundedQuerySites_ReportsNoViolations_ForCurrentInventory`: thiếu `GetProductsByIdsAsync` × 2) — đúng RED state cần có trước khi triển khai US1/US2/US3
 
-**Checkpoint**: Nền tảng sẵn sàng — scanner có khung (danh sách rỗng). Có thể bắt đầu triển khai từng user story.
+**Checkpoint**: Nền tảng sẵn sàng — scanner có khung, đã xác nhận RED đúng chỗ (2/8 test FAIL vì marker thật chưa tồn tại). Có thể bắt đầu triển khai từng user story.
 
 ---
 
