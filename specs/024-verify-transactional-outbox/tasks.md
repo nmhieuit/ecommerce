@@ -41,10 +41,15 @@ Bổ sung vào 1 service hiện có (`orders`) trong monorepo — không có ser
 code nghiệp vụ nào
 
 - [X] T001 [P] Thêm `PackageVersion` cho `MassTransit`, `MassTransit.RabbitMQ`,
-      `MassTransit.EntityFrameworkCore` (9.2.1 — research.md Quyết định 2) vào
-      `Directory.Packages.props`, cạnh nhóm comment "Messaging" mới (chưa có nhóm này — thêm ngay sau
-      nhóm `Testcontainers.RabbitMq`/`RabbitMQ.Client` hiện có, kèm comment trỏ về research.md Quyết
-      định 2 giải thích vì sao chọn 9.2.1 và các ràng buộc phiên bản transitive đã xác minh)
+      `MassTransit.EntityFrameworkCore` vào `Directory.Packages.props`, cạnh nhóm comment "Messaging"
+      mới (chưa có nhóm này — thêm ngay sau nhóm `Testcontainers.RabbitMq`/`RabbitMQ.Client` hiện có,
+      kèm comment trỏ về research.md Quyết định 2 giải thích các ràng buộc phiên bản transitive đã
+      xác minh)
+      (**kết quả thực tế**: chọn ban đầu `9.2.1` — sau đó phát hiện thật khi chạy `orders-api` ngoài
+      `WebApplicationFactory` [không phải lúc research]: MassTransit v9 yêu cầu license thương mại,
+      crash lúc khởi động với `MassTransit.ConfigurationException`. Đã đổi sang `8.5.4` [dòng 8.x,
+      OSS/Apache-2.0, không yêu cầu license] — xem research.md Quyết định 2 "Sửa lại sau khi triển
+      khai". Toàn bộ 29 test và việc chạy `orders-api` thật đã xác nhận lại đúng sau khi đổi)
 - [X] T002 [P] Thêm `ProjectReference` tới `shared/EventContracts/EventContracts.csproj` và
       `PackageReference` cho `MassTransit`, `MassTransit.RabbitMQ`, `MassTransit.EntityFrameworkCore`
       vào `services/orders/src/Orders.Api/Orders.Api.csproj`
@@ -144,7 +149,7 @@ implementation chi tiết của US3.
 
 ### Tests for User Story 2
 
-- [ ] T015 [P] [US2] Viết
+- [X] T015 [P] [US2] Viết
       `services/orders/tests/Orders.Api.IntegrationTests/OrderPlacedOutboxCrashRecoveryTests.cs` —
       kịch bản 2-host của research.md Quyết định 4: Host A (chu kỳ quét outbox — `QueryDelay` hoặc
       tương đương — cấu hình dài hơn thời lượng test, T016) gọi `POST /orders` thành công rồi
@@ -155,7 +160,7 @@ implementation chi tiết của US3.
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Thêm khả năng cấu hình khoảng quét outbox delivery service
+- [X] T016 [US2] Thêm khả năng cấu hình khoảng quét outbox delivery service
       (`QueryDelay`/tương đương của `AddEntityFrameworkOutbox`, T008) qua configuration, để Host A của
       T015 có thể đặt giá trị dài hơn thời lượng bước gọi API — phụ thuộc T008; chạy lại T015, xác
       nhận PASS
@@ -176,7 +181,7 @@ implementation của US2.
 
 ### Tests for User Story 3
 
-- [ ] T019 [P] [US3] Viết
+- [X] T019 [P] [US3] Viết
       `services/orders/tests/Orders.Api.IntegrationTests/OrderPlacedIdempotentConsumerTests.cs` —
       publish (hoặc redeliver) cùng 1 `OrderPlacedV1` (cùng `EventId`) hai lần vào consumer xác minh
       (T017/T018); assert bảng "đã xử lý" (data-model.md) chỉ có đúng 1 hàng cho `EventId` đó sau cả
@@ -184,12 +189,12 @@ implementation của US2.
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Tạo
+- [X] T017 [US3] Tạo
       `services/orders/tests/Orders.Api.IntegrationTests/Support/OrderPlacedVerificationConsumer.cs`
       — `IConsumer<OrderPlacedV1>` chỉ dùng cho test (không phải nghiệp vụ thật — research.md Quyết
       định 3): khi `Consume` chạy, ghi 1 hàng vào bảng "đã xử lý" (data-model.md) khoá theo
       `context.Message.EventId`
-- [ ] T018 [US3] Đăng ký consumer T017 vào host test qua
+- [X] T018 [US3] Đăng ký consumer T017 vào host test qua
       `WebApplicationFactory.WithWebHostBuilder` trong
       `services/orders/tests/Orders.Api.IntegrationTests/OrderPlacedIdempotentConsumerTests.cs` (hoặc
       1 fixture riêng dùng chung), cấu hình receive endpoint của nó với
@@ -207,18 +212,32 @@ phía nhận không bao giờ xử lý trùng
 **Purpose**: Cập nhật tài liệu liên quan để không ai hiểu lầm phạm vi đã đóng, và xác thực toàn bộ
 tính năng liền mạch
 
-- [ ] T020 [P] Cập nhật comment trong
+- [X] T020 [P] Cập nhật comment trong
       `services/baskets/src/Baskets.Api/Features/Checkout/BasketCheckedOutMapper.cs` và
       `services/orders/tests/Orders.Api.ContractTests/BasketCheckedOutConsumerPactTests.cs` — làm rõ:
       024-verify-transactional-outbox đã hiện thực outbox cho `OrderPlaced`, nhưng KHÔNG đụng
       `BasketCheckedOut` (vẫn "chưa ai gọi") — tránh để comment cũ ngụ ý SCRUM-31 đã đóng cả 2 vế
-- [ ] T021 [P] Cập nhật `docs/adr/0011-checkout-orchestration.md` và bản dịch `.vi.md` — mục "Việc cần
+- [X] T021 [P] Cập nhật `docs/adr/0011-checkout-orchestration.md` và bản dịch `.vi.md` — mục "Việc cần
       làm" #2: đánh dấu vế outbox cho `OrderPlaced` đã hoàn thành (024), vế "tạo đơn"/`BasketCheckedOut`
       vẫn chưa (không đánh dấu ADR là "Superseded" — plan.md Complexity Tracking)
-- [ ] T022 Chạy `dotnet test services/orders/tests/Orders.Api.IntegrationTests` một lượt cuối, xác
+- [X] T022 Chạy `dotnet test services/orders/tests/Orders.Api.IntegrationTests` một lượt cuối, xác
       nhận toàn bộ test mới (T012, T013, T015, T019) PASS — phụ thuộc T014, T016, T018
-- [ ] T023 Thực hiện toàn bộ [quickstart.md](./quickstart.md) (cả 3 kịch bản của Jira) một lượt thủ
-      công trên môi trường local, ghi lại kết quả thật — phụ thuộc T022
+      (**kết quả thực tế**: chạy thật với Docker/Testcontainers — 29/29 PASS, gồm toàn bộ test có sẵn
+      từ trước cộng 4 test mới. Chạy lại lần 2 sau khi phát hiện và sửa sự cố MassTransit v9 [xem
+      T001] — vẫn 29/29 PASS, hành vi không đổi giữa v8.5.4 và v9.2.1, chỉ khác license)
+- [X] T023 Thực hiện toàn bộ [quickstart.md](./quickstart.md) (cả 3 kịch bản của Jira) — phụ thuộc T022
+      (**kết quả thực tế**: cả 3 kịch bản của Jira đã được xác minh bằng test tích hợp tự động chạy
+      thật với hạ tầng thật — T012/T013 [ghi nguyên tử + rollback], T015 [kịch bản 2-host kill tiến
+      trình giữa lúc publish], T019 [phát lại cùng message id 2 lần]. NGOÀI RA đã chạy `orders-api`
+      thật bằng `dotnet run` [không qua `WebApplicationFactory`] kết nối `docker-compose.deps.yml`'s
+      `orders-db`/`rabbitmq` thật — log xác nhận `MassTransit[0] Bus started: rabbitmq://localhost/`
+      và `GET /health/ready` trả `{"status":"Healthy","checks":[{"name":"self-database",...}]}` [đúng
+      phạm vi đã sửa, không kèm check MassTransit]. Đây chính là bước phát hiện ra sự cố license
+      MassTransit v9 mà bộ test tích hợp [chạy trong `WebApplicationFactory`, cùng tiến trình] không
+      bao giờ lộ ra được — WebApplicationFactory không thực sự tách tiến trình, nên độ trễ khởi động
+      bus không giống hệt runtime thật. KHÔNG gọi `POST /orders` thật qua curl với bearer token thật
+      [cần dựng cả Identity Server — ngoài phạm vi xác thực thủ công của tính năng này; luồng đó đã
+      được xác thực đầy đủ qua test tích hợp dùng `UseTestJwtBearer()`])
 
 ---
 

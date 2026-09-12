@@ -14,7 +14,7 @@ tầng nhắn tin thật nào** — không gói MassTransit, không outbox, `POS
 tồn tại sẵn (docker-compose) nhưng "chưa ai nối dây" — đúng như comment tại đó đã dự đoán, tính năng
 này là "the story that first needs one".
 
-Cách tiếp cận: (1) thêm `MassTransit`/`MassTransit.RabbitMQ`/`MassTransit.EntityFrameworkCore` (9.2.1,
+Cách tiếp cận: (1) thêm `MassTransit`/`MassTransit.RabbitMQ`/`MassTransit.EntityFrameworkCore` (8.5.4,
 đã xác minh tương thích .NET 10/EF Core 10 trên NuGet Gallery) vào `orders`; (2) `POST /orders` ghi bản
 ghi outbox (Bus Outbox của MassTransit) trong cùng transaction EF Core với việc lưu đơn hàng, và một
 outbox delivery service có sẵn của thư viện tự gửi `OrderPlacedV1` ra RabbitMQ, kể cả sau khi tiến
@@ -36,10 +36,12 @@ hạng mục lớn hơn phạm vi được yêu cầu. ADR-0011 và deviation Pr
 **Language/Version**: C#/.NET 10 — không có ngôn ngữ ứng dụng mới.
 
 **Primary Dependencies**: `MassTransit` + `MassTransit.RabbitMQ` + `MassTransit.EntityFrameworkCore`
-9.2.1 (mới, xác minh trên NuGet Gallery — research.md Quyết định 2): `MassTransit.RabbitMQ` phụ thuộc
-`RabbitMQ.Client >= 7.2.2`, khớp đúng phiên bản đã pin sẵn trong `Directory.Packages.props`;
-`MassTransit.EntityFrameworkCore` (target .NET 10) phụ thuộc `Microsoft.EntityFrameworkCore.Relational
->= 10.0.0`, khớp EF Core 10.0.0 đã dùng — không xung đột phiên bản transitive nào.
+8.5.4 — dòng 8.x, không phải 9.x (research.md Quyết định 2: v9 yêu cầu license thương mại, phát hiện
+khi chạy `orders-api` thật ngoài `WebApplicationFactory`, không phải lúc research; đã đổi lại và xác
+minh lại toàn bộ). `MassTransit.RabbitMQ` 8.5.4 phụ thuộc `RabbitMQ.Client >= 7.1.2`, thoả bởi phiên
+bản đã pin sẵn trong `Directory.Packages.props` (7.2.2); `MassTransit.EntityFrameworkCore` 8.5.4 phụ
+thuộc `Microsoft.EntityFrameworkCore.Relational >= 9.0.1`, thoả bởi EF Core 10.0.0 đã dùng (mức sàn,
+không phải pin cứng) — không xung đột phiên bản transitive nào.
 
 **Storage**: SQL Server (đã có, `OrdersDbContext`) — thêm bảng outbox (`OutboxMessage`, `OutboxState`)
 do `MassTransit.EntityFrameworkCore` định nghĩa sẵn qua `AddEntityFrameworkOutbox`, cộng bảng
@@ -116,7 +118,7 @@ specs/024-verify-transactional-outbox/
 ### Source Code (repository root)
 
 ```text
-Directory.Packages.props                          # sửa: +MassTransit, +MassTransit.RabbitMQ, +MassTransit.EntityFrameworkCore (9.2.1)
+Directory.Packages.props                          # sửa: +MassTransit, +MassTransit.RabbitMQ, +MassTransit.EntityFrameworkCore (8.5.4)
 
 services/orders/src/Orders.Api/
 ├── Orders.Api.csproj                              # sửa: thêm 3 PackageReference trên

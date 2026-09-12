@@ -12,7 +12,7 @@ using Orders.Api.Data;
 namespace Orders.Api.Migrations
 {
     [DbContext(typeof(OrdersDbContext))]
-    [Migration("20260911140736_AddTransactionalOutbox")]
+    [Migration("20260911222115_AddTransactionalOutbox")]
     partial class AddTransactionalOutbox
     {
         /// <inheritdoc />
@@ -150,6 +150,10 @@ namespace Orders.Api.Migrations
 
                     b.HasKey("SequenceNumber");
 
+                    b.HasIndex("EnqueueTime");
+
+                    b.HasIndex("ExpirationTime");
+
                     b.HasIndex("OutboxId", "SequenceNumber")
                         .IsUnique()
                         .HasFilter("[OutboxId] IS NOT NULL");
@@ -166,10 +170,6 @@ namespace Orders.Api.Migrations
                     b.Property<Guid>("OutboxId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("BusName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("datetime2");
@@ -190,7 +190,7 @@ namespace Orders.Api.Migrations
 
                     b.HasKey("OutboxId");
 
-                    b.HasIndex("BusName", "Created");
+                    b.HasIndex("Created");
 
                     b.ToTable("OutboxState");
                 });

@@ -43,8 +43,7 @@ namespace Orders.Api.Migrations
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
                     Created = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Delivered = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    LastSequenceNumber = table.Column<long>(type: "bigint", nullable: true),
-                    BusName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true)
+                    LastSequenceNumber = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -99,6 +98,16 @@ namespace Orders.Api.Migrations
                 column: "Delivered");
 
             migrationBuilder.CreateIndex(
+                name: "IX_OutboxMessage_EnqueueTime",
+                table: "OutboxMessage",
+                column: "EnqueueTime");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OutboxMessage_ExpirationTime",
+                table: "OutboxMessage",
+                column: "ExpirationTime");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_InboxMessageId_InboxConsumerId_SequenceNumber",
                 table: "OutboxMessage",
                 columns: new[] { "InboxMessageId", "InboxConsumerId", "SequenceNumber" },
@@ -113,9 +122,9 @@ namespace Orders.Api.Migrations
                 filter: "[OutboxId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_OutboxState_BusName_Created",
+                name: "IX_OutboxState_Created",
                 table: "OutboxState",
-                columns: new[] { "BusName", "Created" });
+                column: "Created");
         }
 
         /// <inheritdoc />

@@ -93,14 +93,35 @@ nhưng `BasketCheckedOut` vẫn chưa được publish/consume.
 
 ## Quyết định 2: Cơ chế outbox kỹ thuật — dùng MassTransit + MassTransit.EntityFrameworkCore, không tự viết
 
-**Decision**: Dùng gói `MassTransit` + `MassTransit.RabbitMQ` + `MassTransit.EntityFrameworkCore`
-(9.2.1 — xác minh trên NuGet Gallery: `MassTransit` 9.2.1 tính tương thích với .NET 10;
-`MassTransit.RabbitMQ` 9.2.1 phụ thuộc `RabbitMQ.Client >= 7.2.2`, khớp đúng phiên bản đã pin sẵn
-trong `Directory.Packages.props`; `MassTransit.EntityFrameworkCore` 9.2.1 phụ thuộc
-`Microsoft.EntityFrameworkCore.Relational >= 10.0.0` cho target .NET 10, khớp đúng EF Core 10.0.0 đã
-dùng). Dùng cơ chế **Bus Outbox** có sẵn của thư viện (`AddEntityFrameworkOutbox<TDbContext>` +
-`UseBusOutbox()`) cho phía publisher (`orders`), thay vì tự viết bảng outbox và một
-`BackgroundService` quét tay.
+**Decision**: Dùng gói `MassTransit` + `MassTransit.RabbitMQ` + `MassTransit.EntityFrameworkCore`,
+**pin ở dòng 8.x (8.5.4)**, dùng cơ chế **Bus Outbox** có sẵn của thư viện
+(`AddEntityFrameworkOutbox<TDbContext>` + `UseBusOutbox()`) cho phía publisher (`orders`), thay vì tự
+viết bảng outbox và một `BackgroundService` quét tay.
+
+**Sửa lại sau khi triển khai (tasks.md T001, phát hiện khi chạy `orders-api` thật, ngoài
+`WebApplicationFactory`)**: quyết định ban đầu ở đây chọn `9.2.1` dựa trên xác minh NuGet Gallery
+(tương thích .NET 10, ràng buộc phiên bản transitive khớp đúng) — nhưng **bỏ sót hoàn toàn việc kiểm
+tra giấy phép**. Chạy `orders-api` thật với `9.2.1` crash ngay khi khởi động:
+`MassTransit.ConfigurationException: License must be specified with SetLicense/SetLicenseLocation`.
+Tra cứu xác nhận: **MassTransit v9 (bản ổn định đầu tiên ~Q1 2026) là sản phẩm thương mại có phí**
+(domain giấy phép `masstransit.massient.com` là hợp pháp — công ty thương mại của MassTransit đổi
+tên — không phải giả mạo, dù trông khả nghi lúc research ban đầu); **v8.x vẫn miễn phí/OSS
+(Apache-2.0)** và vẫn được vá bảo mật tới hết 2026. Mọi phụ thuộc khác trong repo này đều là OSS —
+đưa vào một phụ thuộc có phí là một quyết định kinh doanh không nằm trong thẩm quyền của bất kỳ bước
+plan/implementation nào tự quyết định.
+
+**Đã đổi sang 8.5.4** (bản 8.x mới nhất, đã xác minh trên NuGet Gallery): `MassTransit.RabbitMQ`
+8.5.4 phụ thuộc `RabbitMQ.Client >= 7.1.2` (thoả bởi 7.2.2 đã pin sẵn); `MassTransit.EntityFrameworkCore`
+8.5.4 phụ thuộc `Microsoft.EntityFrameworkCore.Relational >= 9.0.1` (thoả bởi EF Core 10.0.0 đã
+dùng — đây là mức sàn, không phải pin cứng, nên không có hạ cấp EF Core nào xảy ra). 8.5.4 target
+`net8.0` (không phải `net10.0`) nhưng chạy được bình thường trên các service `net10.0` của nền tảng
+này, như mọi thư viện target `net8.0` khác. **Model entity outbox/inbox giữa 8.x và 9.x khác nhau**
+(migration EF Core sinh ra khác nhau giữa 2 phiên bản) — đã xoá và tạo lại migration
+`AddTransactionalOutbox` sau khi đổi phiên bản (`dotnet ef migrations remove` rồi `add` lại), xác
+nhận qua lỗi `PendingModelChangesWarning` thật khi chạy test với migration cũ.
+Toàn bộ 29 test tích hợp và việc chạy `orders-api` thật (kết nối RabbitMQ thật, log xác nhận
+`Bus started: rabbitmq://localhost/`) đã xác nhận lại PASS/hoạt động đúng sau khi đổi phiên bản —
+hành vi outbox/inbox không đổi giữa 2 dòng phiên bản, chỉ khác license.
 
 **Rationale**:
 - Constitution's "Technology and Infrastructure Constraints" đã chốt cứng từ trước:
