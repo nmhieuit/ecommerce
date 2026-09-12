@@ -42,6 +42,12 @@ public static class ServiceDefaultsExtensions
                 // HttpClient instrumentation above, which cannot distinguish "failed on the first
                 // try" from "failed after two retries and an open circuit" (spec FR-008).
                 .AddSource("Polly")
+                // 024-verify-transactional-outbox: MassTransit emits its own ActivitySource under
+                // this name for publish/consume/outbox-delivery activity — without it, a feature
+                // whose entire point is crash/idempotency behaviour would be invisible in traces,
+                // failing "a feature is not complete until it is debuggable in production from
+                // telemetry alone" (constitution Principle VII).
+                .AddSource("MassTransit")
                 .AddOtlpExporter())
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
@@ -49,6 +55,7 @@ public static class ServiceDefaultsExtensions
                 .AddRuntimeInstrumentation()
                 // See the "Polly" activity source above — same reasoning, for the meter side.
                 .AddMeter("Polly")
+                .AddMeter("MassTransit")
                 .AddOtlpExporter());
 
         builder.Logging.AddOpenTelemetry(logging =>

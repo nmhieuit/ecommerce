@@ -69,10 +69,16 @@ public static class HealthCheckEndpoints
 
         // Readiness answers "can this service actually serve traffic right now", which includes
         // reaching its own database — it must fail closed, never report healthy without it
-        // (spec FR-003 and Edge Cases).
+        // (spec FR-003 and Edge Cases). Filtered by name, not just the "ready" tag: MassTransit
+        // (024-verify-transactional-outbox) auto-registers its own bus-connectivity health check
+        // tagged "ready" too, which would otherwise fold broker reachability into this endpoint —
+        // a real behavioural change to an existing, tested contract ("against this service's own
+        // database only", see AddHealthCheckFeature above) that no acceptance criterion of this
+        // feature asks for. Whether broker connectivity should gate readiness is a separate,
+        // undecided question, not something to fold in as a side effect of adding messaging.
         app.MapHealthChecks("/health/ready", new HealthCheckOptions
         {
-            Predicate = registration => registration.Tags.Contains(ReadyTag),
+            Predicate = registration => registration.Name == SelfDatabaseCheck,
             ResponseWriter = WriteReadinessResponse,
         }).AllowAnonymous();
 

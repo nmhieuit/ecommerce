@@ -96,6 +96,18 @@
     <PackageVersion Include="StackExchange.Redis" Version="3.1.31" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
 
+    <!-- Messaging (024-verify-transactional-outbox research.md Decision 2; constitution's
+         Technology and Infrastructure Constraints already names "RabbitMQ via MassTransit, with
+         outbox... configured centrally" as the platform's messaging mechanism). 9.2.1 verified on
+         NuGet Gallery: MassTransit.RabbitMQ depends on RabbitMQ.Client >= 7.2.2 (matches the pin
+         above exactly); MassTransit.EntityFrameworkCore's net10.0 target depends on
+         Microsoft.EntityFrameworkCore.Relational >= 10.0.0 (matches the EF Core 10.0.0 pin above).
+         First production (non-test-only) use of RabbitMQ in this repository — orders is "the story
+         that first needs one" (docker-compose.yml comment). -->
+    <PackageVersion Include="MassTransit" Version="9.2.1" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="9.2.1" />
+    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="9.2.1" />
+
     <!-- JSON Schema 2020-12 validation, test-only. Referenced solely by
          shared/EventContracts.UnitTests to prove a serialized event instance satisfies its
          published schema (008-versioned-event-schemas research.md Decision 2). It is deliberately

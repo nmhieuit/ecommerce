@@ -27,14 +27,28 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
     private static readonly Guid AnyOrderId = new("8a1f6f6e-0000-4000-8000-000000000002");
     private static readonly Guid Notebook = new("9f8d6b1e-0001-4000-8000-000000000001");
 
+    /// <summary>
+    /// 024-verify-transactional-outbox: deliberately the opposite of what this test asserted
+    /// before that feature. Construction is no longer gated on a resolved tenant — MassTransit's
+    /// outbox delivery/cleanup hosted services (Program.cs's <c>AddEntityFrameworkOutbox</c>)
+    /// construct this same context from their own background scope, with no HTTP request (and
+    /// therefore no resolved tenant) behind it; per MassTransit's own maintainers, gating
+    /// construction itself on a scoped, request-only dependency is unsupported. The guarantee
+    /// this suite actually cares about — that a real request cannot reach Order data without a
+    /// resolved tenant — moved to the call sites that touch that data
+    /// (<c>OrderEndpoints.MapOrderEndpoints</c>'s explicit <c>tenant.RequireTenantId()</c> calls)
+    /// and is what <see cref="ARequestWithoutATenant_Fails_RatherThanServingDefaultSchemaData"/>
+    /// and <see cref="AWriteWithoutATenant_CreatesNoOrder"/> below verify end-to-end.
+    /// </summary>
     [Fact]
-    public async Task ResolvingTheDbContext_Throws_WhenNoTenantHasBeenResolved()
+    public async Task ResolvingTheDbContext_Succeeds_EvenWhenNoTenantHasBeenResolved()
     {
         await using var factory = CreateFactory();
         using var scope = factory.Services.CreateScope();
 
-        Assert.Throws<MissingTenantContextException>(
-            () => scope.ServiceProvider.GetRequiredService<OrdersDbContext>());
+        var dbContext = scope.ServiceProvider.GetRequiredService<OrdersDbContext>();
+
+        Assert.NotNull(dbContext);
     }
 
     /// <summary>

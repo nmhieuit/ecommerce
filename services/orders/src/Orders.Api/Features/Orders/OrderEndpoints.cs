@@ -1,6 +1,9 @@
+using EventContracts;
 using Identity;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Orders.Api.Data;
+using ServiceDefaults;
 using Tenancy;
 
 namespace Orders.Api.Features.Orders;
@@ -18,8 +21,16 @@ public static class OrderEndpoints
         app.MapGet("/orders/{orderId:guid}", async (
             Guid orderId,
             OrdersDbContext dbContext,
+            TenantContext tenant,
             CancellationToken cancellationToken) =>
         {
+            // 024-verify-transactional-outbox: explicit now that OrdersDbContext construction
+            // itself is no longer gated on a resolved tenant (Program.cs) — this call is what
+            // preserves "a request without a resolved tenant cannot reach Order data"
+            // (constitution Principle V) for the read path, the same way Order.PlaceFrom already
+            // does for the write path below.
+            tenant.RequireTenantId();
+
             var order = await dbContext.Orders
                 .AsNoTracking()
                 .Where(entity => entity.Id == orderId)
@@ -37,6 +48,8 @@ public static class OrderEndpoints
             OrdersDbContext dbContext,
             CallerContext caller,
             TenantContext tenant,
+            IPublishEndpoint publishEndpoint,
+            HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
             // Requiring a caller before touching persistence, the same way the tenant is required.
@@ -69,6 +82,28 @@ public static class OrderEndpoints
             }
 
             dbContext.Orders.Add(order);
+
+            // 024-verify-transactional-outbox (research.md Decision 2, spec FR-001): Publish()
+            // stages the outbox record via the Bus Outbox (Program.cs's UseBusOutbox()) rather than
+            // sending anything itself — the actual send happens only once SaveChangesAsync below
+            // commits, in the SAME transaction, and only via the outbox delivery service afterwards
+            // (never inline on this request), which is what keeps this endpoint's response
+            // unaffected by broker latency (spec FR-007/Constraints) and keeps the order write and
+            // the outbox write atomic (contracts/outbox-guarantees-contract.md Bất biến 1/2).
+            //
+            // Lines are not read back from `order` (Order.cs deliberately does not persist them —
+            // see its remarks) but taken directly from the request that is already in scope.
+            await publishEndpoint.Publish(new OrderPlacedV1(
+                Guid.NewGuid(),
+                order.PlacedAtUtc,
+                order.Id,
+                order.TenantId ?? string.Empty,
+                httpContext.Items[CorrelationIdMiddleware.HeaderName] as string ?? string.Empty,
+                order.Total,
+                [.. request.Items.Select(item =>
+                    new OrderLineV1(item.ProductId, item.Quantity, item.UnitPrice))]),
+                cancellationToken);
+
             await dbContext.SaveChangesAsync(cancellationToken);
 
             var response = new OrderResponse(order.Id, order.PlacedAtUtc, order.Total, order.TenantId);

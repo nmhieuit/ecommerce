@@ -70,3 +70,10 @@ artifacts/
 
 # Ansible (019-liveness-readiness-probes)
 *.retry
+
+# Git worktrees used to isolate parallel Claude Code sessions on this repo. Never committed: each
+# is a linked checkout of a branch that already exists in full in .git history, and an unignored
+# worktree directory risks being swept into a commit whole (e.g. via `git add -A`) as a gitlink or,
+# worse, duplicated file content.
+/.worktrees/
+/.claude/worktrees/
