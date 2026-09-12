@@ -41,19 +41,6 @@ hàng trùng lặp**.
    dùng có thể không hề nhận ra đã có trục trặc. Nhưng khi **đặt hàng hoặc thêm giỏ hàng**, hệ thống
    không tự thử lại — tránh nguy cơ tạo dữ liệu trùng lặp.
 
-## Điều đặc biệt (đã kiểm chứng thật)
-
-- **Phát hiện 1 lỗi thật đang tồn tại sẵn, không phải giả định**: khi kiểm tra kỹ, phát hiện cơ chế
-  "ngắt mạch" ở 1 điểm quan trọng của hệ thống thực ra **không hoạt động đúng như tưởng** — hệ thống
-  vẫn âm thầm cố gắng kết nối thật dù đã "báo mạch mở", chỉ vì 1 cấu hình mặc định ẩn của công cụ nền
-  tảng. Đã xác thực bằng cách chạy thật và đo thời gian phản hồi, phát hiện và sửa đúng chỗ — chuyển từ
-  hành vi "vẫn chờ như cũ" sang phản hồi tức thì thật sự.
-- **Phát hiện 1 lỗi tiềm ẩn thật đã tồn tại từ trước**: cơ chế "thử lại tự động" cũ áp dụng cho cả các
-  yêu cầu tạo đơn hàng/giỏ hàng — 1 rủi ro tạo dữ liệu trùng lặp thật sự đã tồn tại âm thầm trước khi
-  tính năng này được làm, không phải rủi ro lý thuyết. Đã khép lại đúng khoảng hở này.
-- **Có bộ kiểm tra tự động** rà soát lại toàn bộ điểm kết nối giữa các bộ phận, đảm bảo không sót điểm
-  nào thiếu 3 lớp bảo vệ nói trên — kể cả các điểm kết nối mới sẽ được thêm vào sau này.
-
 ## Lợi ích kinh doanh
 
 - **Không còn nguy cơ 1 bộ phận gặp sự cố kéo sập cả hệ thống theo dây chuyền** — sự cố được khoanh
@@ -62,18 +49,7 @@ hàng trùng lặp**.
   nghiệm mua hàng và dữ liệu kinh doanh.
 - **Tự phục hồi khỏi sự cố thoáng qua** mà không cần người vận hành can thiệp thủ công cho từng lần.
 
-## Giới hạn hiện tại
-
-- Việc bảo vệ này mới áp dụng cho **các lời gọi qua HTTP** giữa các bộ phận đã tồn tại thật trong hệ
-  thống (trang web → BFF, BFF → 4 dịch vụ nghiệp vụ, xác thực định danh). **Chưa áp dụng** cho việc gửi
-  thông điệp bất đồng bộ qua hàng đợi tin nhắn (message broker) — cơ chế đó chưa được xây dựng trong hệ
-  thống, thuộc phạm vi 1 hạng mục khác sắp tới.
-- Chưa có cơ chế phát hiện & loại bỏ đơn hàng trùng lặp mang tính triệt để (kiểu "mã định danh duy
-  nhất cho mỗi yêu cầu") — giải pháp hiện tại là 1 biện pháp giảm thiểu hợp lý trong phạm vi, không
-  phải lời giải cuối cùng cho vấn đề trùng lặp dữ liệu.
-- Khả năng "nhìn thấy" các sự kiện bảo vệ này (khi nào có ngắt mạch, khi nào có thử lại) qua công cụ
-  giám sát vận hành **chưa được xác nhận hoạt động thật** trong phiên hoàn thành tính năng — mới xác
-  nhận ở mức cấu hình, chưa có bằng chứng vận hành thật qua công cụ giám sát.
-
-Chi tiết kỹ thuật đầy đủ dành cho đội kỹ thuật, xem
+Bằng chứng đã kiểm chứng thật (2 lỗi thật tìm được, 1 đã tồn tại sẵn và 1 tiềm ẩn từ trước) và giới
+hạn hiện tại: xem [functional-debt.md](functional-debt.md). Chi tiết kỹ thuật đầy đủ dành cho đội kỹ
+thuật, xem
 [`docs/architecture/020_Architect_timeout retry circuit breaker cho cuộc gọi ra ngoài.md`](../architecture/020_Architect_timeout%20retry%20circuit%20breaker%20cho%20cuộc%20gọi%20ra%20ngoài.md).

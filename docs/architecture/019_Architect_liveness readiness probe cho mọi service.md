@@ -9,10 +9,9 @@ kiến trúc: [`research.md`](../../specs/019-liveness-readiness-probes/research
 tạo ra thư mục `deploy/ansible/` — trước đó repo hoàn toàn chưa có manifest K8s hay tài nguyên Ansible
 nào (kể cả `018`, vốn chỉ có `deploy/k8s/` — manifest `ExternalSecret` khai báo, không phải Deployment).
 
-**Trạng thái xác minh**: 26 task `[X]`, 58/58 test xUnit pass. Có 1 lượt xác thực **trên cluster `kind`
-thật** (mục 4) — nhưng khác `018`, lượt này gặp giới hạn công cụ thật đáng chú ý: Ansible không chạy
-được native trên Windows, nên phần "render bằng Ansible thật + `ansible-lint`/`kubeconform`" **chưa hề
-chạy trong chính phiên triển khai tính năng này** — trình bày trung thực ở mục 5, không che giấu.
+**Trạng thái xác minh**: 26 task `[X]`, 58/58 test xUnit pass. Có 1 lượt xác thực trên cluster `kind`
+thật, nhưng lớp kiểm tra Ansible/`ansible-lint`/`kubeconform` chưa hề chạy trong chính phiên triển
+khai tính năng này — trình bày trung thực ở [technical-debt.md](technical-debt.md), không che giấu.
 
 ## 1. Kiến trúc tổng thể
 
@@ -29,7 +28,7 @@ Deployment K8s đã render (YAML thật cho từng service)
    ├─ Lớp kiểm tra 1: tests/DeploymentManifestConventionTests (C#, TỰ render Jinja2, không cần Ansible)
    ├─ Lớp kiểm tra 2: scripts/ci/lint-deployment-manifests.sh (ansible-lint + Ansible thật + kubeconform)
    │   — stage "deployment manifest lint" trong Jenkinsfile, KHÔNG publish check GitHub riêng
-   └─ Cluster kind thật (mục 4) — xác thực hành vi ĐỘNG, chạy thủ công/định kỳ, không chặn mọi PR
+   └─ Cluster kind thật — xác thực hành vi ĐỘNG, chạy thủ công/định kỳ, không chặn mọi PR
 ```
 
 ## 2. Mô tả từng thành phần
@@ -39,11 +38,10 @@ Deployment K8s đã render (YAML thật cho từng service)
 Trích nguyên văn: *"Constitution cố định 'Platform: containers on Kubernetes, provisioned and
 configured through Ansible' như một ràng buộc không thể thương lượng lại theo từng feature — Ansible
 là công cụ đã được quyết định sẵn."* Đây là lý do **không có ADR mới** cho quyết định dùng Ansible ở
-tài liệu này (đã xác nhận khi rà soát `docs/adr/` — xem
-[11-trien-khai-k8s-va-secret-store.md](../onboarding/11-trien-khai-k8s-va-secret-store.md)). Alternative
-bị loại: Helm chart (constitution nêu đích danh Ansible, thêm Helm là bổ sung ngăn xếp công nghệ ngoài
-phạm vi, cần ADR riêng); viết tay 7 manifest YAML riêng (lặp khối probe 7 lần, dễ lệch nhau theo thời
-gian — đúng vấn đề Principle VII đã cảnh báo cho observability, áp dụng tương tự cho probe).
+tài liệu này. Alternative bị loại: Helm chart (constitution nêu đích danh Ansible, thêm Helm là bổ
+sung ngăn xếp công nghệ ngoài phạm vi, cần ADR riêng); viết tay 7 manifest YAML riêng (lặp khối probe
+7 lần, dễ lệch nhau theo thời gian — đúng vấn đề Principle VII đã cảnh báo cho observability, áp dụng
+tương tự cho probe).
 
 ### 2.2. Ngưỡng probe tái dùng số liệu đã kiểm chứng, không phải số tự nghĩ (research.md Quyết định 2)
 
@@ -58,15 +56,14 @@ thừa hưởng đúng số đó.
 ### 2.3. Lớp kiểm tra 1 — `tests/DeploymentManifestConventionTests` (research.md Quyết định 3)
 
 Đã giải thích chi tiết ở [07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md § 5](../onboarding/07-cac-du-an-test-quy-uoc-va-ci-quality-gate.md#5-testsdeploymentmanifestconventiontests--mọi-service-phải-khai-báo-đúng-livenessreadiness-probe-mới-spec-019)
-— không lặp lại. Điểm bổ sung: thiết kế BAN ĐẦU (research.md) định gọi `ansible-playbook --check` cục
-bộ trong chính bộ test C# này — **đã đổi hướng khi implement** (mục 5) sang tự render Jinja2 hoàn toàn
-bằng C#, vì Ansible không chạy được trên máy phát triển Windows của phiên triển khai.
+— không lặp lại. Bộ test C# tự render Jinja2 hoàn toàn, không gọi `ansible-playbook` — lý do đổi hướng
+khi implement xem [technical-debt.md](technical-debt.md).
 
 ### 2.4. Rollout strategy — `maxUnavailable: 0`
 
 Kubernetes mặc định `maxUnavailable: 25%` — cho phép rút 1 pod cũ TRƯỚC KHI pod mới sẵn sàng.
 `deployment.yaml.j2` khai báo `maxUnavailable: 0` tường minh, đã kiểm chứng bằng
-`RolloutStrategyTests.cs` VÀ trên cluster `kind` thật (mục 4).
+`RolloutStrategyTests.cs` và trên cluster `kind` thật.
 
 ## 3. Bảng quyết định — probe nào phản ứng với gì
 
@@ -77,45 +74,17 @@ Kubernetes mặc định `maxUnavailable: 25%` — cho phép rút 1 pod cũ TRƯ
 | Tiến trình treo/deadlock thật | Fail liên tiếp vượt ngưỡng → Kubernetes restart pod | (không quan sát được — pod đã restart) |
 | Rolling update, pod mới chưa Ready | N/A (pod mới) | Pod mới `0/1`, pod cũ vẫn `1/1 Running` phục vụ |
 
-## 4. Xác thực thật trên cluster `kind` — thành công 1 phần, thất bại 1 phần, ghi nhận trung thực
-
-Dựng 1 cluster `kind` thật trên Windows (Docker Desktop), tải 2 image thật đang chạy ở local dev stack
-(`ecomerce-local-orders-api:latest` — đại diện nhóm `db_backed`; `ecomerce-local-gateway-api:latest`
-— đại diện nhóm `stateless`), áp dụng manifest tương đương chính xác những gì role Ansible sẽ render:
-
-- **`gateway`**: readiness pass gần như ngay lập tức (đúng nhóm stateless).
-- **`orders`** (không có SQL Server trong cluster `kind` này): readiness probe fail thật với
-  `HTTP 503`/timeout, **liveness KHÔNG fail**, 0 lần restart sau ~90 giây — bằng chứng thật cho
-  FR-003/FR-004/SC-004, không chỉ test cấu trúc.
-- **Rolling restart trên `gateway`**: pod mới `0/1` tồn tại song song với 2 pod cũ vẫn `1/1 Running`
-  cho tới khi pod mới chuyển `Ready` — bằng chứng thật cho FR-009/SC-002/SC-005.
-- Cluster đã được dọn dẹp (`kind delete cluster`) sau khi xác thực xong.
-
-**Chưa mô phỏng được**: kịch bản tiến trình treo thật (đúng nghĩa "liveness restart"), vì không có
-công cụ an toàn nào sẵn có trong phiên đó để chặn phản hồi từ bên trong 1 container đang chạy. Hành vi
-này hiện **chỉ đảm bảo ở mức cấu trúc** (giá trị `failureThreshold`/`periodSeconds` hợp lệ, qua 58 test
-xUnit) — chưa qua cluster thật.
-
-## 5. Giới hạn phạm vi đã biết — trung thực, đây là phần quan trọng nhất
-
-- **`ansible-lint`/`kubeconform` (lớp kiểm tra 2) CHƯA từng chạy thật trong chính phiên triển khai
-  này** — nguyên nhân xác nhận trực tiếp: Ansible không chạy native trên Windows (`OSError: [WinError
-  87]` khi thử `ansible --version`); WSL có sẵn nhưng thiếu quyền `sudo` để cài `python3-venv`/`pip`.
-  `scripts/ci/lint-deployment-manifests.sh` đã viết đúng và **kỳ vọng** chạy được trên agent Linux
-  thật của Jenkins — nhưng đây là kỳ vọng chưa có bằng chứng thực thi, không phải điều đã xác nhận.
-- **Cluster `kind` dùng để xác thực mục 4 là TẠM THỜI**, đã bị xoá ngay sau khi xong — giống `018`,
-  không có cluster K8s thật nào tồn tại lâu dài cho nền tảng này.
-- **Kịch bản "liveness tự khởi động lại pod treo" (User Story 3) chưa được xác thực động** — chỉ có
-  bằng chứng cấu trúc, chưa có bằng chứng hành vi thật trên cluster.
-
-## 6. Sơ đồ
+## 4. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/019-liveness-readiness-probes-component.drawio`](../diagrams/019-liveness-readiness-probes-component.drawio)
 - Sơ đồ luồng nghiệp vụ: [`docs/diagrams/019-liveness-readiness-probes-flow-nghiep-vu.drawio`](../diagrams/019-liveness-readiness-probes-flow-nghiep-vu.drawio)
 - Sơ đồ trình tự: [`docs/diagrams/019-liveness-readiness-probes-sequence.drawio`](../diagrams/019-liveness-readiness-probes-sequence.drawio)
 
-## 7. Tham khảo thêm
+## 5. Tham khảo thêm
 
 `deploy/ansible/` đối chiếu với `deploy/k8s/` (spec `018`) đã có ở
-[11-trien-khai-k8s-va-secret-store.md](../onboarding/11-trien-khai-k8s-va-secret-store.md) — không
-lặp lại ở đây, trừ chi tiết xác thực cluster `kind` ở mục 4 (chưa từng được ghi ở onboarding).
+[11-trien-khai-k8s-va-secret-store.md](../onboarding/11-trien-khai-k8s-va-secret-store.md).
+
+**Giới hạn phạm vi đã biết — phần quan trọng nhất của tài liệu gốc**: xác thực trên cluster `kind`
+thật (thành công 1 phần, thất bại 1 phần) và việc `ansible-lint`/`kubeconform` chưa từng chạy thật
+trong phiên triển khai này — chi tiết đầy đủ xem [technical-debt.md](technical-debt.md).

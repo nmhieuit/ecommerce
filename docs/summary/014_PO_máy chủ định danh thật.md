@@ -52,20 +52,6 @@ hoặc cấu hình sai, mọi bộ phận phía sau vẫn tự bảo vệ đư�
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/014-identity-server-flow-nghiep-vu.drawio`](../diagrams/014-identity-server-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: đã kiểm chứng thật, không chỉ thiết kế trên giấy
-
-Hai điều dưới đây đã được **thử nghiệm thật**, không chỉ là mô tả lý thuyết:
-
-- **Đi vòng qua cổng vào chính vẫn bị chặn.** Đội đã thử gửi thẳng một vé giả mạo tới một bộ phận xử
-  lý nghiệp vụ phía sau, cố tình bỏ qua hoàn toàn cổng vào chính — bộ phận đó tự phát hiện và từ chối
-  ngay, không cần ai "báo trước" cho nó.
-- **Công tắc khẩn cấp hoạt động thật, không cần khởi động lại hệ thống.** Đội đã thử gạt công tắc
-  "quay về chế độ cũ" ngay trên một hệ thống đang chạy (không dừng, không triển khai lại) và xác nhận
-  cổng vào chính lập tức ngừng tự đòi vé thông hành — trong khi các bộ phận phía sau, đúng theo thiết
-  kế "không tin ai cả", vẫn tiếp tục tự đòi vé của riêng chúng. Điều này chứng minh công tắc khẩn cấp
-  chỉ kiểm soát đúng lớp mà nó được thiết kế để kiểm soát, không âm thầm tắt luôn lớp phòng thủ ở phía
-  sau.
-
 ## Lợi ích kinh doanh
 
 - **An toàn hơn thật sự, không phải an toàn "trên giấy"**: một điểm yếu ở cổng vào chính không còn có
@@ -79,15 +65,7 @@ Hai điều dưới đây đã được **thử nghiệm thật**, không chỉ 
   ký, phân quyền chi tiết theo vai trò...) sau này đều xây trên nền móng này, thay vì phải làm lại từ
   đầu.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- **Màn hình đăng nhập tương tác (giao diện người dùng thật để nhập tên đăng nhập/mật khẩu) chưa được
-  xây trong phần này** — đây là một công việc riêng, đã được ghi nhận để làm tiếp, không nằm trong
-  phạm vi đã hoàn thành. Toàn bộ phần "cấp vé, kiểm tra vé, từ chối vé giả/hết hạn" đã hoạt động và
-  được kiểm chứng thật; chỉ riêng "màn hình để người dùng gõ mật khẩu" là phần còn thiếu.
-- **Trong lúc kiểm chứng lần chạy thử cuối cùng trên một môi trường đầy đủ**, đội đã phát hiện và vá
-  luôn ba lỗ hổng cấu hình thật — những lỗi mà không có bài kiểm tra tự động nào bắt được trước đó, vì
-  chúng chỉ lộ ra khi chạy đúng như một hệ thống thật sẽ chạy. Đây chính là lý do việc chạy thử trên
-  môi trường đầy đủ, thay vì chỉ tin vào các bài kiểm tra tự động, là một bước bắt buộc trước khi coi
-  một tính năng là "đã xong" — chi tiết kỹ thuật dành cho đội kỹ thuật, xem
-  [`docs/architecture/014_Architect_máy chủ định danh thật.md`](../architecture/014_Architect_máy%20chủ%20định%20danh%20thật.md).
+Bằng chứng đã kiểm chứng thật (đi vòng qua cổng vào vẫn bị chặn, công tắc khẩn cấp hoạt động thật) và
+giới hạn hiện tại (chưa có màn hình đăng nhập tương tác, 3 lỗ hổng cấu hình thật đã vá): xem
+[functional-debt.md](functional-debt.md). Chi tiết kỹ thuật đầy đủ dành cho đội kỹ thuật, xem
+[`docs/architecture/014_Architect_máy chủ định danh thật.md`](../architecture/014_Architect_máy%20chủ%20định%20danh%20thật.md).

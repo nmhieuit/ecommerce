@@ -17,8 +17,11 @@ riêng lẻ.
 
 **Bạn là software architect / kỹ sư đã quen hệ thống, cần tra cứu sâu đúng 1 tính năng cụ thể?**
 → [`docs/architecture/`](architecture/) — 1 file `0NN_Architect_*.md` cho mỗi spec (001-021, trừ 012
-đổi số thành 013). Có bảng kết quả test theo từng project, bằng chứng xác minh thật trích từ
-`tasks.md` của chính spec đó — không suy đoán.
+đổi số thành 013), viết xúc tích, thuần góc nhìn kiến trúc (kiến trúc tổng thể, quyết định kỹ thuật,
+sơ đồ). Mọi blocker giữa chừng, bug thật phát hiện khi triển khai/xác thực, giới hạn phạm vi đã biết,
+và amendment đính chính đã gom về 1 file riêng:
+[`docs/architecture/technical-debt.md`](architecture/technical-debt.md) — mỗi file `0NN` đều dẫn link
+sang đúng mục của mình ở đó, không suy đoán.
 
 **Bạn cần biết VÌ SAO 1 công nghệ/công cụ được chọn (không phải cách nó hoạt động)?**
 → [`docs/adr/`](adr/) — Architecture Decision Record, bản gốc viết bằng tiếng Anh, mỗi file đều có

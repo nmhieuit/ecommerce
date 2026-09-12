@@ -43,14 +43,6 @@ sách dựa vào ý thức tự giác.
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/013-quality-gate-flow-nghiep-vu.drawio`](../diagrams/013-quality-gate-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: không có "đường vòng" cho bất kỳ ai
-
-Đây là điểm đã được **kiểm chứng thật**, không chỉ là thiết kế trên giấy: đội đã thử nghiệm bằng cách
-cố tình tạo ra một thay đổi không đạt chuẩn, sau đó cố gắng đưa nó vào hệ thống chính **bằng chính
-tài khoản có quyền cao nhất** (chủ sở hữu kho mã nguồn). Kết quả: nút "đưa vào hệ thống chính" bị vô
-hiệu hoá hoàn toàn, và **không hề có bất kỳ tuỳ chọn "cứ làm bất chấp" nào xuất hiện ở đâu cả** —
-không phải bị ẩn, mà thực sự không tồn tại trong luồng thao tác.
-
 ## Lợi ích kinh doanh
 
 - **Giảm rủi ro**: mã chất lượng thấp — thiếu kiểm thử, trùng lặp, có vấn đề tiềm ẩn — không còn cơ
@@ -62,12 +54,5 @@ không phải bị ẩn, mà thực sự không tồn tại trong luồng thao t
 - **Vòng lặp sửa lỗi nhanh**: từ lúc phát hiện vấn đề tới lúc được duyệt lại là hoàn toàn tự động —
   không có bước chờ đợi hay xin duyệt lại thủ công nào chen giữa.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- **Đây là môi trường thử nghiệm cục bộ**, không phải hạ tầng vận hành chính thức (production) trên
-  máy chủ chuyên dụng. Việc cơ chế này *hoạt động đúng* đã được kiểm chứng đầy đủ; việc *dựng nó trên
-  hạ tầng vận hành chính thức lâu dài* là một công việc riêng, chưa nằm trong phạm vi đã hoàn thành.
-- Một số điều chỉnh kỹ thuật đã được xác minh hoạt động tốt trong quá trình thử nghiệm nhưng **hiện
-  chưa được đưa chính thức vào nhánh mã nguồn chính** — chi tiết dành cho đội kỹ thuật, xem
-  [`docs/architecture/013_Architect_cổng chất lượng CI.md`](../architecture/013_Architect_cổng%20chất%20lượng%20CI.md).
-  Điều này không ảnh hưởng tới việc cơ chế chặn merge đã hoạt động thật trên các thay đổi thật.
+Bằng chứng đã kiểm chứng thật (thử "vượt rào" bằng tài khoản cao nhất) và giới hạn hiện tại: xem
+[functional-debt.md](functional-debt.md).

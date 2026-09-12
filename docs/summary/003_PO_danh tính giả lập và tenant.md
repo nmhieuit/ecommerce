@@ -38,12 +38,6 @@ dùng tạm.
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/003-stub-identity-tenant-context-flow-nghiep-vu.drawio`](../diagrams/003-stub-identity-tenant-context-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: đã kiểm chứng bằng cách rà soát toàn bộ mã nguồn, không chỉ vài ví dụ
-
-Đội đã quét toàn bộ mã nguồn để xác nhận **không có một nơi nào** trong hệ thống có thể chạm tới dữ
-liệu lưu trữ mà không yêu cầu biết trước thông tin khách hàng doanh nghiệp — không phải kiểm tra vài
-trường hợp mẫu, mà là toàn bộ. Kết quả: zero ngoại lệ.
-
 ## Lợi ích kinh doanh
 
 - **Rủi ro lẫn dữ liệu giữa các khách hàng doanh nghiệp gần như bằng không** — đây là một đảm bảo cấu
@@ -54,11 +48,4 @@ trường hợp mẫu, mà là toàn bộ. Kết quả: zero ngoại lệ.
 - **Dễ dò lỗi khi có sự cố** — thông tin khách hàng doanh nghiệp hiển thị trong nhật ký hệ thống ở
   mọi chặng, giúp truy vết một yêu cầu cụ thể xuyên suốt toàn hệ thống.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Đây vẫn là **danh tính giả lập** — chưa có đăng nhập thật, chưa có mật khẩu. Việc thay thế bằng máy
-  chủ định danh thật là một tính năng riêng trong lộ trình (đã hoàn thành sau đó, xem tài liệu
-  "014 — Máy chủ định danh thật").
-- Việc lan truyền thông tin khách hàng doanh nghiệp sang các sự kiện bất đồng bộ (hàng đợi tin nhắn)
-  chưa nằm trong phạm vi này, vì hạ tầng đó chưa tồn tại tại thời điểm triển khai — sẽ áp dụng khi hạ
-  tầng đó xuất hiện.
+Bằng chứng đã kiểm chứng thật và giới hạn hiện tại: xem [functional-debt.md](functional-debt.md).

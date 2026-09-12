@@ -44,20 +44,13 @@ tạo phiên bản mới), test đó thất bại ngay, chặn merge.
   version), `SchemaValidationTests` + `TolerantReaderTests` (US3, xác nhận consumer cũ đọc được event
   mới có field lạ mà không sập).
 
-## 4. Giới hạn phạm vi đã biết
-
-- **Chưa có publisher/consumer thật nào** — đây là hợp đồng đứng riêng, chờ tính năng đấu nối
-  messaging thật (ngoài phạm vi feature này) tới dùng.
-- Chỉ đúng hai event (`OrderPlaced`, `BasketCheckedOut`) nằm trong phạm vi — event khác trong tương
-  lai cần lặp lại đúng khuôn mẫu này riêng, không tự động áp dụng.
-- Khoảng thời gian deprecation cụ thể (bao nhiêu ngày/chu kỳ release) là một chi tiết chính sách/tài
-  liệu, không phải một con số cố định trong đặc tả — chỉ yêu cầu nó tồn tại, được ghi lại, và được
-  tôn trọng.
-
-## 5. Sơ đồ
+## 4. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/008-versioned-event-schemas-component.drawio`](../diagrams/008-versioned-event-schemas-component.drawio)
 - Sơ đồ trình tự (đề xuất thay đổi schema → compatibility check → chặn hoặc version mới; và nhánh
   tolerant-reader): [`docs/diagrams/008-versioned-event-schemas-sequence.drawio`](../diagrams/008-versioned-event-schemas-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/008-versioned-event-schemas-flow-nghiep-vu.drawio`](../diagrams/008-versioned-event-schemas-flow-nghiep-vu.drawio)
+
+Giới hạn phạm vi đã biết (chưa có publisher/consumer, chỉ 2 event, chính sách deprecation chưa cố
+định): xem [technical-debt.md](technical-debt.md).

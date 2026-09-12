@@ -40,11 +40,4 @@ chính hợp đồng đó, nên không có cách nào để nó lệch khỏi th
 - **Tốc độ làm việc nhanh hơn** — sinh lại toàn bộ mã giao diện từ hợp đồng chỉ mất chưa tới một phút,
   thay vì phải tự tay rà soát và sửa từng chỗ.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Phạm vi tính năng này chỉ gồm ba mảng nghiệp vụ (sản phẩm, giỏ hàng, đơn hàng) — mảng khách hàng,
-  luồng thanh toán, và các đường kiểm tra sức khoẻ hệ thống chưa áp dụng cơ chế này, theo đúng phạm vi
-  đã thống nhất từ đầu.
-- Đây chủ yếu là một bước **xác nhận và củng cố** một thực hành đã có sẵn từ trước (không phải xây từ
-  số 0) — phần việc mới thực sự duy nhất là đảm bảo giao diện không sập khi gặp dữ liệu lạ, phần còn
-  lại là kiểm chứng lại những gì đã đúng từ trước vẫn còn đúng.
+Giới hạn hiện tại của tính năng này: xem [functional-debt.md](functional-debt.md).
