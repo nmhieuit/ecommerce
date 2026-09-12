@@ -26,7 +26,7 @@ lại **toàn bộ mã nguồn thật** — chỉ 3/5 điểm dưới đây th�
 | 2 | BFF → Products/Baskets/Orders/Parties (4 typed client) | Đã đủ timeout/retry/circuit breaker từ spec 002 | Giữ nguyên, chỉ thu hẹp retry theo method (mục 2.3) |
 | 3 | Gateway + BFF + 5 service → Identity server (JwtBearer backchannel, OIDC discovery/JWKS) | Timeout ẩn (mặc định framework 60s), không retry/circuit breaker | + `HttpClient` tường minh có resilience đầy đủ (mục 2.2) |
 | 4 | Service → service đồng bộ (vd orders gọi thẳng products) | **Không tồn tại** | Không đổi — không có gì để bọc |
-| 5 | Service → broker (RabbitMQ/MassTransit publish) | **Không tồn tại** | Không đổi — thuộc SCRUM-31 |
+| 5 | Service → broker (RabbitMQ/MassTransit publish) | **Không tồn tại** | Không đổi trong tính năng này. **Amendment (2026-09-12)**: [024-verify-transactional-outbox](../../specs/024-verify-transactional-outbox/) (SCRUM-31) sau đó đã hiện thực publish thật cho `OrderPlaced` — call-site này NAY ĐÃ TỒN TẠI nhưng chưa được rà soát resilience/circuit-breaker theo đúng khuôn mẫu tính năng này, xem [technical-debt.md](technical-debt.md) |
 
 Thiết kế máy móc theo đúng acceptance criteria gốc (dựng cả hạ tầng messaging chỉ để có 1 cuộc gọi
 bọc resilience) sẽ vượt xa 8 story point của SCRUM-30 và trùng phạm vi SCRUM-31 — quyết định phạm vi

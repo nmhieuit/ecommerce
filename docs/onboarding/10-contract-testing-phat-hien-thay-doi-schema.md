@@ -176,7 +176,7 @@ Nghĩa là: `orders` được **tự do đổi hoặc xoá** `tenantId` bất c�
 
 #### `orders-basketcheckedout.json` — [`BasketCheckedOutConsumerPactTests.cs`](../../services/orders/tests/Orders.Api.ContractTests/BasketCheckedOutConsumerPactTests.cs) viết, [`BasketCheckedOutProviderPactTests.cs`](../../services/baskets/tests/Baskets.Api.ContractTests/BasketCheckedOutProviderPactTests.cs) đọc
 
-**Chú ý: chiều NGƯỢC lại với 3 file trên.** Trong 3 ranh giới HTTP ở trên, `bff` luôn là consumer (nó gọi các service kia). Nhưng với sự kiện `BasketCheckedOut`, **`orders` mới là consumer** (nó là bên sẽ *nhận* sự kiện này trong tương lai, theo thiết kế outbox chưa xây — xem [05](05-giai-doan-3-hop-dong-api-va-ha-tang-kiem-thu.md)) và **`baskets` là provider** (nó *phát ra* sự kiện). Đừng nhầm "ai là consumer của 1 hợp đồng Pact" với "ai gọi ai qua HTTP" (đã có nền tảng ở [09](09-bff-dependency-downstream-va-trien-khai.md)) — 2 trục hoàn toàn khác nhau: `baskets` không hề gọi HTTP tới `orders` ở đâu cả, nhưng vẫn là "producer" của 1 hợp đồng Pact vì nó là bên *tạo ra dữ liệu* sự kiện.
+**Chú ý: chiều NGƯỢC lại với 3 file trên.** Trong 3 ranh giới HTTP ở trên, `bff` luôn là consumer (nó gọi các service kia). Nhưng với sự kiện `BasketCheckedOut`, **`orders` mới là consumer** (nó là bên sẽ *nhận* sự kiện này trong tương lai, theo thiết kế outbox chưa xây cho SỰ KIỆN NÀY — xem [05](05-giai-doan-3-hop-dong-api-va-ha-tang-kiem-thu.md); outbox cho `OrderPlaced` thì đã xây, xem Amendment ngay dưới đây) và **`baskets` là provider** (nó *phát ra* sự kiện). Đừng nhầm "ai là consumer của 1 hợp đồng Pact" với "ai gọi ai qua HTTP" (đã có nền tảng ở [09](09-bff-dependency-downstream-va-trien-khai.md)) — 2 trục hoàn toàn khác nhau: `baskets` không hề gọi HTTP tới `orders` ở đâu cả, nhưng vẫn là "producer" của 1 hợp đồng Pact vì nó là bên *tạo ra dữ liệu* sự kiện.
 
 Phía **ĐỌC** (`baskets`, dù đóng vai "provider" của sự kiện) có 1 điểm đặc biệt: không gọi qua HTTP, không có broker/MassTransit — nó gọi **thẳng hàm dựng payload thật**:
 ```csharp
@@ -193,6 +193,14 @@ private static object CheckOutABasketHoldingOneItem()
 }
 ```
 Comment gốc: *"khi SCRUM-31 nối outbox và publisher thật, test này giữ nguyên không đổi — thứ nó kiểm tra là HÌNH DẠNG payload, không phải cách nó được gửi đi."*
+
+> **Amendment (2026-09-12)**: SCRUM-31 (`024-verify-transactional-outbox`) đã hoàn tất — nhưng chỉ nối
+> outbox/publisher thật cho `OrderPlaced` (`orders` là bên phát), **không đụng đến `BasketCheckedOut`**
+> (comment gốc dự đoán rộng hơn phạm vi thật của SCRUM-31 — xem
+> [`specs/024-verify-transactional-outbox/research.md` Quyết định 1](../../specs/024-verify-transactional-outbox/research.md)).
+> Nhận định của test này ("giữ nguyên không đổi, chỉ kiểm tra hình dạng payload") vẫn đúng — chỉ khác
+> là việc "nối outbox và publisher thật" cho `BasketCheckedOut` giờ là 1 công việc chưa gán ticket,
+> không còn là việc của SCRUM-31.
 
 ### 6.B Nếu 2 service ở 2 repo khác nhau — câu trả lời đã có sẵn trong repo, không phải giải pháp tôi tự nghĩ ra
 

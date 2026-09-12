@@ -26,6 +26,13 @@ Chi tiết đáng chú ý nhất: **hậu tố `V1` trong tên type**. Comment t
 
 Một chi tiết dễ gây nhầm lẫn nếu chỉ đọc code hiện tại: **`OrderPlacedV1` KHÔNG được publish ở đâu cả** — không có message broker nào gọi tới type này trong toàn bộ `services/`. Đây là quyết định có chủ đích, không phải việc dang dở bị bỏ quên: hạ tầng "outbox" (cơ chế đảm bảo 1 sự kiện được publish tin cậy cùng lúc với việc ghi database) là công việc của 1 công việc khác trong tương lai (nhắc tới trong code là "SCRUM-18"). Điều spec 008 làm là **chốt hình dạng hợp đồng trước**, để khi hạ tầng publish thật được xây, nó xây theo đúng 1 hợp đồng đã được thống nhất, thay vì vừa xây publisher vừa nghĩ ra schema.
 
+> **Amendment (2026-09-12)**: đoạn trên mô tả đúng hiện trạng tại thời điểm viết (specs 001-011). Từ
+> [`024-verify-transactional-outbox`](../../specs/024-verify-transactional-outbox/) (SCRUM-31),
+> `OrderPlacedV1` **đã được publish thật** — `orders` ghi bản ghi outbox cùng transaction với việc tạo
+> đơn (MassTransit + `MassTransit.EntityFrameworkCore`), một outbox delivery service quét và gửi ra
+> RabbitMQ thật, sống sót qua crash tiến trình. Xem
+> [`024_Architect_*.md`](../architecture/024_Architect_xác%20minh%20outbox%20pattern%20giao%20dịch%20trên%20dịch%20vụ%20phát%20sự%20kiện%20đơn%20hàng.md).
+
 ### `shared/IntegrationTestSupport` — dependency thật, dùng chung cho mọi service (spec 010)
 
 Commit: `cba4449 feat: Add Testcontainers integration test infrastructure for SQL Server, Redis, and RabbitMQ`
@@ -80,7 +87,8 @@ public static class BasketCheckedOutMapper
     }
 }
 ```
-Comment đầu file nói thẳng: *"Chưa ai gọi hàm này cả, và đó là chủ ý. Checkout hiện tại vẫn là orchestration đồng bộ trong BFF (xem Giai đoạn 2); outbox và publisher thật sự sẽ gửi cái này là việc của SCRUM-31."* Vậy nếu chưa ai publish `BasketCheckedOutV1`, làm sao "test hợp đồng" được? Câu trả lời nằm ở `services/orders/tests/Orders.Api.ContractTests/BasketCheckedOutConsumerPactTests.cs` — đây gọi là **"message Pact"**, một biến thể của kỹ thuật contract-testing (thư viện **Pact**) áp dụng cho message/sự kiện thay vì cho HTTP request/response:
+Comment đầu file nói thẳng: *"Chưa ai gọi hàm này cả, và đó là chủ ý. Checkout hiện tại vẫn là orchestration đồng bộ trong BFF (xem Giai đoạn 2); outbox và publisher thật sự sẽ gửi cái này là việc của SCRUM-31."* **Amendment (2026-09-12)**: SCRUM-31 (`024-verify-transactional-outbox`) đã hoàn tất, nhưng **chỉ đóng outbox cho `OrderPlaced`** — quyết định phạm vi có chủ ý của chính 024 (`OrderPlacedV1` không mang định danh khách hàng/giỏ hàng nên không thể dùng để lái việc xoá giỏ). `BasketCheckedOutV1` ở đây **vẫn chưa ai gọi**, và việc kết nối nó không còn là công việc của SCRUM-31 nữa — đây là việc chưa gán ticket, ghi ở Action Item #3 của
+[ADR-0011](../../docs/adr/0011-checkout-orchestration.md). Vậy nếu chưa ai publish `BasketCheckedOutV1`, làm sao "test hợp đồng" được? Câu trả lời nằm ở `services/orders/tests/Orders.Api.ContractTests/BasketCheckedOutConsumerPactTests.cs` — đây gọi là **"message Pact"**, một biến thể của kỹ thuật contract-testing (thư viện **Pact**) áp dụng cho message/sự kiện thay vì cho HTTP request/response:
 
 ```csharp
 var pact = Pact.V3("orders", "basketcheckedout", ...).WithMessageInteractions();
