@@ -46,22 +46,13 @@ thật sự sẽ do các feature sau xây. Điều tính năng này thiết lậ
 FR-004/FR-005). Đây được kiểm chứng bằng cách thử kết nối chéo và xác nhận không có credential/route
 nào cho phép — không phải một runtime check, mà một đảm bảo có thể lặp lại kiểm tra được.
 
-## 4. Giới hạn phạm vi đã biết
-
-- Tenant-keyed schema/connection resolution (Principle V) **không** thuộc phạm vi này — mỗi
-  `DbContext` hiện trỏ tới một connection mặc định duy nhất, có cấu trúc sẵn để một connection
-  resolver theo tenant thay thế sau này mà không cần thiết kế lại (giao cho SCRUM-12 /
-  [003-stub-identity-tenant-context](../../specs/003-stub-identity-tenant-context/)).
-- Outbox table của Orders (constitution Principle IV) chưa được tạo trong feature này — sẽ xuất hiện
-  cùng lúc với event đầu tiên nền tảng thực sự phát hành.
-- Chạy đồng thời cả 4 service bằng một lệnh duy nhất KHÔNG nằm trong phạm vi này (đó là SCRUM-15 /
-  [005-one-command-local-run](../../specs/005-one-command-local-run/)) — phạm vi ở đây chỉ là mỗi
-  service tự chạy độc lập được.
-
-## 5. Sơ đồ
+## 4. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/001-scaffold-service-shells-component.drawio`](../diagrams/001-scaffold-service-shells-component.drawio)
 - Sơ đồ trình tự (khởi động một service, health check phân biệt liveness/readiness):
   [`docs/diagrams/001-scaffold-service-shells-sequence.drawio`](../diagrams/001-scaffold-service-shells-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio`](../diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio)
+
+Ghi chú/giới hạn phạm vi phát sinh sau (không nằm trong phạm vi feature này lúc đó): xem
+[technical-debt.md](technical-debt.md).

@@ -38,14 +38,6 @@ thanh toán.
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/004-minimal-shopping-spa-flow-nghiep-vu.drawio`](../diagrams/004-minimal-shopping-spa-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: đã kiểm chứng bằng kiểm thử trình duyệt thật, không chỉ kiểm thử mã nguồn
-
-Toàn bộ luồng bốn bước trên đã được kiểm thử bằng cách **điều khiển một trình duyệt thật** để đi qua
-đúng hành trình một người mua sắm thật sẽ làm — không có lỗi nào hiện ra trong bảng điều khiển của
-trình duyệt trong suốt hành trình đó. Đội cũng đã đo thời lượng tải trang thực tế và đặt giới hạn tự
-động: nếu một bản cập nhật sau này vô tình làm trang tải chậm hơn ngưỡng cho phép, việc phát hành bản
-đó sẽ tự động bị chặn lại.
-
 ## Lợi ích kinh doanh
 
 - **Có một luồng mua sắm hoàn chỉnh, chứng minh được, để demo cho các bên liên quan** — không còn là
@@ -57,16 +49,5 @@ trình duyệt trong suốt hành trình đó. Đội cũng đã đo thời lư�
 - **Có cơ chế tự động ngăn trang web ngày càng nặng hơn** theo thời gian — bảo vệ trải nghiệm người
   dùng trên thiết bị di động về lâu dài.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Đây là luồng **tối thiểu** — chưa có thanh toán thật, chưa có địa chỉ giao hàng, chưa có thuế/giảm
-  giá, chưa có việc giữ chỗ tồn kho. Tính năng này chứng minh đường đi hoạt động được, không phải quy
-  tắc kinh doanh đầy đủ của việc bán hàng thật.
-- Chưa có việc xoá bớt sản phẩm khỏi giỏ hàng hay sửa số lượng trực tiếp — người mua sắm chỉ thêm và
-  thanh toán ở giai đoạn này.
-- Chưa có lịch sử đơn hàng — màn hình xác nhận chỉ hiện ra một lần ngay sau khi thanh toán, không xem
-  lại được sau đó.
-- Hiện tại chỉ có đúng một khách hàng doanh nghiệp và một người mua sắm giả lập (chưa có đăng nhập
-  thật) — nền tảng multi-tenant thật sự (nhiều khách hàng doanh nghiệp dùng chung, dữ liệu tách biệt
-  ở cấp lưu trữ) đã được ĐẶC TẢ nhưng **chưa được triển khai đầy đủ** ở bước này — một khoảng cách đã
-  được ghi nhận rõ ràng, chờ quyết định ở bước tiếp theo, không phải bị bỏ sót trong im lặng.
+Bằng chứng đã kiểm chứng thật và giới hạn hiện tại (gồm khoảng cách multi-tenant chưa đóng): xem
+[functional-debt.md](functional-debt.md).

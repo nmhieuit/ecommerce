@@ -4,8 +4,8 @@
 tên bất kỳ công cụ kỹ thuật nào.*
 
 *Trạng thái: phần ứng dụng đã hoàn thành và đang hoạt động thật. Phần hạ tầng lưu trữ bí mật thật sự
-(kho bí mật trung tâm của cluster) CHƯA được dựng — xem "Giới hạn hiện tại" để hiểu rõ ranh giới này,
-đây là điểm quan trọng nhất của tài liệu này.*
+(kho bí mật trung tâm của cluster) CHƯA được dựng — xem [functional-debt.md](functional-debt.md) để
+hiểu rõ ranh giới này, đây là điểm quan trọng nhất của tài liệu này.*
 
 ## Vấn đề trước đây
 
@@ -42,17 +42,6 @@ sẵn của từng bộ phận để đảm bảo không có mật khẩu nào v
    động — nếu phát hiện 1 mật khẩu bị lộ (mới hoặc cũ), quá trình kiểm tra báo lỗi ngay, không chờ
    tới lúc triển khai.
 
-## Điều đặc biệt: đã kiểm chứng thật, không chỉ thiết kế trên giấy
-
-- **Chạy công cụ quét bí mật thật trên toàn bộ lịch sử kho mã nguồn** — không chỉ quét thay đổi mới
-  nhất. Các mật khẩu cũ (đã bị xoá khỏi phiên bản hiện tại nhưng còn dấu vết trong lịch sử — việc viết
-  lại lịch sử để xoá hẳn bị coi là hành động rủi ro cao, không làm) được ghi nhận là "đã biết, đã khắc
-  phục" 1 lần — công cụ quét từ nay chỉ báo động cho phát hiện MỚI, không lặp lại cảnh báo cho những
-  gì đã biết.
-- **Chuẩn bị sẵn "hợp đồng"** cho từng bộ phận cần cấp mật khẩu gì, đặt tên gì — để khi kho bí mật
-  trung tâm thật sự được dựng (xem phần giới hạn dưới đây), việc kết nối vào chỉ còn là áp dụng đúng
-  hợp đồng đã có sẵn, không phải thiết kế lại từ đầu.
-
 ## Lợi ích kinh doanh
 
 - **Giảm hẳn rủi ro rò rỉ mật khẩu qua kho mã nguồn** — 1 trong những nguyên nhân rò rỉ dữ liệu phổ
@@ -62,15 +51,7 @@ sẵn của từng bộ phận để đảm bảo không có mật khẩu nào v
 - **Sẵn sàng cho việc đổi mật khẩu định kỳ không cần dừng hệ thống** — khi hạ tầng thật được dựng, đổi
   1 mật khẩu không còn cần phải triển khai lại toàn bộ hệ thống.
 
-## Giới hạn hiện tại — trung thực cần biết, đây là phần quan trọng nhất
-
-**Kho bí mật trung tâm thật của cluster (HashiCorp Vault, và bộ phận đồng bộ nó vào hệ thống hạ tầng)
-CHƯA được dựng ở đâu cả** — đây không phải sơ suất, mà là 1 quyết định phạm vi có chủ đích: phần này
-chỉ hoàn thành **nửa ứng dụng** (mã nguồn đã sẵn sàng nhận mật khẩu đúng cách, đã có "hợp đồng" rõ
-ràng cho từng bộ phận cần gì), còn **nửa hạ tầng** (dựng kho bí mật thật, nối nó vào hệ thống) vẫn là
-công việc còn để ngỏ, thuộc về đội hạ tầng, chưa có deadline trong phạm vi tài liệu này. Nói cách khác:
-ứng dụng đã "sẵn sàng chờ", nhưng chưa có gì thật sự "cấp phát" cho nó ở môi trường một cluster thật.
-
-Chi tiết kỹ thuật đầy đủ (bao gồm quyết định kiến trúc gốc và ghi chú cập nhật về việc phần hạ tầng
-này vẫn còn để ngỏ) dành cho đội kỹ thuật, xem
+Bằng chứng đã kiểm chứng thật (quét bí mật thật trên toàn bộ lịch sử kho mã nguồn) và giới hạn hiện
+tại (kho bí mật trung tâm thật chưa được dựng — phần quan trọng nhất): xem
+[functional-debt.md](functional-debt.md). Chi tiết kỹ thuật đầy đủ dành cho đội kỹ thuật, xem
 [`docs/architecture/018_Architect_secrets qua cluster secret store.md`](../architecture/018_Architect_secrets%20qua%20cluster%20secret%20store.md).

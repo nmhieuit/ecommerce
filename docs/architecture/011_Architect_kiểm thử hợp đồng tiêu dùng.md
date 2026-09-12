@@ -46,20 +46,13 @@ sau này phải `PostConfigure<AuthorizationOptions>(o => o.FallbackPolicy = nul
 interaction không mang `Authorization` header thật (vì được ghi trước khi có xác thực token thật),
 verification cần tắt riêng fallback policy cho đúng provider host đó, không ảnh hưởng service thật.
 
-## 3. Giới hạn phạm vi đã biết
-
-- Phạm vi chỉ dừng ở 4 boundary của "thin slice" — mở rộng ra boundary khác là việc tương lai, ngoài
-  phạm vi này.
-- Event boundary được verify **không cần broker thật/không cần delivery đầu-cuối** (spec Assumptions)
-  — vì chưa service nào thật sự publish/consume `BasketCheckedOut`/`OrderPlaced` (nhất quán với
-  [008](../../specs/008-versioned-event-schemas/) và [010](../../specs/010-testcontainers-integration-tests/)).
-  Khi hạ tầng messaging thật được đấu nối (SCRUM-31), cặp contract test này là điểm khởi đầu, không
-  phải điểm kết thúc.
-
-## 4. Sơ đồ
+## 3. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/011-consumer-contract-tests-component.drawio`](../diagrams/011-consumer-contract-tests-component.drawio)
 - Sơ đồ trình tự (consumer khai báo kỳ vọng → provider tự verify hành vi thật trong build của chính
   nó, gồm nhánh sai lệch chặn build của bên phát): [`docs/diagrams/011-consumer-contract-tests-sequence.drawio`](../diagrams/011-consumer-contract-tests-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/011-consumer-contract-tests-flow-nghiep-vu.drawio`](../diagrams/011-consumer-contract-tests-flow-nghiep-vu.drawio)
+
+Giới hạn phạm vi đã biết (chỉ 4 boundary "thin slice", event boundary verify không cần broker thật):
+xem [technical-debt.md](technical-debt.md).

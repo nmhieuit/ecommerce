@@ -46,64 +46,7 @@ BFF (client)   : {"id":"...","placedAtUtc":"...","total":59.25}
 Kết quả test: **15 unit test + 17 integration test (SQL Server thật) cho orders, tất cả pass**; TDD
 đúng thứ tự đỏ-trước-xanh (`'Order' does not contain a definition for 'TenantId'` trước khi implement).
 
-## 3. Ba lỗi thật đã phát hiện và sửa
-
-1. **Kịch bản PowerShell dừng nhầm vì một cảnh báo vô hại.** Node ghi một cảnh báo ra stderr; dưới
-   `$ErrorActionPreference = 'Stop'`, PowerShell 5.1 biến stderr của lệnh native thành lỗi terminating
-   — demo dừng dù luồng phía dưới đang pass. Sửa bằng một helper `Invoke-Native` chuyển về `Continue`
-   quanh lệnh native, dùng exit code làm tín hiệu duy nhất.
-2. **Phiên bản đầu của helper đó lại trộn output với exit code thành một mảng** (`& $Command` vừa ghi
-   output vào pipeline vừa trả code) — so sánh mảng với `0` báo lỗi trên một lần chạy PASS, rồi
-   `exit` trên mảng lại thoát 0 — sai theo cả hai hướng ngược nhau. Sửa bằng cách trả code qua biến
-   script-scoped riêng, để output tự chảy qua pipeline.
-3. **Bộ lọc bằng chứng mỗi-hop phải loại health check, nếu không mọi con số đều vô nghĩa.** Đo được
-   trong một cửa sổ demo: `Parties.Api` phát ra 461 span, **cả 461 đều là health check** (Docker probe
-   mỗi service mỗi 5 giây). Đếm span thô, một component không phục vụ gì vẫn "trông bận rộn" — khiến
-   assertion FR-011a pass ngay cả trên một stack chưa từng chạy demo. Có lọc: Parties đúng là KHÔNG
-   xuất hiện (nó không nằm trên đường đi đặt hàng), 5 hop thật xuất hiện đúng. Assertion còn được thử
-   nghiệm ngược lại — cắt bớt file bằng chứng để xác nhận nó THẤT BẠI khi thiếu một component, không
-   chỉ được quan sát là pass.
-
-**Một ảnh chụp là "lời nói dối" và đã bị loại bỏ**: phiên bản đầu của `03-checkout.png` (chụp sau khi
-focus nút thanh toán) trùng khớp **từng byte** với `02-basket.png`, vì viền focus không lưu lại trong
-ảnh chụp màn hình. Thay bằng `04-basket-empty.png` — cho thấy giỏ hàng đã trống sau thanh toán, khác
-biệt trực quan thật, và cũng là bằng chứng cho FR-017.
-
-## 4. Kết quả xác minh đầy đủ (T038-T041)
-
-| Scenario | Kết quả |
-|---|---|
-| 1 — demo chạy | exit 0 |
-| 2 — tổng tiền | 59.25, khớp màn hình xác nhận |
-| 3 — tenant | `tenantId` = `contoso` |
-| 4 — không có tenant | 500, không tạo record, cả đọc lẫn ghi |
-| 5 — lặp lại | 5 lần chạy liên tiếp, 5 đơn hàng riêng biệt |
-| 6 — bằng chứng hop | 5 component xuất hiện trong `hops.txt`, Parties đúng là vắng mặt |
-| 7 — artifact | walkthrough + 4 ảnh commit được, `artifacts/` bị git-ignore, không có `.webm` nào dưới `docs/` |
-| 8 — cold start | 2 phút 48 giây |
-| 9 — downstream không khả dụng | giỏ hàng trống → `409` với thông báo có thể hành động, không tạo order; service dừng → thông báo đúng nguyên nhân sau khi sửa (mục dưới) |
-
-**Task T039 tìm ra một chẩn đoán sai**: khi dừng `orders-api`, demo thất bại đúng (exit 1) nhưng báo
-"stack không chạy ở demo mode" — sai, chỉ sai hướng khắc phục. Ba loại lỗi trông giống nhau từ bên
-ngoài (chưa publish, đã chết, hoặc up-nhưng-không-khoẻ) — bản sửa hỏi thẳng Compose/Docker để phân
-biệt đúng nguyên nhân, cho ra thông báo chính xác cho từng trường hợp.
-
-**Build + test toàn bộ (T040)**: `dotnet build Ecommerce.slnx` — 0 lỗi (warnings-as-errors);
-`dotnet test Ecommerce.slnx` — **16 project test, 247 test, 0 fail**, gồm cả structure/container
-convention suite (9+9) và `CrossServiceIsolation.Tests` (14). Frontend: 46 test Vitest, `tsc --noEmit`
-sạch, ESLint sạch toàn workspace.
-
-**Thời gian chạy lặp lại (T041)**: `--skip-start` chỉ mất **10 giây**, so với ngân sách kế hoạch 90
-giây.
-
-## 5. Giới hạn phạm vi đã biết
-
-- T042 (đính video vào Jira) **chưa hoàn thành**, chờ một người thực hiện thủ công — xem đầu tài liệu.
-- Demo chỉ chứng minh single-tenant (một khách hàng doanh nghiệp) — chứng minh cách ly giữa 2 tenant
-  song song nằm ngoài phạm vi này.
-- Không có event/outbox/messaging nào được thêm ở feature này — thuộc về SCRUM-18, để dành riêng.
-
-## 6. Sơ đồ
+## 3. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/006-e2e-order-demo-component.drawio`](../diagrams/006-e2e-order-demo-component.drawio)
 - Sơ đồ trình tự (chạy demo → walkthrough thật → verify tenant → thu bằng chứng hop từ OTel, gồm
@@ -114,3 +57,6 @@ giây.
 Luồng mua sắm bốn bước mà demo dựa trên đó (duyệt → giỏ hàng → thanh toán → xác nhận) đã có sơ đồ
 riêng ở [004-minimal-shopping-spa](../diagrams/004-minimal-shopping-spa-sequence.drawio) — sơ đồ trình
 tự ở đây chỉ thêm phần xác minh tenant và bằng chứng hop mà 004 không có.
+
+3 lỗi thật đã phát hiện và sửa, kết quả xác minh đầy đủ theo scenario, và giới hạn phạm vi đã biết
+(T042 blocked, chỉ single-tenant, chưa có event/outbox): xem [technical-debt.md](technical-debt.md).

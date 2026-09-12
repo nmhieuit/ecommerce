@@ -44,11 +44,5 @@ tầng còn lại mà nền tảng đã cam kết dùng nhưng chưa có tính n
 - **Không lãng phí thời gian chờ đợi vô ích khi hạ tầng gặp sự cố lúc kiểm tra** — mọi trường hợp lỗi
   đều được báo nhanh, rõ ràng.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Tính năng này **chỉ dựng cơ chế kiểm thử**, không thêm bất kỳ chức năng nghiệp vụ mới nào dùng bộ
-  nhớ đệm hay hàng đợi tin nhắn — chưa có mảng nghiệp vụ nào thực sự sử dụng hai thành phần hạ tầng
-  này trong hệ thống đang chạy. Đó là công việc của các tính năng riêng trong tương lai.
-- Việc chịu đựng sự cố hàng đợi tin nhắn ở mức toàn diện (tự động thử lại, ngắt mạch khi lỗi liên
-  tục...) chưa nằm trong phạm vi này — tính năng này chỉ đảm bảo bài kiểm tra không bị treo, chưa phải
-  toàn bộ chiến lược chịu lỗi cho hệ thống thật.
+Giới hạn hiện tại (gồm việc bộ nhớ đệm/hàng đợi tin nhắn chưa có chức năng nghiệp vụ nào dùng): xem
+[functional-debt.md](functional-debt.md).

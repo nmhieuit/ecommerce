@@ -4,7 +4,8 @@
 tên bất kỳ công cụ kỹ thuật nào.*
 
 *Trạng thái: gần như hoàn thành hoàn toàn — 41/42 hạng mục công việc, xác minh bằng số liệu thật.
-Một hạng mục duy nhất còn lại cần một người thực hiện thủ công (xem "Giới hạn hiện tại" bên dưới).*
+Một hạng mục duy nhất còn lại cần một người thực hiện thủ công — xem
+[functional-debt.md](functional-debt.md).*
 
 ## Vấn đề trước đây
 
@@ -38,19 +39,6 @@ trình có thể chạy lại nhiều lần cho ra cùng một kết quả, có 
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/006-e2e-order-demo-flow-nghiep-vu.drawio`](../diagrams/006-e2e-order-demo-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: đã tìm và sửa ba lỗi thật ngay trong lúc chuẩn bị demo
-
-Trong lúc tự động hoá buổi demo, đội phát hiện và sửa ba vấn đề thật, không phải giả định:
-- Kịch bản chạy demo tự động từng dừng lại nhầm chỗ vì hiểu sai một cảnh báo vô hại là một lỗi nghiêm
-  trọng.
-- Cơ chế "bằng chứng mỗi thành phần hệ thống đã thực sự tham gia xử lý" ban đầu bị nhiễu bởi các tín
-  hiệu kiểm tra sức khoẻ định kỳ (không phải hoạt động thật) — đã được lọc lại chính xác.
-- Một trong bốn ảnh chụp minh hoạ ban đầu **giống hệt ảnh trước đó** — tức là nó không thực sự chứng
-  minh điều nó được cho là chứng minh — đã bị phát hiện và thay bằng một ảnh khác, đúng nghĩa.
-
-Đây chính là giá trị của việc tự động hoá kiểm chứng: những lỗi tinh vi này gần như không thể phát
-hiện được nếu chỉ nhìn bằng mắt một lần.
-
 ## Lợi ích kinh doanh
 
 - **Có bằng chứng cụ thể, xem lại được, cho việc "Phase 1 đã hoàn thành"** — không còn là lời khẳng
@@ -60,15 +48,5 @@ hiện được nếu chỉ nhìn bằng mắt một lần.
 - **Có tài liệu ánh xạ rõ ràng**: mỗi tiêu chí "hoàn thành Phase 1" được đánh dấu là đã chứng minh
   bằng buổi demo này, hoặc được ghi rõ là để dành cho giai đoạn sau — không có sự mơ hồ nào.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- **Một bước cuối cùng vẫn cần một người thực hiện thủ công**: đính kèm video ghi lại buổi demo vào hệ
-  thống quản lý công việc (Jira). Đây không phải một khiếm khuyết kỹ thuật — công cụ tự động hiện có
-  không hỗ trợ đính kèm file vào Jira, và việc đăng nội dung công khai cho cả đội xem là việc cần một
-  người chủ động thực hiện, không nên tự động làm thay. Toàn bộ nội dung cần thiết đã được chuẩn bị sẵn
-  trong tài liệu tường thuật, chỉ còn thao tác tải file lên.
-- Demo hiện chạy trên môi trường thử nghiệm cục bộ (xem tính năng "005 — Một lệnh duy nhất"), chưa
-  phải trên hạ tầng vận hành chính thức.
-- Demo vẫn dùng danh tính giả lập (một khách hàng doanh nghiệp duy nhất) — chưa chứng minh việc tách
-  biệt dữ liệu giữa nhiều khách hàng doanh nghiệp khác nhau cùng lúc, vì Phase 1 chỉ có một khách hàng
-  doanh nghiệp.
+Bằng chứng đã kiểm chứng thật (3 lỗi thật tìm được lúc chuẩn bị demo) và giới hạn hiện tại: xem
+[functional-debt.md](functional-debt.md).

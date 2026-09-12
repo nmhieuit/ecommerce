@@ -12,7 +12,8 @@ không sửa — bằng chứng trực tiếp cho constitution Principle V.
 
 **Trạng thái xác minh**: 39/39 task trong `tasks.md` đã hoàn thành. Khối **"T039 results"** cuối
 `tasks.md` ghi nhận lượt chạy thật trên full local stack (4 SQL container, 4 domain service, BFF,
-gateway) cho 5 scenario của `quickstart.md` — tất cả PASS, kèm 2 phát hiện thật đã sửa (mục 4).
+gateway) cho 5 scenario của `quickstart.md` — tất cả PASS, kèm 2 phát hiện thật đã sửa — xem
+[technical-debt.md](technical-debt.md).
 
 ## 1. Kiến trúc tổng thể
 
@@ -55,21 +56,7 @@ exception TRƯỚC khi kết nối database được mở, không phải sau. Đ
 sau này vẫn quan sát thấy nguyên vẹn khi gọi domain service trực tiếp không qua gateway — xác nhận cơ
 chế không bị suy yếu qua nhiều feature sau.
 
-## 4. Hai phát hiện thật khi chạy thử toàn luồng (T039 results)
-
-Trích nguyên văn từ `tasks.md`:
-
-> Two things the run surfaced and fixed: `dotnet ef` could no longer discover a `DbContext` (design-time
-> discovery resolves it through DI and hit the gate), so each domain service gained an
-> `IDesignTimeDbContextFactory`; and the local run needs `ASPNETCORE_ENVIRONMENT=Development`, without
-> which the Development connection strings never load.
-
-Cả hai đều là hệ quả trực tiếp của cùng một nguyên lý cấu trúc ở mục 3: gate chặt tới mức công cụ
-`dotnet ef` (chạy ngoài luồng request thật, không có `TenantContext` nào để resolve) cũng bị chặn
-theo — buộc mỗi service phải có một `IDesignTimeDbContextFactory` cung cấp đường tắt hợp lệ riêng cho
-tình huống design-time, tách biệt khỏi luồng request thật.
-
-## 5. Sơ đồ
+## 4. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/003-stub-identity-tenant-context-component.drawio`](../diagrams/003-stub-identity-tenant-context-component.drawio)
 - Sơ đồ trình tự (resolve tenant một lần → lan truyền header → gate tại `AddDbContext`, gồm nhánh

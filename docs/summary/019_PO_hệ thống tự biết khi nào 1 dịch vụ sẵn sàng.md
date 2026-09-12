@@ -4,7 +4,8 @@
 tên bất kỳ công cụ kỹ thuật nào.*
 
 *Trạng thái: đã hoàn thành ở mức "bản thiết kế đã kiểm chứng kỹ" (template triển khai + kiểm tra tự
-động), CHƯA từng được áp dụng lên 1 hệ thống Kubernetes thật đang chạy — xem "Giới hạn hiện tại".*
+động), CHƯA từng được áp dụng lên 1 hệ thống Kubernetes thật đang chạy — xem
+[functional-debt.md](functional-debt.md).*
 
 ## Vấn đề trước đây (và sẽ gặp phải khi triển khai lên Kubernetes thật trong tương lai)
 
@@ -44,19 +45,6 @@ hoàn toàn khoẻ mạnh, chỉ đang chờ 1 dependency bên ngoài.
 4. **Nếu cơ sở dữ liệu tạm thời gặp sự cố** — bộ phận phụ thuộc nó chỉ tạm "không nhận khách" (qua câu
    hỏi sẵn sàng), KHÔNG bị khởi động lại nhầm — vì bản thân tiến trình vẫn khoẻ mạnh, chỉ đang chờ.
 
-## Điều đặc biệt: đã kiểm chứng thật, không chỉ thiết kế trên giấy
-
-- **Ngưỡng thời gian không phải số tự nghĩ ra** — thời gian chờ/số lần thử lại cho các bộ phận có cơ
-  sở dữ liệu được lấy đúng từ số liệu đã kiểm chứng qua vận hành thật của hệ thống (thời gian cơ sở dữ
-  liệu cần để phục hồi sau khi khởi động lại), không phải ước lượng cảm tính.
-- **Có bộ kiểm tra tự động xác nhận đúng 4 quy tắc cho MỌI bộ phận, không sót cái nào**: cả 2 câu hỏi
-  sức khoẻ đều được khai báo; đường dẫn kiểm tra đúng, không lẫn lộn 2 câu hỏi với nhau; nhóm bộ phận
-  có cơ sở dữ liệu có ngưỡng chờ dài hơn nhóm không có, đúng thực tế khởi động của chúng; và khi cập
-  nhật phiên bản, không có khoảnh khắc nào bộ phận cũ bị rút đi trước khi bộ phận mới sẵn sàng.
-- **Có lớp kiểm tra thứ hai, độc lập** — không chỉ tin vào 1 bộ kiểm tra tự viết, mà còn dùng đúng
-  công cụ chuẩn của Kubernetes để xác nhận bản thiết kế triển khai hợp lệ về mặt kỹ thuật, không chỉ
-  đúng quy ước nghiệp vụ.
-
 ## Lợi ích kinh doanh
 
 - **Không còn downtime khi triển khai phiên bản mới** — khách hàng không bao giờ bị dội vào 1 bộ phận
@@ -66,14 +54,7 @@ hoàn toàn khoẻ mạnh, chỉ đang chờ 1 dependency bên ngoài.
 - **Không khởi động lại nhầm** khi chỉ 1 dependency bên ngoài (như cơ sở dữ liệu) gặp sự cố tạm thời —
   tránh làm sự cố lan rộng hơn mức cần thiết.
 
-## Giới hạn hiện tại — trung thực cần biết, đây là phần quan trọng nhất
-
-**Chưa có 1 hệ thống Kubernetes thật nào đang chạy hệ thống này** — những gì đã hoàn thành là **bản
-thiết kế triển khai đã kiểm chứng kỹ** (khai báo đúng, đã lint bằng công cụ chuẩn của ngành, có bộ
-test tự động canh giữ quy ước), sẵn sàng để áp dụng lên 1 cluster thật ngay khi cluster đó tồn tại —
-nhưng bản thân việc "áp dụng lên 1 hệ thống Kubernetes thật" vẫn chưa xảy ra. Đây là công việc hạ tầng
-riêng, đi cùng nhịp với việc dựng kho bí mật trung tâm đã nhắc ở tính năng "Bỏ hẳn mật khẩu viết cứng
-trong code".
-
-Chi tiết kỹ thuật đầy đủ dành cho đội kỹ thuật, xem
+Bằng chứng đã kiểm chứng thật (ngưỡng thời gian lấy từ số liệu vận hành thật, 2 lớp kiểm tra độc lập)
+và giới hạn hiện tại (chưa có Kubernetes thật đang chạy — phần quan trọng nhất): xem
+[functional-debt.md](functional-debt.md). Chi tiết kỹ thuật đầy đủ dành cho đội kỹ thuật, xem
 [`docs/architecture/019_Architect_liveness readiness probe cho mọi service.md`](../architecture/019_Architect_liveness%20readiness%20probe%20cho%20mọi%20service.md).

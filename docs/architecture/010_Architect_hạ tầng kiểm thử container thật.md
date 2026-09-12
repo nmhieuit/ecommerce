@@ -41,28 +41,14 @@ giờ âm thầm skip" (FR-007) **đã là hành vi mặc định của chính t
 xUnit tự nhiên biến exception đó thành lỗi khởi tạo fixture, fail toàn bộ test trong collection thay
 vì skip. Task của US1 chỉ cần CHỨNG MINH hành vi này, không phải xây thêm plumbing nào.
 
-## 4. Giới hạn phạm vi đã biết
-
-- **Không có chức năng nghiệp vụ mới nào dùng Redis/RabbitMQ** (spec FR-009) — hai fixture này đứng
-  chờ tính năng tương lai đầu tiên cần chúng, giống hệt cách
-  [008-versioned-event-schemas](../../specs/008-versioned-event-schemas/) đứng chờ.
-- Chịu lỗi broker toàn diện (retry, circuit breaker cho outbound call) **ngoài phạm vi** — thuộc
-  SCRUM-30 (Phase 4). Feature này chỉ chứng minh CHÍNH BÀI TEST không treo, không phải chính sách
-  resilience cho hệ thống thật.
-  > **Amendment (2026-09-10)**: SCRUM-30 đã triển khai ở
-  > [`020-timeouts-retry-circuit-breaker`](../../specs/020-timeouts-retry-circuit-breaker/) — nhưng
-  > **chỉ cho HTTP outbound call** (Gateway→BFF, BFF→4 service, JwtBearer backchannel), xem
-  > [`020_Architect_timeout retry circuit breaker cho cuộc gọi ra ngoài.md`](020_Architect_timeout%20retry%20circuit%20breaker%20cho%20cuộc%20gọi%20ra%20ngoài.md).
-  > Phần "chịu lỗi broker" nhắc ở đây (RabbitMQ/MassTransit publish) **vẫn ngoài phạm vi** — 020 đã tự
-  > xác nhận lại bằng grep (`AddMassTransit|IPublishEndpoint|IBus` không có kết quả nào trong
-  > `services/`) rằng service→broker chưa tồn tại trong mã nguồn, nên vẫn chờ SCRUM-31, chưa bắt đầu.
-- Việc gộp 4 bản copy-paste của `SqlServerFixture.cs` vào thư viện chung KHÔNG nằm trong phạm vi này —
-  ghi nhận là follow-up, chưa quyết định.
-
-## 5. Sơ đồ
+## 4. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/010-testcontainers-integration-tests-component.drawio`](../diagrams/010-testcontainers-integration-tests-component.drawio)
 - Sơ đồ trình tự (fixture khởi động container thật → wait strategy → fail loudly hoặc chạy test thật,
   gồm nhánh RabbitMQ chết giữa test): [`docs/diagrams/010-testcontainers-integration-tests-sequence.drawio`](../diagrams/010-testcontainers-integration-tests-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/010-testcontainers-integration-tests-flow-nghiep-vu.drawio`](../diagrams/010-testcontainers-integration-tests-flow-nghiep-vu.drawio)
+
+Giới hạn phạm vi đã biết (chưa có tính năng dùng Redis/RabbitMQ, chịu lỗi broker ngoài phạm vi, chưa
+gộp `SqlServerFixture.cs`) — gồm cả Amendment (2026-09-10) về SCRUM-30/020: xem
+[technical-debt.md](technical-debt.md).

@@ -3,8 +3,9 @@
 *Viết cho: người quản lý sản phẩm, stakeholder không trực tiếp code. Không yêu cầu đọc code hay biết
 tên bất kỳ công cụ kỹ thuật nào.*
 
-*Trạng thái: đã hoàn thành và đang hoạt động thật ở môi trường phát triển — xem phần "Giới hạn hiện
-tại" để biết rõ ranh giới giữa "đã hoạt động" và "đã triển khai lên môi trường vận hành thật".*
+*Trạng thái: đã hoàn thành và đang hoạt động thật ở môi trường phát triển — xem
+[functional-debt.md](functional-debt.md) để biết rõ ranh giới giữa "đã hoạt động" và "đã triển khai
+lên môi trường vận hành thật".*
 
 ## Vấn đề trước đây
 
@@ -39,19 +40,6 @@ dễ trôi dạt theo thời gian):
 4. **Nếu có dấu hiệu bất thường** (1 bộ phận chậm hẳn, tỷ lệ lỗi tăng), đội vận hành thấy được ngay
    trên số liệu tổng hợp, không phải chờ người dùng báo cáo trước.
 
-## Điều đặc biệt: đã kiểm chứng thật, không chỉ thiết kế trên giấy
-
-- **Đặt 1 đơn hàng thật, tìm thấy đủ dấu vết trên Kibana.** Đội đã đặt 1 đơn hàng qua toàn hệ thống
-  rồi tra trên Kibana — xác nhận thấy đủ dấu vết hành trình xuyên suốt các bộ phận tham gia, kèm số
-  liệu và nhật ký tương ứng.
-- **Rà soát và xác nhận không còn cách ghi log kiểu cũ.** Toàn bộ mã nguồn được rà lại để đảm bảo
-  không còn dòng log nào ghi theo kiểu "câu chữ tự do lắp ráp" (khó tra cứu tự động) — chỉ còn cách
-  ghi có cấu trúc.
-- **Thử nghiệm "rút thành phần dùng chung ra xem có sao không".** Đội đã tạm thời gỡ bỏ thành phần
-  quan sát dùng chung khỏi 1 bộ phận rồi xác nhận: bộ phận đó **thực sự mất khả năng gửi báo cáo** —
-  chứng minh thành phần dùng chung này thực sự cần thiết cho việc quan sát hoạt động, không phải một
-  lớp cấu hình trang trí có thể bỏ qua mà không ảnh hưởng gì.
-
 ## Lợi ích kinh doanh
 
 - **1 nơi duy nhất để biết "hệ thống có đang ổn không"** — không cần đội kỹ thuật lần lượt kiểm tra
@@ -63,12 +51,7 @@ dễ trôi dạt theo thời gian):
 - **Không rò rỉ dữ liệu nhạy cảm vào log** — 1 trong các tiêu chí xác nhận của tính năng này là nhật ký
   không chứa thông tin cá nhân nhạy cảm dưới bất kỳ hình thức nào.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- **Kho Elastic/Kibana hiện chỉ chạy trên máy phát triển** (thông qua Docker, cùng cách toàn bộ hệ
-  thống được chạy thử ở giai đoạn này) — **chưa phải 1 hạ tầng vận hành thật, luôn sẵn sàng** cho môi
-  trường sản phẩm chính thức. Việc dựng hạ tầng quan sát thật cho môi trường vận hành là công việc
-  hạ tầng riêng, chưa nằm trong phạm vi đã hoàn thành ở đây.
-- Chi tiết kỹ thuật (cách thành phần dùng chung được nối tới kho Elastic, cấu hình cụ thể) dành cho
-  đội kỹ thuật, xem
-  [`docs/architecture/017_Architect_phát telemetry OTel qua ServiceDefaults tới Elastic.md`](../architecture/017_Architect_phát%20telemetry%20OTel%20qua%20ServiceDefaults%20tới%20Elastic.md).
+Bằng chứng đã kiểm chứng thật (đặt 1 đơn hàng thật và tìm thấy dấu vết trên Kibana, thử nghiệm rút
+thành phần dùng chung) và giới hạn hiện tại: xem [functional-debt.md](functional-debt.md). Chi tiết kỹ
+thuật (cách thành phần dùng chung được nối tới kho Elastic, cấu hình cụ thể) dành cho đội kỹ thuật, xem
+[`docs/architecture/017_Architect_phát telemetry OTel qua ServiceDefaults tới Elastic.md`](../architecture/017_Architect_phát%20telemetry%20OTel%20qua%20ServiceDefaults%20tới%20Elastic.md).

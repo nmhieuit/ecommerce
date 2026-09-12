@@ -10,11 +10,9 @@ authorization on every endpoint/handler", roadmap.md Phase 3), đặc tả tại
 đổi — tính năng này đóng nốt nửa "phân quyền" của constitution Principle VI mà 014 chủ đích để ngỏ).
 Bảy quyết định kiến trúc chi tiết: [`research.md`](../../specs/015-deny-by-default-authz/research.md).
 
-**Trạng thái xác minh**: toàn bộ 38/38 task trong `tasks.md` đã hoàn thành. Không chỉ là bộ test tự
-động xanh trên từng service — tính năng còn được xác nhận bằng một thử nghiệm chủ động: thêm tạm một
-route không khai báo phân quyền, xác nhận scanner thật sự chặn lại, rồi gỡ đi và xác nhận xanh trở
-lại (mục 8). Lượt chạy toàn bộ `dotnet test` cuối phiên có một phát hiện quan trọng về môi trường máy
-phát triển — không phải hồi quy của tính năng — trình bày trung thực ở mục 8, không che giấu.
+**Trạng thái xác minh**: toàn bộ 38/38 task trong `tasks.md` đã hoàn thành. Ngoài bộ test tự động,
+tính năng còn được xác nhận bằng một thử nghiệm chủ động (scanner thật sự chặn được vi phạm — xem
+[technical-debt.md](technical-debt.md)).
 
 ## 1. Kiến trúc tổng thể
 
@@ -40,7 +38,7 @@ phát triển — không phải hồi quy của tính năng — trình bày trun
                                      │ cùng nội dung trong
                                      │ ToggleGatedAuthenticationExtensions
                                      │ (không gọi được AddIdentityValidation
-                                     │ trực tiếp — lý do ở mục 2.3)
+                                     │ trực tiếp — lý do ở mục 2.2)
           ┌──────────────────────────┼──────────────────────────────────┐
           ▼                          ▼                                  ▼
  ┌──────────────────┐      ┌───────────────────────┐      ┌───────────────────────┐
@@ -88,10 +86,7 @@ bản thân sự khai báo tường minh tại từng route mới là điều FR
 - **`RequireApiScopeRequirement.cs`**: một `IAuthorizationRequirement` đánh dấu, không mang dữ liệu.
 - **`RequireApiScopeAuthorizationHandler.cs`**: đọc `IOptionsMonitor<AuthorizationToggleOptions>` tại
   mỗi lần đánh giá — không cache ở constructor, để việc gạt toggle có hiệu lực ngay lập tức (constitution
-  Principle X). Toggle tắt → `Succeed()` vô điều kiện; toggle bật → chỉ `Succeed()` nếu principal có
-  claim `scope` chứa `ecommerce-api` (xử lý cả hai hình dạng: một claim gộp khoảng trắng hoặc nhiều
-  claim `scope` riêng lẻ — token thật từ Duende/JwtBearer có thể phát hành theo một trong hai cách tuỳ
-  cấu hình claims-mapping).
+  Principle X).
 - **`AuthenticationFallbackPolicy.cs`** (nâng cấp): `Build()` giờ thêm
   `.AddRequirements(new RequireApiScopeRequirement())` bên cạnh `RequireAuthenticatedUser()` đã có từ
   014 — `FallbackPolicy` deliberately ít nhất nghiêm ngặt bằng policy `ApiScope` mà mọi route khai báo
@@ -101,22 +96,14 @@ bản thân sự khai báo tường minh tại từng route mới là điều FR
   `AuthorizationMiddlewareResultHandler` mặc định — khi `PolicyAuthorizationResult.Forbidden`, ghi thân
   JSON `{"error":"forbidden_scope","message":"..."}` thay vì 403 rỗng mặc định của framework. Đối
   xứng với `ClearUnauthorizedResponseEvents` (401, 014).
-- **`IdentityValidationExtensions.AddIdentityValidation()`** (cập nhật): đăng ký
-  `services.Configure<AuthorizationToggleOptions>(...)`, `IAuthorizationHandler`
-  (`RequireApiScopeAuthorizationHandler`), `IAuthorizationMiddlewareResultHandler`
-  (`ClearForbiddenResponseEvents`), và named policy `ApiScope` bên cạnh `FallbackPolicy` đã nâng cấp.
 
 ### 2.2. Gateway (`services/gateway/src/Gateway.Api/Identity/ToggleGatedAuthenticationExtensions.cs`)
 
 Không gọi được `AddIdentityValidation()` trực tiếp — 014 đã cho gateway một đăng ký 3-scheme riêng
-(`AddPolicyScheme` chọn `JwtBearer`/`StubIdentity` mỗi request) không tương thích với việc gọi thẳng
-helper dùng chung. Vì vậy `ToggleGatedAuthenticationExtensions` lặp lại đúng nội dung
-`AddIdentityValidation()` vừa thêm (toggle options, handler, result handler, named policy `ApiScope`)
-— cùng lý do nó đã phải lặp lại `ClearUnauthorizedResponseEvents`/`AuthenticationFallbackPolicy.Build()`
-từ 014.
-
-Gateway không có route nghiệp vụ nào để khai báo `.RequireAuthorization(...)` riêng lẻ — toàn bộ lưu
-lượng ngoài health probe đi qua đúng một `MapReverseProxy()` catch-all — nên chính sách của nó là
+không tương thích với việc gọi thẳng helper dùng chung, nên `ToggleGatedAuthenticationExtensions` lặp
+lại đúng nội dung của nó (toggle options, handler, result handler, named policy `ApiScope`). Gateway
+không có route nghiệp vụ nào để khai báo `.RequireAuthorization(...)` riêng lẻ — toàn bộ lưu lượng
+ngoài health probe đi qua đúng một `MapReverseProxy()` catch-all — nên chính sách của nó là
 `FallbackPolicy` (đã nâng cấp) áp dụng đồng nhất, không phải khai báo per-route.
 
 ### 2.3. Khai báo tường minh trên từng route (BFF + 4 domain service)
@@ -124,8 +111,8 @@ lượng ngoài health probe đi qua đúng một `MapReverseProxy()` catch-all 
 Mọi route trong 9 file `*Endpoints.cs` (4 domain service + 5 file `Features/*/Endpoints.cs` của BFF)
 chain thêm `.RequireAuthorization(AuthorizationPolicies.ApiScope)`; hai health probe mỗi service giữ
 nguyên `.AllowAnonymous()` đã có từ 014. `service-manifest.yaml` của cả 5 service được cập nhật thêm
-trường `authorization:` song song `authentication:` đã có, cho mục đích tài liệu hoá — không phải cơ
-chế thực thi (cơ chế thực thi là scanner ở mục 2.4).
+trường `authorization:` song song `authentication:` — cho mục đích tài liệu hoá, không phải cơ chế
+thực thi (cơ chế thực thi là scanner ở mục 2.4).
 
 ### 2.4. `AuthorizationPolicyDeclaredScanner` (`tests/CrossServiceIsolation.Tests`)
 
@@ -133,10 +120,9 @@ Mirror `AuthenticatedByDefaultScanner` (014): đọc mã nguồn tĩnh, không k
 `ScanEndpoints()` trích từng call site `Map(Get|Post|Put|Delete|Patch)(...)`, xác định điểm đóng ngoặc
 khớp, rồi quét chuỗi fluent-chain phía sau tới dấu `;` đầu tiên ở paren-depth 0 để tìm
 `.RequireAuthorization(`/`.AllowAnonymous()`. `ScanConsumers()` quét toàn `services/**/*.cs` tìm
-`IConsumer<T>` thiếu doc-comment "Trusted source:" (contracts/message-handler-authorization-contract.md)
-— pass rỗng hôm nay vì không có handler nào tồn tại, nhưng sẽ chặn ngay khi handler đầu tiên được thêm
-mà thiếu khai báo. `gateway`/`identity` cố ý không nằm trong `AuthorizingServices` (lý do ở mục 2.2 và
-vì `identity` không phục vụ endpoint nghiệp vụ nào — chỉ phát hành token).
+`IConsumer<T>` thiếu doc-comment "Trusted source:" — pass rỗng hôm nay vì không có handler nào tồn
+tại. `gateway`/`identity` cố ý không nằm trong `AuthorizingServices` — xem
+[technical-debt.md](technical-debt.md).
 
 ## 3. Bảng quyết định — khi nào 401, 403, hay xử lý bình thường
 
@@ -150,11 +136,9 @@ vì `identity` không phục vụ endpoint nghiệp vụ nào — chỉ phát h�
 
 ## 4. Toggle & rollback không cần redeploy
 
-Cùng cơ chế cấu hình `FeatureToggles`/`IOptionsMonitor` mà 014 đã dùng cho `IdentityServerAuthCutover`
-(ADR-0008 chọn Unleash ở cấp kiến trúc, nhưng chưa service nào triển khai hạ tầng Unleash thật — xem
-014's `FeatureToggleOptions.cs` remarks; xây riêng hạ tầng đó chỉ để phục vụ một toggle của tính năng
-này vượt phạm vi hợp lý). Mặc định `false` ở `appsettings.json` (an toàn — trạng thái rollback), `true`
-ở `appsettings.Development.json` (để chạy được `quickstart.md` cục bộ).
+Mặc định `false` ở `appsettings.json` (an toàn — trạng thái rollback), `true` ở
+`appsettings.Development.json` (để chạy được `quickstart.md` cục bộ). Bối cảnh ADR-0008/Unleash: xem
+[technical-debt.md](technical-debt.md).
 
 **Điểm quan trọng khác với toggle của 014**: khai báo tường minh `.RequireAuthorization(ApiScope)` tại
 từng route **không phụ thuộc** trạng thái toggle — nó luôn tồn tại trong mã nguồn, luôn được scanner
@@ -162,75 +146,11 @@ kiểm chứng. Toggle chỉ chi phối **nội dung** mà `RequireApiScopeAutho
 trong policy đó. Nói cách khác: gạt toggle về tắt không làm "biến mất" quyết định phân quyền của một
 route — nó chỉ làm quyết định đó tạm thời nới lỏng về đúng mức "chỉ cần đã xác thực" như trước 015.
 
-## 5. Giới hạn phạm vi đã biết
-
-- **US3 không thêm quy tắc nghiệp vụ mới.** Rà soát mã nguồn khi lập kế hoạch (research.md Decision 7)
-  phát hiện các kiểm tra phía máy chủ tương ứng đã tồn tại từ trước (`CheckoutEndpoints.cs` — 409 khi
-  giỏ hàng rỗng; `BasketEndpoints.cs` — 400 khi `Quantity < 1`/`UnitPrice < 0`; `OrderEndpoints.cs` —
-  400 khi `Items` rỗng). Công việc thực tế của US3 là kiểm kê và bổ sung đúng một test còn thiếu bằng
-  chứng (`CurrentBasketTests.AddItem_Rejects_ANegativeUnitPrice`) — chi tiết đầy đủ ở
-  [`tasks.md`](../../specs/015-deny-by-default-authz/tasks.md) ghi chú T033-T035.
-- **`gateway`/`identity` nằm ngoài `AuthorizationPolicyDeclaredScanner.AuthorizingServices`** — lý do:
-  gateway chỉ có một route catch-all không có granularity để khai báo riêng; `identity` phát hành
-  token, không phục vụ endpoint nghiệp vụ nào cần chính sách `ApiScope`.
-- **Chưa có phân quyền theo vai trò (RBAC) chi tiết** — chính sách `ApiScope` hiện là nhị phân (có/
-  không đúng scope), khớp đúng phạm vi Jira SCRUM-24. `AddIdentity<ApplicationUser, IdentityRole>()`
-  đã sẵn có ở service `identity` (014) nhưng chưa seed vai trò nào — một mở rộng tương lai, không phải
-  khoảng trống của tính năng này.
-- **Không có message handler nào tồn tại để kiểm chứng `ScanConsumers()` thật sự chặn được vi phạm** —
-  guard hiện chỉ chứng minh được nó "chạy qua toàn bộ services" (structural), chưa chứng minh được nó
-  "bắt được vi phạm thật" như `ScanEndpoints()` đã được chứng minh (mục 8) — vì chưa có handler nào để
-  thử nghiệm.
-
-## 6. Sơ đồ
+## 5. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/015-deny-by-default-authz-component.drawio`](../diagrams/015-deny-by-default-authz-component.drawio)
 - Sơ đồ luồng nghiệp vụ (phi kỹ thuật): [`docs/diagrams/015-deny-by-default-authz-flow-nghiep-vu.drawio`](../diagrams/015-deny-by-default-authz-flow-nghiep-vu.drawio)
 - Sơ đồ trình tự kỹ thuật: [`docs/diagrams/015-deny-by-default-authz-sequence.drawio`](../diagrams/015-deny-by-default-authz-sequence.drawio)
 
-## 7. Sanity check thật đã thực hiện trên scanner (không chỉ lý thuyết)
-
-Trong lúc triển khai US2 (tasks.md ghi chú T030-T032), đội đã thêm tạm một route
-`GET /products/temp-scanner-sanity-check` vào `CatalogEndpoints.cs` **không** khai báo
-`.RequireAuthorization(...)`/`.AllowAnonymous()`, chạy
-`AuthorizationPolicyDeclaredScannerTests.EveryMappedRoute_DeclaresAnAuthorizationDecision` → **FAIL**
-đúng như kỳ vọng, thông báo nêu rõ route và file vi phạm. Gỡ route thử nghiệm, chạy lại → **PASS**.
-Đây là bằng chứng scanner thật sự bắt được vi phạm, không chỉ pass một cách vô nghĩa vì quét nhầm thư
-mục hay không tìm thấy file nào.
-
-## 8. Trạng thái xác minh đầy đủ theo từng project test
-
-Số liệu dưới đây lấy từ các lượt `dotnet test` chạy thật trong phiên triển khai, không suy đoán.
-
-| Project | Kết quả |
-|---|---|
-| `Identity.UnitTests` (`shared/`, mở rộng — 8 test mới của 015) | 15/15 pass |
-| `Baskets.Api.IntegrationTests` (gồm `AuthorizationPolicyTests` mới + `AddItem_Rejects_ANegativeUnitPrice` mới) | 27/27 pass |
-| `Orders.Api.IntegrationTests` (gồm `AuthorizationPolicyTests` mới) | 24/24 pass |
-| `Parties.Api.IntegrationTests` (gồm `AuthorizationPolicyTests` mới) | 14/14 pass |
-| `Products.Api.IntegrationTests` (gồm `AuthorizationPolicyTests` mới) | 18/18 pass |
-| `Identity.Api.IntegrationTests` (không đổi bởi 015) | 2/2 pass |
-| `tests/CrossServiceIsolation.Tests` (gồm 4 test `AuthorizationPolicyDeclaredScannerTests` mới) | 21/21 pass |
-| Mọi `*.Api.UnitTests` (Baskets/Bff/Gateway/Orders/Parties/Products), `Tenancy.UnitTests`, `EventContracts.UnitTests`, `ContainerConventionTests`, `ContractCoverageTests`, `StructureConventionTests`, `IntegrationTestSupport.Tests` | Tất cả pass 100% |
-| `Gateway.Api.IntegrationTests` | 17/31 pass — 14 fail |
-| `Bff.Api.IntegrationTests` | 27/48 pass — 21 fail |
-| `Baskets.Api.ContractTests` / `Orders.Api.ContractTests` / `Products.Api.ContractTests` (Pact) | 1 fail mỗi project |
-
-**Về các dòng fail cuối bảng — kết luận: vấn đề môi trường, không phải hồi quy của tính năng 015.**
-Docker Desktop trên máy phát triển bị dừng và phải khởi động lại giữa phiên làm việc; ngay cả sau khi
-daemon đã sẵn sàng, việc bắc cầu HTTP giữa hai `WebApplicationFactory` in-process trở lên (đúng cơ chế
-`Gateway.Api.IntegrationTests` và `Bff.Api.IntegrationTests` dùng để gọi sang service khác) thể hiện độ
-trễ ~4.5s một cách nhất quán, vượt ngân sách `AttemptTimeout=1s`/`TotalRequestTimeout=3s` khai báo tại
-`services/bff/src/Bff.Api/DownstreamClients/DownstreamClientRegistrationExtensions.cs` (cấu hình có từ
-trước, không đổi bởi 015). Ba bằng chứng cụ thể:
-
-1. Cùng tập hợp test này đã fail hệt vậy ở một lượt `dotnet test` chạy đầu phiên làm việc, **trước khi
-   bất kỳ dòng code Phase 3-5 nào của 015 tồn tại**.
-2. Chạy cô lập `Bff.Api.IntegrationTests.ProductsRouteTests` — route hoàn toàn không đụng tới logic
-   checkout hay bất kỳ đường phân quyền nào 015 thay đổi — vẫn fail với cùng dấu hiệu độ trễ ~4.5s.
-3. `BffTestHost.cs` (có từ trước 015) đã tự ghi chú hiện tượng tương tự trong doc-comment của nó: "under
-   Docker contention the DNS path was observed exceeding the 1 s attempt timeout".
-
-Không có thay đổi nào được thực hiện để "vá" hiện tượng này — đây là hạn chế môi trường tại thời điểm
-kiểm chứng, nằm ngoài phạm vi tính năng 015. Chi tiết đầy đủ: [`tasks.md`](../../specs/015-deny-by-default-authz/tasks.md)
-ghi chú T038.
+Sanity check thật trên scanner, bảng test đầy đủ theo project (gồm phân tích các dòng fail do môi
+trường), và giới hạn phạm vi đã biết: xem [technical-debt.md](technical-debt.md).

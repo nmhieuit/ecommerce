@@ -258,14 +258,42 @@ downstream nhận nhiều request (có retry, đúng số `MaxRetryAttempts` đ�
       đầu: `RetryMethodPolicyTests` nằm ở `Bff.Api.UnitTests` không phải `IntegrationTests`; circuit
       breaker động của gateway là file mới `PassiveHealthCheckCircuitBreakerTests.cs`, không phải mở
       rộng `DownstreamUnavailableTests.cs`)
-- [~] T025 [P] Thực hiện [quickstart.md](./quickstart.md) Bước 1–6 — phụ thuộc T012, T018, T023.
+- [X] T025 [P] Thực hiện [quickstart.md](./quickstart.md) Bước 1–6 — phụ thuộc T012, T018, T023.
       Bước 1-5 đã chạy PASS thật (ResilienceCoverageTests 5/5, RetryMethodPolicyTests 2/2,
       DownstreamUnavailableTests của BFF 8/8, PassiveHealthCheckConfigurationTests 4/4 +
-      PassiveHealthCheckCircuitBreakerTests 1/1, test timeout hiện có 1/1). Bước 6 (quan sát sự kiện
-      Polly qua OTel Collector/Elastic thật) KHÔNG thực hiện được trong phiên này — không có OTel
-      Collector chạy sẵn trong sandbox; đã xác nhận ở mức cấu hình (build sạch, `AddSource("Polly")`/
-      `AddMeter("Polly")` có trong `ServiceDefaultsExtensions.cs`), chưa có bằng chứng runtime thật
-      qua Elastic.
+      PassiveHealthCheckCircuitBreakerTests 1/1, test timeout hiện có 1/1).
+      **Bước 6 hoàn tất trong phiên xác thực sau (2026-09-12), với bằng chứng runtime thật qua
+      Elastic** — trước đó phiên đầu (2026-09-09) không có Elastic Stack chạy sẵn nên chỉ xác nhận
+      được ở mức cấu hình; phiên này đã bật `docker-compose.local.yml` (Elasticsearch + Kibana +
+      OTel Collector + toàn bộ service) trên Docker Desktop, tạo user thật + lấy access token thật
+      qua ROPC grant của identity-api (client `integration-test-ropc`), gọi `GET /bff/products` (200
+      OK — xác nhận auth thật hoạt động), dừng container `baskets-api` để tạo lỗi thật, rồi gọi lặp
+      lại `GET /bff/basket` qua gateway (nhiều lần 504 GatewayTimeout thật, ~3s/lần, khớp
+      `TotalRequestTimeout`). Query trực tiếp Elasticsearch
+      (`metrics-generic.otel-default`) sau khi đợi đủ chu kỳ export định kỳ của OTel metric reader
+      (~60s) cho ra 37+ document thật gắn `scope.name: "Polly"`, bao gồm sự kiện
+      `event.name: "OnRetry"` (pipeline `BasketsApi-standard`, `strategy.name: "Standard-Retry"`,
+      `exception.type: "Polly.Timeout.TimeoutRejectedException"`) và `event.name: "OnTimeout"`
+      (`Standard-AttemptTimeout`/`Standard-TotalRequestTimeout`) trên cả `Bff.Api` (pipeline
+      `BasketsApi-standard`, `ProductsApi-standard`, `IdentityBackchannel-standard`) và
+      `Gateway.Api` (`IdentityBackchannel-standard`), đúng `service.name` từng bên — xác nhận FR-008
+      bằng dữ liệu thật, không suy diễn. Sự kiện circuit-breaker riêng (`OnCircuitOpened`) KHÔNG quan
+      sát được trong phiên này — cần khoảng 100 request lỗi liên tiếp để vượt
+      `MinimumThroughput` mặc định của Polly, chưa thử ở quy mô đó; hành vi circuit breaker tự nó đã
+      được T014 xác nhận riêng qua test tự động (503 fail-fast), không phụ thuộc bước quan sát này.
+      **Sự cố phát sinh và đã xử lý trong lúc xác thực** (ghi lại vì có giá trị tham khảo, không phải
+      lỗi của tính năng): (1) `appsettings.Development.json` bật `IdentityServerAuthCutover=true`
+      nên cần token JWT thật, không dùng được StubIdentity — phải tạo user thật qua
+      `UserManager<ApplicationUser>` (không có endpoint đăng ký) và lấy token qua ROPC; (2) token lấy
+      qua cổng publish `localhost:5205` có `iss` không khớp `Identity:Authority=http://identity-api:8080`
+      mà các service cấu hình — phải lấy token từ một container gắn cùng docker network
+      (`ecomerce-local_backbone`) gọi thẳng `http://identity-api:8080`; (3) một lần kiểm tra sai
+      (dùng `bytes.decode('utf-16le', errors='ignore')` rồi tìm substring để soát DLL) cho kết quả
+      false-negative do lệch offset khi gặp byte không hợp lệ — sửa bằng cách tìm đúng raw byte
+      pattern (`'Polly'.encode('utf-16le') in data`), tự nhắc nhở không suy diễn từ một phương pháp
+      kiểm tra chưa được xác minh; (4) restart lại toàn stack (để loại trừ nghi ngờ (3), sau này xác
+      định là không cần thiết) làm token cũ mất hiệu lực do identity-api xoay khoá ký mới — phải lấy
+      token mới.
 - [X] T026 Build sạch toàn `Ecommerce.slnx` (0 lỗi/cảnh báo), cộng
       `shared/Identity.UnitTests` (15/15), `shared/ServiceDefaults.UnitTests` (13/13),
       `Orders.Api.UnitTests` (14/14), `Baskets.Api.UnitTests` (14/14) — phụ thuộc T025.
