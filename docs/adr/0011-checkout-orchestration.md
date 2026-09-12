@@ -69,6 +69,17 @@ Between A and C, the argument is entirely about which failure a shopper can reco
 
 ## Action Items
 
-1. [ ] SCRUM-18: define the `BasketCheckedOut` / `OrderPlaced` event schemas in the shared contracts location
-2. [ ] SCRUM-31: replace this orchestration with an outbox-backed saga and verify it by killing the process mid-publish
-3. [ ] On completion of 1 and 2, mark this ADR superseded and remove the deviation from `specs/004-minimal-shopping-spa/plan.md` Complexity Tracking
+1. [x] SCRUM-18: define the `BasketCheckedOut` / `OrderPlaced` event schemas in the shared contracts location
+2. [~] SCRUM-31 (024-verify-transactional-outbox): implemented the transactional outbox pattern for
+   `orders` publishing `OrderPlaced` — ghi nguyên tử, phục hồi sau crash, và consumer idempotent, đều
+   xác minh bằng test tích hợp thật (Testcontainers). **Không** thay điều phối checkout này bằng một
+   saga đầy đủ, và **không** publish/consume `BasketCheckedOut` — quyết định phạm vi có chủ ý (xem
+   `specs/024-verify-transactional-outbox/research.md` Quyết định 1): `OrderPlacedV1` không mang định
+   danh khách hàng/giỏ hàng, nên dùng nó để lái nghiệp vụ "xoá giỏ hàng" đòi hỏi một phiên bản hợp đồng
+   mới (`OrderPlacedV2`) và đổi UX xác nhận đơn từ đồng bộ sang bất đồng bộ — vượt xa 3 tiêu chí chấp
+   nhận thật sự của Jira SCRUM-31. Điều phối 2 bước đồng bộ ở ADR này **vẫn còn nguyên**, chưa được
+   thay thế.
+3. [ ] Việc còn lại để đóng hẳn ADR này (chưa có story riêng): thay bước "tạo đơn" của BFF bằng việc
+   `orders` consume `BasketCheckedOut` (đòi hỏi mở rộng `OrderPlacedV1`/`BasketCheckedOutV1` với định
+   danh khách hàng nếu cũng muốn thay bước "xoá giỏ hàng"), rồi mới đánh dấu ADR này superseded và gỡ
+   deviation khỏi `specs/004-minimal-shopping-spa/plan.md` Complexity Tracking.

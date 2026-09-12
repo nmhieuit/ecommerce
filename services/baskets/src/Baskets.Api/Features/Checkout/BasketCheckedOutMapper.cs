@@ -9,9 +9,12 @@ namespace Baskets.Api.Features.Checkout;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Nothing calls this yet, and that is deliberate. Checkout is synchronous BFF orchestration today
-/// (ADR-0011); the outbox and the publisher that will send this are SCRUM-31's work. What exists
-/// here is the payload construction alone, so that work starts against a contract the orders
+/// Nothing calls this yet, and that is deliberate. Checkout is still synchronous BFF orchestration
+/// today (ADR-0011). 024-verify-transactional-outbox implemented the transactional outbox pattern
+/// for <c>orders</c> publishing <c>OrderPlaced</c> — deliberately scoped to only that (see its
+/// research.md Quyết định 1) — and did not wire <c>BasketCheckedOut</c> publish/consume or move
+/// order creation off the synchronous HTTP path; that remains open, unstarted work. What exists
+/// here is still just the payload construction, so that work starts against a contract the orders
 /// service has already verified rather than defining one after the fact
 /// (011-consumer-contract-tests research.md Decision 3).
 /// </para>

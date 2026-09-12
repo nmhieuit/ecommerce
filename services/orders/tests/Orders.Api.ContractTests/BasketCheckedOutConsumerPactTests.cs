@@ -11,11 +11,13 @@ namespace Orders.Api.ContractTests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// No broker and no MassTransit. Nothing publishes or consumes <c>BasketCheckedOut</c> yet —
-/// checkout is synchronous BFF orchestration today (ADR-0011) — and a message pact verifies a
-/// payload rather than a delivery, so the transport that will eventually carry it is not needed to
-/// pin its shape down now (research.md Decisions 3 and 4). Wiring the outbox and publisher is
-/// SCRUM-31's work; this exists so that work starts against a contract instead of defining one.
+/// Still no broker connection for <c>BasketCheckedOut</c> specifically. Checkout remains synchronous
+/// BFF orchestration today (ADR-0011) — 024-verify-transactional-outbox (SCRUM-31) implemented the
+/// transactional outbox for <c>orders</c> publishing <c>OrderPlaced</c> only (a deliberate scope
+/// decision, its research.md Quyết định 1), and did not wire <c>BasketCheckedOut</c> publish/consume.
+/// A message pact verifies a payload rather than a delivery, so the transport that will eventually
+/// carry it was never needed to pin its shape down. This exists so that future work starts against
+/// a contract instead of defining one.
 /// </para>
 /// <para>
 /// The provider participant is the event rather than the service that will publish it, so this

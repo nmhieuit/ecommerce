@@ -10,10 +10,6 @@ namespace Orders.Api.Data;
 /// and a total, spec FR-009), and the basket is what carries per-product detail. Orders gain line
 /// items with the story that owns them (004 spec.md, Assumptions).
 /// </para>
-/// <para>
-/// The outbox table (constitution Principle IV) is likewise absent; it lands alongside the first
-/// event this platform publishes (SCRUM-18).
-/// </para>
 /// </remarks>
 public class Order
 {

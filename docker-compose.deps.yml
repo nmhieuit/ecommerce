@@ -125,6 +125,24 @@ services:
       - -c
       - /opt/mssql-tools18/bin/sqlcmd -S identity-db -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "IF DB_ID('identity') IS NULL CREATE DATABASE [identity];"
 
+  # 024-verify-transactional-outbox: unlike the *-db services above, this is deliberately NOT
+  # per-service — a message broker is shared infrastructure between whichever services publish and
+  # consume events, not something each service owns exclusively (Principle I only requires that of
+  # data, not of the transport). `orders` is the first service that actually needs it (see the
+  # "nothing connects to this" note on the `rabbitmq` service in docker-compose.yml — this is the
+  # story that first needs one). Same image as docker-compose.yml's `rabbitmq`, for consistency.
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
 volumes:
   parties-db-data:
   products-db-data:

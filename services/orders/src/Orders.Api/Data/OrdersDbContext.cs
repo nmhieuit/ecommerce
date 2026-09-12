@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 namespace Orders.Api.Data;
@@ -7,10 +8,9 @@ namespace Orders.Api.Data;
 /// schema is referenced here or anywhere downstream of it (spec FR-004, FR-005).
 /// </summary>
 /// <remarks>
-/// Holds the minimal order read surface the BFF proxies (002-gateway-bff-routing). Line items,
-/// status transitions, and the outbox table (constitution Principle IV) still belong to this
-/// service's first domain story; what exists here is the smallest set of fields that makes the
-/// BFF's order route a real proxy.
+/// Holds the minimal order read surface the BFF proxies (002-gateway-bff-routing). Line items and
+/// status transitions still belong to this service's first domain story; what exists here is the
+/// smallest set of fields that makes the BFF's order route a real proxy.
 /// The connection is supplied through <see cref="DbContextOptions{TContext}"/> at registration
 /// rather than resolved inside the context, so SCRUM-12's tenant-keyed connection resolver can
 /// replace that one call site without changing this type.
@@ -22,6 +22,12 @@ public class OrdersDbContext(DbContextOptions<OrdersDbContext> options) : DbCont
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // 024-verify-transactional-outbox (research.md Decision 2): OutboxMessage/OutboxState for
+        // the Bus Outbox (orders publishing OrderPlacedV1) and InboxState for the Consumer
+        // Outbox/Inbox (the test-only verification consumer, US3) — all three defined by
+        // MassTransit.EntityFrameworkCore, not hand-rolled entities.
+        modelBuilder.AddTransactionalOutboxEntities();
 
         modelBuilder.Entity<Order>(order =>
         {
