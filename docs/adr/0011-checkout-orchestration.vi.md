@@ -103,9 +103,16 @@ chưa bao giờ được tạo là vô hình và không thể khôi phục đố
 
 ## Việc cần làm
 
-1. [ ] SCRUM-18: định nghĩa schema event `BasketCheckedOut` / `OrderPlaced` tại vị trí contract dùng
+1. [x] SCRUM-18: định nghĩa schema event `BasketCheckedOut` / `OrderPlaced` tại vị trí contract dùng
    chung
-2. [ ] SCRUM-31: thay thế điều phối này bằng 1 saga dựa trên outbox và verify nó bằng cách kill tiến
-   trình giữa lúc publish
-3. [ ] Sau khi hoàn thành mục 1 và 2, đánh dấu ADR này đã bị thay thế và gỡ sai lệch này khỏi mục
-   Complexity Tracking của `specs/004-minimal-shopping-spa/plan.md`
+2. [~] SCRUM-31 (024-verify-transactional-outbox): đã hiện thực outbox pattern giao dịch cho `orders`
+   publish `OrderPlaced` — ghi nguyên tử, phục hồi sau crash, consumer idempotent, đều xác minh bằng
+   test tích hợp thật (Testcontainers). **Chưa** thay điều phối checkout này bằng saga đầy đủ, **chưa**
+   publish/consume `BasketCheckedOut` — quyết định phạm vi có chủ ý (xem
+   `specs/024-verify-transactional-outbox/research.md` Quyết định 1): `OrderPlacedV1` không mang định
+   danh khách hàng/giỏ hàng nên không đủ để lái nghiệp vụ "xoá giỏ hàng" mà không đổi hợp đồng sự kiện
+   (`OrderPlacedV2`) — vượt phạm vi 3 tiêu chí chấp nhận thật sự của Jira SCRUM-31. Điều phối 2 bước
+   đồng bộ ở ADR này vẫn còn nguyên.
+3. [ ] Việc còn lại để đóng hẳn ADR này (chưa có story riêng): thay bước "tạo đơn" của BFF bằng việc
+   `orders` consume `BasketCheckedOut`, rồi mới đánh dấu ADR này đã bị thay thế và gỡ sai lệch này khỏi
+   mục Complexity Tracking của `specs/004-minimal-shopping-spa/plan.md`

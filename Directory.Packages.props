@@ -97,6 +97,28 @@
     <PackageVersion Include="StackExchange.Redis" Version="3.1.31" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
 
+    <!-- Messaging (024-verify-transactional-outbox research.md Decision 2; constitution's
+         Technology and Infrastructure Constraints already names "RabbitMQ via MassTransit, with
+         outbox... configured centrally" as the platform's messaging mechanism).
+         PINNED TO THE 8.x LINE DELIBERATELY, NOT 9.x: MassTransit v9 (first stable ~Q1 2026) ships
+         under a commercial license — running it throws MassTransit.ConfigurationException at
+         startup ("License must be specified with SetLicense/SetLicenseLocation") unless a paid
+         MT_LICENSE is configured (confirmed by actually running orders-api against it — see
+         masstransit.massient.com/configuration/license, the license vendor's real, current domain
+         for the v9 line). Every other dependency in this repository is free/OSS; introducing a paid
+         one is a business decision no plan/implementation step has authority to make on its own.
+         8.5.4 is the latest 8.x release (Apache-2.0, no license requirement) — verified on NuGet
+         Gallery: MassTransit.RabbitMQ 8.5.4 depends on RabbitMQ.Client >= 7.1.2 (satisfied by the
+         7.2.2 already pinned above); MassTransit.EntityFrameworkCore 8.5.4 depends on
+         Microsoft.EntityFrameworkCore.Relational >= 9.0.1 (satisfied by the EF Core 10.0.0 already
+         pinned above — a floor, not an exact pin, so no downgrade occurs). 8.5.4 targets net8.0
+         (not net10.0) but is usable on this platform's net10.0 services the same way any
+         net8.0-targeted library is. First production (non-test-only) use of RabbitMQ in this
+         repository — orders is "the story that first needs one" (docker-compose.yml comment). -->
+    <PackageVersion Include="MassTransit" Version="8.5.4" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.4" />
+    <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="8.5.4" />
+
     <!-- JSON Schema 2020-12 validation, test-only. Referenced solely by
          shared/EventContracts.UnitTests to prove a serialized event instance satisfies its
          published schema (008-versioned-event-schemas research.md Decision 2). It is deliberately
