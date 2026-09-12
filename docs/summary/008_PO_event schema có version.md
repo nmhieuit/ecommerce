@@ -43,10 +43,5 @@ lắng nghe, thay đổi đó **bắt buộc phải mang một số phiên bản
 - **Nền tảng sẵn sàng cho việc giao tiếp bất đồng bộ giữa các mảng nghiệp vụ trong tương lai** — khi
   cơ chế truyền thông điệp thật sự được kết nối, hai hợp đồng này đã sẵn sàng để dùng ngay.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Đây **chỉ là hợp đồng** — chưa có cơ chế truyền thông điệp thật sự nào được kết nối ở bước này. Hai
-  loại thông báo này chưa thực sự được gửi/nhận qua hàng đợi tin nhắn trong hệ thống đang chạy; đó là
-  công việc của một tính năng riêng trong lộ trình.
-- Phạm vi chỉ giới hạn ở đúng hai loại thông báo quan trọng nhất ("đơn hàng vừa đặt" và "giỏ hàng vừa
-  thanh toán") — các loại thông báo khác trong tương lai sẽ cần lặp lại đúng khuôn mẫu này riêng.
+Giới hạn hiện tại (gồm việc chưa có hàng đợi tin nhắn thật kết nối): xem
+[functional-debt.md](functional-debt.md).

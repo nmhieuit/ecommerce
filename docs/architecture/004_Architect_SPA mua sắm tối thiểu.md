@@ -17,13 +17,13 @@ cuối `tasks.md`:
 > quickstart Scenario 7 returned `504` in 3.02 s, inside SC-006's five-second ceiling; Scenario 9
 > refused a gateway-bypassing call.
 
-## 1. Phạm vi mở rộng — không chỉ SPA
+## 1. Kiến trúc tổng thể
 
-**Assumptions đã ghi nhận trong spec.md**: tại thời điểm viết spec, BFF chỉ có 3 route đọc (list
-products, get one basket, get one order) — không có add-to-basket, không có checkout, không có
-seed data catalog. Vì vậy feature này **buộc phải bao gồm cả phần backend tối thiểu** (FR-019–FR-023):
-basket line item + quantity, add-to-basket, place-order từ basket, và seed catalog — không phải chỉ
-xây giao diện gọi vào một backend đã có sẵn đầy đủ.
+SPA React tối thiểu (Turborepo `frontend/`) phủ đúng một luồng: duyệt sản phẩm → giỏ hàng → checkout
+2 bước → xác nhận. Vì tại thời điểm viết spec BFF chỉ có 3 route đọc, feature này kèm theo cả phần
+backend tối thiểu để luồng chạy được thật (FR-019–FR-023): basket line item + quantity, add-to-basket,
+place-order từ basket, và seed catalog — bối cảnh mở rộng phạm vi này xem
+[technical-debt.md](technical-debt.md).
 
 ## 2. Quyết định kỹ thuật đáng chú ý (research.md)
 
@@ -45,25 +45,13 @@ Quyết định 7/8 đáng chú ý nhất về ranh giới trách nhiệm: BFF *
 luôn do chính Baskets/Orders tính, giữ đúng nguyên tắc "BFF không chứa business logic" đã đặt ra từ
 [002](002_Architect_định%20tuyến%20gateway-BFF.md) FR-005.
 
-## 3. Giới hạn phạm vi đã biết — một khoảng cách quan trọng chưa đóng
-
-`tasks.md` ghi nhận rõ, mục "Not in scope for these tasks": **schema-per-tenant separation mà
-[003-stub-identity-tenant-context](../../specs/003-stub-identity-tenant-context/) đã đặc tả và đánh
-dấu hoàn thành trên giấy — thực tế CHƯA được triển khai.** `HasDefaultSchema` không xuất hiện ở đâu
-trong mã nguồn, và mọi migration đều nhắm vào schema `dbo` mặc định. Feature này thêm dữ liệu nghiệp
-vụ thuộc-về-tenant ĐẦU TIÊN của nền tảng ngay trên nền một khoảng cách đó. Việc đóng khoảng cách này
-được mô tả là "contained" (resolve schema từ tenant context tại mỗi điểm gọi `AddDbContext`, cộng một
-migration mỗi service) nhưng nằm ngoài phạm vi clarify của feature này, và đã được nêu ra để một
-maintainer quyết định — **chưa có quyết định nào được đưa ra tại thời điểm này.**
-
-Một quyết định phạm vi khác, tường minh: checkout theo kiểu event-driven (SCRUM-18/SCRUM-31) không
-được xây ở đây vì chưa có hạ tầng messaging nào tồn tại — ghi nhận là một deviation có chủ đích, không
-phải bị quên.
-
-## 4. Sơ đồ
+## 3. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/004-minimal-shopping-spa-component.drawio`](../diagrams/004-minimal-shopping-spa-component.drawio)
 - Sơ đồ trình tự (duyệt → giỏ hàng → checkout 2 bước → xác nhận, gồm nhánh giỏ trống bị chặn và
   double-submit): [`docs/diagrams/004-minimal-shopping-spa-sequence.drawio`](../diagrams/004-minimal-shopping-spa-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/004-minimal-shopping-spa-flow-nghiep-vu.drawio`](../diagrams/004-minimal-shopping-spa-flow-nghiep-vu.drawio)
+
+Giới hạn phạm vi đã biết (khoảng cách schema-per-tenant chưa đóng): xem
+[technical-debt.md](technical-debt.md).

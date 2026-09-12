@@ -10,7 +10,7 @@ OpenAPI), thực thi kỹ thuật đã có từ [002-gateway-bff-routing](../../
 Decision 6 (dùng document builder OpenAPI có sẵn của ASP.NET Core).
 
 **Trạng thái xác minh**: 15/15 task trong `tasks.md` đã hoàn thành. Bốn checkpoint xác nhận từng
-user story độc lập (SC-001 tới SC-005) — xem mục 2.
+user story độc lập (SC-001 tới SC-005).
 
 ## 1. Bản chất feature — xác nhận và củng cố, không phải xây mới
 
@@ -30,22 +30,13 @@ xác nhận lại những gì đã đúng vẫn còn đúng, không phải tri�
 | 3 | Thêm test tolerant-reader — mỗi mảng nghiệp vụ một case, viết trong file test đã có sẵn, không tạo file mới |
 | 4 | Không có thay đổi production code nào |
 
-## 3. Ghi chú cho người bảo trì tương lai
-
-`tasks.md` ghi rõ: nếu bất kỳ task xác minh nào (T004-T009) phát hiện một sai lệch thực sự giữa route
-và spec, đó là một **defect thật, nằm ngoài giả định phạm vi của feature này** — cần dừng lại và định
-phạm vi lại, không được âm thầm vá bên trong một task "chỉ xác minh". Không có sai lệch nào được ghi
-nhận trong lượt triển khai này — cả bốn checkpoint (SC-001, SC-002/003/005, SC-004) đều xác nhận PASS.
-
-## 4. Giới hạn phạm vi đã biết
-
-Phạm vi chỉ giới hạn ở ba mảng nghiệp vụ products/baskets/orders (đúng như Jira issue) — route parties,
-checkout, và health-check nằm ngoài phạm vi, theo đúng Assumptions đã ghi trong `spec.md`.
-
-## 5. Sơ đồ
+## 3. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/007-bff-openapi-contracts-component.drawio`](../diagrams/007-bff-openapi-contracts-component.drawio)
 - Sơ đồ trình tự (route BFF thay đổi → spec tự cập nhật → sinh lại client, gồm nhánh field lạ không
   làm sập client): [`docs/diagrams/007-bff-openapi-contracts-sequence.drawio`](../diagrams/007-bff-openapi-contracts-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/007-bff-openapi-contracts-flow-nghiep-vu.drawio`](../diagrams/007-bff-openapi-contracts-flow-nghiep-vu.drawio)
+
+Ghi chú cho người bảo trì tương lai và giới hạn phạm vi (chỉ 3 mảng products/baskets/orders): xem
+[technical-debt.md](technical-debt.md).

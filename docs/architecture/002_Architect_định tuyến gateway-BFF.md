@@ -9,8 +9,9 @@ shell của [001-scaffold-service-shells](../../specs/001-scaffold-service-shell
 trúc gốc: [ADR-0002](../adr/0002-api-gateway.md) (chọn YARP làm gateway) và
 [ADR-0003](../adr/0003-bff-implementation-pattern.md) (chọn Minimal APIs cho BFF).
 
-**Trạng thái xác minh**: 65/65 task trong `tasks.md` đã hoàn thành, gồm cả một pha xử lý blocker giữa
-chừng (mục 3 bên dưới) và một lỗi thật đã phát hiện + sửa khi chạy thử toàn luồng (mục 4).
+**Trạng thái xác minh**: 65/65 task trong `tasks.md` đã hoàn thành, gồm 1 blocker giữa chừng và 2 phát
+hiện thật đã sửa khi chạy thử toàn luồng — xem [technical-debt.md](technical-debt.md). Gateway→BFF sau
+này còn được bổ sung circuit breaker thật ở spec 020, cũng ghi ở đó.
 
 ## 1. Kiến trúc tổng thể
 
@@ -42,66 +43,10 @@ Client (SPA)  ──▶  Gateway (YARP)  ──▶  BFF (Minimal API)  ──▶
 | 6 | Sinh tài liệu OpenAPI bằng document builder có sẵn của ASP.NET Core, không dùng Swashbuckle |
 | 7 | Lan truyền header tenant/correlation chỉ một chiều (forward-only) trong phạm vi feature này |
 
-## 3. Blocker giữa chừng — và cách được giải quyết
-
-Tại thời điểm viết `spec.md`, một giả định bị sai: cả 4 domain service (từ 001) chỉ có 2 health probe,
-**không có bất kỳ endpoint dữ liệu nào** — không có gì để BFF proxy tới. Điều này khiến FR-002/FR-003
-/FR-004 không thể thoả mãn đầu-cuối cho tới khi có quyết định phạm vi rõ ràng.
-
-**Quyết định phạm vi đã chốt** (ghi trong `tasks.md`, Phase 3 được thêm sau khi phát hiện blocker):
-cả 4 domain service được bổ sung một bề mặt đọc (read surface) tối thiểu — đủ để route
-product-listing (FR-004/SC-002) và các route còn lại hoạt động thật, thay vì trì hoãn dữ liệu thật
-sang một feature khác. Phase 1-2 (khung Gateway/BFF) đã hoàn thành trước khi blocker này xuất hiện,
-giữ nguyên số task cũ để truy vết được; phần đánh số lại bắt đầu từ sau T013.
-
-## 4. Lỗi thật đã phát hiện và sửa khi chạy thử toàn luồng
-
-**Mã số theo dõi (correlation ID) không sống sót qua chặng gateway.** Khi chạy thử `quickstart.md`
-Scenario 4 đầu-cuối, header phản hồi `X-Correlation-Id` và `correlationId` trong body lỗi mang **hai
-giá trị khác nhau**. Nguyên nhân: `CorrelationIdMiddleware` ghi ID đã xác định vào `HttpContext.Items`
-và header response, nhưng KHÔNG ghi vào header của chính request — trong khi YARP chỉ forward header
-request đã có sẵn. Kết quả: một ID do gateway sinh ra chỉ tồn tại ở response của chính gateway, còn
-BFF tự sinh một ID khác không liên quan — vi phạm trực tiếp constitution Principle VII ("sinh ra ở
-edge và lan truyền qua mọi lệnh gọi đồng bộ"). **Đã vá bằng đúng một dòng** trong
-`shared/ServiceDefaults/CorrelationIdMiddleware.cs`, có test hồi quy riêng
-(`Gateway.Api.IntegrationTests/CorrelationIdPropagationTests`) và được xác nhận không phá vỡ 14
-project test khác dùng chung middleware này (vì đây là thư viện chia sẻ). Trường hợp caller tự cung
-cấp ID đã hoạt động đúng từ trước — chỉ trường hợp ID do hệ thống tự sinh mới bị lỗi.
-
-**Phát hiện về cold-start đã tự giải quyết, không cần sửa code.** Lần đo đầu tiên cho thấy request
-đầu tiên qua gateway → BFF → products mất hơn 3 giây (vượt ngân sách). Điều tra lại cho thấy đây là
-hiện tượng của bộ đo thử (chờ `/health/live` thay vì `/health/ready`) — Kubernetes thực tế chỉ mở
-traffic khi `/health/ready` sẵn sàng, và với domain service, readiness đã mở kết nối database thật từ
-trước (làm nóng EF model + connection pool). Đo lại đúng cách: request đầu tiên trả về **200 trong
-1.07 giây** — trong ngân sách 3 giây. Cổng readiness sẵn có của nền tảng đã là biện pháp giảm thiểu
-đủ, không cần thay đổi timeout nào.
-
-## 5. Sơ đồ
+## 3. Sơ đồ
 
 - Sơ đồ thành phần: [`docs/diagrams/002-gateway-bff-routing-component.drawio`](../diagrams/002-gateway-bff-routing-component.drawio)
 - Sơ đồ trình tự (request → route → aggregate, gồm nhánh downstream không khả dụng):
   [`docs/diagrams/002-gateway-bff-routing-sequence.drawio`](../diagrams/002-gateway-bff-routing-sequence.drawio)
 - Sơ đồ luồng nghiệp vụ đơn giản hoá (đi kèm tài liệu PO):
   [`docs/diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio`](../diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio)
-
-## Amendment (2026-09-10): Gateway → BFF nay đã có circuit breaker thật
-
-Tại thời điểm viết tài liệu này, quyết định 3 ở mục 2 chỉ ghi nhận "BFF gọi downstream qua `HttpClient`
-có resilience handler chuẩn" — tức resilience mới có ở chặng BFF→service, **chưa có** ở chính chặng
-Gateway→BFF mà tài liệu này mô tả.
-
-[`020-timeouts-retry-circuit-breaker`](../../specs/020-timeouts-retry-circuit-breaker/) đã lấp khoảng
-này: gateway giờ bật `HealthCheck:Passive` của YARP trên cluster `bff-cluster` làm cơ chế circuit
-breaker — khi BFF liên tục lỗi/timeout, gateway tự "mở mạch" và trả lỗi ngay cho client thay vì tiếp
-tục thử kết nối thật mỗi lần (fail-fast). Cố ý **không thêm retry** ở tầng gateway — nó forward nguyên
-văn mọi method (kể cả `POST /checkout`) mà không biết ngữ nghĩa idempotency của route, khác BFF (nơi
-đã biết rõ từng downstream call).
-
-**Bug thật tìm được khi xác thực thủ công** (đáng nhắc lại ở đây vì đụng đúng chặng gateway→BFF):
-`AvailableDestinationsPolicy` mặc định của YARP là `HealthyOrPanic`, tự động coi MỌI destination "khả
-dụng" khi không còn destination nào khỏe mạnh — với cluster chỉ có 1 destination (`bff`), circuit
-breaker "mở" nhưng gateway vẫn âm thầm thử kết nối thật (vẫn `502`, không fail-fast). Đã sửa bằng cách
-đặt tường minh `AvailableDestinationsPolicy: "HealthyAndUnknown"`.
-
-Chi tiết đầy đủ (bao gồm chặng JwtBearer backchannel và việc thu hẹp retry ở BFF theo HTTP method), xem
-[`020_Architect_timeout retry circuit breaker cho cuộc gọi ra ngoài.md`](020_Architect_timeout%20retry%20circuit%20breaker%20cho%20cuộc%20gọi%20ra%20ngoài.md).

@@ -1,11 +1,11 @@
 <mxfile host="65bd71144e">
     <diagram id="liveness-readiness-probes-flow-nghiep-vu" name="2 câu hỏi sức khoẻ tách biệt — sẵn sàng vs còn sống">
-        <mxGraphModel dx="1699" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="650" math="0" shadow="0">
+        <mxGraphModel dx="1232" dy="1110" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="650" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
                 <mxCell id="title" value="Một pod trong vòng đời của nó — 2 câu hỏi sức khoẻ tách biệt, Kubernetes tự hành động theo từng câu" style="text;html=1;fontStyle=1;fontSize=15;fontColor=#333333;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="20" width="1150" height="30" as="geometry"/>
+                    <mxGeometry x="30" y="-10" width="1150" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="n1" value="1. Pod mới được tạo&#xa;(triển khai lần đầu hoặc&#xa;rolling update)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
                     <mxGeometry x="30" y="90" width="220" height="90" as="geometry"/>
@@ -52,8 +52,8 @@
                 <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="n3a" target="d1" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="1270" y="60"/>
-                            <mxPoint x="410" y="60"/>
+                            <mxPoint x="1270" y="20"/>
+                            <mxPoint x="410" y="20"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>

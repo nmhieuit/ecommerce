@@ -38,15 +38,6 @@ hệ thống tự động:
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio`](../diagrams/002-gateway-bff-routing-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: một lỗi thật đã bị bắt và sửa ngay trong lúc kiểm chứng
-
-Trong lúc chạy thử toàn bộ luồng thật, đội phát hiện một lỗi tinh vi: mã số theo dõi một yêu cầu (dùng
-để tra cứu khi có sự cố) đã không được giữ nguyên xuyên suốt hành trình của yêu cầu đó — mã số hiển
-thị cho người dùng và mã số ghi trong nhật ký hệ thống lại là hai giá trị khác nhau, khiến việc tra
-cứu sự cố trở nên vô nghĩa đúng lúc cần nó nhất. Lỗi này đã được phát hiện và sửa ngay, trước khi coi
-tính năng là hoàn thành — một ví dụ cụ thể cho việc chạy thử thật, không chỉ tin vào thiết kế trên
-giấy.
-
 ## Lợi ích kinh doanh
 
 - **Ứng dụng khách hàng đơn giản hơn, ổn định hơn** — không cần biết cấu trúc nội bộ hệ thống, nên
@@ -56,11 +47,5 @@ giấy.
 - **Dễ dò lỗi khi có sự cố thật** — mã số theo dõi được giữ nguyên xuyên suốt, giúp đội vận hành tra
   cứu đúng và nhanh.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Đây là bước đầu về **định tuyến và ghép nối dữ liệu** — cửa vào duy nhất chưa bao gồm việc xác
-  thực người dùng thật hay xác định khách hàng doanh nghiệp nào đang gọi (những việc đó thuộc các
-  tính năng khác trong lộ trình).
-- Cơ chế phục hồi sự cố nâng cao hơn (ví dụ tự động thử lại thông minh khi một mảng chập chờn, không
-  chỉ báo lỗi và dừng) là bước tiếp theo, chưa nằm trong phạm vi tính năng này — tính năng này chỉ
-  đảm bảo lỗi được báo rõ ràng và nhanh chóng, chưa tự phục hồi.
+Bằng chứng đã kiểm chứng thật (gồm 1 lỗi thật bắt được lúc kiểm chứng) và giới hạn hiện tại: xem
+[functional-debt.md](functional-debt.md).

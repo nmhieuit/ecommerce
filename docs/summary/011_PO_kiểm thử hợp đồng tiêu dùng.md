@@ -44,10 +44,5 @@ của bên nhận, và càng không phải khi hệ thống đã chạy thật.
 - **Có cách kiểm tra nhanh xem còn "lỗ hổng" nào chưa được bảo vệ hay không** — dễ dàng rà soát định
   kỳ, không phải đoán mò.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Phạm vi hiện tại chỉ dừng ở đúng bốn đường giao tiếp quan trọng nhất trong luồng nghiệp vụ cốt lõi —
-  mở rộng ra các đường giao tiếp khác trong tương lai là công việc riêng, chưa nằm trong phạm vi này.
-- Với cặp thông báo nội bộ (event), việc kiểm tra hiện chỉ so sánh dữ liệu được tạo ra với những gì
-  bên nhận cần — **chưa có hệ thống hàng đợi tin nhắn thật nào đang chạy** để gửi/nhận thông báo đó
-  trong môi trường thực tế; đây là bước thí điểm đi trước, chuẩn bị cho khi hạ tầng đó được kết nối.
+Giới hạn hiện tại (gồm việc chưa có hàng đợi tin nhắn thật kết nối cho cặp thông báo nội bộ): xem
+[functional-debt.md](functional-debt.md).

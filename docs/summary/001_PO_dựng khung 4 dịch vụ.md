@@ -33,13 +33,6 @@ ranh giới cấu trúc, được xây ngay từ đầu, không phải một quy
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio`](../diagrams/001-scaffold-service-shells-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: ranh giới dữ liệu đã được kiểm chứng thật, không chỉ thiết kế trên giấy
-
-Đội đã thử nghiệm cụ thể: cố tình để mã nguồn của một khối tìm cách chạm vào kho dữ liệu của khối
-khác — và xác nhận không có bất kỳ đường nào (không thông tin đăng nhập, không kết nối, không thư viện
-dùng chung) cho phép điều đó xảy ra. Đây là một đảm bảo cấu trúc, được kiểm tra lặp lại được, không
-phải một lời hứa.
-
 ## Lợi ích kinh doanh
 
 - **Bốn đội có thể làm việc song song mà không giẫm chân nhau** — mỗi mảng nghiệp vụ là một đơn vị
@@ -49,11 +42,5 @@ phải một lời hứa.
 - **Nền móng vững cho mọi tính năng nghiệp vụ tiếp theo** — mọi công việc sau này (đăng nhập, giỏ
   hàng, đặt hàng...) đều xây trên nền bốn khối này, không phải làm lại từ đầu.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Đây thuần tuý là bước **dựng khung** — bốn khối chỉ mới báo cáo được tình trạng của chính mình,
-  chưa có bất kỳ chức năng nghiệp vụ thật nào (chưa có sản phẩm để xem, chưa có giỏ hàng để thêm...).
-  Các chức năng đó là những bước tiếp theo, xây trên đúng nền móng này.
-- Việc xác định "một người dùng thuộc khách hàng doanh nghiệp nào" (để cách ly dữ liệu giữa các khách
-  hàng doanh nghiệp khác nhau dùng chung nền tảng) chưa nằm trong phạm vi này — đó là công việc của
-  bước tiếp theo trong lộ trình.
+Bằng chứng đã kiểm chứng thật và giới hạn hiện tại của tính năng này: xem
+[functional-debt.md](functional-debt.md).

@@ -40,16 +40,6 @@ diện mua sắm — và **chỉ báo "xong" khi mọi thứ thực sự sẵn s
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/005-one-command-local-run-flow-nghiep-vu.drawio`](../diagrams/005-one-command-local-run-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: đã đo bằng số liệu thật, không phải ước lượng
-
-Đội đã chạy đi chạy lại và đo thời gian thật: lần chạy đầu tiên (khi mọi thứ còn phải tải/dựng từ đầu)
-mất khoảng 85 giây tới khi mọi thành phần sẵn sàng; luồng mua sắm đầu-cuối qua giao diện thật hoàn tất
-trong chưa tới 11 giây. Khi đội cố tình gỡ bỏ một thành phần cần thiết để thử nghiệm, hệ thống báo lỗi
-rõ ràng trong vòng 89 giây, nêu đúng tên thành phần bị thiếu — không có tình trạng "báo thành công rồi
-lỗi âm thầm khi dùng thật". Trong lúc kiểm chứng, đội cũng phát hiện và sửa một vấn đề thật: một tuỳ
-chọn hiển thị thêm thông tin kỹ thuật (dành cho nhà phát triển) ban đầu không hoạt động đúng, đã được
-sửa và xác nhận lại trước khi coi là xong.
-
 ## Lợi ích kinh doanh
 
 - **Người mới tham gia dự án lên môi trường làm việc nhanh hơn nhiều** — không còn phải tự mò mẫm chín
@@ -59,16 +49,6 @@ sửa và xác nhận lại trước khi coi là xong.
 - **Ít rủi ro "chạy trên máy tôi thì được" hơn** — mọi người dùng đúng cùng một cách dựng hệ thống,
   được ghi lại đầy đủ, không có bước ẩn nào chỉ một người biết.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Đây là **môi trường thử nghiệm cục bộ trên máy cá nhân**, không phải hạ tầng vận hành chính thức —
-  một số cách sắp xếp (ví dụ dùng chung một máy chủ cơ sở dữ liệu cho mọi mảng nghiệp vụ, để tiết
-  kiệm tài nguyên máy cá nhân) là lựa chọn có chủ đích riêng cho việc chạy thử, khác với cách hệ thống
-  thật sự vận hành khi triển khai chính thức — tài liệu kỹ thuật nêu rõ điều này để không ai nhầm lẫn.
-- **Một khoảng cách quan trọng đã được ghi nhận nhưng chưa đóng lại**: việc tách biệt dữ liệu theo
-  từng khách hàng doanh nghiệp ở tầng lưu trữ (đã đặc tả từ trước) trên thực tế vẫn chưa được triển
-  khai đầy đủ — tính năng này không làm khoảng cách đó tệ hơn, nhưng cũng chưa đóng lại nó. Đây là
-  quyết định đang chờ người phụ trách kỹ thuật xác nhận, không phải bị bỏ sót trong im lặng.
-- Hai thành phần hạ tầng (bộ nhớ đệm và hàng đợi tin nhắn) được khởi động sẵn theo đúng thiết kế nền
-  tảng, nhưng **hiện chưa có chức năng nào thực sự sử dụng chúng** — chúng chỉ chứng minh "có mặt và
-  khoẻ mạnh", chưa chứng minh "đang hoạt động trong một luồng nghiệp vụ thật".
+Bằng chứng đã kiểm chứng thật (số liệu đo thời gian thật) và giới hạn hiện tại (gồm khoảng cách
+multi-tenant chưa đóng, bộ nhớ đệm/hàng đợi tin nhắn chưa dùng): xem
+[functional-debt.md](functional-debt.md).

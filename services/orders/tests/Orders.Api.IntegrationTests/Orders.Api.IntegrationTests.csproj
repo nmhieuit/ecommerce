@@ -14,6 +14,9 @@
     <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+    <!-- 024-verify-transactional-outbox: OrderPlacedVerificationConsumer implements
+         IConsumer<OrderPlacedV1>, registered via WithWebHostBuilder (test-only, not production). -->
+    <PackageReference Include="MassTransit" />
   </ItemGroup>
 
   <ItemGroup>

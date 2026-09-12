@@ -5,7 +5,7 @@ tên bất kỳ công cụ kỹ thuật nào.*
 
 *Trạng thái: đã hoàn thành — 38/38 công việc đã lên kế hoạch đều xong, đã kiểm chứng bằng các phép
 thử tự động chạy thật trên từng bộ phận của hệ thống. Có một giới hạn cần biết về môi trường máy phát
-triển lúc kiểm chứng cuối — xem mục "Giới hạn hiện tại" bên dưới, được nêu trung thực, không che giấu.*
+triển lúc kiểm chứng cuối, nêu trung thực ở [functional-debt.md](functional-debt.md), không che giấu.*
 
 ## Vấn đề trước đây
 
@@ -58,17 +58,6 @@ Giờ đây:
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/015-deny-by-default-authz-flow-nghiep-vu.drawio`](../diagrams/015-deny-by-default-authz-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: đã kiểm chứng thật, không chỉ thiết kế trên giấy
-
-- **Thợ xây "quên dán biển" thật sự bị chặn.** Đội đã thử nghiệm bằng cách cố tình thêm một cửa thử
-  nghiệm không dán biển, chạy lại "thanh tra công trình tự động", và xác nhận nó bị từ chối ngay, nêu
-  rõ đúng cửa vi phạm — sau đó gỡ cửa thử nghiệm đi, thanh tra lại xác nhận mọi thứ bình thường.
-- **Từ chối "thiếu đúng loại thẻ" hoạt động thật, ở cả 5 bộ phận nghiệp vụ của hệ thống** — không chỉ
-  ở một nơi. Mỗi bộ phận đều được thử với một yêu cầu mang thẻ hợp lệ nhưng thiếu đúng loại cần thiết,
-  và đều từ chối đúng cách.
-- **Quy tắc nghiệp vụ mà giao diện web tự kiểm tra cũng được xác nhận có kiểm tra độc lập ở máy chủ**
-  bằng phép thử gọi thẳng vào hệ thống, bỏ qua hoàn toàn giao diện web.
-
 ## Lợi ích kinh doanh
 
 - **Không còn phụ thuộc vào trí nhớ con người để đảm bảo an toàn** — máy móc tự kiểm tra, tự chặn mọi
@@ -81,18 +70,7 @@ Giờ đây:
   viên khác khách hàng thường), công việc đó xây thẳng lên nền móng "mỗi cửa tự khai báo rõ ràng" này,
   không phải làm lại từ đầu.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- **Một số phép thử cần nhiều bộ phận hệ thống nói chuyện với nhau qua mạng nội bộ (ví dụ cổng vào
-  chính gọi sang bộ phận tổng hợp, rồi gọi tiếp sang bộ phận nghiệp vụ) đã không chạy được trong đúng
-  phiên làm việc cuối cùng** — vì máy chủ container trên máy phát triển vừa được khởi động lại và mạng
-  nội bộ của nó chưa ổn định hoàn toàn ngay sau đó, khiến các cuộc gọi giữa các bộ phận bị chậm bất
-  thường và vượt quá thời gian chờ cho phép. Đây là vấn đề của **môi trường máy phát triển tại đúng
-  thời điểm đó**, không phải lỗi của tính năng: mọi phép thử chạy trực tiếp trên **từng bộ phận riêng
-  lẻ** — nơi tính năng này thực sự thay đổi hành vi — đều đã chạy và đạt kết quả đúng. Chi tiết kỹ
-  thuật đầy đủ dành cho đội kỹ thuật, xem
-  [`docs/architecture/015_Architect_phân quyền từ chối theo mặc định.md`](../architecture/015_Architect_phân%20quyền%20từ%20chối%20theo%20mặc%20định.md).
-- **Phân quyền theo vai trò chi tiết (ví dụ "quản trị viên" khác "khách hàng thường") chưa nằm trong
-  phạm vi tính năng này** — hiện tại mọi người dùng đã đăng nhập thật đều mang cùng một loại "thẻ".
-  Tính năng này chỉ đảm bảo mọi cửa đều bắt buộc phải khai báo rõ ràng, làm nền móng cho việc phân biệt
-  vai trò chi tiết hơn sau này.
+Bằng chứng đã kiểm chứng thật (3 điều, gồm việc thợ xây quên dán biển thật sự bị chặn) và giới hạn
+hiện tại: xem [functional-debt.md](functional-debt.md). Chi tiết kỹ thuật đầy đủ dành cho đội kỹ
+thuật, xem
+[`docs/architecture/015_Architect_phân quyền từ chối theo mặc định.md`](../architecture/015_Architect_phân%20quyền%20từ%20chối%20theo%20mặc%20định.md).

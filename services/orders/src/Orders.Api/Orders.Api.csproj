@@ -7,6 +7,8 @@
          AddIdentityValidation()/UseIdentityValidation() into Program.cs is User Story 2's job
          (tasks.md T038). -->
     <ProjectReference Include="..\..\..\..\shared\Identity\Identity.csproj" />
+    <!-- 024-verify-transactional-outbox: OrderPlacedV1 is the payload the outbox publishes. -->
+    <ProjectReference Include="..\..\..\..\shared\EventContracts\EventContracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +23,11 @@
     <!-- Design-time only: supplies the `dotnet ef migrations` tooling. PrivateAssets="all" keeps
          it out of the published image, which must never carry migration tooling into production. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <!-- Messaging (024-verify-transactional-outbox research.md Decision 2): Bus Outbox for
+         publishing OrderPlacedV1 in the same EF Core transaction as the order write. -->
+    <PackageReference Include="MassTransit" />
+    <PackageReference Include="MassTransit.RabbitMQ" />
+    <PackageReference Include="MassTransit.EntityFrameworkCore" />
   </ItemGroup>
 
   <PropertyGroup>

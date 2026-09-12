@@ -305,10 +305,17 @@ services:
     environment:
       ConnectionStrings__OrdersDb: Server=sqlserver;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      # 024-verify-transactional-outbox: first service to actually connect to the `rabbitmq`
+      # container declared above (guest/guest, same local-dev posture as every other datastore in
+      # this file) — publishes OrderPlacedV1 via the transactional outbox. Full connection string,
+      # same convention as every ConnectionStrings__* above.
+      ConnectionStrings__RabbitMq: amqp://guest:guest@rabbitmq:5672
     depends_on:
       orders-migrate:
         condition: service_completed_successfully
       identity-api:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   parties-api:

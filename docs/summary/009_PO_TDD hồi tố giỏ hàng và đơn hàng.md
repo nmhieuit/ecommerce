@@ -34,15 +34,6 @@ nhất rằng một quy tắc thực sự được bảo vệ, không chỉ "tr�
 
 *(Xem sơ đồ minh hoạ: [`docs/diagrams/009-retrofit-tdd-basket-order-flow-nghiep-vu.drawio`](../diagrams/009-retrofit-tdd-basket-order-flow-nghiep-vu.drawio))*
 
-## Điều đặc biệt: một phát hiện tốt hơn mong đợi
-
-Sau khi rà soát kỹ, đội xác nhận **toàn bộ quy tắc quan trọng đã được xây đúng và đã có bài kiểm tra
-bảo vệ từ trước** — không có lỗ hổng thực sự nào cần vá. Thay vì viết lại mã đã hoạt động đúng (một
-việc chỉ tạo thêm rủi ro mà không mang lại giá trị gì), đội chọn cách làm đúng nguyên tắc "không sửa
-những gì không hỏng": chỉ chứng minh lại bằng thực nghiệm, và bổ sung một ghi chú kỷ luật làm việc rõ
-ràng cho tương lai. Đây là cách xử lý cẩn trọng và tiết kiệm hơn nhiều so với việc viết lại mọi thứ
-"cho chắc".
-
 ## Lợi ích kinh doanh
 
 - **Có bằng chứng thực nghiệm, không phải phỏng đoán**, rằng các quy tắc tính tiền quan trọng nhất
@@ -52,10 +43,4 @@ ràng cho tương lai. Đây là cách xử lý cẩn trọng và tiết kiệm 
 - **Có kỷ luật làm việc rõ ràng cho tương lai**: mọi thay đổi sau này tới các quy tắc quan trọng này
   đều phải qua đúng quy trình kiểm chứng trước khi viết mã.
 
-## Giới hạn hiện tại — trung thực cần biết
-
-- Phạm vi rà soát chỉ dừng ở các quy tắc tính toán nội bộ (không phải kiểm thử toàn bộ đường đi qua
-  hệ thống thật) — mức kiểm thử này là đủ và đúng loại theo yêu cầu ban đầu, không phải một sự thu
-  hẹp phạm vi.
-- Không có thay đổi hành vi nào cho người dùng cuối trong tính năng này — đây thuần tuý là một bước
-  củng cố chất lượng nội bộ, không phải một tính năng mới người dùng nhìn thấy được.
+Điều bất ngờ phát hiện được và giới hạn hiện tại: xem [functional-debt.md](functional-debt.md).

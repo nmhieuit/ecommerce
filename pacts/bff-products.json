@@ -4,6 +4,108 @@
   },
   "interactions": [
     {
+      "description": "a request for a page of the catalog",
+      "providerStates": [
+        {
+          "name": "the catalog contains at least one product"
+        }
+      ],
+      "request": {
+        "headers": {
+          "X-Tenant-Id": "contoso"
+        },
+        "method": "GET",
+        "path": "/products",
+        "query": {
+          "page": [
+            "1"
+          ],
+          "pageSize": [
+            "20"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "items": [
+            {
+              "id": "9f8d6b1e-0001-4000-8000-000000000001",
+              "name": "Field Notes Notebook",
+              "price": 12.5
+            }
+          ],
+          "page": 1,
+          "pageSize": 20,
+          "totalCount": 1
+        },
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8"
+        },
+        "matchingRules": {
+          "body": {
+            "$.items": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type",
+                  "min": 1
+                }
+              ]
+            },
+            "$.items[*].id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.items[*].name": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.items[*].price": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "number"
+                }
+              ]
+            },
+            "$.page": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.pageSize": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.totalCount": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          }
+        },
+        "status": 200
+      }
+    },
+    {
       "description": "a request for the catalog",
       "providerStates": [
         {
