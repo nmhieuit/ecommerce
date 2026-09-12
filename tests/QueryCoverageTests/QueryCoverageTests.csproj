@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- References no service project on purpose, matching tests/ResilienceCoverageTests. This suite
+       audits which collection endpoints declare pagination/cap markers and which relational-query
+       call sites declare a bounded-lookup marker by reading source files as text — compiling
+       against the projects it polices would turn a missing marker into a compiler error instead of
+       the named, readable violation contracts/query-coverage-inventory-contract.md asks for. -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

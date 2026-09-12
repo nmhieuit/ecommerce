@@ -1,0 +1,83 @@
+# BFF contract surface — delta for this feature
+#
+# Supplements specs/002-gateway-bff-routing/contracts/bff-openapi.yaml. Only /bff/products changes
+# in this feature (query params forwarded, ProductListResponse gains 3 additive fields). Basket,
+# order, and party routes are untouched at the contract level — the fix to BasketsEndpoints.cs
+# (research.md Decision 4) changes HOW the BFF fetches product data internally, not the
+# BasketResponse/BasketItem shape the client sees.
+
+openapi: 3.0.3
+info:
+  title: Commerce BFF — pagination delta
+  version: "0.2.0"
+  description: >
+    data-model.md — "Product List Response". Per-spec FR-007: additive only, Items unchanged, so
+    an SPA that has not yet been updated to read Page/PageSize/TotalCount keeps working unmodified.
+
+paths:
+  /bff/products:
+    get:
+      operationId: listProducts
+      summary: >
+        Proxies the products service's paginated listing (spec FR-001, FR-004; research.md
+        Decisions 2-3). Forwards page/pageSize to the downstream call unchanged.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          description: Forwarded as-is; the products service applies the actual clamp (single source of truth for the cap).
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+      responses:
+        "200":
+          description: Product listing, shaped for client consumption.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+        "502":
+          $ref: "specs/002-gateway-bff-routing/contracts/bff-openapi.yaml#/components/responses/DownstreamUnavailable"
+        "504":
+          $ref: "specs/002-gateway-bff-routing/contracts/bff-openapi.yaml#/components/responses/DownstreamTimeout"
+
+components:
+  schemas:
+    ProductListResponse:
+      type: object
+      description: >
+        Extends specs/002-gateway-bff-routing/contracts/bff-openapi.yaml's ProductListResponse.
+        `items` is unchanged; page/pageSize/totalCount are new, additive fields (spec FR-007).
+      required: [items, page, pageSize, totalCount]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductSummary"
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalCount:
+          type: integer
+
+    ProductSummary:
+      type: object
+      description: Unchanged from specs/002-gateway-bff-routing/contracts/bff-openapi.yaml.
+      required: [id, name, price]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+          format: decimal

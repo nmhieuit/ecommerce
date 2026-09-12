@@ -40,8 +40,9 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var products = await response.Content.ReadFromJsonAsync<ProductResponse[]>();
-        Assert.NotNull(products);
+        var page = await response.Content.ReadFromJsonAsync<PagedProductsResponse>();
+        Assert.NotNull(page);
+        var products = page.Items;
 
         foreach (var expected in CatalogSeed.Products)
         {
@@ -61,11 +62,11 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
         await using var factory = await CreateMigratedFactoryAsync("products-seed-minimum");
         var client = CreateTenantClient(factory);
 
-        var products = await client.GetFromJsonAsync<ProductResponse[]>("/products");
+        var page = await client.GetFromJsonAsync<PagedProductsResponse>("/products");
 
-        Assert.NotNull(products);
-        Assert.NotEmpty(products);
-        Assert.All(products, product =>
+        Assert.NotNull(page);
+        Assert.NotEmpty(page.Items);
+        Assert.All(page.Items, product =>
         {
             Assert.False(string.IsNullOrWhiteSpace(product.Name));
             Assert.True(product.Price > 0m, "A seeded product must have a real price to be purchasable.");
@@ -83,12 +84,12 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
         await using var first = await CreateMigratedFactoryAsync("products-seed-stable-one");
         await using var second = await CreateMigratedFactoryAsync("products-seed-stable-two");
 
-        var fromFirst = await CreateTenantClient(first).GetFromJsonAsync<ProductResponse[]>("/products");
-        var fromSecond = await CreateTenantClient(second).GetFromJsonAsync<ProductResponse[]>("/products");
+        var fromFirst = await CreateTenantClient(first).GetFromJsonAsync<PagedProductsResponse>("/products");
+        var fromSecond = await CreateTenantClient(second).GetFromJsonAsync<PagedProductsResponse>("/products");
 
         Assert.Equal(
-            fromFirst!.Select(product => product.Id).OrderBy(id => id),
-            fromSecond!.Select(product => product.Id).OrderBy(id => id));
+            fromFirst!.Items.Select(product => product.Id).OrderBy(id => id),
+            fromSecond!.Items.Select(product => product.Id).OrderBy(id => id));
     }
 
     /// <summary>
@@ -132,4 +133,7 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
     }
 
     private sealed record ProductResponse(Guid Id, string Name, decimal Price);
+
+    private sealed record PagedProductsResponse(
+        IReadOnlyList<ProductResponse> Items, int Page, int PageSize, int TotalCount);
 }

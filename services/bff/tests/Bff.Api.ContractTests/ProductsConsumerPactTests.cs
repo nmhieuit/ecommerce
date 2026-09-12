@@ -25,35 +25,44 @@ public class ProductsConsumerPactTests
         var pact = BffPact.For(Provider);
 
         pact
-            .UponReceiving("a request for the catalog")
+            .UponReceiving("a request for a page of the catalog")
                 .Given("the catalog contains at least one product")
                 .WithRequest(HttpMethod.Get, "/products")
+                .WithQuery("page", "1")
+                .WithQuery("pageSize", "20")
                 .WithHeader("X-Tenant-Id", BffPact.TenantId)
             .WillRespond()
                 .WithStatus(HttpStatusCode.OK)
                 .WithHeader("Content-Type", "application/json; charset=utf-8")
-                // MinType(_, 1) rather than a fixed array: the BFF reads however many products
-                // there are, so pinning the count would make an unrelated catalog change a
-                // contract break.
-                .WithJsonBody(Match.MinType(
-                    new
-                    {
-                        id = Match.Type("9f8d6b1e-0001-4000-8000-000000000001"),
-                        name = Match.Type("Field Notes Notebook"),
-                        price = Match.Number(12.50m),
-                    },
-                    1));
+                // items uses MinType(_, 1) rather than a fixed array: the BFF reads however many
+                // products the page contains, so pinning the count would make an unrelated catalog
+                // change a contract break. page/pageSize/totalCount are the additive pagination
+                // envelope (specs/023-audit-n1-unbounded-pagination FR-007 — Items unchanged).
+                .WithJsonBody(new
+                {
+                    items = Match.MinType(
+                        new
+                        {
+                            id = Match.Type("9f8d6b1e-0001-4000-8000-000000000001"),
+                            name = Match.Type("Field Notes Notebook"),
+                            price = Match.Number(12.50m),
+                        },
+                        1),
+                    page = Match.Type(1),
+                    pageSize = Match.Type(20),
+                    totalCount = Match.Type(1),
+                });
 
         await pact.VerifyAsync(async context =>
         {
             using var httpClient = BffPact.CreateRelayingClient(context.MockServerUri);
             var client = new ProductsApiClient(httpClient);
 
-            var products = await client.GetProductsAsync(CancellationToken.None);
+            var page = await client.GetProductsAsync(1, 20, CancellationToken.None);
 
             // Asserting on the deserialised resource, not on raw JSON: it is what proves the shape
             // recorded above is one ProductResource can actually be built from.
-            var product = Assert.Single(products);
+            var product = Assert.Single(page.Items);
             Assert.NotEqual(Guid.Empty, product.Id);
             Assert.False(string.IsNullOrWhiteSpace(product.Name));
             Assert.Equal(12.50m, product.Price);
