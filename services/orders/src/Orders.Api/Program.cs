@@ -4,11 +4,17 @@ using Microsoft.EntityFrameworkCore;
 using Orders.Api.Data;
 using Orders.Api.Features.Orders;
 using Orders.Api.Features.HealthCheck;
+using Orders.Api.Features.Chaos;
 using ServiceDefaults;
 using Tenancy;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
+
+// 025-chaos-pod-kill-latency: off by default (see appsettings.json "//Chaos"); registered here so
+// it is available to ChaosLatencyInjectionMiddleware regardless of which environment binds it true.
+builder.Services.Configure<ChaosOptions>(builder.Configuration.GetSection(ChaosOptions.SectionName));
+builder.Services.AddSingleton<IChaosDelay, SystemChaosDelay>();
 
 // specs/018-cluster-secret-store FR-007: fail fast at startup if the cluster never injected this
 // service's database credential, instead of starting and only discovering it on the first request.
@@ -88,6 +94,11 @@ builder.Services.AddMassTransit(x =>
 
 var app = builder.Build();
 app.UseServiceDefaults();
+
+// 025-chaos-pod-kill-latency: before auth, so an injected delay reflects the same infrastructure
+// latency a slow dependency would impose on a caller (BFF) regardless of whether the request would
+// go on to pass authentication — see data-model.md mục 1, Bất biến 5.
+app.UseMiddleware<ChaosLatencyInjectionMiddleware>();
 
 // Authenticate/authorize before tenant resolution — an unauthenticated request is rejected before
 // spending any effort resolving a tenant or touching persistence.

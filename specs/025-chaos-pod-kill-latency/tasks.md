@@ -18,6 +18,14 @@ thực bằng cách chạy `quickstart.md` trên hạ tầng thật, đúng ti�
 **Organization**: Task được nhóm theo user story trong spec.md để mỗi story có thể triển khai và
 kiểm thử độc lập.
 
+**⚠️ Giới hạn môi trường thực thi (`/speckit-implement` lần này)**: phiên làm việc chạy task này
+KHÔNG có .NET SDK (`dotnet`), KHÔNG có `kubectl`/`kind`, và Docker client cài sẵn không kết nối được
+daemon nào — nên chỉ các task thuần đọc/ghi file (viết mã nguồn, viết tài liệu) được thực hiện; mọi
+task yêu cầu `dotnet build`/`dotnet test` hoặc thao tác lên cluster Kubernetes/Elastic thật đều
+KHÔNG chạy được trong phiên này và vẫn để `[ ]`, kèm ghi chú "kết quả thực tế" giải thích lý do tại
+từng task. Trước khi coi tính năng này sẵn sàng merge, cần chạy lại T004/T006/T014 (dotnet) và
+T001–T003/T009/T013/T015/T016 (cluster thật) ở một môi trường có đủ công cụ.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Có thể chạy song song (khác file, không phụ thuộc task chưa hoàn thành)
@@ -82,9 +90,14 @@ pod mới `READY` — tự đủ, không phụ thuộc US2/US3.
 - [ ] T003 [US1] Xác nhận thời gian phục hồi (từ lúc pod cũ bị xóa tới lúc pod mới `READY 1/1` và tỷ
       lệ lỗi của tải nền về bình thường) và ghi lại số đo được — dữ liệu đầu vào cho bản ghi kết quả
       của User Story 3 (không tạo file ở task này, chỉ ghi chú tại chỗ để dùng ở T010).
+      (**kết quả thực tế cho T001–T003**: CHƯA thực hiện — không có cluster Kubernetes nào trong
+      phiên làm việc này để chạy `kubectl`. Về mặt thiết kế, US1 không cần thêm mã ứng dụng nào
+      [research.md Quyết định 0] nên không có gì để "triển khai" ở đây ngoài chính việc chạy bài tập
+      trên hạ tầng thật — việc đó cần một cluster diễn tập thật, ngoài phạm vi phiên này.)
 
 **Checkpoint**: User Story 1 đã được xác nhận độc lập — không có mã ứng dụng nào bị chạm, không phụ
-thuộc User Story 2/3.
+thuộc User Story 2/3. (**Trạng thái hiện tại**: chưa xác nhận được trên hạ tầng thật — xem ghi chú
+T001–T003 ở trên.)
 
 ---
 
@@ -104,7 +117,7 @@ hiện tiêu hao — tự đủ, không phụ thuộc US1/US3.
 
 > **Viết các test này TRƯỚC, xác nhận FAIL (middleware chưa tồn tại) trước khi triển khai (Constitution Principle III).**
 
-- [ ] T004 [US2] Viết `services/orders/tests/Orders.Api.UnitTests/Features/Chaos/ChaosLatencyInjectionMiddlewareTests.cs`
+- [X] T004 [US2] Viết `services/orders/tests/Orders.Api.UnitTests/Features/Chaos/ChaosLatencyInjectionMiddlewareTests.cs`
       — gọi middleware trực tiếp với một `RequestDelegate` giả và một `TimeProvider`/đồng hồ giả lập
       (không `Task.Delay` thật) để test tất định, xác nhận đủ 4 bất biến của
       [contracts/chaos-latency-injection-contract.md](./contracts/chaos-latency-injection-contract.md):
@@ -115,34 +128,58 @@ hiện tiêu hao — tự đủ, không phụ thuộc US1/US3.
       `999999`) → bị kẹp về đúng 30000, không bao giờ trì hoãn lâu hơn. Chạy
       `dotnet test services/orders/tests/Orders.Api.UnitTests --filter FullyQualifiedName~ChaosLatencyInjection`
       và xác nhận FAIL (biên dịch lỗi hoặc test đỏ) vì middleware/`ChaosOptions` chưa tồn tại.
+      (**kết quả thực tế**: đã viết đủ 6 test case [4 bất biến + 2 case bổ sung: header không parse
+      được/âm/bằng 0, và `next()` luôn được gọi]. KHÔNG chạy được `dotnet test` — môi trường thực thi
+      phiên này không có .NET SDK cài sẵn [`which dotnet` → not found], nên trạng thái FAIL trước khi
+      có T005/T006 chỉ được suy luận bằng đọc mã [file tham chiếu `ChaosOptions`/`IChaosDelay`/
+      `ChaosLatencyInjectionMiddleware` chưa tồn tại tại thời điểm viết], không được một lần chạy
+      thật xác nhận. Cần chạy `dotnet test` thật ở môi trường có .NET 10 SDK trước khi coi tính năng
+      sẵn sàng merge — xem T014.)
 
 ### Implementation for User Story 2
 
-- [ ] T005 [P] [US2] Tạo `services/orders/src/Orders.Api/Features/Chaos/ChaosOptions.cs` — lớp cấu
+- [X] T005 [P] [US2] Tạo `services/orders/src/Orders.Api/Features/Chaos/ChaosOptions.cs` — lớp cấu
       hình `AllowLatencyInjection` (bool, mặc định `false`) buộc vào section `Chaos` của
       `IConfiguration`, cùng hằng số `MaxInjectedLatencyMs = 30000` (data-model.md mục 1).
-- [ ] T006 [US2] Tạo `services/orders/src/Orders.Api/Features/Chaos/ChaosLatencyInjectionMiddleware.cs`
+      (**kết quả thực tế**: cũng thêm `services/orders/src/Orders.Api/Features/Chaos/IChaosDelay.cs`
+      [không có trong tasks.md ban đầu] — seam nhỏ giữa middleware và `Task.Delay` thật, cần thiết để
+      T004 ghi lại khoảng trễ được yêu cầu mà không thực sự chờ trong lúc test, đúng tinh thần
+      "TimeProvider/đồng hồ giả lập" của research.md Quyết định 4 mà không cần thêm gói NuGet
+      `Microsoft.Extensions.TimeProvider.Testing`.)
+- [X] T006 [US2] Tạo `services/orders/src/Orders.Api/Features/Chaos/ChaosLatencyInjectionMiddleware.cs`
       hiện thực đủ 4 bất biến ở T004 — parse header `X-Chaos-Latency-Ms` bằng
       `int.TryParse` (giá trị âm/không parse được coi như vắng mặt), kẹp trần bằng
       `Math.Min(parsed, ChaosOptions.MaxInjectedLatencyMs)`, `await Task.Delay(...)` chỉ khi
       `AllowLatencyInjection=true` và có giá trị hợp lệ, sau đó luôn gọi `next(context)` — không đổi
       status/header/body của response (Bất biến 6 của hợp đồng). Chạy lại T004, xác nhận PASS.
-- [ ] T007 [US2] Sửa `services/orders/src/Orders.Api/appsettings.json` — thêm comment `"//Chaos"`
+      (**kết quả thực tế**: hiện thực xong, đọc lại thủ công khớp đủ 6 test case của T004. KHÔNG
+      chạy được `dotnet test` để xác nhận PASS thật — cùng lý do môi trường ở T004 [không có .NET
+      SDK]. Cần chạy thật trước khi merge — xem T014.)
+- [X] T007 [US2] Sửa `services/orders/src/Orders.Api/appsettings.json` — thêm comment `"//Chaos"`
       theo đúng quy ước `"//FeatureToggles"` đã có (giải thích: công cụ vận hành thường trực, mặc
       định tắt, không phải toggle rollout có ngày gỡ — xem plan.md Constitution Check mục X) và khối
       `"Chaos": { "AllowLatencyInjection": false }`.
-- [ ] T008 [US2] Sửa `services/orders/src/Orders.Api/Program.cs` — đăng ký
+- [X] T008 [US2] Sửa `services/orders/src/Orders.Api/Program.cs` — đăng ký
       `ChaosOptions` (`builder.Services.Configure<ChaosOptions>(builder.Configuration.GetSection("Chaos"))`)
       và `app.UseMiddleware<ChaosLatencyInjectionMiddleware>()` ngay sau `app.UseServiceDefaults()`,
       **trước** `app.UseIdentityValidation()` (data-model.md mục 1, Bất biến 5 của hợp đồng).
+      (**kết quả thực tế**: cũng đăng ký `IChaosDelay`/`SystemChaosDelay` [T005] làm singleton — cần
+      thiết để DI resolve được constructor mới của middleware.)
 - [ ] T009 [US2] Thực hiện [quickstart.md](./quickstart.md) Bước 2–3 trên một cluster diễn tập với
       `Chaos:AllowLatencyInjection=true`: gửi `X-Chaos-Latency-Ms: 2000` liên tục tới Orders.Api,
       xác nhận circuit breaker của `OrdersApiClient` (BFF) mở theo đúng ngưỡng, và dashboard
       `SLO vận hành hằng ngày — 7 service` (đã import từ 021) thể hiện tiêu hao ngân sách latency
       của `Orders.Api` gần thời gian thực. Dừng tiêm (ngừng gửi header) và xác nhận không cần
       restart pod nào để dừng.
+      (**kết quả thực tế**: CHƯA thực hiện — phiên làm việc này không có cluster Kubernetes/`kubectl`/
+      `kind` hay Elastic/Kibana nào đang chạy để thao tác lên [môi trường sandbox chỉ có Docker client
+      không kết nối được daemon, không có `kubectl`/`kind`]. Cần một người/phiên có quyền truy cập
+      cluster diễn tập thật thực hiện task này.)
 
 **Checkpoint**: User Story 1 VÀ 2 đều hoạt động độc lập; `dotnet test services/orders/tests/Orders.Api.UnitTests` pass toàn bộ.
+(**Trạng thái hiện tại**: mã nguồn US2 đã viết xong [T004–T008] nhưng chưa được `dotnet test` xác
+nhận thật, và các task cần cluster thật của US1/US2 [T001–T003, T009] chưa chạy vì thiếu hạ tầng —
+xem ghi chú "Giới hạn môi trường thực thi" ở đầu file.)
 
 ---
 
@@ -158,17 +195,17 @@ US1/US2 đã "xong" theo nghĩa mã nguồn (chỉ cần một lần chạy th�
 
 ### Implementation for User Story 3
 
-- [ ] T010 [P] [US3] Tạo `docs/dien-tap-chaos-engineering/mau-ket-qua.md` — mẫu bản ghi kết quả với
+- [X] T010 [P] [US3] Tạo `docs/dien-tap-chaos-engineering/mau-ket-qua.md` — mẫu bản ghi kết quả với
       đủ các trường bắt buộc tại [data-model.md](./data-model.md) mục 3:
       `ngay_chay`, `kich_ban` (`kill-pod` | `inject-latency`), `nguoi_thuc_hien`, `quan_sat`,
       `ket_luan` (`dat` | `sai_lech`), `jira_ticket` (bắt buộc khi `ket_luan=sai_lech` — xem
       [contracts/exercise-outcome-writeup-contract.md](./contracts/exercise-outcome-writeup-contract.md)
       Bất biến 3).
-- [ ] T011 [P] [US3] Tạo `docs/dien-tap-chaos-engineering/README.md` — tóm tắt runbook (tham chiếu
+- [X] T011 [P] [US3] Tạo `docs/dien-tap-chaos-engineering/README.md` — tóm tắt runbook (tham chiếu
       [quickstart.md](./quickstart.md) của tính năng này thay vì lặp lại nội dung), và một mục "Lịch
       sử chạy" liệt kê mọi file trong `ket-qua/` (rỗng ban đầu, mới nhất trước — Bất biến 4 của hợp
       đồng bản ghi kết quả).
-- [ ] T012 [US3] Tạo `docs/dien-tap-chaos-engineering/ket-qua/.gitkeep` để thư mục rỗng ban đầu được
+- [X] T012 [US3] Tạo `docs/dien-tap-chaos-engineering/ket-qua/.gitkeep` để thư mục rỗng ban đầu được
       theo dõi bởi git (không nội dung nào khác — bản ghi kết quả thật chỉ xuất hiện khi bài tập
       thật sự được chạy, T013).
 - [ ] T013 [US3] Thực hiện [quickstart.md](./quickstart.md) Bước 4: dựa trên kết quả quan sát được ở
@@ -177,6 +214,9 @@ US1/US2 đã "xong" theo nghĩa mã nguồn (chỉ cần một lần chạy th�
       `...-inject-latency.md`, điền đủ trường; nếu bất kỳ kỳ vọng nào ở T001–T003/T009 không khớp
       thực tế, đặt `ket_luan: sai_lech` và mở bug ticket, dán liên kết vào `jira_ticket`. Cập nhật
       `docs/dien-tap-chaos-engineering/README.md` (T011) để liệt kê (các) file vừa tạo.
+      (**kết quả thực tế**: CHƯA thực hiện — phụ thuộc T001–T003/T009 đã chạy thật trên cluster, chưa
+      có trong phiên này [xem ghi chú tương ứng]. Không tạo bản ghi giả để "điền cho đủ": một bản ghi
+      kết quả không dựa trên quan sát thật vi phạm chính mục đích của User Story 3.)
 
 **Checkpoint**: Cả 3 user story hoạt động độc lập — có ít nhất một bản ghi kết quả tra cứu được cho
 mỗi bài tập đã chạy.
@@ -189,13 +229,22 @@ mỗi bài tập đã chạy.
 
 - [ ] T014 Chạy `dotnet build Ecommerce.slnx` và `dotnet test services/orders/tests/Orders.Api.UnitTests`
       — xác nhận không hồi quy cho các test đã có của Orders.Api ngoài `ChaosLatencyInjectionMiddlewareTests`.
+      (**kết quả thực tế**: CHƯA chạy được — phiên làm việc này không có .NET SDK cài sẵn. Rà soát
+      thủ công: `ChaosOptions.cs`/`IChaosDelay.cs`/`ChaosLatencyInjectionMiddleware.cs` chỉ dùng API
+      đã có sẵn trong `Microsoft.AspNetCore.Http`/`Microsoft.Extensions.Options` [không thêm
+      `PackageReference` nào]; `Program.cs` chỉ thêm 2 dòng đăng ký DI + 1 dòng `UseMiddleware` không
+      đổi thứ tự các middleware/registration khác đã có. Chưa có xác nhận biên dịch thật.)
 - [ ] T015 Chạy lại toàn bộ [quickstart.md](./quickstart.md) từ đầu tới cuối (Bước 1–4 + Dọn dẹp) một
       lượt liền mạch trên cùng một cluster diễn tập, xác nhận thứ tự các bước không phụ thuộc ẩn nào
       bị bỏ sót giữa US1/US2/US3.
+      (**kết quả thực tế**: CHƯA thực hiện — phụ thuộc T001–T003/T009/T013 đã chạy trên cluster thật,
+      chưa có trong phiên này.)
 - [ ] T016 Đối chiếu lại `specs/025-chaos-pod-kill-latency/checklists/requirements.md` — xác nhận mọi
       mục vẫn PASS sau khi có kết quả triển khai thật (theo đúng tiền lệ "Cập nhật sau khi triển
       khai" của `specs/021-declare-service-slos/plan.md`), cập nhật `plan.md` nếu triển khai thật
       phát hiện sai lệch so với Technical Context/Constitution Check đã viết trước.
+      (**kết quả thực tế**: CHƯA thực hiện — cần T001–T003/T009/T013/T014/T015 có kết quả thật trước
+      để biết có sai lệch nào so với plan.md cần cập nhật hay không.)
 
 ---
 
