@@ -1,0 +1,74 @@
+<mxfile host="65bd71144e">
+    <diagram id="audit-n1-unbounded-pagination-component" name="Kiến trúc thành phần — phân trang bắt buộc + chặn over-fetch xuyên service">
+        <mxGraphModel dx="1232" dy="460" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="760" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Rà soát N+1 / truy vấn không giới hạn / thiếu phân trang — thành phần đã sửa" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1000" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="spa" value="SPA / Storefront" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="80" width="180" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff" value="Bff.Api&#xa;ProductsEndpoints / BasketsEndpoints" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="280" y="80" width="260" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="products" value="Products.Api — CatalogEndpoints&#xa;DefaultPageSize=20, MaxPageSize=100&#xa;filter ids= chặn thẳng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="620" y="60" width="300" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="baskets" value="Baskets.Api&#xa;.Include(LineItems) — eager load đúng cách&#xa;khoá thành regression test qua QueryCountInterceptor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="620" y="160" width="300" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="scanner" value="tests/QueryCoverageTests&#xa;ExpectedListEndpoints / ExpectedBoundedQuerySites&#xa;(đúng khuôn mẫu ResilienceCoverageTests)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="280" y="280" width="300" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="notlist" value="Orders.Api /  Parties.Api&#xa;GET /{id} — KHÔNG có endpoint danh sách nào&#xa;xác nhận lại bằng grep (T025)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="80" width="300" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="interceptor" value="shared/IntegrationTestSupport&#xa;QueryCountInterceptor (DbCommandInterceptor)&#xa;chỉ đăng ký trong test host" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1000" y="180" width="300" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="GET /bff/products?page&amp;pageSize" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="spa" target="bff" edge="1">
+                    <mxGeometry x="0.0133" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="245" y="105"/>
+                            <mxPoint x="245" y="110"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e2" value="forward page/pageSize" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="bff" target="products" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="render basket → GetProductsByIdsAsync(ids)&#xa;1 lời gọi, bất kể basket bao nhiêu dòng" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;fontColor=#82b366;fontStyle=1;" parent="1" source="baskets" target="products" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="bff" target="baskets" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="410" y="200"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e5" value="quét mã nguồn tĩnh, xác nhận marker" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="scanner" target="products" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1330" y="330"/>
+                            <mxPoint x="1330" y="30"/>
+                            <mxPoint x="770" y="30"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="scanner" target="baskets" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" value="đếm ReaderExecuting" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="interceptor" target="baskets" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Khoảng hở nặng nhất KHÔNG phải N+1 kiểu EF Core cổ điển — mà là BFF tải toàn bộ catalog qua HTTP&#xa;mỗi lần render basket, chỉ để join tên sản phẩm (đã sửa bằng filter ids=)." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="280" y="400" width="700" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

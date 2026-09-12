@@ -1,0 +1,26 @@
+{
+  "title": "Xác minh outbox pattern giao dịch trên dịch vụ phát sự kiện đơn hàng",
+  "items": {
+    "FR-001": "Order publisher PHẢI ghi bản ghi đơn hàng và bản ghi outbox chứa sự kiện OrderPlaced tương ứng trong cùng một giao dịch cơ sở dữ liệu duy nhất — hai thao tác ghi này PHẢI cùng thành công hoặc cùng thất bại, không được phép chỉ một trong hai xảy ra.",
+    "FR-002": "Khi giao dịch tạo đơn hàng bị rollback vì bất kỳ lý do gì, hệ thống PHẢI đảm bảo không có bản ghi outbox nào (và do đó không có sự kiện OrderPlaced nào) được tạo ra cho yêu cầu đó.",
+    "FR-003": "Outbox relay PHẢI quét và phát các bản ghi outbox chưa gửi ra message broker một cách tự động, liên tục, kể cả sau khi dịch vụ order publisher khởi động lại từ một lần dừng đột ngột.",
+    "FR-004": "Cơ chế phát sự kiện của outbox relay PHẢI đảm bảo mỗi sự kiện đã cam kết (committed) trong outbox cuối cùng được gửi ra ít nhất một lần (at-least-once) — không được phép có sự kiện bị mất vĩnh viễn dù xảy ra sự cố tiến trình hay hạ tầng.",
+    "FR-005": "Consumer của sự kiện OrderPlaced PHẢI xử lý theo cơ chế idempotent — khi nhận được cùng một sự kiện (nhận diện qua định danh duy nhất của sự kiện) nhiều hơn một lần, các lần xử lý sau lần đầu tiên KHÔNG được tạo thêm bất kỳ tác dụng phụ nào ngoài lần xử lý đầu.",
+    "FR-006": "Phải có khả năng thiết lập và chạy được các kịch bản kiểm thử xác minh ba khía cạnh trên (tính nguyên tử của việc ghi, khả năng không mất sự kiện khi crash, tính idempotent của consumer) một cách tự động và lặp lại được.",
+    "FR-007": "Việc bổ sung khả năng xác minh và các đảm bảo trên KHÔNG được thay đổi hành vi phản hồi nghiệp vụ hiện có của việc tạo đơn hàng đối với người dùng cuối.",
+    "US1-KB1": "Với điều kiện một yêu cầu tạo đơn hàng hợp lệ, Khi giao dịch tạo đơn hàng được commit thành công, Thì bản ghi đơn hàng và bản ghi outbox chứa sự kiện OrderPlaced tương ứng cùng được ghi nhận trong cùng một giao dịch cơ sở dữ liệu đó.",
+    "US1-KB2": "Với điều kiện giao dịch tạo đơn hàng bị rollback vì bất kỳ lý do gì, Khi tôi kiểm tra lại cơ sở dữ liệu sau đó, Thì không có bản ghi đơn hàng nào và cũng không có bản ghi outbox nào được tạo ra cho yêu cầu đó.",
+    "US1-KB3": "Với điều kiện nhiều yêu cầu tạo đơn hàng được gửi đồng thời, Khi tôi rà soát toàn bộ các đơn hàng đã ghi nhận thành công, Thì mỗi đơn hàng đều có đúng một bản ghi outbox tương ứng, không có đơn hàng nào thiếu hoặc có nhiều hơn một bản ghi outbox trùng lặp.",
+    "US2-KB1": "Với điều kiện một đơn hàng đã được tạo và giao dịch đã commit thành công nhưng tiến trình dịch vụ dừng đột ngột trước khi outbox relay gửi message tương ứng, Khi dịch vụ khởi động lại, Thì outbox relay tự động phát hiện bản ghi outbox chưa gửi và gửi sự kiện OrderPlaced đó ra message broker mà không cần can thiệp thủ công.",
+    "US2-KB2": "Với điều kiện một sự kiện đã được outbox relay gửi ra thành công, Khi tôi kiểm tra lại trạng thái bản ghi outbox tương ứng, Thì bản ghi đó được đánh dấu là đã gửi, để lần quét tiếp theo của outbox relay không gửi lại sự kiện đó thêm một lần nữa.",
+    "US2-KB3": "Với điều kiện dịch vụ khởi động lại nhiều lần liên tiếp trong lúc vẫn còn bản ghi outbox chưa gửi, Khi outbox relay chạy sau mỗi lần khởi động, Thì sự kiện đó cuối cùng vẫn được gửi thành công đúng một lần theo góc nhìn nghiệp vụ, dù có thể có tối đa một vài lần gửi trùng ở tầng vận chuyển.",
+    "US3-KB1": "Với điều kiện một sự kiện OrderPlaced đã được consumer xử lý thành công một lần, Khi cùng sự kiện đó (cùng định danh) được gửi lại lần thứ hai vào consumer, Thì lần xử lý thứ hai không tạo thêm bất kỳ bản ghi, trạng thái, hay tác dụng phụ nào mới.",
+    "US3-KB2": "Với điều kiện hai bản sao giống hệt nhau của cùng một sự kiện OrderPlaced đến gần như đồng thời, Khi consumer xử lý cả hai, Thì chỉ một trong hai lần xử lý tạo ra tác dụng phụ thực sự, lần còn lại được nhận diện là trùng lặp và bỏ qua an toàn.",
+    "US3-KB3": "Với điều kiện một sự kiện OrderPlaced đến consumer nhưng có nội dung khác về mặt thời điểm phát sinh so với một sự kiện trước đó đã xử lý cho cùng đơn hàng, Khi consumer xử lý sự kiện này, Thì consumer phân biệt được đây là sự kiện mới hợp lệ, không nhầm lẫn giữa \"trùng lặp\" và \"sự kiện hợp lệ tiếp theo cho cùng đơn hàng\".",
+    "SC-001": "100% đơn hàng được tạo thành công đều có đúng một bản ghi outbox tương ứng được ghi trong cùng giao dịch — không có trường hợp đơn hàng tồn tại mà thiếu outbox record hoặc ngược lại.",
+    "SC-002": "Trong kịch bản mô phỏng dừng tiến trình ngay sau khi commit và trước khi gửi message, 100% sự kiện OrderPlaced đã cam kết đều được outbox relay phát ra thành công sau khi hệ thống khởi động lại, không có sự kiện nào bị mất vĩnh viễn qua nhiều lần lặp lại kịch bản.",
+    "SC-003": "Khi phát lại thủ công cùng một sự kiện OrderPlaced hai lần vào consumer, 0% trường hợp phát sinh thêm tác dụng phụ trùng lặp ở lần xử lý thứ hai.",
+    "SC-004": "Khi giao dịch tạo đơn hàng bị rollback, 100% các lần thử đều không ghi nhận bất kỳ sự kiện OrderPlaced nào được phát ra cho đơn hàng đó.",
+    "SC-005": "Toàn bộ các kịch bản kiểm thử xác minh nêu trên (ghi nguyên tử, phục hồi sau crash, idempotency, rollback) có thể chạy tự động trong pipeline kiểm thử liên tục, cho ra kết quả xác định ở mỗi lần chạy, không cần can thiệp thủ công."
+  }
+}

@@ -1,4 +1,4 @@
-# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-021
+# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-024
 
 *Đối tượng đọc: kỹ sư phần mềm / software architect. File này gom lại mọi "lưu ý hay khám phá" (blocker
 giữa chừng, bug thật tìm được khi triển khai/xác thực, giới hạn phạm vi đã biết, amendment đính chính)
@@ -171,6 +171,25 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   ≠ 0% lỗi": truy vấn khoảng thời gian trước khi môi trường demo tồn tại → `hits.total.value=0`, khác
   hẳn "có traffic nhưng 0 lỗi" — đúng cơ chế Lens Table (0 tài liệu → dòng biến mất, không hiển thị `0%`
   gây hiểu lầm).
+- **[023](023_Architect_rà%20soát%20N%2B1%20query%20truy%20vấn%20không%20giới%20hạn%20và%20thiếu%20phân%20trang.md)** —
+  T010 phát hiện `DbCommandInterceptor`/`CommandEventData` nằm ở gói `Microsoft.EntityFrameworkCore.Relational`,
+  không phải gói lõi `Microsoft.EntityFrameworkCore` như dự kiến ban đầu — lỗi biên dịch CS0246 lộ ra
+  ngay lập tức, thêm đúng 1 `PackageReference` là đủ. T023 (quickstart) có 1 lần flake hạ tầng không
+  liên quan: SQL Server container crash do hết đĩa khi nhiều container Testcontainers chạy nối tiếp
+  trong cùng suite `Baskets.Api.IntegrationTests`, khiến 3/28 test khác fail; và `Products.Api.ContractTests`/
+  `Baskets.Api.ContractTests` fail 401 trên mọi route — xác nhận KHÔNG phải hồi quy bằng cách chạy lại
+  trên baseline commit `10ea911` (trước khi tính năng này sửa gì) và thấy lỗi giống hệt.
+- **[024](024_Architect_xác%20minh%20outbox%20pattern%20giao%20dịch%20trên%20dịch%20vụ%20phát%20sự%20kiện%20đơn%20hàng.md)** —
+  Phát hiện thật quan trọng nhất của tính năng này (T001/Quyết định 2): chọn ban đầu `MassTransit 9.2.1`
+  dựa trên xác minh tương thích .NET trên NuGet Gallery, nhưng **bỏ sót hoàn toàn việc kiểm tra giấy
+  phép**. Chạy `orders-api` thật (`dotnet run`, ngoài `WebApplicationFactory`) crash ngay khi khởi động:
+  `MassTransit.ConfigurationException: License must be specified` — MassTransit v9 (bản ổn định đầu
+  tiên) là sản phẩm thương mại có phí; v8.x vẫn OSS/Apache-2.0. Đổi sang `8.5.4`, xoá và tạo lại
+  migration outbox (model entity khác nhau giữa 2 dòng phiên bản). Toàn bộ 29 test tích hợp và việc
+  chạy `orders-api` thật đã xác nhận lại PASS/hoạt động đúng sau khi đổi — hành vi outbox/inbox không
+  đổi giữa 2 dòng, chỉ khác license. **Đáng chú ý về phương pháp luận**: bug này CHỈ lộ ra khi chạy
+  service thật ngoài `WebApplicationFactory` — bộ test tích hợp (chạy cùng tiến trình test) không bao
+  giờ khởi động bus theo đúng cách runtime thật làm, nên không bao giờ bắt được sự cố license này.
 
 ## 3. Giới hạn phạm vi đã biết
 
@@ -200,26 +219,36 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   phạm vi lại, không âm thầm vá trong 1 task "chỉ xác minh". Không có sai lệch nào ghi nhận ở lượt này —
   cả 4 checkpoint PASS. Phạm vi chỉ giới hạn products/baskets/orders — route parties, checkout,
   health-check ngoài phạm vi, theo đúng Assumptions.
-- **Broker/messaging chưa đấu nối, chờ SCRUM-31** —
+- **Broker/messaging — trạng thái đã đổi 1 phần sau 024** —
   [005](005_Architect_chạy%20local%20một%20lệnh.md),
   [006](006_Architect_demo%20đặt%20hàng%20end-to-end.md),
   [008](008_Architect_event%20schema%20có%20version.md),
   [010](010_Architect_hạ%20tầng%20kiểm%20thử%20container%20thật.md),
   [011](011_Architect_kiểm%20thử%20hợp%20đồng%20tiêu%20dùng.md),
   [016](016_Architect_lan%20truyền%20correlation%20ID%20từ%20edge%20đến%20frontend.md),
-  [020](020_Architect_timeout%20retry%20circuit%20breaker%20cho%20cuộc%20gọi%20ra%20ngoài.md) — Chưa có
-  publisher/consumer thật nào cho `OrderPlaced`/`BasketCheckedOut`. 008: event contract giới hạn ở tầng
-  hợp đồng, không đấu nối broker ("No existing service is touched by any task"). 005: Redis/RabbitMQ
-  chạy sẵn theo khai báo phụ thuộc nhưng không service nào kết nối — health check khoẻ chỉ chứng minh
-  "có mặt", không chứng minh "đang dùng trong luồng thật" (ADR-0011: checkout vẫn đồng bộ). 010: fixture
-  Redis/RabbitMQ đứng chờ tính năng tương lai; chịu lỗi broker toàn diện ngoài phạm vi, thuộc SCRUM-31
-  (Amendment 2026-09-10: SCRUM-30/020 chỉ đóng phần HTTP outbound — Gateway→BFF, BFF→4 service, JwtBearer
-  backchannel — 020 tự grep xác nhận lại `AddMassTransit|IPublishEndpoint|IBus` vẫn không tồn tại trong
-  `services/`, broker resilience vẫn chờ SCRUM-31, chưa bắt đầu). 011: event boundary verify không cần
-  broker thật/không cần delivery đầu-cuối — khi SCRUM-31 đấu nối hạ tầng thật, cặp contract test này là
-  điểm khởi đầu, không phải điểm kết thúc. 016: không xây publisher/consumer mới cho correlation ID —
-  payload event mang theo ID, sẵn sàng cho khi publisher thật được nối. 020: call-site #5 (service→
-  broker) xác nhận lại vẫn không tồn tại bằng grep, không đổi bởi tính năng này.
+  [020](020_Architect_timeout%20retry%20circuit%20breaker%20cho%20cuộc%20gọi%20ra%20ngoài.md) — Lúc các
+  spec này viết, chưa có publisher/consumer thật nào cho `OrderPlaced`/`BasketCheckedOut`.
+  **Amendment (2026-09-12, sau [024-verify-transactional-outbox](024_Architect_xác%20minh%20outbox%20pattern%20giao%20dịch%20trên%20dịch%20vụ%20phát%20sự%20kiện%20đơn%20hàng.md)/SCRUM-31)**:
+  `orders` nay đã publish `OrderPlacedV1` thật qua MassTransit + outbox pattern (ghi nguyên tử, sống
+  sót qua crash, consumer idempotent — xem entry 024 ở mục 2). Cập nhật chính xác theo từng claim gốc,
+  không tuyên bố "đã xong" quá mức phạm vi thật của 024:
+  - 005: "Redis/RabbitMQ chạy sẵn nhưng không service nào kết nối" — nay SAI cho RabbitMQ (`orders` đã
+    kết nối thật). Redis thì vẫn đúng như cũ, chưa ai dùng.
+  - 006: không đổi — câu gốc nói về phạm vi riêng của chính feature 006 (bản thân nó không thêm gì),
+    vẫn đúng nguyên văn.
+  - 008: "chưa có cơ chế truyền thông điệp thật nào được kết nối" — nay chỉ còn đúng cho
+    `BasketCheckedOut`. `OrderPlaced` đã có publisher thật.
+  - 010: RabbitMQ nay có đúng 1 use case thật (`orders` outbox) — nhưng đây là chuyện khác với "chịu
+    lỗi broker" theo nghĩa gốc của 020/SCRUM-30: bản thân lệnh publish mới này của 024 **chưa được rà
+    soát resilience/circuit-breaker** theo khuôn mẫu 020 — 1 khoảng hở mới, chưa có ticket riêng.
+    Fixture Redis/RabbitMQ dùng cho test vẫn giữ nguyên vai trò cũ.
+  - 011: không đổi — cặp contract test thí điểm của 011 là cho `BasketCheckedOut`, khác event, không
+    bị 024 đụng tới.
+  - 016: xác nhận thay vì còn là giới hạn — payload `OrderPlacedV1` nay thực sự mang `CorrelationId`
+    qua publisher thật (024, `context.Items[CorrelationIdMiddleware.HeaderName]`), đúng như dự đoán
+    "sẵn sàng cho khi publisher thật được nối" đã nêu trước đó.
+  - 020: call-site #5 (service→broker) nay ĐÃ tồn tại (024) — xem Amendment trực tiếp trong chính file
+    `020_Architect_*.md` mục 1 và entry 024 ở mục 2/3 của file này.
 - **[008](008_Architect_event%20schema%20có%20version.md)** — Chỉ đúng 2 event (`OrderPlaced`,
   `BasketCheckedOut`) nằm trong phạm vi — event khác trong tương lai cần lặp lại đúng khuôn mẫu này
   riêng, không tự động áp dụng. Khoảng thời gian deprecation cụ thể (bao nhiêu ngày/chu kỳ release) là
@@ -302,6 +331,23 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   cơ chế sẵn sàng trong schema nhưng chưa thực chiến. p99 của `Orders.Api` đo được (393,4ms) gần ngưỡng
   khai báo (500ms) ngay ở điều kiện vận hành bình thường — đáng theo dõi tiếp, không phải lỗi cần sửa
   ngay.
+- **[023](023_Architect_rà%20soát%20N%2B1%20query%20truy%20vấn%20không%20giới%20hạn%20và%20thiếu%20phân%20trang.md)** —
+  Giới hạn đã biết của chính khuôn mẫu scanner (`tests/QueryCoverageTests`, giống `ContractCoverageTests`/
+  `ResilienceCoverageTests`): danh sách viết tay (`ExpectedListEndpoints`/`ExpectedBoundedQuerySites`)
+  chỉ bắt được khi marker bị xoá/đổi tên ở 1 endpoint ĐÃ có trong danh sách — không tự phát hiện 1
+  endpoint danh sách hoàn toàn mới chưa từng được thêm vào danh sách (cần con người chủ động cập nhật
+  scanner khi thêm endpoint mới). Đây là giới hạn đã biết của khuôn mẫu, không phải lỗi riêng của tính
+  năng này.
+- **[024](024_Architect_xác%20minh%20outbox%20pattern%20giao%20dịch%20trên%20dịch%20vụ%20phát%20sự%20kiện%20đơn%20hàng.md)** —
+  Phạm vi cố ý hẹp (Quyết định 1): chỉ đóng outbox cho `orders` publish `OrderPlacedV1` — đúng 3 tiêu
+  chí chấp nhận Jira SCRUM-31. KHÔNG dựng saga checkout đầy đủ, KHÔNG chuyển bước "tạo đơn" của BFF
+  sang tiêu thụ `BasketCheckedOutV1`, KHÔNG dùng bước "xoá giỏ hàng" làm consumer thật —
+  [ADR-0011](../adr/0011-checkout-orchestration.md) giữ nguyên, không đóng (ADR đã tự cập nhật Action
+  Items phản ánh đúng ranh giới này). Consumer dùng để xác minh idempotency chỉ tồn tại trong bộ test
+  tích hợp, không phải consumer nghiệp vụ thật — chưa có bằng chứng cho 1 consumer sản xuất thật dùng
+  cùng cơ chế `InboxState`. Xác thực thủ công không gọi `POST /orders` qua curl với bearer token thật
+  (cần dựng Identity Server, ngoài phạm vi) — luồng đó đã được xác thực đầy đủ qua test tích hợp dùng
+  `UseTestJwtBearer()` thay thế.
 
 ## 4. Amendment — đính chính khi thực tế lệch spec gốc
 

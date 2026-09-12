@@ -1,4 +1,4 @@
-# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 20 tính năng
+# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 22 tính năng
 
 *Viết cho: người quản lý sản phẩm, stakeholder không trực tiếp code. Không yêu cầu đọc code hay biết
 tên bất kỳ công cụ kỹ thuật nào.*
@@ -92,6 +92,17 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   đúng, bộ phận đó chỉ thuộc 1 nhóm tiêu chuẩn khác tương đương, đã sửa lại đúng ghi chép, không bịa lý
   do giả. Đã tự tạo 1 đợt tải giả lập thật chứng minh nơi tra cứu phản ánh đúng: độ trễ đo được tăng
   ~95 lần ngay khi tạo tải cao. Đã xác nhận phân biệt đúng "không có dữ liệu" với "không có lỗi".
+- **[023](../architecture/023_Architect_rà%20soát%20N%2B1%20query%20truy%20vấn%20không%20giới%20hạn%20và%20thiếu%20phân%20trang.md)** —
+  Đội đã gieo thật 500 sản phẩm rồi gọi thử danh sách không truyền tham số nào — xác nhận chỉ nhận về
+  đúng 1 trang giới hạn, không phải cả 500. Đã đo số lượng lời gọi thực tế khi hiển thị giỏ hàng có
+  nhiều dòng khác nhau (kể cả trùng sản phẩm) — xác nhận luôn đúng 1 lời gọi duy nhất tới nơi cung cấp
+  thông tin sản phẩm, không tỷ lệ theo số dòng trong giỏ.
+- **[024](../architecture/024_Architect_xác%20minh%20outbox%20pattern%20giao%20dịch%20trên%20dịch%20vụ%20phát%20sự%20kiện%20đơn%20hàng.md)** —
+  Đội đã chủ động mô phỏng việc dừng đột ngột dịch vụ đúng vào khoảnh khắc giữa lúc ghi nhận đơn hàng
+  và lúc gửi thông báo ra ngoài — xác nhận khi khởi động lại, thông báo còn thiếu vẫn tự động được gửi,
+  không cần ai can thiệp. Trong lúc chạy thử dịch vụ thật (không chỉ qua bài kiểm tra tự động), đội
+  phát hiện công cụ kỹ thuật ban đầu chọn yêu cầu trả phí — đã đổi ngay sang phiên bản miễn phí tương
+  đương, không ảnh hưởng gì tới cách hệ thống hoạt động.
 
 ## 2. Giới hạn hiện tại
 
@@ -127,13 +138,16 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   giỏ hàng, đơn hàng) — mảng khách hàng, luồng thanh toán, đường kiểm tra sức khoẻ hệ thống chưa áp
   dụng cơ chế này. Đây chủ yếu là bước xác nhận và củng cố 1 thực hành đã có sẵn, không phải xây từ
   số 0.
-- **Bộ nhớ đệm/hàng đợi tin nhắn đã dựng sẵn nhưng chưa có chức năng nào dùng** —
+- **Bộ nhớ đệm/hàng đợi tin nhắn — cập nhật sau tính năng "024 — outbox"** —
   [005](005_PO_chạy%20local%20một%20lệnh.md), [008](008_PO_event%20schema%20có%20version.md),
   [010](010_PO_hạ%20tầng%20kiểm%20thử%20container%20thật.md),
   [011](011_PO_kiểm%20thử%20hợp%20đồng%20tiêu%20dùng.md),
   [020](020_PO_hệ%20thống%20không%20còn%20treo%20vô%20thời%20hạn%20khi%201%20dịch%20vụ%20khác%20gặp%20sự%20cố.md)
-  — chưa có cơ chế truyền thông điệp thật sự nào được kết nối/đang chạy; các thành phần hạ tầng đứng
-  sẵn chờ tính năng đầu tiên thực sự cần tới chúng.
+  — lúc các tính năng này hoàn thành, chưa có chức năng nào thật sự dùng hàng đợi tin nhắn. **Cập
+  nhật**: tính năng "024 — đơn hàng không bao giờ biến mất" (xem mục 1 ở trên) nay đã kết nối hàng đợi
+  tin nhắn thật cho việc thông báo "có đơn hàng mới" — không còn đúng 100% cho phần hàng đợi tin nhắn
+  nữa. Vẫn đúng nguyên cho: bộ nhớ đệm (Redis, vẫn chưa ai dùng) và thông báo "giỏ hàng vừa thanh toán"
+  (vẫn chưa kết nối).
 - **[008](008_PO_event%20schema%20có%20version.md)** (riêng) — Phạm vi chỉ giới hạn ở đúng 2 loại
   thông báo quan trọng nhất ("đơn hàng vừa đặt", "giỏ hàng vừa thanh toán") — loại khác trong tương lai
   cần lặp lại đúng khuôn mẫu riêng.
@@ -190,3 +204,12 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   chạy liên tục để đảm bảo nơi tra cứu luôn khớp đúng dữ liệu gốc — việc đối chiếu hiện làm định kỳ/thủ
   công. 1 chỉ tiêu (độ trễ ở mức hiếm gặp nhất, p99) của bộ phận xử lý đơn hàng hiện đo được khá gần
   với ngưỡng đã cam kết — đáng theo dõi tiếp, chưa phải vấn đề cần xử lý gấp.
+- **[023](../architecture/023_Architect_rà%20soát%20N%2B1%20query%20truy%20vấn%20không%20giới%20hạn%20và%20thiếu%20phân%20trang.md)** —
+  Cơ chế tự động nhắc hiện chỉ phát hiện được khi 1 danh sách đã được biết tới trước đó bị sửa nhầm
+  (mất giới hạn). Nếu ai đó thêm 1 danh sách hoàn toàn mới vào hệ thống, cần con người chủ động khai
+  báo nó vào cơ chế kiểm tra — hệ thống chưa tự dò ra được danh sách hoàn toàn mới.
+- **[024](../architecture/024_Architect_xác%20minh%20outbox%20pattern%20giao%20dịch%20trên%20dịch%20vụ%20phát%20sự%20kiện%20đơn%20hàng.md)** —
+  Tính năng này chỉ áp dụng cho việc thông báo "có đơn hàng mới" — chưa mở rộng sang việc tự động dọn
+  giỏ hàng sau khi đặt đơn (vẫn làm theo đúng cách cũ, đồng bộ ngay trong lúc đặt hàng). Đây là quyết
+  định phạm vi có chủ đích, không phải bị bỏ sót — mở rộng việc dọn giỏ hàng sẽ cần thay đổi lớn hơn tới
+  cách xác nhận đơn hàng hiển thị cho khách, chưa ai yêu cầu ở bước này.

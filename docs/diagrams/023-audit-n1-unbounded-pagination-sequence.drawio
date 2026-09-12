@@ -1,0 +1,58 @@
+<mxfile host="65bd71144e">
+    <diagram id="audit-n1-unbounded-pagination-sequence" name="Trình tự — trước/sau khi sửa over-fetch và ép trần phân trang">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Trình tự: render basket 5 dòng (trước/sau) + ép trần pageSize" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="900" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="c1" value="Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="160" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="c2" value="Bff.Api" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="60" width="160" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="c3" value="Products.Api" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="60" width="200" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="r1" value="TRƯỚC (khoảng hở #6/#7): GET /bff/basket/{id}&#xa;→ BFF gọi GetProductsAsync() KHÔNG tham số" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="130" width="500" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r2" value="Products.Api trả về TOÀN BỘ catalog&#xa;(ví dụ 500 sản phẩm) chỉ để join tên 5 dòng trong giỏ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="190" width="400" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r3" value="SAU (Decision 4): GET /bff/basket/{id}&#xa;→ BFF gọi GetProductsByIdsAsync([5 id trong giỏ])" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="260" width="500" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r4" value="Products.Api: GET /products?ids=... → đúng 1 lời gọi HTTP&#xa;trả về đúng 5 sản phẩm khớp, bất kể catalog lớn cỡ nào" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="320" width="400" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r5" value="Client: GET /products?pageSize=1000000&#xa;(cố tình khai kích thước trang cực lớn)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="400" width="500" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r6" value="Math.Clamp(pageSize, 1, MaxPageSize=100)&#xa;→ trả về đúng 100 bản ghi, không phản ánh 1000000 client yêu cầu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="460" width="400" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="c1" target="r1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r1" target="r2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r2" target="r3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r3" target="r4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r4" target="r5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r5" target="r6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

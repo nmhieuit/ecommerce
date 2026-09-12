@@ -1,0 +1,52 @@
+<mxfile host="65bd71144e">
+    <diagram id="verify-transactional-outbox-component" name="Kiến trúc thành phần — outbox pattern cho OrderPlaced">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="780" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Xác minh outbox pattern giao dịch — order publisher (OrderPlaced)" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="900" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="api" value="Orders.Api — OrderEndpoints&#xa;POST /orders: Order.PlaceFrom(...) + Publish(OrderPlacedV1)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="80" width="360" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="db" value="OrdersDbContext (SQL Server)&#xa;Orders + OutboxMessage/OutboxState/InboxState&#xa;(MassTransit.EntityFrameworkCore)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="200" width="360" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="outbox" value="MassTransit Bus Outbox&#xa;UseBusOutbox() — ghi outbox record CÙNG&#xa;transaction EF Core với SaveChangesAsync()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="140" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="relay" value="Outbox delivery service (hosted)&#xa;quét bảng outbox theo chu kỳ (QueryDelay)&#xa;sống sót qua khởi động lại tiến trình" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="260" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="rmq" value="RabbitMQ (thật)&#xa;docker-compose.deps.yml — dùng chung,&#xa;không per-service như *-db" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="830" y="200" width="280" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="consumer" value="Consumer xác minh (test-only)&#xa;UseEntityFrameworkOutbox() → InboxState&#xa;khoá theo MessageId — KHÔNG phải nghiệp vụ thật" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1160" y="200" width="260" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="notbuilt" value="BasketCheckedOut → saga tạo đơn / xoá giỏ hàng&#xa;VẪN CHƯA XÂY — ADR-0011 để ngỏ&#xa;(OrderPlacedV1 không mang CustomerRef/BasketId)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontSize=10;fontColor=#b85450;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="400" width="500" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="api" target="db" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="cùng SaveChangesAsync()" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="db" target="outbox" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="outbox" target="relay" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="publish OrderPlacedV1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="relay" target="rmq" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="rmq" target="consumer" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="chưa xây" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;strokeColor=#b85450;fontColor=#b85450;" parent="1" source="rmq" target="notbuilt" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

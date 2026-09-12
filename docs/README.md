@@ -6,7 +6,8 @@ nội dung kỹ thuật đã có ở nơi khác.
 ## Đi thẳng vào việc — theo vai trò
 
 **Bạn là Product Owner / quản lý sản phẩm, muốn biết 1 tính năng làm được gì, cho ai, lợi ích gì?**
-→ [`docs/summary/`](summary/) — đọc theo số tăng dần (`001_PO_*.md` → `021_PO_*.md`). Mỗi file viết
+→ [`docs/summary/`](summary/) — đọc theo số tăng dần (`001_PO_*.md` → `024_PO_*.md`, không có 012/022).
+Mỗi file viết
 cho người không đọc code, có mục "Giới hạn hiện tại" trung thực về những gì CHƯA làm được.
 
 **Bạn là kỹ sư mới gia nhập dự án, cần đọc code hiểu hệ thống từ đầu?**
@@ -16,8 +17,9 @@ nghị". Khác `docs/architecture/`: đi theo TRÌNH TỰ LỊCH SỬ (giai đo�
 riêng lẻ.
 
 **Bạn là software architect / kỹ sư đã quen hệ thống, cần tra cứu sâu đúng 1 tính năng cụ thể?**
-→ [`docs/architecture/`](architecture/) — 1 file `0NN_Architect_*.md` cho mỗi spec (001-021, trừ 012
-đổi số thành 013), viết xúc tích, thuần góc nhìn kiến trúc (kiến trúc tổng thể, quyết định kỹ thuật,
+→ [`docs/architecture/`](architecture/) — 1 file `0NN_Architect_*.md` cho mỗi spec (001-024, trừ 012
+đổi số thành 013; không có 022 — đánh số nhảy từ 021 sang 023), viết xúc tích, thuần góc nhìn kiến trúc
+(kiến trúc tổng thể, quyết định kỹ thuật,
 sơ đồ). Mọi blocker giữa chừng, bug thật phát hiện khi triển khai/xác thực, giới hạn phạm vi đã biết,
 và amendment đính chính đã gom về 1 file riêng:
 [`docs/architecture/technical-debt.md`](architecture/technical-debt.md) — mỗi file `0NN` đều dẫn link
@@ -35,7 +37,7 @@ Code. Mỗi spec có 3 file: `-component` (kiến trúc kỹ thuật), `-flow-ng
 dành cho PO), `-sequence` (trình tự kỹ thuật chi tiết).
 
 **Bạn cần bản tóm tắt FR/Acceptance Criteria/Success Criteria song song bản tiếng Anh gốc?**
-→ [`docs/spec-summary-vi/`](spec-summary-vi/) — file JSON, có đủ 001-021. **Đính chính**: ghi chú cũ ở
+→ [`docs/spec-summary-vi/`](spec-summary-vi/) — file JSON, có đủ 001-024 (trừ 012/022). **Đính chính**: ghi chú cũ ở
 đây từng nói "chỉ có 001-012, từ 013 trở đi không cần nữa vì `spec.md` đã viết tiếng Việt trực tiếp" —
 sai, đã kiểm tra lại thư mục thật và xác nhận việc viết file tóm tắt này vẫn tiếp tục đều đặn cho mọi
 spec, kể cả các spec 013+ đã viết `spec.md` bằng tiếng Việt.
