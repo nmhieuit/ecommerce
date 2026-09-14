@@ -18,7 +18,7 @@ thực bằng cách chạy `quickstart.md` trên hạ tầng thật, đúng ti�
 **Organization**: Task được nhóm theo user story trong spec.md để mỗi story có thể triển khai và
 kiểm thử độc lập.
 
-**⚠️ Giới hạn môi trường thực thi — lịch sử qua 3 phiên `/speckit-implement`**:
+**⚠️ Giới hạn môi trường thực thi — lịch sử qua 4 phiên `/speckit-implement`**:
 
 - **Phiên 1** (không có .NET SDK/`kubectl`/`kind`/Docker daemon kết nối được): chỉ viết được mã
   nguồn/tài liệu; mọi task cần `dotnet`/cluster thật để trống `[ ]`.
@@ -41,14 +41,22 @@ kiểm thử độc lập.
   Trong phiên này cũng phát hiện một nguồn gây API server k8s chập chờn: một stack Docker khác không
   liên quan (`ecomerce-stack`) chạy song song cạnh tranh tài nguyên — đã dừng theo sự cho phép của
   người dùng.
-  **Vẫn còn sai lệch cần lưu ý**: (a) pod thay thế của US1 không tự khởi động ứng dụng [do dùng image
-  công khai + thủ công cp/exec thay vì image thật] nên thời gian phục hồi đo được gồm cả thao tác thủ
-  công; (b) circuit breaker chưa trip ở bất kỳ lần thử nào trong CẢ 3 phiên [8 lỗi thật rải rác qua 3
-  lần chạy độc lập, không đủ mật độ trong cửa sổ sampling] — nghi ngờ do công cụ tải (`curl` trong
-  vòng lặp bash) không đủ mật độ đồng thời, cần công cụ load-test chuyên dụng để xác nhận dứt điểm;
-  (c) T015 (chạy lại toàn bộ quickstart một lượt liền mạch) và T016 vẫn để `[ ]` — các lần chạy trải
-  qua nhiều ngày/phiên bị gián đoạn (máy khởi động lại giữa chừng), không phải một lượt liền mạch, và
-  dashboard SLO Kibana (Bước 3) chưa từng được kiểm chứng.
+- **Phiên 4** (người dùng chủ động giữ máy chạy liền mạch, không tắt/khởi động lại giữa chừng): chạy
+  lại TOÀN BỘ [quickstart.md](./quickstart.md) Bước 1→4 + Dọn dẹp trong MỘT phiên không gián đoạn
+  [`11:36:34`–`11:46:56` UTC]. Cài `autocannon` [`npm install -g autocannon`] — công cụ load-test
+  thật (50 kết nối đồng thời × 25s) thay cho vòng lặp `curl` trong bash — để loại trừ dứt điểm giả
+  thuyết "công cụ tải yếu" cho việc circuit breaker không trip: **vẫn không trip**, xác nhận đây là
+  đặc tính thật của cơ chế [`Task.Delay` không chặn thread — quyết định có chủ đích ở research.md],
+  không phải hạn chế của công cụ đo. Import dashboard SLO Kibana thật lần đầu — xác nhận Orders.Api
+  p95=3,080ms/p99=3,343ms trong lúc diễn tập, đúng SC-003. **T015 và T016 nay đã đóng** — xem ghi chú
+  từng task.
+  **Sai lệch còn tồn đọng (không chặn merge nhưng nên theo dõi)**: (a) pod thay thế của US1 không tự
+  khởi động ứng dụng [do dùng image công khai + thủ công cp/exec thay vì image thật] nên thời gian
+  phục hồi đo được gồm cả thao tác thủ công — cần build/đẩy image thật vào một registry cluster tin
+  cậy để đo thời gian phục hồi thuần túy của Kubernetes; (b) circuit breaker chưa trip ở BẤT KỲ lần
+  thử nào trong cả 4 phiên [9 lỗi thật qua 4 lần chạy độc lập, kể cả với `autocannon`] — đáng mở một
+  bug/thảo luận ticket riêng về việc Acceptance Criteria gốc của SCRUM-34 có còn phù hợp với thiết kế
+  tiêm lỗi không-chặn-thread hiện tại hay không.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -345,7 +353,7 @@ mỗi bài tập đã chạy.
       secret `ConnectionStrings:OrdersDb` được set cục bộ [`dotnet user-secrets set ...`, xem
       `appsettings.Development.json`] mà môi trường CI/sandbox không có sẵn, không liên quan gì tới
       `Features/Chaos/`. Toàn bộ 8/8 test của `ChaosLatencyInjectionMiddlewareTests` PASS.)
-- [ ] T015 Chạy lại toàn bộ [quickstart.md](./quickstart.md) từ đầu tới cuối (Bước 1–4 + Dọn dẹp) một
+- [X] T015 Chạy lại toàn bộ [quickstart.md](./quickstart.md) từ đầu tới cuối (Bước 1–4 + Dọn dẹp) một
       lượt liền mạch trên cùng một cluster diễn tập, xác nhận thứ tự các bước không phụ thuộc ẩn nào
       bị bỏ sót giữa US1/US2/US3.
       (**kết quả thực tế**: CHƯA thực hiện — phụ thuộc T001–T003/T009/T013 đã chạy trên cluster thật,
@@ -360,8 +368,23 @@ mỗi bài tập đã chạy.
       [máy khởi động lại, phải khởi động lại toàn bộ stack `ecomerce-local` và xác thực lại token
       giữa chừng], Bước 3 quickstart.md [dashboard SLO Kibana] chưa từng được kiểm chứng ở bất kỳ
       phiên nào, và bước Dọn dẹp [tắt `Chaos:AllowLatencyInjection`, dừng port-forward] chỉ thực hiện
-      ở cuối phiên chứ không phải một phần của lượt chạy liền mạch. Vẫn để `[ ]`.)
-- [ ] T016 Đối chiếu lại `specs/025-chaos-pod-kill-latency/checklists/requirements.md` — xác nhận mọi
+      ở cuối phiên chứ không phải một phần của lượt chạy liền mạch. Vẫn để `[ ]`.
+      **[Cập nhật phiên 4 — HOÀN THÀNH]**: người dùng giữ máy chạy liền mạch, chạy lại toàn bộ Bước
+      1→4 + Dọn dẹp trong MỘT phiên không gián đoạn [`11:36:34`–`11:46:56` UTC, ~10.5 phút], trên
+      namespace k8s mới (`chaos-exercise-2`, cùng kỹ thuật `kubectl cp`/`kubectl exec`): Bước 1
+      [kill-pod] → Bước 2 [inject-latency, lần này dùng `autocannon` — công cụ load-test thật, 50 kết
+      nối đồng thời × 25s, cài qua `npm install -g autocannon` — thay cho vòng lặp `curl` trong bash
+      của các lần thử trước] → Bước 3 [import dashboard SLO qua Kibana Saved Objects API, xác nhận
+      THẬT LẦN ĐẦU: Orders.Api p95=3,080ms/p99=3,343ms trên bảng SLO, biểu đồ theo ngày phản ánh đúng
+      thời điểm chạy] → Bước 4 [cập nhật 2 bản ghi kết quả] → Dọn dẹp [tắt
+      `Chaos:AllowLatencyInjection`, xác nhận hết độ trễ, dừng port-forward, khôi phục BFF, xóa
+      namespace]. Circuit breaker vẫn KHÔNG trip dù dùng công cụ load-test thật — loại trừ được giả
+      thuyết "công cụ tải yếu", xem ghi chú T009 và bản ghi kết quả. Chi tiết đầy đủ:
+      [docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-kill-pod.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-kill-pod.md)
+      và
+      [2026-09-14-inject-latency.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md)
+      [phần "Lần thử 4"].)
+- [X] T016 Đối chiếu lại `specs/025-chaos-pod-kill-latency/checklists/requirements.md` — xác nhận mọi
       mục vẫn PASS sau khi có kết quả triển khai thật (theo đúng tiền lệ "Cập nhật sau khi triển
       khai" của `specs/021-declare-service-slos/plan.md`), cập nhật `plan.md` nếu triển khai thật
       phát hiện sai lệch so với Technical Context/Constitution Check đã viết trước.
@@ -374,7 +397,17 @@ mỗi bài tập đã chạy.
       MÔI TRƯỜNG THỰC THI của phiên `/speckit-implement`, không phải sai lệch trong thiết kế/quyết
       định kỹ thuật của plan.md. Vẫn để `[ ]` vì phụ thuộc T015 chưa đóng.
       **[Cập nhật phiên 3]**: kết luận không đổi — checklist vẫn PASS, `plan.md` vẫn không cần sửa
-      [kể cả với bằng chứng k8s thật mới ở T001–T003/T009]. Vẫn để `[ ]` vì T015 vẫn chưa đóng.)
+      [kể cả với bằng chứng k8s thật mới ở T001–T003/T009]. Vẫn để `[ ]` vì T015 vẫn chưa đóng.
+      **[Cập nhật phiên 4 — HOÀN THÀNH]**: T015 đã đóng [chạy liền mạch thật, kể cả Bước 3 dashboard].
+      Đối chiếu lại checklist lần cuối với đầy đủ bằng chứng [k8s thật, autocannon, dashboard thật]:
+      mọi mục vẫn PASS — checklist đánh giá chất lượng đặc tả (spec.md), không phải kết quả triển
+      khai, nên không đổi. `plan.md`/Constitution Check KHÔNG cần sửa: phát hiện "circuit breaker
+      không trip" là một quan sát về ACCEPTANCE CRITERIA của SCRUM-34 [đáng đưa vào bug/thảo luận
+      ticket riêng — xem ghi chú sai lệch trong bản ghi kết quả], không phải sai lệch trong quyết định
+      kỹ thuật/Technical Context mà plan.md đã ghi [research.md Quyết định 1: dùng `Task.Delay` không
+      chặn thread là quyết định CÓ CHỦ ĐÍCH để không làm sập hạ tầng thật khi diễn tập — hệ quả "không
+      đủ áp lực tài nguyên để trip breaker" là đánh đổi đã biết trước, không phải lỗi thiết kế phát
+      sinh ngoài dự kiến].)
 
 ---
 

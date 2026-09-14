@@ -24,10 +24,10 @@ Sau khi chạy, điền [mau-ket-qua.md](./mau-ket-qua.md) thành một file m�
 
 ## Lịch sử chạy
 
-- [2026-09-14 — kill-pod (trên Kubernetes thật)](./ket-qua/2026-09-14-kill-pod.md) — sai lệch (thời
-  gian phục hồi lẫn thao tác thủ công tái cấp app; circuit breaker không trip)
-- [2026-09-14 — inject-latency (bổ sung lần chạy trên Kubernetes thật)](./ket-qua/2026-09-14-inject-latency.md) — sai lệch
-  (circuit breaker không trip sau 3 lần thử độc lập; dashboard SLO chưa kiểm chứng)
+- [2026-09-14 — kill-pod (chạy liền mạch trên Kubernetes thật, gồm cả Bước 1→4 + Dọn dẹp)](./ket-qua/2026-09-14-kill-pod.md)
+  — sai lệch (thời gian phục hồi lẫn thao tác thủ công tái cấp app; circuit breaker không trip)
+- [2026-09-14 — inject-latency (chạy liền mạch trên Kubernetes thật, dùng `autocannon`, dashboard SLO đã xác nhận)](./ket-qua/2026-09-14-inject-latency.md)
+  — sai lệch (circuit breaker không trip sau 4 lần thử độc lập kể cả với công cụ load-test thật)
 - [2026-09-12 — kill-pod (trên container Docker)](./ket-qua/2026-09-12-kill-pod.md) — sai lệch (chạy
   trên container Docker thay vì pod Kubernetes thật; xem bản ghi 2026-09-14 để có kết quả trên k8s
   thật)
