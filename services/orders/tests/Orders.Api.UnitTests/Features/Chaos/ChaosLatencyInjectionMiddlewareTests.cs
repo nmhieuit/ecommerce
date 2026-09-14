@@ -101,7 +101,7 @@ public class ChaosLatencyInjectionMiddlewareTests
 
     private static Task NextThatSucceeds(HttpContext context) => Task.CompletedTask;
 
-    private static HttpContext CreateContextWithHeader(string value)
+    private static DefaultHttpContext CreateContextWithHeader(string value)
     {
         var context = new DefaultHttpContext();
         context.Request.Headers[ChaosLatencyInjectionMiddleware.LatencyHeaderName] = value;

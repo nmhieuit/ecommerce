@@ -24,4 +24,7 @@ Sau khi chạy, điền [mau-ket-qua.md](./mau-ket-qua.md) thành một file m�
 
 ## Lịch sử chạy
 
-_Chưa có bài tập nào được ghi nhận._
+- [2026-09-14 — inject-latency](./ket-qua/2026-09-14-inject-latency.md) — sai lệch (circuit breaker
+  không trip; dashboard SLO chưa kiểm chứng)
+- [2026-09-12 — kill-pod](./ket-qua/2026-09-12-kill-pod.md) — sai lệch (chạy trên container Docker
+  thay vì pod Kubernetes thật, do môi trường thực thi không có cluster k8s đủ hạ tầng)

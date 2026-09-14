@@ -18,13 +18,22 @@ thực bằng cách chạy `quickstart.md` trên hạ tầng thật, đúng ti�
 **Organization**: Task được nhóm theo user story trong spec.md để mỗi story có thể triển khai và
 kiểm thử độc lập.
 
-**⚠️ Giới hạn môi trường thực thi (`/speckit-implement` lần này)**: phiên làm việc chạy task này
-KHÔNG có .NET SDK (`dotnet`), KHÔNG có `kubectl`/`kind`, và Docker client cài sẵn không kết nối được
-daemon nào — nên chỉ các task thuần đọc/ghi file (viết mã nguồn, viết tài liệu) được thực hiện; mọi
-task yêu cầu `dotnet build`/`dotnet test` hoặc thao tác lên cluster Kubernetes/Elastic thật đều
-KHÔNG chạy được trong phiên này và vẫn để `[ ]`, kèm ghi chú "kết quả thực tế" giải thích lý do tại
-từng task. Trước khi coi tính năng này sẵn sàng merge, cần chạy lại T004/T006/T014 (dotnet) và
-T001–T003/T009/T013/T015/T016 (cluster thật) ở một môi trường có đủ công cụ.
+**⚠️ Giới hạn môi trường thực thi — lịch sử qua 2 phiên `/speckit-implement`**:
+
+- **Phiên 1** (không có .NET SDK/`kubectl`/`kind`/Docker daemon kết nối được): chỉ viết được mã
+  nguồn/tài liệu; mọi task cần `dotnet`/cluster thật để trống `[ ]`.
+- **Phiên 2** (môi trường máy người dùng, có đủ `dotnet`/`kubectl`/`kind`/`docker`): chạy được
+  T004/T006/T014 thật [PASS]. Có một cluster Kubernetes docker-desktop khả dụng nhưng KHÔNG dùng
+  được để chạy US1/US2 đúng nguyên bản — image build cục bộ không nạp được vào containerd của
+  cluster đó [đã thử 3 cách độc lập: image trần, ép lên node control-plane, registry cục bộ tùy
+  chỉnh; nguyên nhân gốc: mọi lượt pull bị một registry-mirror nội bộ của Docker Desktop chặn khi
+  proxy tới registry tùy chỉnh]. Được sự đồng ý của người dùng, T001–T003/T009/T013 chạy thay thế
+  trên container Docker thật [stack `ecomerce-local`, auth JWT thật, DB thật] — xem ghi chú từng
+  task và [docs/dien-tap-chaos-engineering/ket-qua/](../../docs/dien-tap-chaos-engineering/ket-qua/).
+  **Đây KHÔNG phải xác nhận đầy đủ trên Kubernetes thật** (T015/T016 vẫn để `[ ]` vì phụ thuộc điều
+  này). Trước khi coi tính năng sẵn sàng merge, cần chạy lại T001–T003/T009/T013/T015/T016 trên một
+  cluster Kubernetes thật có đủ Service/SQL/RabbitMQ/Identity, với một công cụ tạo tải tập trung hơn
+  (circuit breaker chưa được quan sát trip ở lần chạy nào trong 2 lần thử của phiên 2).
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -77,27 +86,40 @@ pod mới `READY` — tự đủ, không phụ thuộc US2/US3.
 
 ### Implementation for User Story 1
 
-- [ ] T001 [US1] Thực hiện [quickstart.md](./quickstart.md) Bước 1 trên một cluster diễn tập (`kind`
+- [X] T001 [US1] Thực hiện [quickstart.md](./quickstart.md) Bước 1 trên một cluster diễn tập (`kind`
       cục bộ theo đúng cách `specs/019-liveness-readiness-probes/quickstart.md` Bước 1–2, hoặc cluster
       diễn tập thật): dựng tải tổng hợp nhẹ gọi `baskets` qua BFF, chạy
       `kubectl delete pod -l app=baskets --field-selector=status.phase=Running`, quan sát
       `kubectl get pods -l app=baskets -w`.
-- [ ] T002 [US1] Thu bằng chứng circuit breaker/retry engage của `BasketsApiClient` trong lúc pod thay
+- [X] T002 [US1] Thu bằng chứng circuit breaker/retry engage của `BasketsApiClient` trong lúc pod thay
       thế chưa `READY` — qua log có cấu trúc nguồn `"Polly"` của BFF, hoặc Kibana Data View **Traces**
       (`traces-generic.otel-default*`) lọc `resource.attributes.service.name : "Bff.Api"`, hoặc
       `dotnet-counters monitor --process-id <pid> Polly` nếu chạy cục bộ không có Elastic (khớp kỹ
       thuật đã dùng ở `specs/020-timeouts-retry-circuit-breaker/quickstart.md` Bước 6).
-- [ ] T003 [US1] Xác nhận thời gian phục hồi (từ lúc pod cũ bị xóa tới lúc pod mới `READY 1/1` và tỷ
+- [X] T003 [US1] Xác nhận thời gian phục hồi (từ lúc pod cũ bị xóa tới lúc pod mới `READY 1/1` và tỷ
       lệ lỗi của tải nền về bình thường) và ghi lại số đo được — dữ liệu đầu vào cho bản ghi kết quả
       của User Story 3 (không tạo file ở task này, chỉ ghi chú tại chỗ để dùng ở T010).
       (**kết quả thực tế cho T001–T003**: CHƯA thực hiện — không có cluster Kubernetes nào trong
       phiên làm việc này để chạy `kubectl`. Về mặt thiết kế, US1 không cần thêm mã ứng dụng nào
       [research.md Quyết định 0] nên không có gì để "triển khai" ở đây ngoài chính việc chạy bài tập
-      trên hạ tầng thật — việc đó cần một cluster diễn tập thật, ngoài phạm vi phiên này.)
+      trên hạ tầng thật — việc đó cần một cluster diễn tập thật, ngoài phạm vi phiên này.
+      **[Cập nhật phiên sau]**: một cluster Kubernetes docker-desktop CÓ sẵn ở môi trường của người
+      dùng, nhưng image build cục bộ không nạp được vào containerd của cluster đó [multi-node,
+      registry-mirror nội bộ chặn mọi registry tùy chỉnh — xác nhận qua 3 cách thử độc lập]. Được sự
+      đồng ý của người dùng, chạy thay thế bằng `docker restart` trên container `baskets-api` THẬT
+      [stack `ecomerce-local`, auth JWT thật qua Identity server, DB thật] thay vì `kubectl delete
+      pod`. Kết quả thật: tải nền `GET /bff/basket` qua BFF ghi nhận 3/90 request lỗi [502/502/504]
+      trong ~5-9s sau restart, tự phục hồi về 200 OK liên tục không cần can thiệp; log BFF xác nhận
+      Polly retry [`BasketsApi-standard//Standard-Retry`] engage thật [Connection refused → attempt
+      timeout → total timeout]; circuit breaker KHÔNG trip [cửa sổ gián đoạn quá ngắn]. Chi tiết đầy
+      đủ: [docs/dien-tap-chaos-engineering/ket-qua/2026-09-12-kill-pod.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-12-kill-pod.md).
+      **Đây KHÔNG phải xác nhận đầy đủ trên Kubernetes thật** — cần chạy lại trên cluster k8s có đủ
+      Service/SQL/Identity trước khi coi US1 hoàn tất theo đúng tinh thần spec.md.)
 
 **Checkpoint**: User Story 1 đã được xác nhận độc lập — không có mã ứng dụng nào bị chạm, không phụ
-thuộc User Story 2/3. (**Trạng thái hiện tại**: chưa xác nhận được trên hạ tầng thật — xem ghi chú
-T001–T003 ở trên.)
+thuộc User Story 2/3. (**Trạng thái hiện tại**: xác nhận được trên container Docker thật [không phải
+pod Kubernetes thật — xem ghi chú T001–T003 và bản ghi kết quả 2026-09-12-kill-pod.md]; cần chạy lại
+trên k8s thật để xác nhận đầy đủ.)
 
 ---
 
@@ -134,7 +156,10 @@ hiện tiêu hao — tự đủ, không phụ thuộc US1/US3.
       có T005/T006 chỉ được suy luận bằng đọc mã [file tham chiếu `ChaosOptions`/`IChaosDelay`/
       `ChaosLatencyInjectionMiddleware` chưa tồn tại tại thời điểm viết], không được một lần chạy
       thật xác nhận. Cần chạy `dotnet test` thật ở môi trường có .NET 10 SDK trước khi coi tính năng
-      sẵn sàng merge — xem T014.)
+      sẵn sàng merge — xem T014.
+      **[Cập nhật phiên sau, môi trường có .NET 10 SDK]**: chạy thật
+      `dotnet test services/orders/tests/Orders.Api.UnitTests --filter FullyQualifiedName~ChaosLatencyInjection`
+      — PASS đủ 8/8 test case sau khi sửa 1 lỗi biên dịch nhỏ [CA1859 ở T006].)
 
 ### Implementation for User Story 2
 
@@ -154,7 +179,12 @@ hiện tiêu hao — tự đủ, không phụ thuộc US1/US3.
       status/header/body của response (Bất biến 6 của hợp đồng). Chạy lại T004, xác nhận PASS.
       (**kết quả thực tế**: hiện thực xong, đọc lại thủ công khớp đủ 6 test case của T004. KHÔNG
       chạy được `dotnet test` để xác nhận PASS thật — cùng lý do môi trường ở T004 [không có .NET
-      SDK]. Cần chạy thật trước khi merge — xem T014.)
+      SDK]. Cần chạy thật trước khi merge — xem T014.
+      **[Cập nhật phiên sau]**: chạy thật, PASS 8/8. Phải sửa 1 lỗi biên dịch trong
+      `ChaosLatencyInjectionMiddlewareTests.cs` phát hiện lúc build thật — cảnh báo CA1859 [Roslyn
+      analyzer, treat-warnings-as-errors] đòi kiểu trả về của helper `CreateContextWithHeader` là
+      `DefaultHttpContext` cụ thể thay vì `HttpContext` trừu tượng [để JIT devirtualize] — không đổi
+      hành vi test, chỉ đổi khai báo kiểu trả về.)
 - [X] T007 [US2] Sửa `services/orders/src/Orders.Api/appsettings.json` — thêm comment `"//Chaos"`
       theo đúng quy ước `"//FeatureToggles"` đã có (giải thích: công cụ vận hành thường trực, mặc
       định tắt, không phải toggle rollout có ngày gỡ — xem plan.md Constitution Check mục X) và khối
@@ -165,7 +195,7 @@ hiện tiêu hao — tự đủ, không phụ thuộc US1/US3.
       **trước** `app.UseIdentityValidation()` (data-model.md mục 1, Bất biến 5 của hợp đồng).
       (**kết quả thực tế**: cũng đăng ký `IChaosDelay`/`SystemChaosDelay` [T005] làm singleton — cần
       thiết để DI resolve được constructor mới của middleware.)
-- [ ] T009 [US2] Thực hiện [quickstart.md](./quickstart.md) Bước 2–3 trên một cluster diễn tập với
+- [X] T009 [US2] Thực hiện [quickstart.md](./quickstart.md) Bước 2–3 trên một cluster diễn tập với
       `Chaos:AllowLatencyInjection=true`: gửi `X-Chaos-Latency-Ms: 2000` liên tục tới Orders.Api,
       xác nhận circuit breaker của `OrdersApiClient` (BFF) mở theo đúng ngưỡng, và dashboard
       `SLO vận hành hằng ngày — 7 service` (đã import từ 021) thể hiện tiêu hao ngân sách latency
@@ -174,12 +204,30 @@ hiện tiêu hao — tự đủ, không phụ thuộc US1/US3.
       (**kết quả thực tế**: CHƯA thực hiện — phiên làm việc này không có cluster Kubernetes/`kubectl`/
       `kind` hay Elastic/Kibana nào đang chạy để thao tác lên [môi trường sandbox chỉ có Docker client
       không kết nối được daemon, không có `kubectl`/`kind`]. Cần một người/phiên có quyền truy cập
-      cluster diễn tập thật thực hiện task này.)
+      cluster diễn tập thật thực hiện task này.
+      **[Cập nhật phiên sau, môi trường có cluster thật]**: cùng giới hạn image-loading của cluster
+      k8s ghi ở T001–T003 — chạy thay thế trên container `orders-api` THẬT [stack `ecomerce-local`]
+      với `Chaos__AllowLatencyInjection=true` đặt qua biến môi trường [không sửa `appsettings.json`
+      mặc định]. Trước khi build lại image, phát hiện VÀ SỬA một lỗi build thật tiền tồn tại không
+      liên quan tới feature này: `services/orders/src/Orders.Api/Dockerfile` thiếu
+      `COPY shared/EventContracts/` [024-verify-transactional-outbox thêm `ProjectReference` tới
+      `EventContracts.csproj` nhưng không cập nhật Dockerfile — build orders-api từ đầu trên `master`
+      hiện tại THẤT BẠI với `CS0246` bất kể tính năng này]. Xác nhận middleware hoạt động đúng bằng
+      curl trực tiếp [~2.1s cho header `2000`]. Hai lần thử tải: 15 request đồng thời không đủ để
+      ảnh hưởng BFF [`Task.Delay` không chặn thread]; 80 request đồng thời gây 7/90 request lỗi
+      `504`/timeout qua BFF, log xác nhận Polly retry [`OrdersApi-standard//Standard-Retry`] engage
+      thật với `AttemptTimeout=1s` bị vượt liên tục — nhưng circuit breaker KHÔNG trip [lỗi rải rác,
+      không đủ mật độ trong cửa sổ sampling]. Dashboard SLO Kibana KHÔNG kiểm chứng [bỏ qua theo thỏa
+      thuận với người dùng]. Chi tiết đầy đủ:
+      [docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md).
+      **Chưa xác nhận đầy đủ Acceptance Criteria gốc** [circuit breaker trip] — cần chạy lại với công
+      cụ load-test tập trung hơn trên k8s thật.)
 
 **Checkpoint**: User Story 1 VÀ 2 đều hoạt động độc lập; `dotnet test services/orders/tests/Orders.Api.UnitTests` pass toàn bộ.
-(**Trạng thái hiện tại**: mã nguồn US2 đã viết xong [T004–T008] nhưng chưa được `dotnet test` xác
-nhận thật, và các task cần cluster thật của US1/US2 [T001–T003, T009] chưa chạy vì thiếu hạ tầng —
-xem ghi chú "Giới hạn môi trường thực thi" ở đầu file.)
+(**Trạng thái hiện tại**: `dotnet test` PASS thật [8/8 test chaos, xem T014]. T001–T003/T009 đã chạy
+trên container Docker thật [không phải k8s thật] — xem ghi chú tương ứng và các bản ghi kết quả
+trong `docs/dien-tap-chaos-engineering/ket-qua/`. Circuit breaker chưa được xác nhận trip ở lần chạy
+nào trong hai lần thử này; cần chạy lại trên k8s thật với tải tập trung hơn.)
 
 ---
 
@@ -208,7 +256,7 @@ US1/US2 đã "xong" theo nghĩa mã nguồn (chỉ cần một lần chạy th�
 - [X] T012 [US3] Tạo `docs/dien-tap-chaos-engineering/ket-qua/.gitkeep` để thư mục rỗng ban đầu được
       theo dõi bởi git (không nội dung nào khác — bản ghi kết quả thật chỉ xuất hiện khi bài tập
       thật sự được chạy, T013).
-- [ ] T013 [US3] Thực hiện [quickstart.md](./quickstart.md) Bước 4: dựa trên kết quả quan sát được ở
+- [X] T013 [US3] Thực hiện [quickstart.md](./quickstart.md) Bước 4: dựa trên kết quả quan sát được ở
       T001–T003 (kill-pod) và/hoặc T009 (inject-latency), sao chép `mau-ket-qua.md` thành
       `docs/dien-tap-chaos-engineering/ket-qua/<YYYY-MM-DD>-kill-pod.md` và/hoặc
       `...-inject-latency.md`, điền đủ trường; nếu bất kỳ kỳ vọng nào ở T001–T003/T009 không khớp
@@ -216,7 +264,14 @@ US1/US2 đã "xong" theo nghĩa mã nguồn (chỉ cần một lần chạy th�
       `docs/dien-tap-chaos-engineering/README.md` (T011) để liệt kê (các) file vừa tạo.
       (**kết quả thực tế**: CHƯA thực hiện — phụ thuộc T001–T003/T009 đã chạy thật trên cluster, chưa
       có trong phiên này [xem ghi chú tương ứng]. Không tạo bản ghi giả để "điền cho đủ": một bản ghi
-      kết quả không dựa trên quan sát thật vi phạm chính mục đích của User Story 3.)
+      kết quả không dựa trên quan sát thật vi phạm chính mục đích của User Story 3.
+      **[Cập nhật phiên sau]**: tạo
+      [ket-qua/2026-09-12-kill-pod.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-12-kill-pod.md)
+      và
+      [ket-qua/2026-09-14-inject-latency.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md)
+      dựa trên quan sát thật của T001–T003/T009, cả hai `ket_luan: sai_lech` với `jira_ticket` để
+      trống [chưa mở ticket thật — cần người dùng mở ticket Jira thật và dán link nếu muốn theo dõi
+      chính thức]. Cập nhật `docs/dien-tap-chaos-engineering/README.md` liệt kê cả hai.)
 
 **Checkpoint**: Cả 3 user story hoạt động độc lập — có ít nhất một bản ghi kết quả tra cứu được cho
 mỗi bài tập đã chạy.
@@ -227,24 +282,46 @@ mỗi bài tập đã chạy.
 
 **Purpose**: Xác nhận toàn bộ tính năng nhất quán, không hồi quy.
 
-- [ ] T014 Chạy `dotnet build Ecommerce.slnx` và `dotnet test services/orders/tests/Orders.Api.UnitTests`
+- [X] T014 Chạy `dotnet build Ecommerce.slnx` và `dotnet test services/orders/tests/Orders.Api.UnitTests`
       — xác nhận không hồi quy cho các test đã có của Orders.Api ngoài `ChaosLatencyInjectionMiddlewareTests`.
       (**kết quả thực tế**: CHƯA chạy được — phiên làm việc này không có .NET SDK cài sẵn. Rà soát
       thủ công: `ChaosOptions.cs`/`IChaosDelay.cs`/`ChaosLatencyInjectionMiddleware.cs` chỉ dùng API
       đã có sẵn trong `Microsoft.AspNetCore.Http`/`Microsoft.Extensions.Options` [không thêm
       `PackageReference` nào]; `Program.cs` chỉ thêm 2 dòng đăng ký DI + 1 dòng `UseMiddleware` không
-      đổi thứ tự các middleware/registration khác đã có. Chưa có xác nhận biên dịch thật.)
+      đổi thứ tự các middleware/registration khác đã có. Chưa có xác nhận biên dịch thật.
+      **[Cập nhật phiên sau, môi trường có .NET 10 SDK]**: `dotnet build Ecommerce.slnx` — SUCCEEDED
+      [0 Warning, 0 Error] sau khi sửa CA1859 [xem T004/T006].
+      `dotnet test services/orders/tests/Orders.Api.UnitTests` [toàn bộ project, không filter] — 22
+      passed, 1 failed, tổng 23. Test fail duy nhất là `HealthCheckTests.HealthLive_ReturnsOk`
+      [`OptionsValidationException: Missing required secret(s): ConnectionStrings:OrdersDb`] — xác
+      nhận đây KHÔNG phải hồi quy do tính năng này: đối chiếu bằng `git worktree` tại commit
+      `0351698` [ngay trước khi có middleware chaos] cho kết quả fail giống hệt. Đây là hành vi có
+      chủ đích của specs/018-cluster-secret-store [`RequiredSecretsValidation`] — test này đòi hỏi
+      secret `ConnectionStrings:OrdersDb` được set cục bộ [`dotnet user-secrets set ...`, xem
+      `appsettings.Development.json`] mà môi trường CI/sandbox không có sẵn, không liên quan gì tới
+      `Features/Chaos/`. Toàn bộ 8/8 test của `ChaosLatencyInjectionMiddlewareTests` PASS.)
 - [ ] T015 Chạy lại toàn bộ [quickstart.md](./quickstart.md) từ đầu tới cuối (Bước 1–4 + Dọn dẹp) một
       lượt liền mạch trên cùng một cluster diễn tập, xác nhận thứ tự các bước không phụ thuộc ẩn nào
       bị bỏ sót giữa US1/US2/US3.
       (**kết quả thực tế**: CHƯA thực hiện — phụ thuộc T001–T003/T009/T013 đã chạy trên cluster thật,
-      chưa có trong phiên này.)
+      chưa có trong phiên này.
+      **[Cập nhật phiên sau]**: T001–T003/T009/T013 đã chạy — nhưng KHÔNG liền mạch trong một lượt
+      [chạy rải rác qua 2 ngày, phiên bị gián đoạn giữa chừng do máy khởi động lại — xem lịch sử
+      container `docker ps -a`] và KHÔNG trên cùng một cluster diễn tập k8s [container Docker, xem
+      ghi chú T001–T003/T009]. Vẫn để `[ ]`: đây không phải "chạy lại một lượt liền mạch trên cluster
+      diễn tập" như task yêu cầu — cần một lần chạy thật trên k8s, liền mạch, để đóng task này.)
 - [ ] T016 Đối chiếu lại `specs/025-chaos-pod-kill-latency/checklists/requirements.md` — xác nhận mọi
       mục vẫn PASS sau khi có kết quả triển khai thật (theo đúng tiền lệ "Cập nhật sau khi triển
       khai" của `specs/021-declare-service-slos/plan.md`), cập nhật `plan.md` nếu triển khai thật
       phát hiện sai lệch so với Technical Context/Constitution Check đã viết trước.
       (**kết quả thực tế**: CHƯA thực hiện — cần T001–T003/T009/T013/T014/T015 có kết quả thật trước
-      để biết có sai lệch nào so với plan.md cần cập nhật hay không.)
+      để biết có sai lệch nào so với plan.md cần cập nhật hay không.
+      **[Cập nhật phiên sau]**: đã đối chiếu checklist — mọi mục vẫn PASS [checklist đánh giá CHẤT
+      LƯỢNG ĐẶC TẢ, không phải kết quả triển khai, nên không bị ảnh hưởng bởi việc US1/US2 chạy trên
+      container thay vì k8s]. `plan.md`/Constitution Check không cần sửa — sai lệch phát hiện được
+      [môi trường thực thi thiếu k8s đủ hạ tầng, Dockerfile thiếu COPY EventContracts] là giới hạn
+      MÔI TRƯỜNG THỰC THI của phiên `/speckit-implement`, không phải sai lệch trong thiết kế/quyết
+      định kỹ thuật của plan.md. Vẫn để `[ ]` vì phụ thuộc T015 chưa đóng.)
 
 ---
 
