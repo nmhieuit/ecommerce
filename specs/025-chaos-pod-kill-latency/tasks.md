@@ -18,22 +18,37 @@ thực bằng cách chạy `quickstart.md` trên hạ tầng thật, đúng ti�
 **Organization**: Task được nhóm theo user story trong spec.md để mỗi story có thể triển khai và
 kiểm thử độc lập.
 
-**⚠️ Giới hạn môi trường thực thi — lịch sử qua 2 phiên `/speckit-implement`**:
+**⚠️ Giới hạn môi trường thực thi — lịch sử qua 3 phiên `/speckit-implement`**:
 
 - **Phiên 1** (không có .NET SDK/`kubectl`/`kind`/Docker daemon kết nối được): chỉ viết được mã
   nguồn/tài liệu; mọi task cần `dotnet`/cluster thật để trống `[ ]`.
 - **Phiên 2** (môi trường máy người dùng, có đủ `dotnet`/`kubectl`/`kind`/`docker`): chạy được
-  T004/T006/T014 thật [PASS]. Có một cluster Kubernetes docker-desktop khả dụng nhưng KHÔNG dùng
-  được để chạy US1/US2 đúng nguyên bản — image build cục bộ không nạp được vào containerd của
-  cluster đó [đã thử 3 cách độc lập: image trần, ép lên node control-plane, registry cục bộ tùy
-  chỉnh; nguyên nhân gốc: mọi lượt pull bị một registry-mirror nội bộ của Docker Desktop chặn khi
-  proxy tới registry tùy chỉnh]. Được sự đồng ý của người dùng, T001–T003/T009/T013 chạy thay thế
-  trên container Docker thật [stack `ecomerce-local`, auth JWT thật, DB thật] — xem ghi chú từng
-  task và [docs/dien-tap-chaos-engineering/ket-qua/](../../docs/dien-tap-chaos-engineering/ket-qua/).
-  **Đây KHÔNG phải xác nhận đầy đủ trên Kubernetes thật** (T015/T016 vẫn để `[ ]` vì phụ thuộc điều
-  này). Trước khi coi tính năng sẵn sàng merge, cần chạy lại T001–T003/T009/T013/T015/T016 trên một
-  cluster Kubernetes thật có đủ Service/SQL/RabbitMQ/Identity, với một công cụ tạo tải tập trung hơn
-  (circuit breaker chưa được quan sát trip ở lần chạy nào trong 2 lần thử của phiên 2).
+  T004/T006/T014 thật [PASS]. Cluster Kubernetes docker-desktop khả dụng nhưng image build cục bộ
+  không nạp được vào containerd của cluster [đã thử 3 cách: image trần, ép lên node control-plane,
+  registry cục bộ tùy chỉnh; nguyên nhân gốc: registry-mirror nội bộ của Docker Desktop chặn khi
+  proxy tới registry tùy chỉnh]. Chạy thay thế T001–T003/T009/T013 trên container Docker thật
+  [stack `ecomerce-local`].
+- **Phiên 3** (cùng máy, người dùng yêu cầu tiếp tục dùng k8s docker-desktop có sẵn): vượt qua được
+  giới hạn image-loading của phiên 2 bằng kỹ thuật khác — `dotnet publish` cục bộ → `kubectl cp`
+  binary vào một Pod chạy image công khai `mcr.microsoft.com/dotnet/aspnet:10.0` (không cần build/
+  đẩy image tùy chỉnh) → `kubectl exec` khởi chạy `dotnet <Service>.Api.dll`. Kết nối BFF (container
+  Docker thật) tới Service trong cluster qua `kubectl port-forward --address 0.0.0.0` (người dùng đã
+  cho phép mở cổng) + `host.docker.internal`. Nhờ đó **T001–T003 và T009 đã chạy lại trên Pod
+  Kubernetes THẬT** (`kubectl delete pod` xóa đúng pod thật, Kubernetes tái lập lịch thật) — xem
+  [docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-kill-pod.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-kill-pod.md)
+  và phần "Lần thử 3" trong
+  [2026-09-14-inject-latency.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md).
+  Trong phiên này cũng phát hiện một nguồn gây API server k8s chập chờn: một stack Docker khác không
+  liên quan (`ecomerce-stack`) chạy song song cạnh tranh tài nguyên — đã dừng theo sự cho phép của
+  người dùng.
+  **Vẫn còn sai lệch cần lưu ý**: (a) pod thay thế của US1 không tự khởi động ứng dụng [do dùng image
+  công khai + thủ công cp/exec thay vì image thật] nên thời gian phục hồi đo được gồm cả thao tác thủ
+  công; (b) circuit breaker chưa trip ở bất kỳ lần thử nào trong CẢ 3 phiên [8 lỗi thật rải rác qua 3
+  lần chạy độc lập, không đủ mật độ trong cửa sổ sampling] — nghi ngờ do công cụ tải (`curl` trong
+  vòng lặp bash) không đủ mật độ đồng thời, cần công cụ load-test chuyên dụng để xác nhận dứt điểm;
+  (c) T015 (chạy lại toàn bộ quickstart một lượt liền mạch) và T016 vẫn để `[ ]` — các lần chạy trải
+  qua nhiều ngày/phiên bị gián đoạn (máy khởi động lại giữa chừng), không phải một lượt liền mạch, và
+  dashboard SLO Kibana (Bước 3) chưa từng được kiểm chứng.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -114,12 +129,24 @@ pod mới `READY` — tự đủ, không phụ thuộc US2/US3.
       timeout → total timeout]; circuit breaker KHÔNG trip [cửa sổ gián đoạn quá ngắn]. Chi tiết đầy
       đủ: [docs/dien-tap-chaos-engineering/ket-qua/2026-09-12-kill-pod.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-12-kill-pod.md).
       **Đây KHÔNG phải xác nhận đầy đủ trên Kubernetes thật** — cần chạy lại trên cluster k8s có đủ
-      Service/SQL/Identity trước khi coi US1 hoàn tất theo đúng tinh thần spec.md.)
+      Service/SQL/Identity trước khi coi US1 hoàn tất theo đúng tinh thần spec.md.
+      **[Cập nhật phiên 3, trên Pod Kubernetes THẬT]**: `kubectl delete pod -l app=baskets` xóa đúng
+      pod thật (`baskets-779f6bc875-vqmjc`), Kubernetes tái lập lịch pod thay thế thật
+      (`baskets-779f6bc875-lg29l`) ngay lập tức. Tải nền `GET /bff/basket` (150 request) ghi nhận
+      4/150 lỗi [502/502/504/504] trong cửa sổ ~42s [`08:08:56`–`08:09:38` UTC], tự phục hồi về 200
+      OK. Log BFF xác nhận Polly retry với bằng chứng đặc trưng k8s thật:
+      `Result: 'Connection refused (host.docker.internal:15188)'` [pod cũ đã bị xóa]. Circuit breaker
+      vẫn KHÔNG trip. **Lưu ý quan trọng**: vì không có image thật để Deployment tự khởi động ứng
+      dụng khi tạo pod mới [xem ghi chú đầu file], phải `kubectl cp` + `kubectl exec` thủ công lại
+      cho pod mới — thời gian phục hồi đo được (~42s) gồm cả ~4s thao tác thủ công này, KHÔNG thuần
+      là thời gian khởi động container/readiness gate thông thường của Kubernetes. Chi tiết đầy đủ:
+      [docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-kill-pod.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-kill-pod.md).)
 
 **Checkpoint**: User Story 1 đã được xác nhận độc lập — không có mã ứng dụng nào bị chạm, không phụ
-thuộc User Story 2/3. (**Trạng thái hiện tại**: xác nhận được trên container Docker thật [không phải
-pod Kubernetes thật — xem ghi chú T001–T003 và bản ghi kết quả 2026-09-12-kill-pod.md]; cần chạy lại
-trên k8s thật để xác nhận đầy đủ.)
+thuộc User Story 2/3. (**Trạng thái hiện tại**: đã chạy trên CẢ container Docker thật [2026-09-12] VÀ
+Pod Kubernetes thật [2026-09-14, xem ghi chú T001–T003] — xác nhận Kubernetes tái lập lịch pod thật
+và Polly retry engage thật ở cả hai. Circuit breaker chưa trip ở lần nào. Recovery-time đo được trên
+k8s vẫn lẫn thao tác thủ công tái cấp app do giới hạn image-loading của cluster.)
 
 ---
 
@@ -221,13 +248,25 @@ hiện tiêu hao — tự đủ, không phụ thuộc US1/US3.
       thuận với người dùng]. Chi tiết đầy đủ:
       [docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md).
       **Chưa xác nhận đầy đủ Acceptance Criteria gốc** [circuit breaker trip] — cần chạy lại với công
-      cụ load-test tập trung hơn trên k8s thật.)
+      cụ load-test tập trung hơn trên k8s thật.
+      **[Cập nhật phiên 3, trên Pod Kubernetes THẬT]**: vượt qua được giới hạn image-loading bằng kỹ
+      thuật `kubectl cp` + `kubectl exec` [xem ghi chú đầu file]. Orders.Api chạy như Pod Kubernetes
+      thật (`orders-788d88d7cb-pmf88`) với `Chaos__AllowLatencyInjection=true`; xác nhận middleware
+      hoạt động đúng trên pod thật [~2.35s cho header `2000`]. Tải nền qua BFF (100 request) đồng thời
+      với luồng tiêm tập trung hơn lần trước (100 request đồng thời liên tục ~30s, header `3000`, gửi
+      trực tiếp qua `kubectl port-forward`): chỉ 1/100 request lỗi [`504`] — yếu hơn lần thử trên
+      container Docker dù mức tải cao hơn. Log BFF vẫn xác nhận Polly retry engage thật. **Circuit
+      breaker vẫn KHÔNG trip** — tổng 8 lỗi thật qua 3 lần thử độc lập [2 trên container Docker, 1
+      trên k8s thật] đều rải rác, không đủ mật độ; đây là phát hiện nhất quán trên cả hai nền tảng,
+      không phải hạn chế riêng của môi trường Docker. Chi tiết đầy đủ (phần "Lần thử 3"):
+      [docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md).)
 
 **Checkpoint**: User Story 1 VÀ 2 đều hoạt động độc lập; `dotnet test services/orders/tests/Orders.Api.UnitTests` pass toàn bộ.
 (**Trạng thái hiện tại**: `dotnet test` PASS thật [8/8 test chaos, xem T014]. T001–T003/T009 đã chạy
-trên container Docker thật [không phải k8s thật] — xem ghi chú tương ứng và các bản ghi kết quả
-trong `docs/dien-tap-chaos-engineering/ket-qua/`. Circuit breaker chưa được xác nhận trip ở lần chạy
-nào trong hai lần thử này; cần chạy lại trên k8s thật với tải tập trung hơn.)
+trên CẢ container Docker thật VÀ Pod Kubernetes thật — xem ghi chú tương ứng và các bản ghi kết quả
+trong `docs/dien-tap-chaos-engineering/ket-qua/`. Circuit breaker chưa được xác nhận trip ở BẤT KỲ
+lần chạy nào trong 3 lần thử độc lập [8 lỗi thật tổng cộng, luôn rải rác] — nghi ngờ công cụ tải
+`curl`/bash không đủ mật độ đồng thời; cần công cụ load-test chuyên dụng để xác nhận dứt điểm.)
 
 ---
 
@@ -271,7 +310,13 @@ US1/US2 đã "xong" theo nghĩa mã nguồn (chỉ cần một lần chạy th�
       [ket-qua/2026-09-14-inject-latency.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md)
       dựa trên quan sát thật của T001–T003/T009, cả hai `ket_luan: sai_lech` với `jira_ticket` để
       trống [chưa mở ticket thật — cần người dùng mở ticket Jira thật và dán link nếu muốn theo dõi
-      chính thức]. Cập nhật `docs/dien-tap-chaos-engineering/README.md` liệt kê cả hai.)
+      chính thức]. Cập nhật `docs/dien-tap-chaos-engineering/README.md` liệt kê cả hai.
+      **[Cập nhật phiên 3]**: tạo thêm
+      [ket-qua/2026-09-14-kill-pod.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-kill-pod.md)
+      [chạy trên Pod Kubernetes THẬT] và bổ sung phần "Lần thử 3" vào
+      [2026-09-14-inject-latency.md](../../docs/dien-tap-chaos-engineering/ket-qua/2026-09-14-inject-latency.md)
+      dựa trên quan sát thật ở phiên 3. Cả hai vẫn `ket_luan: sai_lech`. Cập nhật README liệt kê đầy
+      đủ 3 bản ghi.)
 
 **Checkpoint**: Cả 3 user story hoạt động độc lập — có ít nhất một bản ghi kết quả tra cứu được cho
 mỗi bài tập đã chạy.
@@ -309,7 +354,13 @@ mỗi bài tập đã chạy.
       [chạy rải rác qua 2 ngày, phiên bị gián đoạn giữa chừng do máy khởi động lại — xem lịch sử
       container `docker ps -a`] và KHÔNG trên cùng một cluster diễn tập k8s [container Docker, xem
       ghi chú T001–T003/T009]. Vẫn để `[ ]`: đây không phải "chạy lại một lượt liền mạch trên cluster
-      diễn tập" như task yêu cầu — cần một lần chạy thật trên k8s, liền mạch, để đóng task này.)
+      diễn tập" như task yêu cầu — cần một lần chạy thật trên k8s, liền mạch, để đóng task này.
+      **[Cập nhật phiên 3]**: T001–T003/T009 ĐÃ chạy lại trên Pod Kubernetes thật [xem ghi chú tương
+      ứng] — nhưng vẫn KHÔNG phải "một lượt liền mạch": phiên này tự nó cũng bị gián đoạn giữa chừng
+      [máy khởi động lại, phải khởi động lại toàn bộ stack `ecomerce-local` và xác thực lại token
+      giữa chừng], Bước 3 quickstart.md [dashboard SLO Kibana] chưa từng được kiểm chứng ở bất kỳ
+      phiên nào, và bước Dọn dẹp [tắt `Chaos:AllowLatencyInjection`, dừng port-forward] chỉ thực hiện
+      ở cuối phiên chứ không phải một phần của lượt chạy liền mạch. Vẫn để `[ ]`.)
 - [ ] T016 Đối chiếu lại `specs/025-chaos-pod-kill-latency/checklists/requirements.md` — xác nhận mọi
       mục vẫn PASS sau khi có kết quả triển khai thật (theo đúng tiền lệ "Cập nhật sau khi triển
       khai" của `specs/021-declare-service-slos/plan.md`), cập nhật `plan.md` nếu triển khai thật
@@ -321,7 +372,9 @@ mỗi bài tập đã chạy.
       container thay vì k8s]. `plan.md`/Constitution Check không cần sửa — sai lệch phát hiện được
       [môi trường thực thi thiếu k8s đủ hạ tầng, Dockerfile thiếu COPY EventContracts] là giới hạn
       MÔI TRƯỜNG THỰC THI của phiên `/speckit-implement`, không phải sai lệch trong thiết kế/quyết
-      định kỹ thuật của plan.md. Vẫn để `[ ]` vì phụ thuộc T015 chưa đóng.)
+      định kỹ thuật của plan.md. Vẫn để `[ ]` vì phụ thuộc T015 chưa đóng.
+      **[Cập nhật phiên 3]**: kết luận không đổi — checklist vẫn PASS, `plan.md` vẫn không cần sửa
+      [kể cả với bằng chứng k8s thật mới ở T001–T003/T009]. Vẫn để `[ ]` vì T015 vẫn chưa đóng.)
 
 ---
 
