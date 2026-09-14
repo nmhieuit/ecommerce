@@ -1,0 +1,76 @@
+#!/usr/bin/env groovy
+
+// Scheduled performance gate for the critical browse->basket->checkout->order path
+// (specs/025-load-performance-test-budgets). Deliberately a SEPARATE pipeline from Jenkinsfile (the
+// PR gate): the constitution's "Performance gate" runs on a scheduled pipeline against a
+// production-like environment, not on every PR — see
+// specs/025-load-performance-test-budgets/contracts/performance-pipeline-stage-contract.md. This
+// file must never add a stage to Jenkinsfile, and must never touch the 5 required check names
+// specs/013-sonarqube-merge-blocker/contracts/pipeline-stage-contract.md documents.
+//
+// Agent requirements: same as Jenkinsfile (.NET 10 SDK, a working Docker daemon — this pipeline
+// brings up the full demo stack via docker compose).
+
+void checkStarted(String name) {
+    githubNotify context: name, description: "${name} is running", status: 'PENDING'
+}
+
+void checkPassed(String name, String summary) {
+    githubNotify context: name, description: summary, status: 'SUCCESS'
+}
+
+void checkFailed(String name, String summary) {
+    githubNotify context: name, description: summary, status: 'FAILURE'
+}
+
+pipeline {
+    agent any
+
+    triggers {
+        // Nightly. Not required-status-check gated (contracts/performance-pipeline-stage-contract.md
+        // §1-2) — a budget regression here blocks release through this check's own FAILURE status,
+        // per constitution's "blocks the release even when the PR gate is green", not through
+        // GitHub branch protection.
+        cron('H 2 * * *')
+    }
+
+    options {
+        timeout(time: 60, unit: 'MINUTES')
+        timestamps()
+        disableConcurrentBuilds(abortPrevious: false)
+        buildDiscarder(logRotator(numToKeepStr: '30'))
+    }
+
+    environment {
+        DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+        DOTNET_NOLOGO = '1'
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
+
+        CHECK_PERFORMANCE_GATE = 'ci/performance-gate'
+    }
+
+    stages {
+        stage('performance gate') {
+            steps {
+                checkStarted(env.CHECK_PERFORMANCE_GATE)
+                sh 'scripts/ci/run-performance-tests.sh'
+            }
+            post {
+                success {
+                    checkPassed(env.CHECK_PERFORMANCE_GATE, 'Critical path stayed within its declared budget.')
+                }
+                unsuccessful {
+                    checkFailed(env.CHECK_PERFORMANCE_GATE,
+                        'Critical path exceeded its declared budget — see artifacts/performance/ and the Jenkins console log.')
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            junit allowEmptyResults: true, testResults: '**/TestResults/*.trx'
+            archiveArtifacts artifacts: 'artifacts/performance/*', allowEmptyArchive: true, fingerprint: false
+        }
+    }
+}

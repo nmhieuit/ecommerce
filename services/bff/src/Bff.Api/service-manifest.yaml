@@ -5,8 +5,10 @@
 # telemetry required by Principle VII." Declared at scaffold time so the budget is measured from
 # day one rather than bolted on after the first regression.
 #
-# Scope note: the health endpoints are the only surface this service exposes today. The /bff/*
-# routes declare their own budgets here as T022-T025 add them.
+# Scope note: every /bff/* route this service exposes declares its own budget below. (Corrected
+# 025-load-performance-test-budgets: this note previously said only health endpoints existed and the
+# rest would arrive "as T022-T025 add them" — that was stale even before this feature, since
+# POST /bff/basket/items and POST /bff/checkout already existed in code with no matching entry here.)
 
 service:
   name: bff
@@ -71,6 +73,31 @@ endpoints:
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: products
+    latency:
+      p95: 300ms
+      p99: 800ms
+  - route: POST /bff/basket/items
+    purpose: >-
+      Adds a product to the caller's current basket, merging onto an existing line for the same
+      product rather than creating a second line (spec 002 FR-005). (025-load-performance-test-budgets:
+      this entry was missing even though the route has existed since 002-gateway-bff-routing — added
+      while wiring the critical-path load test's budget lookups.)
+    authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
+    authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
+    proxies: baskets
+    latency:
+      p95: 300ms
+      p99: 800ms
+  - route: POST /bff/checkout
+    purpose: >-
+      Reads the caller's basket, places an order for its lines, then clears the basket
+      (Features/Checkout/CheckoutEndpoints.cs). The one route that spans a workflow rather than a
+      single downstream read. (025-load-performance-test-budgets: this entry was missing even though
+      the route has existed since 004-minimal-shopping-spa — added while wiring the critical-path
+      load test's budget lookups.)
+    authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
+    authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
+    proxies: [baskets, orders]
     latency:
       p95: 300ms
       p99: 800ms
