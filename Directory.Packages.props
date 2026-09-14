@@ -125,6 +125,29 @@
          NOT referenced by shared/EventContracts itself: runtime schema validation is not part of
          this platform's safety net (ADR-0005), so no service ever takes a dependency on it. -->
     <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
+
+    <!-- Load testing (025-load-performance-test-budgets research.md Quyết định 1; constitution
+         Principle VIII: "Critical user paths MUST have automated performance tests"). PINNED TO
+         4.1.2 DELIBERATELY, NOT THE LATEST 5.x/6.x LINE: since v5, NBomber ships under the
+         "NBomber Business License" — its own licensing page states the FREE version is "only for
+         personal use. You can't use the FREE versions for an organization" (verified against
+         nbomber.com/docs/getting-started/license/ and the NuGet Gallery license page for 6.6.0).
+         4.1.2 (published 2023-03-30, verified via nuget.org/packages/NBomber/4.1.2/License) is the
+         last release under the original Apache License 2.0 — free for any use, including an
+         organization's CI pipeline. Same reasoning already applied to MassTransit above: introducing
+         a paid dependency is a business decision no plan/implementation step has authority to make
+         on its own. Do not bump this past the 4.x line without first re-confirming the license of
+         whatever version is current at the time. -->
+    <PackageVersion Include="NBomber" Version="4.1.2" />
+    <!-- NBomber 4.1.2 -> NBomber.Contracts [4.1.1] transitively floors MessagePack at 2.4.59, which
+         `dotnet restore` refuses outright under this repo's NuGet audit-as-error settings: 12 known
+         moderate/high-severity advisories, none of them fixed anywhere in the 2.x line (confirmed
+         against the MessagePack-CSharp security advisories — the fix for the last one,
+         GHSA-4qm4-8hg2-g2xm, landed only in 3.1.7). Same pattern as SSH.NET above: pinning the
+         package directly so the patched version wins over the transitive floor. Verified this
+         project only needs NBomber's own stats/reporting APIs, never MessagePack directly — 3.1.8 is
+         a major-version bump from 2.x, but nothing in this repository serializes through it by hand. -->
+    <PackageVersion Include="MessagePack" Version="3.1.8" />
   </ItemGroup>
 
 </Project>

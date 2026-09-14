@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- research.md Quyết định 1: NBomber ghim đúng 4.1.2 (Apache-2.0) — KHÔNG dùng bản mới nhất
+       (5.x/6.x, "NBomber Business License", miễn phí chỉ cho cá nhân). Xem comment tại
+       Directory.Packages.props. -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="NBomber" />
+    <!-- Forces NBomber's transitive MessagePack floor (2.4.59, vulnerable) up to the patched version
+         pinned in Directory.Packages.props — see the comment there. -->
+    <PackageReference Include="MessagePack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Tái dùng ServiceManifestFixture để đọc ngưỡng SLO trực tiếp từ service-manifest.yaml của bff
+       — research.md Quyết định 0, không parse YAML lần hai (021-declare-service-slos). -->
+  <ItemGroup>
+    <ProjectReference Include="..\ServiceManifestSloConventionTests\ServiceManifestSloConventionTests.csproj" />
+  </ItemGroup>
+
+</Project>
