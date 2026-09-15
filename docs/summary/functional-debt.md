@@ -1,4 +1,4 @@
-# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 22 tính năng
+# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 24 tính năng
 
 *Viết cho: người quản lý sản phẩm, stakeholder không trực tiếp code. Không yêu cầu đọc code hay biết
 tên bất kỳ công cụ kỹ thuật nào.*
@@ -103,6 +103,20 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   không cần ai can thiệp. Trong lúc chạy thử dịch vụ thật (không chỉ qua bài kiểm tra tự động), đội
   phát hiện công cụ kỹ thuật ban đầu chọn yêu cầu trả phí — đã đổi ngay sang phiên bản miễn phí tương
   đương, không ảnh hưởng gì tới cách hệ thống hoạt động.
+- **[025](../architecture/025_Architect_diễn%20tập%20chaos%20engineering%20giết%20pod%20tiêm%20độ%20trễ.md)** —
+  Phát hiện quan trọng nhất: qua 4 lần chủ động thử làm chậm 1 bộ phận (2 lần trên container, 2 lần
+  trên Kubernetes thật, kể cả dùng công cụ tạo tải chuyên dụng), lưới an toàn "tự động từ chối nhanh
+  khi 1 bộ phận liên tục có vấn đề" **chưa từng kích hoạt** — lỗi thật có xảy ra nhưng luôn rải rác,
+  không đủ dồn dập để lưới an toàn đó nhận ra. Đội xác nhận đây là hệ quả của 1 quyết định thiết kế có
+  chủ đích (không làm ảnh hưởng tài nguyên hệ thống thật khi diễn tập), không phải lỗi bất ngờ — nhưng
+  cũng đặt ra câu hỏi đáng bàn: tiêu chí gốc cho bài diễn tập này có còn phù hợp không.
+- **[026](../architecture/026_Architect_kiểm%20thử%20tải%20hiệu%20năng%20luồng%20nghiệp%20vụ%20trọng%20yếu.md)** —
+  Lần chạy thật đầu tiên trên môi trường đầy đủ phát hiện ngay: hệ thống chưa có cách nào hợp lệ để
+  bài kiểm thử tải "đăng nhập" như 1 khách hàng thật — mọi yêu cầu bị từ chối vì thiếu thông tin xác
+  thực. Đây là khoảng trống của toàn hệ thống (không phải riêng bài kiểm thử tải), đã được ghi nhận
+  thành việc cần làm riêng. Nhân tiện phát hiện và vá tạm 2 vấn đề khác không liên quan: 1 lỗi khiến
+  việc build lại hệ thống từ đầu bị chặn hoàn toàn, và 1 dấu hiệu treo/xung đột khi dịch vụ định danh
+  khởi động lần đầu dưới tải.
 
 ## 2. Giới hạn hiện tại
 
@@ -204,6 +218,17 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   chạy liên tục để đảm bảo nơi tra cứu luôn khớp đúng dữ liệu gốc — việc đối chiếu hiện làm định kỳ/thủ
   công. 1 chỉ tiêu (độ trễ ở mức hiếm gặp nhất, p99) của bộ phận xử lý đơn hàng hiện đo được khá gần
   với ngưỡng đã cam kết — đáng theo dõi tiếp, chưa phải vấn đề cần xử lý gấp.
+- **[025](../architecture/025_Architect_diễn%20tập%20chaos%20engineering%20giết%20pod%20tiêm%20độ%20trễ.md)** —
+  Chỉ xác nhận được kịch bản "xoá 1 bộ phận" trên 1 môi trường thử nghiệm tạm thời do giới hạn kỹ
+  thuật của môi trường đó — chưa xác nhận trên hạ tầng vận hành chính thức với quy trình đóng gói
+  chính thức. Chưa có ticket theo dõi thật nào được mở cho phát hiện "lưới an toàn chưa kích hoạt" dù
+  đã ghi nhận là sai lệch.
+- **[026](../architecture/026_Architect_kiểm%20thử%20tải%20hiệu%20năng%20luồng%20nghiệp%20vụ%20trọng%20yếu.md)** —
+  Hiện chỉ tự động đo và chặn được phần "khách hàng gọi tới hệ thống" — phần đo hiệu năng từng bộ phận
+  phía sau vẫn cần người xem thủ công trên dashboard, chưa tự động chặn. Vì lần chạy đầu tiên đã dừng ở
+  bước xác thực (mục 1), phần "tự động chặn phát hành khi vượt cam kết" và "chạy lặp lại theo lịch"
+  chưa từng được xác nhận hoạt động trên dữ liệu thật — mới xác nhận đúng cơ chế ở mức kiểm tra nội
+  bộ, không cần hệ thống thật đang chạy.
 - **[023](../architecture/023_Architect_rà%20soát%20N%2B1%20query%20truy%20vấn%20không%20giới%20hạn%20và%20thiếu%20phân%20trang.md)** —
   Cơ chế tự động nhắc hiện chỉ phát hiện được khi 1 danh sách đã được biết tới trước đó bị sửa nhầm
   (mất giới hạn). Nếu ai đó thêm 1 danh sách hoàn toàn mới vào hệ thống, cần con người chủ động khai

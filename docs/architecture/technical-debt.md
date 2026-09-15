@@ -1,4 +1,4 @@
-# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-024
+# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-026
 
 *Đối tượng đọc: kỹ sư phần mềm / software architect. File này gom lại mọi "lưu ý hay khám phá" (blocker
 giữa chừng, bug thật tìm được khi triển khai/xác thực, giới hạn phạm vi đã biết, amendment đính chính)
@@ -190,6 +190,37 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   đổi giữa 2 dòng, chỉ khác license. **Đáng chú ý về phương pháp luận**: bug này CHỈ lộ ra khi chạy
   service thật ngoài `WebApplicationFactory` — bộ test tích hợp (chạy cùng tiến trình test) không bao
   giờ khởi động bus theo đúng cách runtime thật làm, nên không bao giờ bắt được sự cố license này.
+- **[025](025_Architect_diễn%20tập%20chaos%20engineering%20giết%20pod%20tiêm%20độ%20trễ.md)** — Phát
+  hiện quan trọng nhất của tính năng này: circuit breaker của `OrdersApiClient`/`BasketsApiClient`
+  **chưa từng trip** qua 4 lần thử độc lập (2 lần trên container Docker, 2 lần trên Pod Kubernetes
+  thật, kể cả lần dùng công cụ load-test thật `autocannon` — 50 kết nối đồng thời × 25s). Tổng 8-9 lỗi
+  thật quan sát được qua các lần thử, luôn **rải rác**, không đủ mật độ trong cửa sổ sampling của
+  circuit breaker. Nguyên nhân xác nhận: `research.md` Quyết định 1 chọn `Task.Delay` KHÔNG chặn
+  thread có chủ đích (để tiêm độ trễ không làm sập hạ tầng thật khi diễn tập) — hệ quả "không đủ áp
+  lực tài nguyên để trip breaker" là đánh đổi đã biết trước, không phải lỗi thiết kế phát sinh ngoài
+  dự kiến (`tasks.md` T016 tự ghi nhận). Đáng mở 1 bug/thảo luận ticket riêng về việc Acceptance
+  Criteria gốc của SCRUM-34 có còn phù hợp với thiết kế tiêm lỗi không-chặn-thread hiện tại hay
+  không — **chưa có ticket đó tại thời điểm viết tài liệu này**. Phụ: pod thay thế của US1 không tự
+  khởi động ứng dụng (dùng image công khai + `kubectl cp`/`kubectl exec` thủ công thay vì image thật
+  của cluster test, do giới hạn image-loading) nên thời gian phục hồi đo được (~42s) gồm cả thao tác
+  thủ công, không thuần là thời gian khởi động container/readiness gate của Kubernetes.
+- **[026](026_Architect_kiểm%20thử%20tải%20hiệu%20năng%20luồng%20nghiệp%20vụ%20trọng%20yếu.md)** —
+  Phát hiện license NBomber: bản mới nhất trên NuGet (dòng 5.x/6.x, hiện `6.6.0`) phát hành dưới
+  "NBomber Business License" — miễn phí CHỈ cho cá nhân, không được dùng cho tổ chức. Đã ghim đúng
+  `4.1.2` (bản 4.x cuối cùng, Apache-2.0, miễn phí mọi mục đích) — cùng loại rủi ro repo đã né tránh
+  với MassTransit (024). **Phát hiện quan trọng nhất**: chạy thật trên stack đầy đủ
+  (`docker-compose.yml`+`docker-compose.demo.yml`) FAIL vì `GET /bff/products` trả `401` — giả định
+  ban đầu ("gọi qua gateway không cần token, giống `demo.ps1`") SAI: gateway (chế độ stub identity)
+  không forward bearer token xuống hạ lưu, còn BFF luôn xác thực JWT thật không điều kiện, không có
+  cơ chế bỏ qua như gateway. Lấy token thật qua `/connect/token` cũng không khả thi vì `SeedData.cs`
+  cố ý không giữ tài khoản demo nào. Đây là khoảng trống XÁC THỰC CỦA TOÀN NỀN TẢNG, ngoài thẩm quyền
+  tính năng 026 tự sửa — đã tạo task riêng theo dõi (chưa có link ticket tại thời điểm viết). Đây là
+  hành vi ĐÚNG theo FR-004 (1 lỗi thật khiến lần chạy thất bại rõ ràng), không phải lỗi của bài kiểm
+  thử tải. Nhân tiện phát hiện và vá tối thiểu 2 lỗi thật khác không liên quan: `Orders.Api/Dockerfile`
+  thiếu `COPY shared/EventContracts/` (chặn cả `docker compose build` từ `master` bất kể tính năng
+  nào — cùng vấn đề mà 025 cũng độc lập phát hiện); và dấu hiệu race/deadlock khi `identity-api` tự
+  sinh signing key lần đầu dưới tải đồng thời (đã tạo task điều tra riêng, chưa kết luận nguyên nhân
+  gốc).
 
 ## 3. Giới hạn phạm vi đã biết
 
@@ -331,6 +362,19 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   cơ chế sẵn sàng trong schema nhưng chưa thực chiến. p99 của `Orders.Api` đo được (393,4ms) gần ngưỡng
   khai báo (500ms) ngay ở điều kiện vận hành bình thường — đáng theo dõi tiếp, không phải lỗi cần sửa
   ngay.
+- **[025](025_Architect_diễn%20tập%20chaos%20engineering%20giết%20pod%20tiêm%20độ%20trễ.md)** — US1
+  chỉ xác nhận được trên 1 cluster test tạm thời (`kind`/docker-desktop) do giới hạn image-loading
+  (image build cục bộ không nạp được vào containerd multi-node, registry-mirror nội bộ chặn registry
+  tùy chỉnh — đã thử 3 cách độc lập) — chưa xác nhận trên cluster production-shaped thật với image
+  pipeline thật. US3 (bản ghi kết quả) không tích hợp Jira thật — trường `jira_ticket` trong cả 2 bản
+  ghi kết quả vẫn để trống, chưa có ticket thật được mở dù `ket_luan: sai_lệch`.
+- **[026](026_Architect_kiểm%20thử%20tải%20hiệu%20năng%20luồng%20nghiệp%20vụ%20trọng%20yếu.md)** —
+  Chỉ đo lớp `client-facing-bff` (qua BFF) một cách tự động/chặn được — lớp `internal-service-api` (4
+  service phía sau BFF) chỉ xác nhận qua dashboard 021 như bước bổ sung thủ công trong `quickstart.md`,
+  không phải cổng chặn tự động của chính tính năng này. Do khoảng trống 401 (mục 2) chưa giải quyết,
+  User Story 2/3 (cổng chặn thật sự khi vượt ngân sách, tích hợp pipeline theo lịch) **chưa từng được
+  xác nhận chạy PASS trên dữ liệu thật** — chỉ xác nhận đúng cơ chế qua unit test thuần
+  (`BudgetAssertionsTests`, không cần stack sống).
 - **[023](023_Architect_rà%20soát%20N%2B1%20query%20truy%20vấn%20không%20giới%20hạn%20và%20thiếu%20phân%20trang.md)** —
   Giới hạn đã biết của chính khuôn mẫu scanner (`tests/QueryCoverageTests`, giống `ContractCoverageTests`/
   `ResilienceCoverageTests`): danh sách viết tay (`ExpectedListEndpoints`/`ExpectedBoundedQuerySites`)

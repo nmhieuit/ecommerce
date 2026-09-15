@@ -1,0 +1,40 @@
+<mxfile host="65bd71144e">
+    <diagram id="chaos-pod-kill-latency-flow" name="Luồng nghiệp vụ — chủ động phá hệ thống trong tầm kiểm soát">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="600" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Chủ động &quot;phá&quot; hệ thống trong tầm kiểm soát — biết chắc, không phải tin chắc" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1000" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="s1" value="Lưới an toàn (tự phục hồi, cảnh báo sớm)&#xa;đã được xây và cấu hình từ trước" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="80" width="380" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="s2" value="Chủ động gây sự cố thật (xoá 1 bộ phận,&#xa;làm chậm 1 bộ phận) trong môi trường an toàn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="460" y="80" width="380" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3" value="Quan sát thật: lưới an toàn có kích hoạt&#xa;đúng như kỳ vọng hay không" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="890" y="80" width="360" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="s4" value="Ghi lại kết luận rõ ràng — &quot;đạt&quot; hoặc&#xa;&quot;phát hiện sai lệch, cần xử lý&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="890" y="220" width="360" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="s5" value="Kết quả thật lần này: phát hiện 1 lưới an toàn&#xa;chưa kích hoạt như kỳ vọng qua nhiều lần thử —&#xa;đúng giá trị của việc thử thật, không phải thất bại" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="220" width="380" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s1" target="s2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s2" target="s3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s3" target="s4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s1" target="s5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

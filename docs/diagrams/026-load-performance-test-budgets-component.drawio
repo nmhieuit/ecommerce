@@ -1,0 +1,52 @@
+<mxfile host="65bd71144e">
+    <diagram id="load-performance-test-budgets-component" name="Kiến trúc thành phần — kiểm thử tải luồng trọng yếu đối chiếu ngân sách">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="760" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kiểm thử tải luồng trọng yếu — browse→basket→checkout→order đối chiếu ngân sách SLO" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1000" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="nbomber" value="tests/CriticalPathLoadTests&#xa;NBomber 4.1.2 (ghim — license) + GatewayClient" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="90" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw" value="Gateway → BFF&#xa;4 bước: GET products → POST basket/items →&#xa;POST checkout → GET orders/{id}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="80" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="budget" value="CriticalPathStepBudget&#xa;đọc service-manifest.yaml qua ServiceManifestFixture (021)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="220" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="assert" value="BudgetAssertions&#xa;fail nếu p95/p99 đo được vượt ngưỡng bất kỳ bước nào" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="220" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="report" value="LoadTestReportWriter&#xa;artifacts/performance/ — mỗi lần chạy 1 file mới, không ghi đè" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="810" y="220" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="jenkins" value="Jenkinsfile.performance (mới, tách biệt)&#xa;tier &quot;performance&quot; — KHÔNG lọt tier &quot;unit&quot; của PR gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="810" y="90" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="blocker" value="Thật tế: GET /bff/products → 401&#xa;BFF luôn đòi JWT thật, gateway không forward token&#xa;→ khoảng trống xác thực TOÀN NỀN TẢNG, ngoài phạm vi feature này" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontSize=10;fontColor=#b85450;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="340" width="420" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="nbomber" target="gw" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="gw" target="budget" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="budget" target="assert" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="assert" target="report" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="report" target="jenkins" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="chạy thật, FAIL 401" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;strokeColor=#b85450;fontColor=#b85450;" parent="1" source="gw" target="blocker" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -1,0 +1,52 @@
+<mxfile host="65bd71144e">
+    <diagram id="chaos-pod-kill-latency-component" name="Kiến trúc thành phần — 2 kịch bản chaos + bản ghi kết quả">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="760" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Diễn tập chaos — kill-pod (US1) / inject-latency (US2) / bản ghi kết quả (US3)" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1000" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="sre" value="Người thực hiện (SRE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="90" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="k8s" value="Kubernetes&#xa;kubectl delete pod -l app=baskets" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="60" width="260" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="bff" value="Bff.Api → BasketsApiClient&#xa;AddStandardResilienceHandler() (từ 020)&#xa;AttemptTimeout=1s, CircuitBreaker.SamplingDuration=10s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="650" y="60" width="340" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="orders" value="Orders.Api&#xa;ChaosLatencyInjectionMiddleware (Features/Chaos/)&#xa;2 lớp gate: Chaos:AllowLatencyInjection + header X-Chaos-Latency-Ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="180" width="400" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="dashboard" value="Dashboard Kibana &quot;SLO vận hành hằng ngày&quot; (021)&#xa;tái dùng nguyên trạng, không xây panel riêng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="830" y="180" width="320" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="docs" value="docs/dien-tap-chaos-engineering/&#xa;mau-ket-qua.md + README.md + ket-qua/*.md&#xa;KHÔNG tích hợp Jira tự động" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="320" width="400" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="finding" value="Kết quả thật: circuit breaker CHƯA TỪNG trip&#xa;qua 4 lần thử độc lập — cả 3 bản ghi kết quả đều &quot;sai_lệch&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;fontSize=10;fontColor=#b85450;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="830" y="320" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="US1: xoá pod" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="sre" target="k8s" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="tái lập lịch (cold-start, 1 replica)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="k8s" target="bff" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="US2: bật header X-Chaos-Latency-Ms" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="sre" target="orders" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="orders" target="dashboard" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="US3: điền mẫu sau mỗi lần chạy" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="sre" target="docs" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;strokeColor=#b85450;" parent="1" source="docs" target="finding" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

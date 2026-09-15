@@ -1,0 +1,29 @@
+{
+  "title": "Kiểm thử tải/hiệu năng luồng nghiệp vụ trọng yếu đối chiếu ngân sách hiệu năng của hiến chương",
+  "items": {
+    "FR-001": "Hệ thống PHẢI cung cấp một bài kiểm thử tải chạy trên toàn bộ luồng nghiệp vụ trọng yếu duyệt sản phẩm → giỏ hàng → thanh toán → đặt hàng (browse→basket→checkout→order).",
+    "FR-002": "Bài kiểm thử tải PHẢI đo lường độ trễ p95 và độ trễ p99 riêng biệt cho từng nhóm endpoint tham gia luồng trọng yếu, không gộp chung thành một con số trung bình duy nhất.",
+    "FR-003": "Với mỗi nhóm endpoint đã có ngân sách SLO được khai báo, số đo p95/p99 của bài kiểm thử tải PHẢI được đối chiếu trực tiếp với ngân sách đã khai báo tương ứng cho nhóm endpoint đó.",
+    "FR-004": "Khi bất kỳ chỉ tiêu (p95 hoặc p99) của bất kỳ nhóm endpoint nào trong luồng trọng yếu vượt ngân sách đã khai báo, toàn bộ lần chạy kiểm thử PHẢI được đánh dấu là THẤT BẠI — không được kết thúc ở trạng thái thành công kèm cảnh báo hay chỉ ghi chú.",
+    "FR-005": "Kết quả của mỗi lần chạy kiểm thử tải PHẢI cho phép ghi lại và tra cứu lại số đo p95/p99 làm mốc nền (baseline), phục vụ so sánh cho các lần chạy sau.",
+    "FR-006": "Bài kiểm thử tải PHẢI có khả năng được kích hoạt chạy lại nhiều lần mà không cần chuẩn bị thủ công lại môi trường, dữ liệu, hay kịch bản kiểm thử ở mỗi lần chạy.",
+    "FR-007": "Bài kiểm thử tải PHẢI được tích hợp vào một quy trình tự động (chạy theo lịch trình định kỳ trên môi trường giống production, hoặc theo mỗi thay đổi liên quan) thay vì chỉ là một thao tác thủ công một lần.",
+    "FR-008": "Khi một lần chạy theo lịch trình tự động phát hiện vi phạm ngân sách trên luồng trọng yếu, kết quả đó PHẢI có khả năng chặn phát hành, kể cả khi các cổng kiểm tra khác của PR đã đạt.",
+    "FR-009": "Hệ thống PHẢI chứng minh được khả năng phát hiện đúng hồi quy hiệu năng thật: khi một hồi quy được đưa vào có chủ đích, lần chạy kế tiếp phải thất bại; khi hồi quy được khắc phục, lần chạy kế tiếp phải thành công trở lại.",
+    "FR-010": "Việc bổ sung bài kiểm thử tải KHÔNG được thay đổi hành vi phản hồi hiện có của luồng nghiệp vụ trọng yếu trong môi trường vận hành thật.",
+    "US1-KB1": "Với điều kiện luồng nghiệp vụ trọng yếu browse→basket→checkout→order đang hoạt động, Khi bài kiểm thử tải được chạy, Thì hệ thống trả về độ trễ p95 và p99 đo được riêng cho từng nhóm endpoint tham gia luồng, không phải một con số trung bình gộp chung.",
+    "US1-KB2": "Với điều kiện kết quả đo được của một nhóm endpoint, Khi tôi đối chiếu với ngân sách SLO đã khai báo cho nhóm endpoint đó, Thì tôi xác định được ngay nhóm endpoint đó đang nằm trong ngân sách hay đã vượt ngân sách.",
+    "US1-KB3": "Với điều kiện đây là lần chạy đầu tiên trên một lát cắt hệ thống, Khi bài kiểm thử tải hoàn tất, Thì số đo p95/p99 của lần chạy đó được ghi lại như một mốc nền (baseline) để so sánh cho các lần chạy sau.",
+    "US2-KB1": "Với điều kiện một nhóm endpoint có độ trễ đo được vượt ngân sách SLO đã khai báo, Khi bài kiểm thử tải hoàn tất, Thì toàn bộ lần chạy được đánh dấu là THẤT BẠI, không phải \"thành công có ghi chú\" hay chỉ hiển thị cảnh báo.",
+    "US2-KB2": "Với điều kiện một hồi quy hiệu năng được đưa vào có chủ đích (ví dụ một truy vấn chậm), Khi bài kiểm thử tải được chạy lại ngay sau đó, Thì lần chạy thất bại, chứng minh cổng chặn phát hiện đúng vi phạm thật.",
+    "US2-KB3": "Với điều kiện hồi quy hiệu năng vừa được khắc phục, Khi bài kiểm thử tải được chạy lại lần nữa, Thì lần chạy trở lại trạng thái thành công, chứng minh đây là một cổng chặn có thể tin cậy chứ không phải luôn báo thất bại hoặc luôn báo thành công bất kể tình trạng thật.",
+    "US3-KB1": "Với điều kiện bài kiểm thử tải đã tồn tại cho luồng trọng yếu, Khi tôi kích hoạt chạy lại nhiều lần liên tiếp, Thì mỗi lần chạy tự hoàn tất và trả về kết quả mà không cần tôi phải chuẩn bị lại kịch bản hay dữ liệu kiểm thử theo cách thủ công.",
+    "US3-KB2": "Với điều kiện một thay đổi mã nguồn ảnh hưởng đến luồng trọng yếu vừa được đưa vào, Khi thay đổi đó cần được xác nhận không gây hồi quy hiệu năng, Thì bài kiểm thử tải có thể được kích hoạt lại ngay để đưa ra kết quả pass/fail cho riêng thay đổi đó.",
+    "US3-KB3": "Với điều kiện bài kiểm thử tải được chạy theo lịch trình định kỳ trên môi trường giống production, Khi một lần chạy theo lịch phát hiện vi phạm ngân sách, Thì kết quả thất bại đó có khả năng chặn phát hành ngay cả khi các cổng kiểm tra khác của PR đã xanh.",
+    "SC-001": "Sau lần chạy kiểm thử tải đầu tiên trên luồng trọng yếu, số đo p95/p99 nền (baseline) cho từng nhóm endpoint tham gia được ghi nhận và có thể tra cứu lại.",
+    "SC-002": "100% lần chạy kiểm thử tải có ít nhất một nhóm endpoint vượt ngân sách SLO đã khai báo đều kết thúc ở trạng thái thất bại rõ ràng — không có trường hợp nào vượt ngân sách mà vẫn báo cáo thành công.",
+    "SC-003": "Khi một hồi quy hiệu năng được đưa vào có chủ đích trên luồng trọng yếu, lần chạy kiểm thử tải kế tiếp phát hiện và báo thất bại mà không cần điều tra thủ công để nhận ra vấn đề.",
+    "SC-004": "Sau khi hồi quy hiệu năng được khắc phục, lần chạy kiểm thử tải kế tiếp trở lại trạng thái thành công mà không cần thay đổi cấu hình hay kịch bản kiểm thử.",
+    "SC-005": "Bài kiểm thử tải có thể được kích hoạt lại nhiều lần liên tiếp mà không cần bất kỳ thao tác chuẩn bị thủ công nào ngoài việc kích hoạt chạy."
+  }
+}
