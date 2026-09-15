@@ -6,9 +6,10 @@ nội dung kỹ thuật đã có ở nơi khác.
 ## Đi thẳng vào việc — theo vai trò
 
 **Bạn là Product Owner / quản lý sản phẩm, muốn biết 1 tính năng làm được gì, cho ai, lợi ích gì?**
-→ [`docs/summary/`](summary/) — đọc theo số tăng dần (`001_PO_*.md` → `024_PO_*.md`, không có 012/022).
-Mỗi file viết
-cho người không đọc code, có mục "Giới hạn hiện tại" trung thực về những gì CHƯA làm được.
+→ [`docs/summary/`](summary/) — đọc theo số tăng dần (`001_PO_*.md` → `026_PO_*.md`, không có 012/022).
+Mỗi file viết cho người không đọc code; mọi "Điều đặc biệt"/"Giới hạn hiện tại" đã gom về 1 file riêng
+[`docs/summary/functional-debt.md`](summary/functional-debt.md), mỗi file `0NN_PO` dẫn link sang đúng
+mục của mình ở đó.
 
 **Bạn là kỹ sư mới gia nhập dự án, cần đọc code hiểu hệ thống từ đầu?**
 → [`docs/onboarding/`](onboarding/) — đọc theo đúng số 01→11, mỗi file có phần "Đi đâu tiếp theo" dẫn
@@ -17,13 +18,23 @@ nghị". Khác `docs/architecture/`: đi theo TRÌNH TỰ LỊCH SỬ (giai đo�
 riêng lẻ.
 
 **Bạn là software architect / kỹ sư đã quen hệ thống, cần tra cứu sâu đúng 1 tính năng cụ thể?**
-→ [`docs/architecture/`](architecture/) — 1 file `0NN_Architect_*.md` cho mỗi spec (001-024, trừ 012
+→ [`docs/architecture/`](architecture/) — 1 file `0NN_Architect_*.md` cho mỗi spec (001-026, trừ 012
 đổi số thành 013; không có 022 — đánh số nhảy từ 021 sang 023), viết xúc tích, thuần góc nhìn kiến trúc
-(kiến trúc tổng thể, quyết định kỹ thuật,
-sơ đồ). Mọi blocker giữa chừng, bug thật phát hiện khi triển khai/xác thực, giới hạn phạm vi đã biết,
-và amendment đính chính đã gom về 1 file riêng:
-[`docs/architecture/technical-debt.md`](architecture/technical-debt.md) — mỗi file `0NN` đều dẫn link
-sang đúng mục của mình ở đó, không suy đoán.
+(kiến trúc tổng thể, quyết định kỹ thuật, sơ đồ). **Lưu ý đánh số 025/026**: thư mục `specs/` có 2 spec
+cùng tên `025-...` (`025-chaos-pod-kill-latency`/SCRUM-34 và `025-load-performance-test-budgets`/
+SCRUM-32, tạo song song trước khi merge) — tài liệu hoá dùng 025 cho spec merge trước (chaos, PR #36)
+và 026 cho spec merge sau (load-test, PR #38), không phải theo số thứ tự Jira. Mọi blocker giữa chừng,
+bug thật phát hiện khi triển khai/xác thực, giới hạn phạm vi đã biết, và amendment đính chính đã gom
+về 1 file riêng: [`docs/architecture/technical-debt.md`](architecture/technical-debt.md) — mỗi file
+`0NN` đều dẫn link sang đúng mục của mình ở đó, không suy đoán.
+
+**Bạn cần đọc phần code thay đổi cụ thể ra sao giữa từng bước, kiểu diff có chú thích?**
+→ [`docs/development/`](development/) — 1 file `0NN_Development_*.md` cho MỘT SỐ spec (không phải mọi
+spec): chỉ những spec có thay đổi mã nguồn backend/devops thật mới có file ở đây — spec chỉ đổi tài
+liệu hoặc không để lại thay đổi mã nguồn ròng (ví dụ 007, 009, 010) cố ý không có file, đã ghi rõ lý do
+ngay trong file liền kề. Mỗi file trích code thật kèm comment `0NN:` đánh dấu đúng dòng đổi so với bước
+liền trước, có ranh giới commit Git cụ thể ở đầu bài, và mục "Tóm tắt N-1 → N" + "Shared project trong
+bước N" ở cuối.
 
 **Bạn cần biết VÌ SAO 1 công nghệ/công cụ được chọn (không phải cách nó hoạt động)?**
 → [`docs/adr/`](adr/) — Architecture Decision Record, bản gốc viết bằng tiếng Anh, mỗi file đều có
@@ -37,7 +48,8 @@ Code. Mỗi spec có 3 file: `-component` (kiến trúc kỹ thuật), `-flow-ng
 dành cho PO), `-sequence` (trình tự kỹ thuật chi tiết).
 
 **Bạn cần bản tóm tắt FR/Acceptance Criteria/Success Criteria song song bản tiếng Anh gốc?**
-→ [`docs/spec-summary-vi/`](spec-summary-vi/) — file JSON, có đủ 001-024 (trừ 012/022). **Đính chính**: ghi chú cũ ở
+→ [`docs/spec-summary-vi/`](spec-summary-vi/) — file JSON, có đủ 001-026 (trừ 012/022; xem ghi chú
+đánh số 025/026 ở mục `docs/architecture/` phía trên — cùng quy ước). **Đính chính**: ghi chú cũ ở
 đây từng nói "chỉ có 001-012, từ 013 trở đi không cần nữa vì `spec.md` đã viết tiếng Việt trực tiếp" —
 sai, đã kiểm tra lại thư mục thật và xác nhận việc viết file tóm tắt này vẫn tiếp tục đều đặn cho mọi
 spec, kể cả các spec 013+ đã viết `spec.md` bằng tiếng Việt.
@@ -83,5 +95,5 @@ nguyên, không sửa** — mỗi file giờ có 1 file `.vi.md` song song cùng
 Việt đầy đủ. Mở file `.vi.md` để đọc bằng tiếng Việt; nếu 2 bản lệch nhau (do bản gốc được cập nhật
 sau khi dịch), bản gốc tiếng Anh là nguồn đúng — mỗi file `.vi.md` đều tự ghi rõ điều này ở đầu bài.
 
-`docs/summary/`, `docs/architecture/`, `docs/diagrams/`, `docs/onboarding/` đều đã là tiếng Việt có
-dấu hoàn toàn ngay từ bản gốc, không cần bản dịch riêng.
+`docs/summary/`, `docs/architecture/`, `docs/development/`, `docs/diagrams/`, `docs/onboarding/` đều
+đã là tiếng Việt có dấu hoàn toàn ngay từ bản gốc, không cần bản dịch riêng.

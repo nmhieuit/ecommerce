@@ -1,0 +1,52 @@
+<mxfile host="65bd71144e">
+    <diagram id="load-performance-test-budgets-sequence" name="Trình tự thật — chạy trên stack đầy đủ, FAIL 401">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="620" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Lần chạy thật đầu tiên trên stack đầy đủ (T017) — FAIL đúng thiết kế" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1000" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="c1" value="CriticalPathLoadTest&#xa;(NBomber)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="220" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="c2" value="Gateway (stub identity)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="60" width="220" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="c3" value="Bff.Api&#xa;(luôn đòi JWT thật)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="870" y="60" width="220" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r1" value="1. GatewayClient gọi GET /bff/products — KHÔNG đính bearer token&#xa;(giống hệt cách demo.ps1/walkthrough.spec.ts gọi qua gateway thành công)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="140" width="700" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r2" value="2. Gateway (stub identity) forward request —&#xa;chỉ chuyển tiếp X-Tenant-Id/X-Subject-Id, KHÔNG có bearer token nào để chuyển" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="210" width="700" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r3" value="3. BFF: AddIdentityValidation() không điều kiện — luôn xác thực JWT thật,&#xa;không có cơ chế stub/toggle bỏ qua như gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="870" y="280" width="400" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r4" value="4. Kết quả: 401 Unauthorized — lần chạy FAIL đúng thiết kế (FR-004:&#xa;1 lỗi thật khiến lần chạy thất bại rõ ràng, không phải lỗi của bài kiểm thử tải)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="360" width="900" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="r5" value="5. Nguyên nhân gốc: không có cách nào hợp lệ để lấy token thật từ 1 client&#xa;HTTP ngoài hôm nay (SeedData.cs cố ý không giữ tài khoản demo nào) —&#xa;khoảng trống của TOÀN NỀN TẢNG, đã tạo task riêng theo dõi, ngoài thẩm quyền feature 026" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=2;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="450" width="900" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="c1" target="r1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r1" target="r2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r2" target="r3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r3" target="r4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r4" target="r5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
