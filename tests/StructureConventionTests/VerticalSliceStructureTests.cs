@@ -16,6 +16,14 @@ public class VerticalSliceStructureTests
     private static readonly string[] ExpectedServices =
         ["baskets", "bff", "gateway", "identity", "orders", "parties", "products"];
 
+    /// <summary>
+    /// Kiểm tra: không service nào có thư mục lớp kỹ thuật (Controllers/, Services/, Repositories/...)
+    /// ở cấp cao nhất của project API.
+    /// Lý do phải test: đây chính là bài kiểm chứng cho SC-004 — assertion trực tiếp cho tiêu chí
+    /// "tìm toàn bộ code của 1 capability ở đúng 1 chỗ, không phải lục qua nhiều thư mục theo lớp
+    /// kỹ thuật".
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T043, US3.
+    /// </summary>
     [Fact]
     public void NoService_HasATopLevelTechnicalLayerFolder()
     {
@@ -26,9 +34,12 @@ public class VerticalSliceStructureTests
     }
 
     /// <summary>
-    /// Guards the assertion above against passing for the wrong reason. A scan that resolved the
-    /// wrong directory, or matched no projects after a layout change, reports zero violations and
-    /// is indistinguishable from a genuinely well-organised repository.
+    /// Kiểm tra: scanner thực sự quét đúng cả 7 service (đúng danh sách) và tìm đủ project API
+    /// tương ứng cho từng service.
+    /// Lý do phải test: bảo vệ assertion ở test phía trên khỏi "pass vì lý do sai" — 1 scanner trỏ
+    /// sai thư mục, hoặc không khớp được project nào sau khi đổi cấu trúc thư mục, vẫn báo "0 vi
+    /// phạm" và không thể phân biệt được với 1 repo thực sự tổ chức tốt.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T043, US3.
     /// </summary>
     [Fact]
     public void Scan_ActuallyExaminesEveryServicesApiProject()
@@ -41,9 +52,12 @@ public class VerticalSliceStructureTests
     }
 
     /// <summary>
-    /// Absence of technical-layer folders is only half of SC-004. A service with no
-    /// <c>Features/</c> folder at all has nothing organised by capability either, and would sail
-    /// through a check that only looked for what must not exist.
+    /// Kiểm tra: mỗi service phải có ít nhất 1 thư mục con dưới Features/ (tức có tổ chức ít nhất 1
+    /// capability theo tính năng).
+    /// Lý do phải test: "không có thư mục lớp kỹ thuật" mới là một nửa của SC-004 — 1 service không
+    /// có Features/ nào cả cũng không hề tổ chức theo capability, nhưng vẫn "vượt qua" nếu chỉ kiểm
+    /// tra những gì KHÔNG được tồn tại.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T043, US3.
     /// </summary>
     [Fact]
     public void EveryService_OrganisesAtLeastOneCapabilityUnderFeatures()
@@ -59,8 +73,13 @@ public class VerticalSliceStructureTests
     }
 
     /// <summary>
-    /// Guards against a check that cannot detect anything. Without this, an implementation that
-    /// always returned zero violations would satisfy SC-004 forever.
+    /// Kiểm tra: với 1 cây thư mục services/ giả, khi project API có 1 thư mục cấp cao nhất trùng
+    /// tên lớp kỹ thuật bị cấm (Controllers, Services, Repositories — kể cả viết thường), scanner
+    /// phải phát hiện đúng 1 vi phạm, nêu đúng service và đúng tên thư mục vi phạm.
+    /// Lý do phải test: đối chứng cho việc scanner thực sự phát hiện được điều cấm — thiếu test
+    /// này, 1 scanner luôn trả về "0 vi phạm" (không kiểm tra gì) vẫn làm SC-004 trông như đã đạt
+    /// mãi mãi.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T043, US3.
     /// </summary>
     [Theory]
     [InlineData("Controllers")]
@@ -79,6 +98,13 @@ public class VerticalSliceStructureTests
         Assert.Equal(bannedFolder, violation.Folder);
     }
 
+    /// <summary>
+    /// Kiểm tra: thư mục capability (Features/HealthCheck) cùng các thư mục không thuộc danh sách
+    /// cấm (Data, Properties) đặt ở cấp cao nhất không bị báo vi phạm.
+    /// Lý do phải test: đảm bảo scanner không quá tay/dương tính giả — chỉ chặn đúng tên thư mục
+    /// lớp kỹ thuật bị cấm, không chặn nhầm cấu trúc hợp lệ khác.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T043, US3.
+    /// </summary>
     [Fact]
     public void Scan_AllowsCapabilityFoldersAndNonLayerFolders()
     {
@@ -91,8 +117,12 @@ public class VerticalSliceStructureTests
     }
 
     /// <summary>
-    /// A technical-layer name nested inside one capability is that capability's business, not a
-    /// platform-wide layering violation — the code still lives with the feature it serves.
+    /// Kiểm tra: 1 thư mục tên kỹ thuật (Services) nằm LỒNG BÊN TRONG 1 capability
+    /// (Features/HealthCheck/Services) không bị coi là vi phạm.
+    /// Lý do phải test: SC-004 cấm tổ chức code THEO lớp kỹ thuật ở cấp toàn service, chứ không cấm
+    /// 1 capability tự tổ chức nội bộ theo cách nó cần — code trong trường hợp này vẫn nằm chung 1
+    /// chỗ với tính năng nó phục vụ, đúng tinh thần SC-004.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T043, US3.
     /// </summary>
     [Fact]
     public void Scan_AllowsATechnicalNameNestedInsideACapability()

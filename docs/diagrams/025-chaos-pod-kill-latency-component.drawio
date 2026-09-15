@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="chaos-pod-kill-latency-component" name="Kiến trúc thành phần — 2 kịch bản chaos + bản ghi kết quả">
-        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="760" math="0" shadow="0">
+        <mxGraphModel dx="1232" dy="465" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="760" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -35,13 +35,22 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e3" value="US2: bật header X-Chaos-Latency-Ms" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="sre" target="orders" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="130" y="160"/>
+                            <mxPoint x="530" y="160"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="orders" target="dashboard" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e5" value="US3: điền mẫu sau mỗi lần chạy" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="sre" target="docs" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="130" y="360"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;strokeColor=#b85450;" parent="1" source="docs" target="finding" edge="1">
                     <mxGeometry relative="1" as="geometry"/>

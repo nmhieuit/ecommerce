@@ -28,6 +28,13 @@ public class RouteConfigurationTests
     /// </summary>
     private static readonly string[] DomainServices = ["products", "baskets", "orders", "parties"];
 
+    /// <summary>
+    /// Kiểm tra: cấu hình YARP của gateway chỉ khai đúng 1 route, trỏ đúng vào 1 cluster tên
+    /// "bff-cluster".
+    /// Lý do phải test: đây là assertion trực tiếp cho FR-001 — gateway chỉ được biết tới BFF, không
+    /// được biết tới bất kỳ service nghiệp vụ nào đứng sau nó.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T060, US2.
+    /// </summary>
     [Fact]
     public void TheConfiguration_DefinesExactlyOneRoute_ToTheBffCluster()
     {
@@ -39,9 +46,11 @@ public class RouteConfigurationTests
     }
 
     /// <summary>
-    /// The catch-all is load-bearing, not incidental: a gateway that enumerated the BFF's paths
-    /// would need editing every time the BFF gained one, reintroducing the topology coupling
-    /// spec FR-001 exists to remove.
+    /// Kiểm tra: route duy nhất đó khớp MỌI path (`{**catch-all}`), không liệt kê path cụ thể nào.
+    /// Lý do phải test: đây không phải chi tiết phụ — nếu gateway liệt kê từng path của BFF, mỗi lần
+    /// BFF thêm route mới sẽ phải sửa gateway theo, tái tạo lại đúng sự ràng buộc topology mà FR-001
+    /// muốn xoá bỏ.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T060, US2.
     /// </summary>
     [Fact]
     public void TheRoute_MatchesEveryPath()
@@ -52,6 +61,14 @@ public class RouteConfigurationTests
         Assert.Equal("{**catch-all}", route.Match.Path);
     }
 
+    /// <summary>
+    /// Kiểm tra: cấu hình chỉ khai đúng 1 cluster ("bff-cluster"), cluster đó chỉ có đúng 1
+    /// destination và địa chỉ destination không rỗng.
+    /// Lý do phải test: đối chứng cho test route phía trên — route trỏ đúng tên cluster là chưa đủ,
+    /// cluster đó còn phải thực sự trỏ được tới đâu đó (BFF), nếu không route "hợp lệ" vẫn không đi
+    /// tới đâu cả.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T060, US2.
+    /// </summary>
     [Fact]
     public void TheConfiguration_DefinesExactlyOneCluster_WithOneDestination()
     {
@@ -65,9 +82,12 @@ public class RouteConfigurationTests
     }
 
     /// <summary>
-    /// The gateway must never be given a route to a domain service directly — that would let a
-    /// caller reach one without passing through the BFF, which is the whole arrangement the
-    /// constitution's edge chain fixes (load balancer → gateway → BFF).
+    /// Kiểm tra: không địa chỉ destination nào trong cấu hình chứa tên 1 trong 4 service nghiệp vụ
+    /// (products/baskets/orders/parties).
+    /// Lý do phải test: gateway tuyệt đối không được có route thẳng tới 1 service nghiệp vụ — nếu có,
+    /// caller có thể vòng qua BFF để chạm thẳng service đó, phá vỡ đúng chuỗi biên constitution quy
+    /// định (load balancer → gateway → BFF).
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T060, US2.
     /// </summary>
     [Fact]
     public void TheConfiguration_NamesNoDomainServiceAsADestination()
@@ -85,9 +105,12 @@ public class RouteConfigurationTests
     }
 
     /// <summary>
-    /// Every route must resolve to a cluster that exists. data-model.md's validation rule: "a route
-    /// with no matching cluster is a configuration error and MUST fail startup, not route silently
-    /// to nothing."
+    /// Kiểm tra: mọi route trong cấu hình đều có `ClusterId` khác null và trỏ tới 1 cluster có thật
+    /// trong danh sách cluster đã khai.
+    /// Lý do phải test: quy tắc kiểm chứng của data-model.md — "route không khớp cluster nào là lỗi
+    /// cấu hình, PHẢI làm fail lúc khởi động, không được lặng lẽ route vào hư không". Thiếu test
+    /// này, 1 route trỏ sai tên cluster có thể lọt qua tới runtime rồi mới lộ ra.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T060, US2.
     /// </summary>
     [Fact]
     public void EveryRoute_ResolvesToADefinedCluster()

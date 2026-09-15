@@ -26,6 +26,14 @@ public class ForwardingTimeoutBudgetTests
 
     private const string RepositoryRootMarker = "Ecommerce.slnx";
 
+    /// <summary>
+    /// Kiểm tra: `ActivityTimeout` của gateway (đọc trực tiếp từ `appsettings.json`) phải ≥ ngân sách
+    /// tổng thời gian BFF được phép chờ 1 downstream call (3 giây).
+    /// Lý do phải test: đây là bất biến xuyên 2 service — không service nào tự mình đảm bảo được.
+    /// Nếu gateway cắt request sớm hơn BFF còn đang chờ hợp lệ, caller nhận `504` từ gateway trong
+    /// khi BFF vẫn đang xử lý bình thường — 1 lỗi khó hiểu, không log nào ở BFF giải thích được.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T058, US3.
+    /// </summary>
     [Fact]
     public void TheGatewaysForwardingTimeout_IsAtLeastTheBffsTotalDownstreamBudget()
     {
@@ -39,8 +47,12 @@ public class ForwardingTimeoutBudgetTests
     }
 
     /// <summary>
-    /// Constitution Principle VIII: no unbounded wait may exist. An absent or infinite
-    /// <c>ActivityTimeout</c> would satisfy the comparison above vacuously.
+    /// Kiểm tra: `ActivityTimeout` không phải giá trị vô hạn (`Timeout.InfiniteTimeSpan`), và nằm
+    /// trong khoảng hợp lý (từ đúng bằng ngân sách BFF tới tối đa 1 phút).
+    /// Lý do phải test: Constitution Principle VIII cấm mọi chờ đợi không giới hạn. Nếu thiếu test
+    /// này, 1 `ActivityTimeout` bị bỏ trống hoặc đặt vô hạn vẫn "thoả mãn" test phía trên một cách vô
+    /// nghĩa (số vô hạn luôn ≥ mọi ngân sách hữu hạn).
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T058, US3.
     /// </summary>
     [Fact]
     public void TheGatewaysForwardingTimeout_IsBounded()

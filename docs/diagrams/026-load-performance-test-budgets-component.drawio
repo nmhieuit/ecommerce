@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="load-performance-test-budgets-component" name="Kiến trúc thành phần — kiểm thử tải luồng trọng yếu đối chiếu ngân sách">
-        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="760" math="0" shadow="0">
+        <mxGraphModel dx="1232" dy="465" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="760" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -8,7 +8,7 @@
                     <mxGeometry x="30" y="10" width="1000" height="26" as="geometry"/>
                 </mxCell>
                 <mxCell id="nbomber" value="tests/CriticalPathLoadTests&#xa;NBomber 4.1.2 (ghim — license) + GatewayClient" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="90" width="320" height="60" as="geometry"/>
+                    <mxGeometry x="30" y="85" width="320" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="gw" value="Gateway → BFF&#xa;4 bước: GET products → POST basket/items →&#xa;POST checkout → GET orders/{id}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="420" y="80" width="320" height="70" as="geometry"/>
@@ -32,7 +32,12 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="gw" target="budget" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="520" y="170"/>
+                            <mxPoint x="190" y="170"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="budget" target="assert" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -44,7 +49,11 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e6" value="chạy thật, FAIL 401" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;strokeColor=#b85450;fontColor=#b85450;" parent="1" source="gw" target="blocker" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="780" y="115"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
             </root>
         </mxGraphModel>
