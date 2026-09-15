@@ -18,6 +18,14 @@ namespace Bff.Api.UnitTests;
 /// </remarks>
 public class ResponseMappingTests
 {
+    /// <summary>
+    /// Kiểm tra: hàm `ProductsEndpoints.ToSummary` map đúng cả 3 trường (`Id`/`Name`/`Price`) từ
+    /// `ProductResource` (downstream) sang `ProductSummary` (response BFF), không qua HTTP.
+    /// Lý do phải test: shaping là nghiệp vụ DUY NHẤT BFF sở hữu (mọi thứ khác là proxy thuần theo
+    /// FR-005) — test đơn vị trực tiếp trên hàm mapping bắt được lỗi field-by-field (vd. 2 trường
+    /// cùng kiểu bị đảo chỗ) mà 1 test tích hợp so sánh nguyên object có thể bỏ lọt.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
+    /// </summary>
     [Fact]
     public void ProductSummary_CarriesEveryFieldFromTheDownstreamProduct()
     {
@@ -31,10 +39,12 @@ public class ResponseMappingTests
     }
 
     /// <summary>
-    /// 004: the basket line the shopper sees is the downstream line plus a product name joined in
-    /// from the catalog. Every other field must survive that join untouched — and the line total
-    /// in particular is passed through, never recomputed, because money arithmetic belongs to the
-    /// baskets service (004 plan.md, post-design re-check).
+    /// Kiểm tra: `BasketsEndpoints.ToItem` nối tên sản phẩm (tra từ dictionary catalog) vào dòng
+    /// giỏ hàng, đồng thời giữ nguyên mọi trường khác (`ProductId`/`Quantity`/`UnitPrice`/`LineTotal`).
+    /// Lý do phải test: dòng giỏ hàng người mua thấy = dòng gốc từ baskets service + tên sản phẩm nối
+    /// từ catalog. `LineTotal` đặc biệt phải được TRUYỀN NGUYÊN, không được tính lại ở BFF — vì phép
+    /// toán tiền tệ thuộc về baskets service (spec 004 plan.md), BFF chỉ shaping.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
     [Fact]
     public void BasketItem_JoinsTheProductName_AndPassesEveryOtherFieldThrough()
@@ -55,9 +65,13 @@ public class ResponseMappingTests
     }
 
     /// <summary>
-    /// A line whose product has since left the catalog keeps its place rather than vanishing: the
-    /// shopper chose it and is being charged for it, so dropping it would misrepresent the total
-    /// they are about to pay.
+    /// Kiểm tra: khi dictionary catalog không có tên cho sản phẩm của dòng giỏ hàng (sản phẩm đã bị
+    /// xoá khỏi catalog), dòng đó vẫn xuất hiện trong response, `LineTotal` không đổi, và `Name` vẫn
+    /// có giá trị (không rỗng/trắng).
+    /// Lý do phải test: 1 dòng có sản phẩm đã rời khỏi catalog vẫn phải giữ chỗ, không được biến mất
+    /// — người mua đã chọn nó và đang bị tính tiền cho nó, xoá dòng sẽ làm sai lệch tổng tiền họ sắp
+    /// trả.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
     [Fact]
     public void BasketItem_SurvivesAProductMissingFromTheCatalog()
@@ -70,6 +84,13 @@ public class ResponseMappingTests
         Assert.False(string.IsNullOrWhiteSpace(item.Name));
     }
 
+    /// <summary>
+    /// Kiểm tra: `OrdersEndpoints.ToResponse` map đúng cả 3 trường (`Id`/`PlacedAtUtc`/`Total`) từ
+    /// `OrderResource` (downstream) sang response BFF.
+    /// Lý do phải test: cùng lý do với test mapping sản phẩm — shaping là nghiệp vụ duy nhất BFF sở
+    /// hữu, nên cần khẳng định trực tiếp từng trường, không chỉ qua test tích hợp.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
+    /// </summary>
     [Fact]
     public void OrderResponse_CarriesEveryFieldFromTheDownstreamOrder()
     {
@@ -86,8 +107,12 @@ public class ResponseMappingTests
     }
 
     /// <summary>
-    /// The instant must survive shaping as an instant. Dropping <see cref="DateTimeKind.Utc"/> here
-    /// would leave the SPA rendering an order time in the wrong zone with nothing to indicate it.
+    /// Kiểm tra: sau khi qua `OrdersEndpoints.ToResponse`, `PlacedAtUtc.Kind` vẫn là
+    /// `DateTimeKind.Utc`, không bị mất đi trong lúc shaping.
+    /// Lý do phải test: thời điểm phải sống sót qua bước shaping đúng là 1 UTC instant. Nếu
+    /// `DateTimeKind.Utc` bị đánh rơi, SPA sẽ hiển thị giờ đặt hàng sai múi giờ mà không có gì báo
+    /// hiệu điều đó đã xảy ra.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
     [Fact]
     public void OrderResponse_PreservesTheUtcKindOfThePlacedTimestamp()
@@ -99,6 +124,13 @@ public class ResponseMappingTests
         Assert.Equal(DateTimeKind.Utc, response.PlacedAtUtc.Kind);
     }
 
+    /// <summary>
+    /// Kiểm tra: `PartiesEndpoints.ToResponse` map đúng cả 2 trường (`Id`/`DisplayName`) từ
+    /// `PartyResource` (downstream) sang response BFF.
+    /// Lý do phải test: hàm shaping thứ 4 (cuối cùng trong 4 route) cần cùng mức khẳng định trực tiếp
+    /// như 3 hàm shaping còn lại, không bỏ sót route nào.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
+    /// </summary>
     [Fact]
     public void PartyResponse_CarriesEveryFieldFromTheDownstreamParty()
     {
@@ -111,9 +143,14 @@ public class ResponseMappingTests
     }
 
     /// <summary>
-    /// Money must not be rounded on the way through. A shaping step that narrowed
-    /// <see cref="decimal"/> to <see cref="double"/> would pass every equality check above on
-    /// round numbers and quietly corrupt prices like this one.
+    /// Kiểm tra: với 3 giá trị tiền tệ khác nhau (kể cả số có nhiều số 9 và số thập phân nhỏ), giá
+    /// sau khi qua `ProductsEndpoints.ToSummary` giữ nguyên CHÍNH XÁC — kể cả số 0 thừa ở cuối, so
+    /// khớp bằng chuỗi chứ không chỉ bằng giá trị số.
+    /// Lý do phải test: tiền không được làm tròn khi đi qua shaping. 1 bước shaping vô tình thu hẹp
+    /// `decimal` thành `double` sẽ vẫn pass mọi phép so sánh bằng nhau ở các test phía trên (vì đó là
+    /// số tròn), nhưng âm thầm làm sai lệch giá dạng như test này — dùng số có nhiều chữ số thập phân
+    /// mới bắt được lỗi đó.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
     [Theory]
     [InlineData("0.01")]

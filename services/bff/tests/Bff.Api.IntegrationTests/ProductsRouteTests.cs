@@ -15,6 +15,15 @@ namespace Bff.Api.IntegrationTests;
 [Collection(DownstreamServicesCollectionDefinition.Name)]
 public class ProductsRouteTests(DownstreamServicesFixture fixture)
 {
+    /// <summary>
+    /// Kiểm tra: `GET /bff/products` (qua BFF, chạm 1 Products.Api thật với database thật) trả về
+    /// `200` với danh sách sản phẩm đã định hình đúng từng trường (`id`/`name`/`price`) khớp
+    /// `contracts/bff-openapi.yaml`, so khớp từng sản phẩm chứ không chỉ đếm số lượng.
+    /// Lý do phải test: đây chính là đường proxy cốt lõi mà cả spec 002 tồn tại để chứng minh, nên
+    /// được kiểm chứng bằng service + database thật, không phải bằng stand-in — so khớp từng trường
+    /// vì chỉ đếm `Items.Length` vẫn có thể pass dù BFF trả về 2 object rỗng.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T033, US1.
+    /// </summary>
     [Fact]
     public async Task GetProducts_ReturnsShapedListingFromTheProductsService()
     {
@@ -54,9 +63,12 @@ public class ProductsRouteTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// The contract wraps the listing in an <c>items</c> object rather than returning a bare
-    /// array. An empty catalog must still produce that envelope, so the SPA can read
-    /// <c>items</c> unconditionally instead of branching on the response's very shape.
+    /// Kiểm tra: khi catalog rỗng, `GET /bff/products` vẫn trả `200` với envelope `{"items": []}`,
+    /// không phải mảng trần rỗng hay lỗi.
+    /// Lý do phải test: hợp đồng API bọc danh sách trong object `items`, không trả mảng trần. Catalog
+    /// rỗng vẫn phải giữ đúng shape đó, để SPA luôn đọc `items` một cách vô điều kiện thay vì phải rẽ
+    /// nhánh theo hình dạng response.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T033, US1.
     /// </summary>
     [Fact]
     public async Task GetProducts_ReturnsEmptyItemsEnvelope_WhenTheCatalogIsEmpty()

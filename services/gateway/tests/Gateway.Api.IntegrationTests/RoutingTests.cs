@@ -15,8 +15,12 @@ namespace Gateway.Api.IntegrationTests;
 public class RoutingTests
 {
     /// <summary>
-    /// The strongest available proof of arrival: the BFF's generated OpenAPI document, which the
-    /// gateway cannot produce and which needs no domain service running to return 200.
+    /// Kiểm tra: gọi `/openapi/v1.json` qua gateway trả về `200` và đúng là tài liệu OpenAPI của BFF
+    /// (có path `/bff/products`).
+    /// Lý do phải test: đây là bằng chứng mạnh nhất cho việc request thật sự "tới nơi" — tài liệu này
+    /// chỉ BFF sinh ra được, gateway không tự tạo ra nó, và test không cần bật service nghiệp vụ nào
+    /// cả để chạy.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T049, US2.
     /// </summary>
     [Fact]
     public async Task ARequestToTheGateway_ReachesAResponseOnlyTheBffCanProduce()
@@ -35,9 +39,13 @@ public class RoutingTests
     }
 
     /// <summary>
-    /// A client-facing route forwards too, not only the contract document. The products service is
-    /// not running here, so the BFF's own downstream call fails — but reaching a BFF handler at all
-    /// is what US2 claims. A 404 would mean the gateway never forwarded.
+    /// Kiểm tra: gọi `/bff/products` (route thật, không phải tài liệu) qua gateway KHÔNG trả về
+    /// `404`.
+    /// Lý do phải test: route hướng người dùng cũng phải được chuyển tiếp, không chỉ tài liệu OpenAPI
+    /// ở test trên. Products service không chạy trong test này nên downstream call của BFF sẽ lỗi —
+    /// nhưng việc chạm được tới handler của BFF (dù nó lỗi) mới là điều US2 khẳng định; nếu gateway
+    /// chưa từng chuyển tiếp, kết quả sẽ là `404`.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T049, US2.
     /// </summary>
     [Fact]
     public async Task AClientFacingRoute_IsForwardedToTheBffsHandler()
@@ -52,15 +60,16 @@ public class RoutingTests
     }
 
     /// <summary>
-    /// The catch-all route must not swallow the gateway's own health probes. Kubernetes calls
-    /// these on the gateway itself; if they were forwarded, the gateway would report the BFF's
-    /// health as its own and a BFF outage would restart every gateway pod.
+    /// Kiểm tra: `/health/live` và `/health/ready` gọi qua gateway trả về `200` — tức route catch-all
+    /// không "nuốt" mất 2 health probe của chính gateway.
+    /// Lý do phải test: Kubernetes gọi thẳng 2 probe này vào chính gateway. Nếu chúng bị route
+    /// catch-all chuyển tiếp xuống BFF, gateway sẽ báo cáo sức khoẻ của BFF như thể là sức khoẻ của
+    /// chính nó — 1 lần BFF gặp sự cố sẽ khiến Kubernetes restart toàn bộ pod gateway. ASP.NET Core
+    /// vốn ưu tiên route cụ thể hơn catch-all nên hiện tại việc này tự đúng, nhưng không có test này
+    /// thì 1 thay đổi route-table sau này có thể âm thầm phá vỡ nó (ghi trong "Phase 5 implementation
+    /// notes" của tasks.md, không có mã task T riêng).
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — US2 (không có mã T riêng, xem Phase 5 notes).
     /// </summary>
-    /// <remarks>
-    /// ASP.NET Core routing prefers the more specific <c>/health/live</c> over
-    /// <c>{**catch-all}</c>, so this passes today — the test exists so that a later change to the
-    /// route table cannot quietly break it.
-    /// </remarks>
     [Theory]
     [InlineData("/health/live")]
     [InlineData("/health/ready")]

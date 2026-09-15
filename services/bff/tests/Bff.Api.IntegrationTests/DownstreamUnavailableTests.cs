@@ -38,6 +38,14 @@ public class DownstreamUnavailableTests
     /// </summary>
     private const string UnreachableAddress = "http://products-service.invalid";
 
+    /// <summary>
+    /// Kiểm tra: khi Products service không tới được (transport lỗi ngay), `GET /bff/products` trả về
+    /// `502 Bad Gateway` trong dưới 5 giây.
+    /// Lý do phải test: SC-003 yêu cầu "callers nhận lỗi rõ ràng trong dưới 5 giây, 100% trường hợp
+    /// quan sát được" — đo bằng ngưỡng cứng (`stopwatch`), không phải chỉ nêu trong comment, vì chờ
+    /// vô hạn chính là hành vi lỗi US3 tồn tại để ngăn chặn.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T053, US3.
+    /// </summary>
     [Fact]
     public async Task GetProducts_ReturnsBadGateway_WhenTheProductsServiceIsUnreachable()
     {
@@ -55,9 +63,12 @@ public class DownstreamUnavailableTests
     }
 
     /// <summary>
-    /// The spec's Edge Case: "a downstream service responds slowly rather than being fully down".
-    /// A timeout is a distinct failure from an unreachable host and gets its own status, so an
-    /// operator reading a dashboard can tell "the service is gone" from "the service is struggling".
+    /// Kiểm tra: khi Products service nhận request nhưng không bao giờ trả lời (khác với không tới
+    /// được), `GET /bff/products` trả về `504 Gateway Timeout` trong dưới 5 giây.
+    /// Lý do phải test: Edge Case của spec — "downstream phản hồi chậm" là 1 kiểu lỗi khác với
+    /// "downstream không tồn tại", và phải có mã trạng thái riêng biệt, để người vận hành đọc
+    /// dashboard phân biệt được "service đã chết" với "service đang ì ạch".
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T053, US3.
     /// </summary>
     [Fact]
     public async Task GetProducts_ReturnsGatewayTimeout_WhenTheProductsServiceNeverAnswers()
@@ -76,8 +87,13 @@ public class DownstreamUnavailableTests
     }
 
     /// <summary>
-    /// data-model.md, Error response: RFC 7807 ProblemDetails carrying type, title, status, and a
-    /// correlationId so the failure is traceable in the shared observability stack (Principle VII).
+    /// Kiểm tra: response lỗi có `Content-Type: application/problem+json`, đủ `type`/`title`/`status`
+    /// (khớp `502`), và có `correlationId` khớp đúng giá trị header `X-Correlation-Id` của response.
+    /// Lý do phải test: data-model.md yêu cầu lỗi phải là RFC 7807 ProblemDetails có `correlationId` để
+    /// truy vết được trong hệ observability chung (Principle VII) — thiếu test này, lỗi có thể trả về
+    /// đúng mã trạng thái nhưng body không đủ cấu trúc để ai đó thật sự tra cứu được request nào đã
+    /// hỏng.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T053, US3.
     /// </summary>
     [Fact]
     public async Task ADownstreamFailure_ReturnsProblemDetailsCarryingTheCorrelationId()
@@ -104,9 +120,13 @@ public class DownstreamUnavailableTests
     }
 
     /// <summary>
-    /// T054 — data-model.md's validation rule: an error "MUST NOT include the downstream service's
-    /// internal URL/address — only its logical name — so the error is diagnosable without leaking
-    /// topology to the client" (consistent with FR-001).
+    /// Kiểm tra: body lỗi có nhắc tên logic của downstream ("ProductsApi") để còn chẩn đoán được,
+    /// nhưng không chứa host/scheme/tên thư viện lỗi/stack trace nào (`downstream.test`, `http://`,
+    /// `Polly`, `System.Net.Http`, `at Bff.Api`, `No such host`).
+    /// Lý do phải test: quy tắc kiểm chứng của data-model.md — lỗi "KHÔNG được chứa URL/địa chỉ nội bộ
+    /// của downstream, chỉ được nêu tên logic", để lỗi vẫn chẩn đoán được mà không lộ topology ra
+    /// client (nhất quán với FR-001).
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T054, US3.
     /// </summary>
     [Fact]
     public async Task ADownstreamFailure_NamesTheLogicalServiceOnly_NeverItsAddress()
@@ -129,8 +149,12 @@ public class DownstreamUnavailableTests
     }
 
     /// <summary>
-    /// Each route must fail as clearly as the product-listing route. A route whose failure path was
-    /// never wired would return a bare 500 here.
+    /// Kiểm tra: 3 route còn lại (baskets/orders/parties, không chỉ products) khi downstream tương
+    /// ứng không tới được cũng trả về `502` + `application/problem+json`, giống hệt route sản phẩm.
+    /// Lý do phải test: mọi route phải lỗi rõ ràng như nhau — 1 route mà đường xử lý lỗi chưa được
+    /// nối dây (do code mới thêm sau, quên wiring) sẽ lộ ra bằng 1 `500` trần thay vì `502` có cấu
+    /// trúc, và chỉ test riêng route products thì không bắt được thiếu sót đó ở 3 route kia.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T053, US3.
     /// </summary>
     [Theory]
     [InlineData("BasketsApi", "/bff/baskets/8a1f6f6e-0000-4000-8000-000000000001")]
@@ -150,14 +174,17 @@ public class DownstreamUnavailableTests
     }
 
     /// <summary>
-    /// The real transport, against a genuinely unreachable host — no substituted handler anywhere.
+    /// Kiểm tra: gọi thật (không thay thế transport nào) tới 1 host thật sự không tồn tại
+    /// (`products-service.invalid`, dành riêng bởi RFC 2606) — response phải là `502` hoặc `504`
+    /// (chấp nhận cả 2), kiểu `application/problem+json`, trong dưới 5 giây, và `detail` có nêu tên
+    /// "ProductsApi" kèm `correlationId`.
+    /// Lý do phải test: 5 test phía trên đều thay thế transport để ép ra đúng 1 mã lỗi cụ thể; test
+    /// này là bằng chứng đối chứng bằng transport thật — chấp nhận cả `502` lẫn `504` vì việc rơi vào
+    /// mã nào phụ thuộc tốc độ phân giải DNS của từng máy (đã quan sát thấy suite bị flaky khi ép cứng
+    /// 1 mã lúc chạy song song với suite khác), nhưng vẫn khẳng định đúng phần bất biến: có giới hạn
+    /// thời gian, có cấu trúc, có nêu tên dependency.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T053, US3.
     /// </summary>
-    /// <remarks>
-    /// Asserts only what holds however slowly the machine reports the failure: it is bounded, it is
-    /// a structured problem document, and it names the dependency. Which of 502 or 504 it lands on
-    /// depends on whether resolution beats the attempt timeout, so pinning that here is what made
-    /// this suite flaky under load; both are correct answers to "the dependency did not answer".
-    /// </remarks>
     [Fact]
     public async Task ADownstreamFailure_IsBoundedAndStructured_AgainstARealUnreachableHost()
     {

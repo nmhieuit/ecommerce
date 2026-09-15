@@ -29,6 +29,13 @@ public class ConnectionStringIsolationTests
     /// <summary>The services that must declare no connection string at all.</summary>
     private static readonly string[] StatelessServices = ["bff", "gateway"];
 
+    /// <summary>
+    /// Kiểm tra: quét toàn bộ appsettings*.json dưới services/ — không service nào có connection
+    /// string trỏ vào database của 1 service khác.
+    /// Lý do phải test: đây chính là bài kiểm chứng cho SC-003 ("Zero successful cross-service data
+    /// accesses are possible") — assertion trực tiếp, ngắn gọn nhất cho tiêu chí nghiệm thu này.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T036, US2.
+    /// </summary>
     [Fact]
     public void NoServiceConfiguration_NamesAnotherServicesDatabase()
     {
@@ -38,9 +45,12 @@ public class ConnectionStringIsolationTests
     }
 
     /// <summary>
-    /// Guards the assertion above against passing for the wrong reason. A scan that resolved the
-    /// wrong directory, or that matched no files after a layout change, would report zero
-    /// violations and look identical to genuine isolation.
+    /// Kiểm tra: scanner thực sự quét đúng cả 7 service (đúng danh sách, đúng tên file cấu hình từng
+    /// service, và tìm được ít nhất 1 connection string cho mỗi service có sở hữu database).
+    /// Lý do phải test: bảo vệ assertion ở test phía trên khỏi "pass vì lý do sai" — 1 scanner trỏ
+    /// sai thư mục, hoặc không khớp được file nào sau khi đổi cấu trúc thư mục, vẫn báo "0 vi phạm"
+    /// và trông giống hệt kết quả của 1 hệ thống thực sự cách ly tốt.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T036, US2.
     /// </summary>
     [Fact]
     public void Scan_ActuallyExaminesEveryServicesConfiguration()
@@ -60,11 +70,15 @@ public class ConnectionStringIsolationTests
     }
 
     /// <summary>
-    /// The other half of Principle I: a service that owns no data must not be handed a database at
-    /// all. The gateway and BFF reach the domain services over HTTP, and a connection string
-    /// appearing in either one's configuration would be a boundary breach the scan above cannot
-    /// see — it looks for connections that name <em>another</em> service's database, and a
-    /// stateless service has no database of its own for one to be compared against.
+    /// Kiểm tra: 2 service không sở hữu database (bff, gateway) không được khai bất kỳ connection
+    /// string nào trong file cấu hình của chúng.
+    /// Lý do phải test: đây là nửa còn lại của Constitution Principle I — không chỉ "không được đụng
+    /// database của service khác" mà "service không sở hữu dữ liệu thì không được cấp database nào
+    /// cả". gateway/bff gọi các service nghiệp vụ qua HTTP; nếu một trong hai bị lộ ra 1 connection
+    /// string, đó là 1 kiểu vi phạm ranh giới mà test phía trên (chỉ tìm connection string trỏ SANG
+    /// service khác) không thể phát hiện được — vì service không sở hữu database vốn không có
+    /// database của chính mình để so sánh.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T036, US2.
     /// </summary>
     [Fact]
     public void NoStatelessService_DeclaresAConnectionString()
@@ -95,8 +109,13 @@ public class ConnectionStringIsolationTests
     }
 
     /// <summary>
-    /// Guards the same assertion against a scanner that cannot detect anything at all. Without
-    /// this, an implementation that always returned zero violations would satisfy SC-003 forever.
+    /// Kiểm tra: với 1 cây thư mục services/ giả (dựng tạm), khi 1 service khai connection string
+    /// trỏ đúng vào database của service khác (dù bằng tên service nội bộ Docker hay bằng địa
+    /// chỉ/cổng localhost thật), scanner phải phát hiện đúng 1 vi phạm, nêu đúng service vi phạm và
+    /// đúng service bị chạm tới.
+    /// Lý do phải test: đối chứng "chiều dương" cho 2 test bên dưới — thiếu test này, 1 scanner luôn
+    /// trả về "0 vi phạm" (dù không kiểm tra gì cả) vẫn làm SC-003 trông như đã đạt mãi mãi.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T036, US2.
     /// </summary>
     [Theory]
     [InlineData("OrdersDb", "Server=parties-db;Database=parties;TrustServerCertificate=True")]
@@ -115,6 +134,13 @@ public class ConnectionStringIsolationTests
         Assert.Equal("orders", violation.ForeignService);
     }
 
+    /// <summary>
+    /// Kiểm tra: khi mỗi service chỉ khai connection string trỏ vào đúng database của chính nó,
+    /// scanner không báo vi phạm nào.
+    /// Lý do phải test: đảm bảo scanner không quá tay/dương tính giả (false positive) — 1 cấu hình
+    /// hoàn toàn hợp lệ, đúng theo Principle I, không được bị chặn nhầm.
+    /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T036, US2.
+    /// </summary>
     [Fact]
     public void Scan_AllowsAServiceToNameItsOwnDatabase()
     {

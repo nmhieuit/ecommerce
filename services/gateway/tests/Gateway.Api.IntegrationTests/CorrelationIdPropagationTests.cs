@@ -21,6 +21,17 @@ namespace Gateway.Api.IntegrationTests;
 /// </remarks>
 public class CorrelationIdPropagationTests
 {
+    /// <summary>
+    /// Kiểm tra: khi caller không gửi kèm `X-Correlation-Id`, ID gateway tự sinh và trả về trong
+    /// header response phải khớp CHÍNH XÁC với `correlationId` mà BFF ghi trong body lỗi.
+    /// Lý do phải test: đây là regression test cho 1 bug thật đã tìm thấy — `CorrelationIdMiddleware`
+    /// từng chỉ ghi ID vào header RESPONSE, không ghi vào header REQUEST khi forward tiếp, nên YARP
+    /// không mang ID đó sang BFF được — BFF phải tự sinh 1 ID khác, và ID caller cầm trên tay không
+    /// khớp gì với log thật của BFF (vi phạm Constitution Principle VII). Lỗi đã sửa bằng 1 dòng ở
+    /// `shared/ServiceDefaults/CorrelationIdMiddleware.cs`.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — phát hiện & sửa ngoài task chính thức, xem
+    /// "Phase 6 implementation notes" trong specs/002-gateway-bff-routing/tasks.md, US3.
+    /// </summary>
     [Fact]
     public async Task AGeneratedCorrelationId_ReachesTheBff_AndMatchesWhatTheCallerIsGiven()
     {
@@ -43,8 +54,13 @@ public class CorrelationIdPropagationTests
     }
 
     /// <summary>
-    /// A caller-supplied ID must be reused rather than replaced, or a client correlating its own
-    /// logs with ours loses the thread at the edge.
+    /// Kiểm tra: khi caller tự gửi kèm `X-Correlation-Id`, giá trị đó phải được giữ nguyên xuyên suốt
+    /// — cả trong header response lẫn `correlationId` của body lỗi phía BFF.
+    /// Lý do phải test: 1 ID do caller cung cấp phải được TÁI SỬ DỤNG, không được thay bằng ID khác —
+    /// nếu không, 1 client đang cố đối chiếu log của chính họ với log hệ thống sẽ mất dấu vết ngay từ
+    /// điểm vào.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — phát hiện & sửa ngoài task chính thức, xem
+    /// "Phase 6 implementation notes" trong specs/002-gateway-bff-routing/tasks.md, US3.
     /// </summary>
     [Fact]
     public async Task ACallerSuppliedCorrelationId_IsPreservedEndToEnd()
@@ -69,8 +85,13 @@ public class CorrelationIdPropagationTests
     }
 
     /// <summary>
-    /// research.md Decision 2: a value a client controls must never reach a structured log
-    /// unfiltered — <c>\r\n</c> inside it could forge a second, fake log line.
+    /// Kiểm tra: nếu ID caller gửi lên (qua đường lách kiểm tra header thông thường) chứa ký tự điều
+    /// khiển `\r`/`\n`, gateway phải thay nó bằng 1 ID tự sinh khác — không giữ nguyên ký tự đó.
+    /// Lý do phải test: research.md Decision 2 — 1 giá trị do client tuỳ ý kiểm soát không bao giờ
+    /// được lọt vào structured log mà không lọc, vì `\r\n` bên trong có thể giả mạo thêm 1 dòng log
+    /// khác (log injection).
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — phát hiện & sửa ngoài task chính thức, xem
+    /// "Phase 6 implementation notes" trong specs/002-gateway-bff-routing/tasks.md, US3.
     /// </summary>
     [Fact]
     public async Task ACorrelationIdContainingControlCharacters_IsReplacedWithAGeneratedOne()
@@ -96,7 +117,14 @@ public class CorrelationIdPropagationTests
         Assert.Equal(callerFacingId, problem.GetProperty("correlationId").GetString());
     }
 
-    /// <summary>research.md Decision 2: an unbounded client-supplied value could bloat every log line it touches indefinitely.</summary>
+    /// <summary>
+    /// Kiểm tra: nếu ID caller gửi lên dài hơn 128 ký tự, gateway phải thay bằng 1 ID tự sinh khác
+    /// (độ dài ≤ 128).
+    /// Lý do phải test: research.md Decision 2 — 1 giá trị client tự đặt, không giới hạn độ dài, có
+    /// thể làm phình to vô hạn mọi dòng log mà nó xuất hiện.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — phát hiện & sửa ngoài task chính thức, xem
+    /// "Phase 6 implementation notes" trong specs/002-gateway-bff-routing/tasks.md, US3.
+    /// </summary>
     [Fact]
     public async Task ACorrelationIdLongerThan128Characters_IsReplacedWithAGeneratedOne()
     {

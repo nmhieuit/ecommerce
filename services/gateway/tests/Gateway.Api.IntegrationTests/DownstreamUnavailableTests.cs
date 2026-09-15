@@ -19,6 +19,15 @@ public class DownstreamUnavailableTests
     /// <summary>SC-003's bound, applied to the gateway as well as the BFF.</summary>
     private static readonly TimeSpan ClearErrorBudget = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// Kiểm tra: khi BFF hoàn toàn không tới được (cluster trỏ vào cổng không ai lắng nghe), request
+    /// qua gateway trả về `502 Bad Gateway` trong dưới 5 giây, không treo.
+    /// Lý do phải test: FR-006 áp dụng ở phía gateway — chuỗi lỗi US3 không chỉ xảy ra khi 1 service
+    /// nghiệp vụ chết, mà cả khi chính BFF (tầng ngay sau gateway) chết. YARP tự báo `502` khi đích
+    /// không tới được; điều cần khẳng định là đây là lỗi rõ ràng có giới hạn thời gian, không phải
+    /// hang hay lộ exception thô ra caller.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T055, US3.
+    /// </summary>
     [Fact]
     public async Task ARequest_ReturnsAClearError_WhenTheBffIsUnreachable()
     {
@@ -38,8 +47,12 @@ public class DownstreamUnavailableTests
     }
 
     /// <summary>
-    /// A BFF outage must not take the gateway's own health reporting with it. If it did, every
-    /// gateway pod would be restarted for a fault in a different service.
+    /// Kiểm tra: khi BFF không tới được, `/health/live` VÀ `/health/ready` của chính gateway vẫn trả
+    /// `200`.
+    /// Lý do phải test: BFF gặp sự cố không được kéo theo sức khoẻ tự báo cáo của gateway. Nếu
+    /// readiness của gateway phụ thuộc vào BFF, 1 lần BFF sập sẽ khiến Kubernetes coi toàn bộ pod
+    /// gateway là không sẵn sàng và restart hàng loạt — vì 1 lỗi ở tầng khác.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T055, US3.
     /// </summary>
     [Fact]
     public async Task TheGatewaysOwnHealth_StaysHealthy_WhenTheBffIsUnreachable()
@@ -55,8 +68,12 @@ public class DownstreamUnavailableTests
     }
 
     /// <summary>
-    /// The error must not disclose where the gateway tried to forward to (FR-007's "leaking
-    /// internal routing details", applied to the failure path).
+    /// Kiểm tra: body lỗi khi BFF không tới được không chứa địa chỉ nội bộ (`127.0.0.1`), tên cluster
+    /// (`bff-cluster`), tên route (`bff-route`), hay tên loại exception (`SocketException`).
+    /// Lý do phải test: áp dụng đúng yêu cầu "không lộ chi tiết định tuyến nội bộ" của FR-007 sang cả
+    /// đường xử lý lỗi — không chỉ path không khớp route mới phải giấu topology, lúc downstream chết
+    /// cũng vậy.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T055, US3.
     /// </summary>
     [Fact]
     public async Task TheError_LeaksNoInternalRoutingDetail()
