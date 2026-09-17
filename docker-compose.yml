@@ -231,9 +231,17 @@ services:
       sqlserver:
         condition: service_healthy
 
-  # Runs all three of identity's EF bundles in sequence (Dockerfile's migrator stage) — the
-  # configuration/operational store and the user credential store, all against the same database
-  # (014-identity-server-auth research.md Decision 8).
+  # Runs all three of identity's EF bundles in sequence, then --seed and --set-test-user-password
+  # (Dockerfile's migrator stage entrypoint) — the configuration/operational store and the user
+  # credential store, all against the same database (014-identity-server-auth research.md
+  # Decision 8).
+  #
+  # ClientSecret/TestUserPassword: both optional, both threaded from `.env` exactly like
+  # MSSQL_SA_PASSWORD above (Compose reads `.env` at parse time, substitutes here) — never a
+  # RequiredSecret, since neither missing value should take this container down (Config.cs's
+  # DefaultIntegrationTestClientSecret covers the first; TestUserPasswordProvisioning.cs no-ops on
+  # the second). A real deployment supplies both from the cluster secret store instead
+  # (deploy/k8s/identity/external-secret.yaml).
   identity-migrate:
     restart: on-failure:3
     build: &identity-build
@@ -242,6 +250,8 @@ services:
       target: migrator
     environment:
       ConnectionStrings__IdentityDb: Server=sqlserver;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ClientSecret: ${ClientSecret:-}
+      TestUserPassword: ${TestUserPassword:-}
     networks: [backbone]
     depends_on:
       sqlserver:

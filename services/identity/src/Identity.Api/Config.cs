@@ -21,6 +21,15 @@ public static class Config
         [new ApiResource(ApiScopeName, "Ecommerce Platform API") { Scopes = { ApiScopeName } }];
 
     /// <summary>
+    /// The value baked into every environment that never overrides <c>ClientSecret</c> — dev/CI
+    /// stacks where this client is genuinely "not a real secret" (see
+    /// <see cref="IntegrationTestClient(string)"/>'s own remarks). A real deployment supplies
+    /// <c>ClientSecret</c> from the cluster secret store (deploy/k8s/identity/external-secret.yaml)
+    /// instead of relying on this.
+    /// </summary>
+    public const string DefaultIntegrationTestClientSecret = "integration-test-secret";
+
+    /// <summary>
     /// Client applications. Only one production client exists: the web storefront SPA, using
     /// Authorization Code + PKCE (research.md Decision 9) — the only grant type a browser-based
     /// public client should use. It has no interactive login UI wired up yet in this phase (Duende's
@@ -28,7 +37,13 @@ public static class Config
     /// spawned follow-up task), so it cannot complete a real browser login end to end today; its
     /// registration exists so that work is additive, not a redesign, when the UI lands.
     /// </summary>
-    public static IEnumerable<Client> Clients =>
+    /// <param name="clientSecret">
+    /// Resolved by the caller (<see cref="Data.SeedData"/>) from <c>IConfiguration["ClientSecret"]</c>,
+    /// falling back to <see cref="DefaultIntegrationTestClientSecret"/> — kept out of this class so
+    /// <c>Config</c> itself stays a plain, environment-agnostic declaration (data-model.md — Client
+    /// Application), the same shape it had before this value became configurable.
+    /// </param>
+    public static IEnumerable<Client> GetClients(string clientSecret) =>
         [
             new Client
             {
@@ -46,7 +61,7 @@ public static class Config
                     ApiScopeName,
                 },
             },
-            IntegrationTestClient,
+            IntegrationTestClient(clientSecret),
         ];
 
     /// <summary>
@@ -59,13 +74,13 @@ public static class Config
     /// the spawned follow-up task for the Razor Pages quickstart UI). This client must never be
     /// deployed with the SPA's real user base reachable through it in a production environment.
     /// </summary>
-    private static Client IntegrationTestClient =>
+    private static Client IntegrationTestClient(string clientSecret) =>
         new()
         {
             ClientId = "integration-test-ropc",
             ClientName = "Integration test client (Resource Owner Password — not used by any real client)",
             AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
-            ClientSecrets = { new Secret("integration-test-secret".Sha256()) },
+            ClientSecrets = { new Secret(clientSecret.Sha256()) },
             AllowedScopes =
             {
                 IdentityServerConstants.StandardScopes.OpenId,
