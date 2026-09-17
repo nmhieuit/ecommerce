@@ -25,8 +25,16 @@ public static class SeedData
 
         await using var scope = services.CreateAsyncScope();
         var configurationDbContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
-        foreach (var client in Config.Clients)
+        // Optional, not a RequiredSecret: this client is explicitly non-production tooling (see
+        // Config.IntegrationTestClient's remarks), so a missing override falls back to the
+        // committed dev-only value rather than refusing to start — unlike ConnectionStrings:IdentityDb,
+        // there is no environment where losing this client should take the whole service down.
+        var clientSecret = configuration["ClientSecret"];
+        clientSecret = string.IsNullOrWhiteSpace(clientSecret) ? Config.DefaultIntegrationTestClientSecret : clientSecret;
+
+        foreach (var client in Config.GetClients(clientSecret))
         {
             if (!configurationDbContext.Clients.Any(existing => existing.ClientId == client.ClientId))
             {

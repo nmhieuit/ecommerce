@@ -18,6 +18,10 @@ public sealed class ApplicationIdentityDbContext(DbContextOptions<ApplicationIde
         base.OnModelCreating(builder);
 
         builder.Entity<ApplicationUser>(user =>
-            user.Property(u => u.TenantId).IsRequired().HasMaxLength(100));
+        {
+            user.Property(u => u.TenantId).IsRequired().HasMaxLength(100);
+            // TestUserSeed's fields only — never PasswordHash (see that type's remarks).
+            user.HasData(TestUserSeed.User);
+        });
     }
 }

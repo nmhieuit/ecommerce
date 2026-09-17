@@ -55,10 +55,23 @@ WORKDIR /app
 COPY --from=migrations /app/efbundle-identity ./efbundle-identity
 COPY --from=migrations /app/efbundle-configuration ./efbundle-configuration
 COPY --from=migrations /app/efbundle-persistedgrant ./efbundle-persistedgrant
+# The full app, alongside the bundles above, so the entrypoint's last two steps
+# (--seed, --set-test-user-password) can run — those flags live in Identity.Api.dll itself
+# (Data/SeedData.cs, Data/TestUserPasswordProvisioning.cs), not in an EF bundle: seeding
+# Clients/Scopes and setting a password both need application code (EF change-tracking,
+# UserManager), not a schema change.
+COPY --from=build /app/publish .
 USER $APP_UID
-# All three run against the same database; MigrationsHistoryTables.cs keeps each context's applied-
-# migration record separate, so running them in any order is safe.
-ENTRYPOINT ["/bin/sh", "-c", "./efbundle-identity && ./efbundle-configuration && ./efbundle-persistedgrant"]
+# The three bundles run against the same database; MigrationsHistoryTables.cs keeps each context's
+# applied-migration record separate, so running them in any order is safe. --seed then populates
+# Duende's ConfigurationStore (Clients/Scopes) — without it every /connect/token request fails
+# client validation, regardless of what credentials are sent. --set-test-user-password runs last,
+# after AddTestUserSeed's HasData migration (part of efbundle-identity) has created the row it sets
+# a password on; it is a no-op (exit 0) when TestUserPassword isn't configured
+# (Data/TestUserPasswordProvisioning.cs), so this step never fails a stack that doesn't set it.
+# One container for all one-shot startup steps, rather than a separate seed container: identity-migrate
+# is already the place every other one-shot step in this Dockerfile lives.
+ENTRYPOINT ["/bin/sh", "-c", "./efbundle-identity && ./efbundle-configuration && ./efbundle-persistedgrant && dotnet Identity.Api.dll --seed && dotnet Identity.Api.dll --set-test-user-password"]
 
 # `final` stays last so it remains the default build target: an image built with no --target is
 # still the service, not the migrator.

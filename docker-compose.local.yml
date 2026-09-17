@@ -308,8 +308,17 @@ services:
       parties-db:
         condition: service_healthy
 
-  # Runs all three of identity's EF bundles in sequence (Dockerfile's migrator stage) — the
-  # configuration/operational store and the user credential store, all against the same database.
+  # Runs all three of identity's EF bundles in sequence, then --seed and --set-test-user-password
+  # (Dockerfile's migrator stage entrypoint) — the configuration/operational store and the user
+  # credential store, all against the same database.
+  #
+  # ClientSecret/TestUserPassword: both optional, both threaded from `.env` exactly like
+  # MSSQL_SA_PASSWORD above (Compose reads `.env` at parse time, substitutes here) — never a
+  # RequiredSecret, since neither missing value should take this container down (Config.cs's
+  # DefaultIntegrationTestClientSecret covers the first; TestUserPasswordProvisioning.cs no-ops on
+  # the second). With both set in .env.example, `cp .env.example .env` is the only setup step
+  # needed before Postman's checked-in collection (postman/local.postman_environment.v2.json) can
+  # get a token — no separate manual command.
   identity-migrate:
     restart: on-failure:3
     build: &identity-build
@@ -318,6 +327,8 @@ services:
       target: migrator
     environment:
       ConnectionStrings__IdentityDb: Server=identity-db;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ClientSecret: ${ClientSecret:-}
+      TestUserPassword: ${TestUserPassword:-}
     networks: [backbone]
     depends_on:
       identity-db:

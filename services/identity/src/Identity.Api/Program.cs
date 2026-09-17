@@ -80,6 +80,16 @@ if (args.Contains("--seed"))
     return;
 }
 
+// Same one-shot convention as --seed above. Kept separate rather than folded into --seed: this
+// touches ApplicationIdentityDbContext (ASP.NET Identity's own store), not Duende's
+// ConfigurationDbContext --seed writes to, and unlike that data, a password is a secret this class
+// never invents — see Data/TestUserPasswordProvisioning.cs.
+if (args.Contains("--set-test-user-password"))
+{
+    await TestUserPasswordProvisioning.SetPasswordIfConfiguredAsync(app.Services);
+    return;
+}
+
 app.Run();
 
 public partial class Program; // exposes the entry point to WebApplicationFactory<Program> in tests
