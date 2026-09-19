@@ -26,9 +26,12 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
     private const string SeedTenantId = "contoso";
 
     /// <summary>
-    /// Each product is named individually rather than only counted: the walkthrough in
-    /// quickstart.md quotes these prices, and the Playwright spec (T065) selects by these names, so
-    /// a silent change to either would break a check somewhere far away from here.
+    /// Kiểm tra: sau khi áp dụng migration, bảng Products có đúng 3 sản phẩm đã biết với mã, tên,
+    /// giá cố định (Notebook $12.50, Pour-Over $48.00, Apron $34.25).
+    /// Lý do phải test: từng sản phẩm được nêu tên riêng chứ không chỉ đếm — quickstart.md trích
+    /// các giá này và Playwright (T065) chọn theo các tên này, nên đổi âm thầm sẽ làm hỏng 1 kiểm
+    /// tra ở rất xa đây.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T023, US1 (FR-018).
     /// </summary>
     [Fact]
     public async Task ApplyingMigrations_SeedsTheCatalog_WithTheThreeKnownProducts()
@@ -53,8 +56,11 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
     }
 
     /// <summary>
-    /// FR-018's actual promise is "at least one", and this is what a reviewer can check without
-    /// caring which three products were chosen.
+    /// Kiểm tra: chỉ áp dụng migration là catalog đã có ít nhất 1 sản phẩm mua được, không cần
+    /// setup dữ liệu thủ công.
+    /// Lý do phải test: lời hứa thật của FR-018 là "ít nhất một" — reviewer kiểm được điều này mà
+    /// không cần quan tâm 3 sản phẩm cụ thể là gì.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T023, US1 (FR-018).
     /// </summary>
     [Fact]
     public async Task ApplyingMigrations_LeavesAPurchasableProduct_WithoutAnyManualSetup()
@@ -74,9 +80,11 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
     }
 
     /// <summary>
-    /// The identifiers are fixed, not generated. Tests, the quickstart walkthrough, and the
-    /// end-to-end spec all name specific products; a fresh identifier per environment would make
-    /// every one of those references unusable.
+    /// Kiểm tra: mã sản phẩm seed giống hệt nhau trên các database mới.
+    /// Lý do phải test: mã là hằng cố định, không sinh ngẫu nhiên: test, quickstart và e2e đều gọi
+    /// tên sản phẩm cụ thể; mã đổi theo môi trường sẽ làm mọi tham chiếu đó vô dụng (research.md
+    /// Decision 10).
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T023, US1 (FR-018, research.md Decision 10).
     /// </summary>
     [Fact]
     public async Task TheSeededIdentifiers_AreStableAcrossFreshDatabases()

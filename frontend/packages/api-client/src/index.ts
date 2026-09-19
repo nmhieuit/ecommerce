@@ -8,5 +8,5 @@
 export * from './generated/endpoints';
 export * from './generated/model';
 
-export { configureApiClient, ApiError, bffFetch } from './http/fetcher';
-export type { ApiClientConfig } from './http/fetcher';
+export { configureApiClient, configureAuthHooks, ApiError, bffFetch } from './http/fetcher';
+export type { ApiClientConfig, AuthHooks } from './http/fetcher';

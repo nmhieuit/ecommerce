@@ -34,7 +34,11 @@ public static class SeedData
         var clientSecret = configuration["ClientSecret"];
         clientSecret = string.IsNullOrWhiteSpace(clientSecret) ? Config.DefaultIntegrationTestClientSecret : clientSecret;
 
-        foreach (var client in Config.GetClients(clientSecret))
+        // Opt-in, unlike the two clients above: a secretless password-grant client for the SPA's
+        // sign-in form (Config.SpaPasswordClient). Dev/test stacks set it; production never does.
+        var includeSpaPasswordClient = configuration.GetValue<bool>("SpaPasswordClient:Enabled");
+
+        foreach (var client in Config.GetClients(clientSecret, includeSpaPasswordClient))
         {
             if (!configurationDbContext.Clients.Any(existing => existing.ClientId == client.ClientId))
             {

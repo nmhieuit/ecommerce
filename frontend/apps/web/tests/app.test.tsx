@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '@/App';
+import { clearSession, setSession } from '@/auth/tokenStore';
 import { server } from './msw/server';
 
 /**
@@ -11,12 +12,19 @@ import { server } from './msw/server';
  */
 describe('application shell', () => {
   beforeEach(() => {
+    // Every storefront screen is behind sign-in, so the shell is exercised as a signed-in shopper;
+    // the sign-in flow itself is tests/auth's.
+    window.history.pushState({}, '', '/');
+    setSession({ accessToken: 'test-token', expiresAt: Date.now() + 60_000 });
+
     // The shell configures the client against the real default origin (the local gateway), so the
     // stub has to match that rather than a test-only host.
     server.use(
       http.get('http://localhost:5300/bff/products', () => HttpResponse.json({ items: [] })),
     );
   });
+
+  afterEach(() => clearSession());
 
   it('renders the landing route inside the shell', async () => {
     render(<App />);

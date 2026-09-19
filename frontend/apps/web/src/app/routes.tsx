@@ -4,11 +4,15 @@ import { ProductList } from '@/features/catalog/ProductList';
 import { BasketScreen } from '@/features/basket/BasketScreen';
 import { ConfirmationScreen } from '@/features/checkout/ConfirmationScreen';
 import { usePageTitle } from '@/shared/usePageTitle';
+import { useAuth } from '@/auth/useAuth';
+import { LoginScreen } from '@/auth/LoginScreen';
+import { RequireAuth } from '@/auth/RequireAuth';
 
-/** The storefront's three screens: browse, basket, confirmation. */
+/** The storefront's screens: sign in, then browse, basket, confirmation. */
 
 function Layout() {
   const { pathname } = useLocation();
+  const { signOut } = useAuth();
   const mainRef = useRef<HTMLElement>(null);
   const isFirstRender = useRef(true);
 
@@ -45,6 +49,11 @@ function Layout() {
             <li>
               <Link to="/basket">Basket</Link>
             </li>
+            <li className="ml-auto">
+              <button type="button" onClick={signOut} className="underline">
+                Sign out
+              </button>
+            </li>
           </ul>
         </nav>
       </header>
@@ -72,13 +81,19 @@ function Catalog() {
 
 function createRouter() {
   return createBrowserRouter([
+    { path: '/login', element: <LoginScreen /> },
     {
-      path: '/',
-      element: <Layout />,
+      element: <RequireAuth />,
       children: [
-        { index: true, element: <Catalog /> },
-        { path: 'basket', element: <BasketScreen /> },
-        { path: 'confirmation', element: <ConfirmationScreen /> },
+        {
+          path: '/',
+          element: <Layout />,
+          children: [
+            { index: true, element: <Catalog /> },
+            { path: 'basket', element: <BasketScreen /> },
+            { path: 'confirmation', element: <ConfirmationScreen /> },
+          ],
+        },
       ],
     },
   ]);

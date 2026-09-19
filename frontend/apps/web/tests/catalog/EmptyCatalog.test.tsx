@@ -8,6 +8,12 @@ import { EmptyCatalog } from '@/features/catalog/CatalogStates';
  * and the shopper is entitled to be told so.
  */
 describe('EmptyCatalog', () => {
+  /**
+   * Kiểm tra: trạng thái catalog rỗng báo cho người mua biết chưa có gì để mua.
+   * Lý do phải test: FR-002/US1 kịch bản 2: phải là trạng thái tường minh, không phải trang trống,
+   * vòng quay không dứt hay lỗi.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T025, US1 (FR-002).
+   */
   it('tells the shopper there is nothing to buy yet', () => {
     render(<EmptyCatalog />);
 
@@ -15,8 +21,10 @@ describe('EmptyCatalog', () => {
   });
 
   /**
-   * An empty catalog is not a failure, so it must not be announced as one. `role="alert"` here
-   * would interrupt a screen reader user to report normality.
+   * Kiểm tra: trạng thái rỗng không tự trình bày như 1 lỗi (không dùng `role="alert"`).
+   * Lý do phải test: catalog rỗng không phải thất bại; `role="alert"` sẽ làm trình đọc màn hình
+   * ngắt người dùng để báo điều bình thường.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T025, US1 (FR-002).
    */
   it('does not present itself as an error', () => {
     render(<EmptyCatalog />);

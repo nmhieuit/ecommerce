@@ -43,7 +43,49 @@ public static class Config
     /// <c>Config</c> itself stays a plain, environment-agnostic declaration (data-model.md — Client
     /// Application), the same shape it had before this value became configurable.
     /// </param>
-    public static IEnumerable<Client> GetClients(string clientSecret) =>
+    /// <param name="includeSpaPasswordClient">
+    /// Whether to also register <see cref="SpaPasswordClient"/> — dev/test environments only, driven by
+    /// <c>SpaPasswordClient:Enabled</c> in <see cref="Data.SeedData"/>. Off by default so a real
+    /// deployment never carries a secretless password-grant client unless someone turns it on.
+    /// </param>
+    public static IEnumerable<Client> GetClients(string clientSecret, bool includeSpaPasswordClient = false)
+    {
+        var clients = new List<Client>(BaseClients(clientSecret));
+
+        if (includeSpaPasswordClient)
+        {
+            clients.Add(SpaPasswordClient);
+        }
+
+        return clients;
+    }
+
+    /// <summary>
+    /// The storefront's own sign-in form, until an interactive login page exists for Authorization
+    /// Code + PKCE. A form in the SPA can only obtain a token through the Resource Owner Password
+    /// grant, and a browser cannot keep a client secret — so this is a public client (no secret)
+    /// whose only protection is the user's own credential. That is acceptable for local/dev/CI
+    /// stacks and unacceptable for production, which is why it is opt-in
+    /// (<c>SpaPasswordClient:Enabled</c>) rather than always seeded like the other two clients.
+    /// <see cref="Client.AllowedCorsOrigins"/> is what lets the browser read the token response.
+    /// </summary>
+    private static Client SpaPasswordClient =>
+        new()
+        {
+            ClientId = "ecommerce-web-spa-password",
+            ClientName = "Ecommerce Web Storefront (password sign-in form — dev/test only)",
+            AllowedGrantTypes = GrantTypes.ResourceOwnerPassword,
+            RequireClientSecret = false,
+            AllowedCorsOrigins = { "http://localhost:5173", "http://localhost:4173" },
+            AllowedScopes =
+            {
+                IdentityServerConstants.StandardScopes.OpenId,
+                IdentityServerConstants.StandardScopes.Profile,
+                ApiScopeName,
+            },
+        };
+
+    private static IEnumerable<Client> BaseClients(string clientSecret) =>
         [
             new Client
             {

@@ -19,6 +19,12 @@ public class StubIdentityAuthenticationHandlerTests
     private const string ConfiguredTenant = "contoso";
     private const string ConfiguredSubject = "phase1-stub-user";
 
+    /// <summary>
+    /// Kiểm tra: `AuthenticateAsync` thành công (`Succeeded`, không có `Failure`) với 1 request bất kỳ.
+    /// Lý do phải test: danh tính giả lập Phase 1 luôn thành công — chưa có credential nào để kiểm tra
+    /// (spec Assumptions). Nếu nó từ chối được thì mọi request qua gateway sẽ mất tenant.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T038, US1.
+    /// </summary>
     [Fact]
     public async Task AuthenticateAsync_Succeeds_ForAnyRequest()
     {
@@ -28,6 +34,12 @@ public class StubIdentityAuthenticationHandlerTests
         Assert.Null(result.Failure);
     }
 
+    /// <summary>
+    /// Kiểm tra: principal được cấp có claim `tenant_id` bằng đúng tenant đã cấu hình ("contoso").
+    /// Lý do phải test: toàn bộ chặng phía sau gateway chỉ đọc đúng claim này và không gì khác
+    /// (FR-001, FR-007) — đây là điểm neo của nguồn phân giải tenant, thứ mà JWT thật sẽ thay thế sau.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T038, US1.
+    /// </summary>
     [Fact]
     public async Task AuthenticateAsync_IssuesTheConfiguredTenantClaim()
     {
@@ -39,8 +51,10 @@ public class StubIdentityAuthenticationHandlerTests
     }
 
     /// <summary>
-    /// data-model.md — Stub Identity: the principal carries a subject as well as a tenant, so it is
-    /// shaped like the real one Phase 3 replaces it with rather than carrying a tenant alone.
+    /// Kiểm tra: principal có thêm claim subject (`NameIdentifier`) bằng đúng subject đã cấu hình.
+    /// Lý do phải test: data-model.md (Stub Identity) — principal giả lập mang cả subject lẫn tenant để
+    /// có hình dạng giống principal thật sẽ thay thế nó ở Phase 3, thay vì chỉ mang mỗi tenant.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T038, US1.
     /// </summary>
     [Fact]
     public async Task AuthenticateAsync_IssuesTheConfiguredSubjectClaim()
@@ -51,8 +65,11 @@ public class StubIdentityAuthenticationHandlerTests
     }
 
     /// <summary>
-    /// Phase 1 has no credentials to present (spec Assumptions), so nothing about the request can
-    /// change the answer — including a caller trying to influence it through headers.
+    /// Kiểm tra: đổi path hoặc gửi kèm header `Authorization: Bearer not-a-real-token` không làm đổi
+    /// kết quả — vẫn thành công với đúng tenant đã cấu hình.
+    /// Lý do phải test: Phase 1 không có credential để trình (spec Assumptions) nên không yếu tố nào của
+    /// request được phép ảnh hưởng tới câu trả lời — kể cả việc client cố tác động qua header.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T038, US1.
     /// </summary>
     [Theory]
     [InlineData("/bff/products")]
@@ -72,9 +89,13 @@ public class StubIdentityAuthenticationHandlerTests
     }
 
     /// <summary>
-    /// An unconfigured gateway must not authenticate anyone. A principal with no tenant would be an
-    /// unresolved request wearing a disguise: every hop below would treat it as unresolved anyway,
-    /// so failing here keeps "resolved once, at the edge" true rather than nominally satisfied.
+    /// Kiểm tra: khi tenant cấu hình là chuỗi rỗng hoặc khoảng trắng, xác thực THẤT BẠI (không có
+    /// principal).
+    /// Lý do phải test: gateway chưa cấu hình thì không được xác thực bất kỳ ai. 1 principal không có
+    /// tenant chỉ là 1 request Unresolved đội lốt — mọi chặng phía sau vẫn coi nó là Unresolved — nên
+    /// thất bại ngay tại đây giữ cho nguyên tắc "phân giải 1 lần ở biên" đúng thật chứ không chỉ đúng
+    /// trên danh nghĩa.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T038, US1.
     /// </summary>
     [Theory]
     [InlineData("")]
@@ -87,6 +108,13 @@ public class StubIdentityAuthenticationHandlerTests
         Assert.Null(result.Principal);
     }
 
+    /// <summary>
+    /// Kiểm tra: identity được cấp có `AuthenticationType` bằng đúng tên scheme của stub.
+    /// Lý do phải test: research.md Decision 1 dựa trên việc stub là 1 authentication scheme thật (dù
+    /// giả), không phải lối tắt tự stamp header — tên scheme là dấu vết để xác nhận điều đó và để phân
+    /// biệt nó với JwtBearer khi toggle cutover được bật.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T038, US1.
+    /// </summary>
     [Fact]
     public async Task AuthenticateAsync_IssuesAnIdentityNamingTheStubScheme()
     {

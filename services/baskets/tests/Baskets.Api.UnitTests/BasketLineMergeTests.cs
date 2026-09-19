@@ -16,6 +16,13 @@ public class BasketLineMergeTests
     private static readonly Guid Notebook = new("9f8d6b1e-0001-4000-8000-000000000001");
     private static readonly Guid Apron = new("9f8d6b1e-0001-4000-8000-000000000003");
 
+    /// <summary>
+    /// Kiểm tra: thêm 1 sản phẩm chưa có trong giỏ thì giỏ có đúng 1 dòng mới với số lượng vừa
+    /// thêm.
+    /// Lý do phải test: nhánh cơ bản của US2 kịch bản 1 (thêm sản phẩm vào giỏ, số lượng = 1); là
+    /// điểm đối chứng cho các test gộp dòng bên dưới.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T032, US2 (FR-021).
+    /// </summary>
     [Fact]
     public void AddItem_CreatesALine_WhenTheProductIsNotInTheBasketYet()
     {
@@ -29,6 +36,14 @@ public class BasketLineMergeTests
         Assert.Equal(12.50m, line.UnitPrice);
     }
 
+    /// <summary>
+    /// Kiểm tra: thêm lại đúng sản phẩm đã có trong giỏ thì dòng cũ tăng số lượng, không sinh dòng
+    /// thứ hai.
+    /// Lý do phải test: quy tắc gộp dòng của FR-005/FR-021 (US2 kịch bản 2): 1 sản phẩm chỉ chiếm
+    /// tối đa 1 dòng. Kiểm tra ở tầng domain để lỗi hiện ra trong vài mili-giây, không phải sau khi
+    /// khởi động container.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T032, US2 (FR-005, FR-021).
+    /// </summary>
     [Fact]
     public void AddItem_IncrementsTheExistingLine_WhenTheProductIsAlreadyInTheBasket()
     {
@@ -41,6 +56,12 @@ public class BasketLineMergeTests
         Assert.Equal(2, line.Quantity);
     }
 
+    /// <summary>
+    /// Kiểm tra: thêm 2 sản phẩm khác nhau thì giỏ có 2 dòng riêng biệt.
+    /// Lý do phải test: chống việc quy tắc gộp dòng gộp nhầm cả những sản phẩm khác nhau vào cùng 1
+    /// dòng.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T032, US2 (FR-005).
+    /// </summary>
     [Fact]
     public void AddItem_KeepsProductsApart_WhenDifferentProductsAreAdded()
     {
@@ -54,6 +75,13 @@ public class BasketLineMergeTests
         Assert.Equal(2, Assert.Single(basket.LineItems, line => line.ProductId == Apron).Quantity);
     }
 
+    /// <summary>
+    /// Kiểm tra: thêm cùng 1 sản phẩm nhiều lần liên tiếp cho ra đúng 1 dòng với số lượng bằng số
+    /// lần thêm (5 lần → số lượng 5).
+    /// Lý do phải test: SC-003 yêu cầu ở 100% số lần thử, số lượng luôn bằng đúng số lần sản phẩm
+    /// được thêm và mỗi sản phẩm hiện đúng 1 lần.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T032, US2 (SC-003).
+    /// </summary>
     [Fact]
     public void AddItem_AccumulatesQuantities_AcrossManyAdditions()
     {
@@ -70,9 +98,11 @@ public class BasketLineMergeTests
     }
 
     /// <summary>
-    /// The price captured on the line is the price when the product was first added, not the most
-    /// recent one offered. Re-pricing a basket the shopper already assembled is exactly what
-    /// capturing a unit price is meant to prevent (004 research.md Decision 7).
+    /// Kiểm tra: thêm lại 1 sản phẩm với đơn giá mới hơn thì dòng vẫn giữ đơn giá đã chụp lúc thêm
+    /// lần đầu.
+    /// Lý do phải test: giỏ chụp lại đơn giá tại thời điểm thêm (research.md Decision 7); tính lại
+    /// giá cho giỏ người mua đã tự chọn xong là đúng điều việc chụp giá muốn tránh.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T032, US2 (research.md Decision 7).
     /// </summary>
     [Fact]
     public void AddItem_KeepsTheOriginallyCapturedPrice_WhenTheCatalogPriceHasChanged()
@@ -88,8 +118,10 @@ public class BasketLineMergeTests
     }
 
     /// <summary>
-    /// data-model.md: a line's quantity is at least 1, and "a line with quantity 0 must not exist".
-    /// Rejecting it here means the rule holds regardless of which caller forgot to validate.
+    /// Kiểm tra: thêm với số lượng nhỏ hơn 1 (0, số âm) bị từ chối.
+    /// Lý do phải test: data-model.md quy định số lượng của 1 dòng tối thiểu là 1, "dòng số lượng 0
+    /// không được tồn tại". Chặn ngay ở domain để quy tắc đúng dù caller nào quên validate.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T032, US2 (FR-020).
     /// </summary>
     [Theory]
     [InlineData(0)]
@@ -102,6 +134,12 @@ public class BasketLineMergeTests
             () => basket.AddItem(Notebook, quantity, unitPrice: 12.50m));
     }
 
+    /// <summary>
+    /// Kiểm tra: thêm với đơn giá âm bị từ chối.
+    /// Lý do phải test: đơn giá âm sẽ làm tổng giỏ giảm đi — một cách hạ giá không cần quyền;
+    /// domain phải tự bảo vệ dù lớp phía trên đã validate hay chưa.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T032, US2 (FR-020, FR-021).
+    /// </summary>
     [Fact]
     public void AddItem_Rejects_ANegativeUnitPrice()
     {

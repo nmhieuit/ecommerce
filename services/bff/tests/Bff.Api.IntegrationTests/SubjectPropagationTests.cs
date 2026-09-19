@@ -24,6 +24,14 @@ public class SubjectPropagationTests(DownstreamServicesFixture fixture)
     private const string ResolvedTenant = "contoso";
     private const string ResolvedSubject = "phase1-stub-user";
 
+    /// <summary>
+    /// Kiểm tra: BFF nhận `X-Subject-Id` thì lời gọi đi ra tới downstream cũng mang đúng subject
+    /// đó.
+    /// Lý do phải test: YARP chuyển header vào BFF miễn phí nhưng `HttpClient` có kiểu thì không —
+    /// thiếu handler đi ra thì subject dừng lại ở BFF và mọi lần tra giỏ phía sau đều không có
+    /// người gọi (contracts/subject-id-header.md).
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T018, US2 (FR-006).
+    /// </summary>
     [Fact]
     public async Task TheBffsOutboundCall_CarriesTheSubjectTheBffReceived()
     {
@@ -43,9 +51,12 @@ public class SubjectPropagationTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// The BFF relays, it never resolves. With no inbound subject — the gateway was bypassed — it
-    /// must send no header rather than inventing one, so the failure propagates downstream instead
-    /// of being masked by a default caller whose basket everyone would share.
+    /// Kiểm tra: khi BFF không nhận subject nào thì mọi lời gọi đi ra đều không mang header
+    /// subject.
+    /// Lý do phải test: BFF relay chứ không phân giải: nếu gateway bị bỏ qua, BFF không được bịa 1
+    /// người gọi mặc định — để lỗi lan xuống downstream thay vì bị che bởi 1 người gọi mà mọi người
+    /// dùng chung giỏ.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T018, US2 (FR-006).
     /// </summary>
     [Fact]
     public async Task TheBffsOutboundCall_CarriesNoSubject_WhenTheBffItselfHasNone()

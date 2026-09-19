@@ -28,12 +28,23 @@ function renderWithQueryClient(ui: ReactNode) {
 }
 
 describe('CheckoutButton with an empty basket', () => {
+  /**
+   * Kiểm tra: nút thanh toán không thao tác được khi giỏ rỗng.
+   * Lý do phải test: FR-008: storefront phải chặn thanh toán ngay trên giao diện khi giỏ rỗng.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T054, US3 (FR-008).
+   */
   it('is not operable', () => {
     renderWithQueryClient(<CheckoutButton itemCount={0} onCheckedOut={() => {}} />);
 
     expect(screen.getByRole('button', { name: /check out/i })).toBeDisabled();
   });
 
+  /**
+   * Kiểm tra: người mua cố bấm thì KHÔNG có request thanh toán nào được gửi đi.
+   * Lý do phải test: SC-004: tiêu chí là 0 request chứ không phải 0 đơn — 1 request bị server từ
+   * chối đã là thất bại của kịch bản này.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T054, US3 (FR-008, SC-004).
+   */
   it('sends no checkout request when the shopper tries anyway', async () => {
     const attempts: string[] = [];
     server.use(
@@ -54,6 +65,11 @@ describe('CheckoutButton with an empty basket', () => {
     expect(attempts).toHaveLength(0);
   });
 
+  /**
+   * Kiểm tra: nút thanh toán thao tác được ngay khi giỏ có hàng.
+   * Lý do phải test: đối chứng cho 2 test trên: chặn giỏ rỗng không được biến thành chặn vĩnh viễn.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T054, US3 (FR-007, FR-008).
+   */
   it('becomes operable once the basket holds something', async () => {
     const attempts: string[] = [];
     server.use(

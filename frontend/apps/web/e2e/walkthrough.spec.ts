@@ -1,4 +1,5 @@
 import { expect, test, type ConsoleMessage, type Page, type Request } from '@playwright/test';
+import { authorizationHeader, signIn } from './auth';
 
 /**
  * The end-to-end walkthrough: browse → add to basket → check out → confirmation.
@@ -52,14 +53,26 @@ function watch(page: Page) {
 
 /** Empties the basket so each test starts from a known state, whatever a previous run left. */
 async function resetBasket(page: Page) {
-  await page.request.post(`${GATEWAY_ORIGIN}/bff/checkout`, { failOnStatusCode: false });
+  await page.request.post(`${GATEWAY_ORIGIN}/bff/checkout`, {
+    headers: await authorizationHeader(page),
+    failOnStatusCode: false,
+  });
 }
 
 test.describe('shopping walkthrough', () => {
   test.beforeEach(async ({ page }) => {
+    // Every screen sits behind sign-in, and the basket is the signed-in shopper's.
+    await signIn(page);
     await resetBasket(page);
   });
 
+  /**
+   * Kiểm tra: lượt đi trọn vẹn duyệt → thêm vào giỏ → tải lại giữa chừng → thanh toán → xác nhận,
+   * không lỗi console, mọi request chỉ đi tới gateway.
+   * Lý do phải test: SC-002/005/007/010 không quan sát được trong jsdom: cần trình duyệt thật, cả
+   * stack chạy, và ghi lại mọi lỗi console lẫn mọi đích request cho cả hành trình.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T065, US1-US3 (SC-002, SC-005, SC-007, SC-010).
+   */
   test('browse, add to basket, check out, and see the confirmation', async ({ page }) => {
     const { consoleErrors, requestOrigins } = watch(page);
 
@@ -107,7 +120,9 @@ test.describe('shopping walkthrough', () => {
     await expect(page.getByText('$59.25')).toBeVisible();
 
     // ---- SC-005: the reference names the order the backend actually created ----
-    const order = await page.request.get(`${GATEWAY_ORIGIN}/bff/orders/${reference}`);
+    const order = await page.request.get(`${GATEWAY_ORIGIN}/bff/orders/${reference}`, {
+      headers: await authorizationHeader(page),
+    });
     expect(order.ok()).toBe(true);
     expect((await order.json()).total).toBe(59.25);
 
@@ -123,8 +138,10 @@ test.describe('shopping walkthrough', () => {
   });
 
   /**
-   * Spec FR-008 and SC-004: blocked in the interface, with **no request sent**. Counting requests
-   * is the assertion — a request the server rejects would be a failure of this test, not a pass.
+   * Kiểm tra: giỏ rỗng thì nút thanh toán bị chặn và không có request nào được gửi.
+   * Lý do phải test: FR-008/SC-004: đếm số request chính là assertion — 1 request bị server từ chối
+   * sẽ là thất bại của test này.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T065, US3 (FR-008, SC-004).
    */
   test('checkout is blocked, and unsent, when the basket is empty', async ({ page }) => {
     const checkoutRequests: string[] = [];
@@ -147,8 +164,10 @@ test.describe('shopping walkthrough', () => {
   });
 
   /**
-   * Spec FR-016 and SC-008. The control disables while in flight, so the second click never
-   * becomes a second request — and the backend would refuse it anyway, since the basket is emptied.
+   * Kiểm tra: thanh toán 2 lần liên tiếp nhanh chỉ tạo đúng 1 đơn.
+   * Lý do phải test: FR-016/SC-008: nút bị vô hiệu khi đang xử lý nên cú bấm thứ 2 không thành
+   * request; backend cũng sẽ từ chối vì giỏ đã rỗng.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T065, US3 (FR-016, SC-008).
    */
   test('checking out twice in rapid succession creates exactly one order', async ({ page }) => {
     const checkoutRequests: string[] = [];
@@ -177,8 +196,10 @@ test.describe('shopping walkthrough', () => {
   });
 
   /**
-   * Spec FR-017 and SC-009: the entire flow by keyboard, with the focused element visible at every
-   * step. Asserted by driving the whole journey with Tab and Enter and never a pointer.
+   * Kiểm tra: toàn bộ luồng hoàn thành chỉ bằng Tab/Enter, phần tử đang focus luôn nhìn thấy được.
+   * Lý do phải test: FR-017/SC-009 (WCAG 2.4.7): phải là chỉ dấu focus nhìn thấy được chứ không chỉ
+   * là phần tử đang được focus.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T065, US1-US3 (FR-017, SC-009).
    */
   test('the whole flow can be completed using only the keyboard', async ({ page }) => {
     await page.goto('/');

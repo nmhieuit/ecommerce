@@ -9,6 +9,13 @@ namespace Tenancy.UnitTests;
 /// </summary>
 public class TenantContextMiddlewareTests
 {
+    /// <summary>
+    /// Kiểm tra: khi request đến có header `X-Tenant-Id: acme`, middleware gán đúng "acme" vào
+    /// `TenantContext`.
+    /// Lý do phải test: đây là nhánh happy-case của FR-003 — service chỉ đọc tenant mà gateway đã phân
+    /// giải, không tự suy luận lại.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, nền tảng cho US1/US2.
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_ResolvesTheTenantContext_FromTheInboundHeader()
     {
@@ -22,8 +29,12 @@ public class TenantContextMiddlewareTests
     }
 
     /// <summary>
-    /// contracts/tenant-id-header.md Failure Modes: absent and empty are the same thing —
-    /// Unresolved. Never a fallback tenant, which is the whole point of the feature.
+    /// Kiểm tra: header `X-Tenant-Id` vắng mặt, rỗng hoặc chỉ có khoảng trắng đều khiến
+    /// `TenantContext` vẫn ở trạng thái Unresolved (`RequireTenantId()` ném exception).
+    /// Lý do phải test: theo contracts/tenant-id-header.md (Failure Modes), "vắng" và "rỗng" là cùng 1
+    /// trạng thái — Unresolved. Tuyệt đối không có tenant dự phòng, vì đó chính là mục đích của tính
+    /// năng này.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, nền tảng cho US1/US2.
     /// </summary>
     [Theory]
     [InlineData(null)]
@@ -44,9 +55,11 @@ public class TenantContextMiddlewareTests
     }
 
     /// <summary>
-    /// Constitution Principle VII, via the same logging-scope mechanism
-    /// <c>CorrelationIdMiddleware</c> already uses, so the tenant lands on every structured log
-    /// line for the request with no per-service wiring.
+    /// Kiểm tra: khi tenant đã phân giải, middleware mở đúng 1 logging scope chứa `TenantId = "acme"`.
+    /// Lý do phải test: FR-006 / Constitution Principle VII — tenant phải hiện trong mọi dòng log có
+    /// cấu trúc của request, để truy vết 1 request xuyên các chặng theo tenant. Dùng cùng cơ chế
+    /// logging-scope mà `CorrelationIdMiddleware` đã dùng nên không cần cấu hình riêng ở từng service.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, US1 (US1-KB2).
     /// </summary>
     [Fact]
     public async Task InvokeAsync_PushesTheResolvedTenantIntoTheLoggingScope()
@@ -62,8 +75,10 @@ public class TenantContextMiddlewareTests
     }
 
     /// <summary>
-    /// An unresolved request must not log a blank or null TenantId as though one existed —
-    /// the absence is the signal.
+    /// Kiểm tra: request chưa phân giải được tenant thì middleware KHÔNG mở logging scope nào.
+    /// Lý do phải test: không được ghi 1 `TenantId` rỗng/null vào log như thể tenant có tồn tại — việc
+    /// vắng mặt chính là tín hiệu để người vận hành nhận ra request bị thiếu tenant.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, nền tảng cho US1/US2.
     /// </summary>
     [Fact]
     public async Task InvokeAsync_PushesNoTenantScope_WhenTheRequestIsUnresolved()
@@ -75,6 +90,14 @@ public class TenantContextMiddlewareTests
         Assert.Empty(logger.Scopes);
     }
 
+    /// <summary>
+    /// Kiểm tra: dù có tenant ("acme") hay không (null), middleware luôn gọi tiếp phần còn lại của
+    /// pipeline.
+    /// Lý do phải test: middleware này chỉ đọc và ghi nhận tenant, không được tự chặn request — việc
+    /// từ chối khi thiếu tenant là của cổng persistence ở `AddDbContext`. Nếu nó chặn sớm thì health
+    /// endpoint (không cần tenant) cũng sẽ hỏng theo.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, nền tảng cho US1/US2.
+    /// </summary>
     [Theory]
     [InlineData("acme")]
     [InlineData(null)]

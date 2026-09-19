@@ -21,6 +21,12 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
     private static readonly Guid Notebook = new("9f8d6b1e-0001-4000-8000-000000000001");
 
+    /// <summary>
+    /// Kiểm tra: xoá giỏ làm mất mọi dòng nhưng giữ lại bản ghi giỏ.
+    /// Lý do phải test: FR-010: thanh toán xong giỏ phải rỗng; giữ lại chính giỏ để định danh giỏ
+    /// của người mua ổn định qua các lần mua.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T051, US3 (FR-010).
+    /// </summary>
     [Fact]
     public async Task Clear_RemovesEveryLine_ButKeepsTheBasket()
     {
@@ -48,8 +54,10 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
     }
 
     /// <summary>
-    /// Spec FR-008 and FR-016: reported rather than silently succeeding, so a checkout of an
-    /// already-empty basket cannot proceed to create a second order.
+    /// Kiểm tra: xoá giỏ đang rỗng trả 409 Conflict.
+    /// Lý do phải test: FR-008/FR-016: phải báo rõ thay vì lặng lẽ thành công, để checkout giỏ đã
+    /// rỗng không thể đi tiếp để tạo đơn thứ hai.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T051, US3 (FR-008, FR-016).
     /// </summary>
     [Fact]
     public async Task Clear_ReturnsConflict_WhenTheBasketIsAlreadyEmpty()
@@ -63,8 +71,10 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
     }
 
     /// <summary>
-    /// The second clear of a checked-out basket is the same conflict. This is what makes a repeated
-    /// checkout attempt fail loudly instead of quietly emptying nothing and carrying on.
+    /// Kiểm tra: xoá giỏ lần thứ hai liên tiếp cũng trả 409.
+    /// Lý do phải test: đây là thứ khiến 1 lần checkout lặp thất bại to tiếng thay vì lặng lẽ xoá
+    /// rỗng rồi chạy tiếp — chốt chặn thứ hai của FR-016.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T051, US3 (FR-016, SC-008).
     /// </summary>
     [Fact]
     public async Task Clear_ReturnsConflict_OnASecondClear()
@@ -86,8 +96,10 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
     }
 
     /// <summary>
-    /// After clearing, the shopper can shop again into the same basket. Checkout ends a purchase,
-    /// not the shopper's relationship with their basket.
+    /// Kiểm tra: sau khi xoá, người mua thêm hàng lại vào đúng giỏ cũ được.
+    /// Lý do phải test: thanh toán kết thúc 1 lần mua, không kết thúc quan hệ giữa người mua và giỏ
+    /// của họ.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T051, US3 (FR-010).
     /// </summary>
     [Fact]
     public async Task Clear_LeavesTheBasketUsable_ForTheNextPurchase()

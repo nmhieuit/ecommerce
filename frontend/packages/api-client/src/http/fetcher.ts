@@ -10,10 +10,27 @@
  */
 
 let baseUrl: string | undefined;
+let authHooks: AuthHooks = {};
 
 export interface ApiClientConfig {
   /** The gateway's origin — never the BFF's, and never a domain service's. */
   readonly baseUrl: string;
+}
+
+/**
+ * How the transport learns who the caller is. Kept as two callbacks so this package stays free of
+ * any one sign-in mechanism or storage choice: the application owns the token, and this file only
+ * attaches it and reports back when the gateway refuses it.
+ */
+export interface AuthHooks {
+  /** The current access token, or `null`/`undefined` when nobody is signed in. */
+  readonly getAccessToken?: () => string | null | undefined;
+  /** Called when the gateway answers 401 to a request that carried a token. */
+  readonly onUnauthorized?: () => void;
+}
+
+export function configureAuthHooks(hooks: AuthHooks): void {
+  authHooks = hooks;
 }
 
 export function configureApiClient(config: ApiClientConfig): void {
@@ -61,14 +78,18 @@ export async function bffFetch<TResponse>(
     throw new Error('configureApiClient() must be called before any request is made.');
   }
 
+  const accessToken = authHooks.getAccessToken?.();
+
   const response = await fetch(`${baseUrl}${url}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      // The bearer token is the caller's identity. The tenant and subject are still resolved at
+      // the gateway from that token's claims; nothing here sets or forwards them
+      // (contracts/subject-id-header.md).
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...init?.headers,
     },
-    // The tenant and subject are resolved at the gateway from the request's identity; nothing here
-    // sets or forwards them (contracts/subject-id-header.md).
     credentials: 'include',
   });
 
@@ -76,6 +97,12 @@ export async function bffFetch<TResponse>(
   const body: unknown = text.length > 0 ? JSON.parse(text) : undefined;
 
   if (!response.ok) {
+    if (response.status === 401 && accessToken) {
+      // The token this request carried was refused (expired, revoked, wrong issuer): the session
+      // is over, so let the application send the shopper back to sign-in.
+      authHooks.onUnauthorized?.();
+    }
+
     throw new ApiError(response.status, url, body, response.headers.get('X-Correlation-Id'));
   }
 

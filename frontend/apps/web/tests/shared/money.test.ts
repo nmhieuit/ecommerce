@@ -16,13 +16,20 @@ describe('formatMoney', () => {
     expect(formatMoney(amount)).toBe(expected);
   });
 
+  /**
+   * Kiểm tra: 1234.5 được định dạng "$1,234.50".
+   * Lý do phải test: FR-024: tổng lớn vẫn phải đọc được.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T022, nền tảng (FR-024).
+   */
   it('groups thousands so a large total stays readable', () => {
     expect(formatMoney(1234.5)).toBe('$1,234.50');
   });
 
   /**
-   * Two decimal places always, even when the amount has more. A price rendered as $12.499 would
-   * not match the total computed from it, and the shopper would be right to distrust both.
+   * Kiểm tra: luôn làm tròn 2 chữ số thập phân.
+   * Lý do phải test: giá hiển thị $12.499 sẽ không khớp tổng tính từ nó, và người mua có lý khi
+   * nghi ngờ cả hai.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T022, nền tảng (FR-024).
    */
   it('rounds to two decimal places', () => {
     expect(formatMoney(12.499)).toBe('$12.50');
@@ -30,24 +37,31 @@ describe('formatMoney', () => {
   });
 
   /**
-   * Nothing in this feature produces a negative amount, so this pins what happens if something
-   * ever does — a visible minus rather than a silently dropped sign.
+   * Kiểm tra: số tiền âm giữ nguyên dấu trừ.
+   * Lý do phải test: không tính năng nào sinh số âm; ghim hành vi nếu sau này có — dấu trừ hiển thị
+   * rõ chứ không bị lặng lẽ mất.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T022, nền tảng (FR-024).
    */
   it('keeps the sign on a negative amount', () => {
     expect(formatMoney(-5)).toBe('-$5.00');
   });
 
   /**
-   * The contract types a decimal as number-or-string (.NET's OpenAPI generator emits both so a
-   * producer may preserve precision), and the generated client passes that union straight through.
-   * Handling only the number half would leave a screen showing "NaN" the first time a producer
-   * exercised the other one.
+   * Kiểm tra: nhận cả dạng chuỗi ("12.50") mà hợp đồng cho phép cho kiểu decimal.
+   * Lý do phải test: .NET sinh OpenAPI với union number-hoặc-string để giữ độ chính xác; chỉ xử lý
+   * dạng số sẽ làm màn hình hiện "NaN" lần đầu producer dùng dạng chuỗi.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T022, nền tảng (FR-024).
    */
   it('accepts the string form the contract also permits', () => {
     expect(formatMoney('12.50')).toBe('$12.50');
     expect(formatMoney('48')).toBe('$48.00');
   });
 
+  /**
+   * Kiểm tra: giá trị không phải số tiền ("not-a-price") làm hàm ném `TypeError`.
+   * Lý do phải test: thất bại to tiếng thay vì hiển thị 1 số tiền sai cho người mua.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T022, nền tảng (FR-024).
+   */
   it('refuses a value that is not an amount at all', () => {
     expect(() => formatMoney('not-a-price')).toThrow(TypeError);
   });

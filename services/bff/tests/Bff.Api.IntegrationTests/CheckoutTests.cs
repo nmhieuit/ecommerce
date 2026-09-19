@@ -26,6 +26,13 @@ public class CheckoutTests(DownstreamServicesFixture fixture)
     private static readonly Guid Notebook = new("9f8d6b1e-0001-4000-8000-000000000001");
     private static readonly Guid Apron = new("9f8d6b1e-0001-4000-8000-000000000003");
 
+    /// <summary>
+    /// Kiểm tra: checkout tạo 1 đơn có các dòng và tổng khớp với nội dung giỏ.
+    /// Lý do phải test: nhánh happy-case của US3 (FR-007, FR-022): giỏ được chuyển thành đơn thật.
+    /// Dùng 3 service thật sau 1 BFF, mỗi service 1 database, vì hành vi đáng kiểm là thứ tự giữa
+    /// các bước (research.md Decision 9).
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T052, US3 (FR-007, FR-022).
+    /// </summary>
     [Fact]
     public async Task Checkout_CreatesAnOrder_ForWhatIsInTheBasket()
     {
@@ -48,9 +55,11 @@ public class CheckoutTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// Spec SC-005: "the order reference shown on the confirmation screen matches the order actually
-    /// created in the backend" — read back through the BFF's own order route, exactly as the
-    /// quickstart walkthrough does with curl.
+    /// Kiểm tra: mã tham chiếu do checkout trả về đọc lại qua route đơn hàng của BFF ra đúng đơn
+    /// đó.
+    /// Lý do phải test: SC-005: mã trên màn hình xác nhận phải khớp đơn thật trong backend — đọc
+    /// lại qua chính route của BFF, giống cách quickstart.md làm bằng curl.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T052, US3 (FR-009, SC-005).
     /// </summary>
     [Fact]
     public async Task Checkout_ReturnsAReference_ThatReadsBackAsTheSameOrder()
@@ -70,7 +79,12 @@ public class CheckoutTests(DownstreamServicesFixture fixture)
         Assert.Equal(confirmation.Total, readBack.Total);
     }
 
-    /// <summary>Spec FR-010: after a successful checkout, the shopper's basket is empty.</summary>
+    /// <summary>
+    /// Kiểm tra: sau khi checkout thành công giỏ của người mua rỗng.
+    /// Lý do phải test: FR-010: giỏ đã thanh toán không được còn hàng; đồng thời là chốt chặn để
+    /// lần checkout lặp thất bại (FR-016).
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T052, US3 (FR-010).
+    /// </summary>
     [Fact]
     public async Task Checkout_EmptiesTheBasket()
     {
@@ -87,8 +101,10 @@ public class CheckoutTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// Spec FR-008: an empty basket has nothing to order. The storefront blocks this before it is
-    /// sent, and this is the server refusing it anyway.
+    /// Kiểm tra: checkout khi giỏ rỗng trả 409 Conflict và không tạo đơn.
+    /// Lý do phải test: FR-008: giỏ rỗng không có gì để đặt; storefront đã chặn trước khi gửi, còn
+    /// đây là server từ chối thêm lần nữa (validate phía client chỉ là UX).
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T052, US3 (FR-008).
     /// </summary>
     [Fact]
     public async Task Checkout_ReturnsConflict_WhenTheBasketIsEmpty()
@@ -102,9 +118,10 @@ public class CheckoutTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// Spec FR-016 and SC-008: checking out twice must not produce two orders. The second attempt
-    /// finds an emptied basket and is refused — which is why FR-010's emptying is load-bearing and
-    /// not merely tidy.
+    /// Kiểm tra: checkout 2 lần liên tiếp chỉ tạo đúng 1 đơn; lần thứ hai bị từ chối.
+    /// Lý do phải test: FR-016/SC-008: lần 2 thấy giỏ đã rỗng và bị chặn — nên việc làm rỗng giỏ
+    /// của FR-010 là chốt chặn thực sự chứ không chỉ để gọn gàng.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T052, US3 (FR-016, SC-008).
     /// </summary>
     [Fact]
     public async Task Checkout_CreatesExactlyOneOrder_WhenAttemptedTwice()
@@ -122,8 +139,10 @@ public class CheckoutTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// Two shoppers, two baskets, two orders — neither checking out the other's items. With one
-    /// stub identity in Phase 1 this is what stops the caller-scoping quietly regressing.
+    /// Kiểm tra: hai người mua, hai giỏ, hai đơn — không ai đặt nhầm hàng của người kia.
+    /// Lý do phải test: với 1 danh tính stub ở Phase 1, đây là assertion ngăn việc gắn giỏ theo
+    /// người gọi âm thầm bị hồi quy.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T052, US3 (FR-006).
     /// </summary>
     [Fact]
     public async Task Checkout_OrdersOnlyTheCallersOwnBasket()

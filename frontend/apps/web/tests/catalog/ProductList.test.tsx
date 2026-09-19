@@ -34,6 +34,12 @@ function respondWithProducts(items: unknown[]) {
 }
 
 describe('ProductList', () => {
+  /**
+   * Kiểm tra: danh sách hiển thị đủ mọi sản phẩm với tên và giá đã định dạng (không phải số thô).
+   * Lý do phải test: US1 kịch bản 1/FR-001: người mua mở storefront thấy sản phẩm lấy từ backend;
+   * giá phải đọc được như tiền (FR-024) — "48" không phải 1 mức giá.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024, US1 (FR-001, FR-024).
+   */
   it('lists every product with its name and price', async () => {
     respondWithProducts([
       { id: '9f8d6b1e-0001-4000-8000-000000000001', name: 'Field Notes Notebook', price: 12.5 },
@@ -51,8 +57,10 @@ describe('ProductList', () => {
   });
 
   /**
-   * A catalog is a list of things, and announcing it as one is how a screen-reader user learns how
-   * many products there are before reading them.
+   * Kiểm tra: catalog được trình bày dưới dạng danh sách (role `list`).
+   * Lý do phải test: người dùng trình đọc màn hình nhờ đó biết có bao nhiêu sản phẩm trước khi nghe
+   * từng mục (FR-017); assert theo role chứ không theo class hay test id.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024, US1 (FR-017).
    */
   it('presents the catalog as a list', async () => {
     respondWithProducts([
@@ -66,8 +74,10 @@ describe('ProductList', () => {
   });
 
   /**
-   * Spec FR-002: zero products is a legitimate answer, and the shopper must be told so rather than
-   * left looking at a page that appears broken.
+   * Kiểm tra: catalog không có sản phẩm nào thì hiển thị trạng thái rỗng tường minh.
+   * Lý do phải test: FR-002: 0 sản phẩm là câu trả lời hợp lệ và người mua phải được báo, thay vì
+   * nhìn 1 trang trông như bị hỏng.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024/T025, US1 (FR-002).
    */
   it('shows the empty state when the catalog holds nothing', async () => {
     respondWithProducts([]);
@@ -79,8 +89,11 @@ describe('ProductList', () => {
   });
 
   /**
-   * Spec FR-012 and US1 acceptance scenario 3: a backend failure produces a readable message and a
-   * usable page — never a blank screen and never an endless spinner.
+   * Kiểm tra: backend lỗi thì hiện thông báo đọc được và trang vẫn dùng được.
+   * Lý do phải test: FR-012/US1 kịch bản 3: không màn hình trắng, không vòng quay vô tận. Test giả
+   * lập lỗi 500; trường hợp 401 (chưa đăng nhập/hết phiên) được xử lý riêng bằng việc đưa về form
+   * đăng nhập — xem tests/auth/signIn.test.tsx.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024/T026, US1 (FR-012).
    */
   it('shows a readable error when the backend fails', async () => {
     server.use(
@@ -98,9 +111,10 @@ describe('ProductList', () => {
   });
 
   /**
-   * SC-010: every request the storefront makes goes to the single backend surface. Asserted here at
-   * the unit level too, because a hardcoded URL introduced in a component would otherwise only be
-   * caught by the end-to-end walkthrough (T065).
+   * Kiểm tra: lời gọi lấy catalog đi tới đúng origin gateway đã cấu hình.
+   * Lý do phải test: SC-010: mọi request của storefront đi tới 1 bề mặt backend duy nhất. Kiểm tra
+   * ở mức đơn vị vì URL hard-code trong component nếu không sẽ chỉ bị e2e (T065) bắt.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024, US1 (FR-014, SC-010).
    */
   it('requests the catalog from the configured gateway origin', async () => {
     const requested: string[] = [];
@@ -119,10 +133,11 @@ describe('ProductList', () => {
   });
 
   /**
-   * Spec FR-006 / SC-004, and constitution Principle II: "Consumers MUST tolerate unknown fields."
-   * The BFF can add a field to `ProductSummary` — a `sku`, say — and deploy it before the SPA's
-   * client has been regenerated. The shopper must still see the catalog when that happens, because
-   * the alternative is a storefront that goes blank the moment the backend ships ahead of it.
+   * Kiểm tra: sản phẩm có thêm 1 trường client chưa biết (vd. `sku`) vẫn hiển thị bình thường.
+   * Lý do phải test: Principle II: "consumer phải chịu được trường lạ". BFF có thể thêm trường và
+   * deploy trước khi client được sinh lại; storefront không được trắng trang vì backend đi trước.
+   * Task nguồn: bổ sung sau spec 004 (tolerant reader — Constitution Principle II); không thuộc
+   * danh sách task T001-T071 của 004.
    */
   it('renders products carrying a field the client does not know about', async () => {
     respondWithProducts([

@@ -25,6 +25,12 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
     private static readonly Guid Notebook = new("9f8d6b1e-0001-4000-8000-000000000001");
     private const decimal NotebookPrice = 12.50m;
 
+    /// <summary>
+    /// Kiểm tra: `GET /bff/basket` của người mua chưa thêm gì trả về giỏ rỗng.
+    /// Lý do phải test: lần đầu vào cửa hàng không phải lỗi; storefront cần 1 giỏ rỗng hợp lệ để
+    /// hiện trạng thái trống (FR-004, FR-020).
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-004, FR-020).
+    /// </summary>
     [Fact]
     public async Task GetBasket_ReturnsAnEmptyBasket_ForAShopperWhoHasAddedNothing()
     {
@@ -43,9 +49,12 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// Spec FR-004: the basket view shows each item's name as well as its quantity and price. The
-    /// baskets service stores a product identifier and nothing else, so the name can only come from
-    /// the BFF aggregating the catalog in — which is precisely its job (spec 002 FR-003).
+    /// Kiểm tra: `POST /bff/basket/items` trả về giỏ có tên sản phẩm và đơn giá do BFF tra từ
+    /// catalog.
+    /// Lý do phải test: FR-004: giỏ hiển thị tên chứ không chỉ số lượng và giá. Baskets chỉ lưu mã
+    /// sản phẩm, nên tên chỉ có thể do BFF ghép từ catalog vào — đúng nhiệm vụ tổng hợp của BFF
+    /// (spec 002 FR-003).
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-004, FR-021).
     /// </summary>
     [Fact]
     public async Task AddItem_ReturnsTheBasket_WithTheProductsNameAndResolvedPrice()
@@ -73,8 +82,11 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// The security property: whatever the caller says a product costs is discarded. Without this,
-    /// the storefront's own client could set its own prices.
+    /// Kiểm tra: client gửi kèm 1 đơn giá tự khai thì BFF bỏ qua, giá ghi nhận là giá catalog.
+    /// Lý do phải test: đặc tính bảo mật cốt lõi: giá do client khai chính là giảm giá do client tự
+    /// đặt. Thiếu test này thì chính client của storefront có thể tự đặt giá (research.md Decision
+    /// 7).
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (research.md Decision 7).
     /// </summary>
     [Fact]
     public async Task AddItem_IgnoresAPriceSuppliedByTheClient()
@@ -94,6 +106,12 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
         Assert.Equal(NotebookPrice, Assert.Single(basket!.Items).UnitPrice);
     }
 
+    /// <summary>
+    /// Kiểm tra: thêm lại cùng 1 sản phẩm qua BFF thì giỏ có 1 dòng với số lượng cộng dồn.
+    /// Lý do phải test: quy tắc gộp dòng (FR-005) phải giữ nguyên qua cả chặng BFF, không chỉ ở
+    /// service Baskets.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-005, FR-021).
+    /// </summary>
     [Fact]
     public async Task AddItem_MergesIntoTheExistingLine_WhenTheSameProductIsAddedAgain()
     {
@@ -112,8 +130,10 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// A product that is not in the catalog has no price to resolve, so there is nothing to add.
-    /// A 404 rather than a 502: the downstream answered correctly, the request was simply wrong.
+    /// Kiểm tra: thêm 1 sản phẩm không có trong catalog trả 404.
+    /// Lý do phải test: sản phẩm không tồn tại thì không có giá để tra nên không có gì để thêm. Trả
+    /// 404 chứ không phải 502: downstream trả lời đúng, chỉ là request sai.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-021).
     /// </summary>
     [Fact]
     public async Task AddItem_ReturnsNotFound_WhenNoSuchProductExists()
@@ -129,6 +149,12 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>
+    /// Kiểm tra: thêm với số lượng nhỏ hơn 1 (0, -2) bị từ chối.
+    /// Lý do phải test: validate hình dạng request ngay ở BFF (FR-005 của spec 002 cho phép); tránh
+    /// gọi downstream với dữ liệu chắc chắn sai.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-021).
+    /// </summary>
     [Theory]
     [InlineData(0)]
     [InlineData(-2)]
