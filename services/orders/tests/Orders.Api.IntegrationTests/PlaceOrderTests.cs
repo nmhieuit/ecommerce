@@ -22,6 +22,12 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
     private static readonly Guid Notebook = new("9f8d6b1e-0001-4000-8000-000000000001");
     private static readonly Guid Apron = new("9f8d6b1e-0001-4000-8000-000000000003");
 
+    /// <summary>
+    /// Kiểm tra: `POST /orders` với các dòng hợp lệ tạo đơn và trả về tổng do Orders tự tính.
+    /// Lý do phải test: nhánh happy-case của FR-022: đơn được tạo từ các dòng được gửi tới, tổng
+    /// tính ở đây chứ không nhận từ caller.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T050, US3 (FR-022).
+    /// </summary>
     [Fact]
     public async Task PlaceOrder_CreatesTheOrder_AndComputesItsTotal()
     {
@@ -48,9 +54,10 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
     }
 
     /// <summary>
-    /// Spec SC-005: "the order reference shown on the confirmation screen matches the order actually
-    /// created in the backend." That only holds if the order is retrievable by the identifier the
-    /// caller was handed.
+    /// Kiểm tra: mã định danh trả về khi đặt đơn đọc lại được đúng đơn đó.
+    /// Lý do phải test: SC-005: mã tham chiếu trên màn hình xác nhận phải khớp đơn thật trong
+    /// backend — chỉ đúng nếu đơn tra được bằng chính mã đã đưa cho caller.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T050, US3 (FR-022, SC-005).
     /// </summary>
     [Fact]
     public async Task PlaceOrder_ReturnsAnIdentifier_ThatReadsBackAsTheSameOrder()
@@ -70,6 +77,12 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
         Assert.Equal(created.PlacedAtUtc, readBack.PlacedAtUtc);
     }
 
+    /// <summary>
+    /// Kiểm tra: response tạo đơn kèm header `Location` trỏ tới đơn vừa tạo.
+    /// Lý do phải test: hợp đồng downstream (contracts/downstream-openapi.yaml) cho biết nơi tra
+    /// cứu tài nguyên mới tạo.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T050, US3 (FR-022).
+    /// </summary>
     [Fact]
     public async Task PlaceOrder_ReturnsALocationHeader_ForTheCreatedOrder()
     {
@@ -87,9 +100,11 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
     }
 
     /// <summary>
-    /// The server-side half of spec FR-008. The storefront blocks an empty-basket checkout before
-    /// it is sent, but client-side validation is UX only (constitution Principle VI) — an order for
-    /// nothing must be impossible to create even by calling this directly.
+    /// Kiểm tra: đặt đơn không có dòng nào bị từ chối.
+    /// Lý do phải test: nửa phía server của FR-008: storefront chặn giỏ rỗng trước khi gửi nhưng
+    /// validate phía client chỉ là UX (Principle VI) — đơn cho không có gì phải bất khả thi ngay cả
+    /// khi gọi thẳng API.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T050, US3 (FR-008).
     /// </summary>
     [Fact]
     public async Task PlaceOrder_Rejects_ARequestWithNoLines()
@@ -102,6 +117,12 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// Kiểm tra: đặt đơn có dòng số lượng không dương bị từ chối.
+    /// Lý do phải test: chặn dòng vô nghĩa hoặc dòng làm giảm tổng đơn ở lớp API, không chỉ ở
+    /// domain.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T050, US3 (FR-022).
+    /// </summary>
     [Fact]
     public async Task PlaceOrder_Rejects_ALineWithANonPositiveQuantity()
     {
@@ -117,8 +138,10 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
     }
 
     /// <summary>
-    /// An order belongs to somebody. A request that did not come through the gateway resolved no
-    /// caller, and must not be able to leave an order behind.
+    /// Kiểm tra: đặt đơn khi không có người gọi nào được phân giải thì thất bại.
+    /// Lý do phải test: đơn hàng thuộc về 1 ai đó; request không đi qua gateway không xác định được
+    /// ai và không được để lại đơn nào.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T050, US3 (FR-006, FR-022).
     /// </summary>
     [Fact]
     public async Task PlaceOrder_Fails_WhenNoCallerWasResolved()
@@ -137,9 +160,11 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
     }
 
     /// <summary>
-    /// 006-e2e-order-demo FR-005: the order carries the tenant resolved for the request that placed
-    /// it. Asserted against the stored row rather than the response, because the response could
-    /// echo a value the record never kept.
+    /// Kiểm tra: đơn được lưu kèm đúng tenant đã phân giải của request đặt đơn.
+    /// Lý do phải test: assert trên dòng đã lưu chứ không phải response, vì response có thể lặp lại
+    /// 1 giá trị mà bản ghi chưa bao giờ giữ.
+    /// Task nguồn: spec 006 (demo đặt hàng end-to-end) — FR-005, mở rộng bộ test đặt đơn của spec
+    /// 004.
     /// </summary>
     [Fact]
     public async Task PlaceOrder_PersistsTheResolvedTenant_OnTheOrderRow()
@@ -162,10 +187,12 @@ public class PlaceOrderTests(SqlServerFixture sqlServer) : IClassFixture<SqlServ
     }
 
     /// <summary>
-    /// FR-005 again, from the other direction: the tenant stored is the one the gateway resolved,
-    /// not something the caller could choose. A body that names a different tenant changes nothing
-    /// - the field is not part of the request contract, and adding one is the smuggling route
-    /// constitution Principle V exists to close.
+    /// Kiểm tra: body có khai 1 tenant khác thì không đổi gì — tenant lưu vẫn là tenant gateway đã
+    /// phân giải.
+    /// Lý do phải test: trường tenant không thuộc hợp đồng request; thêm nó vào body chính là đường
+    /// lén mà Constitution Principle V tồn tại để đóng.
+    /// Task nguồn: spec 006 (demo đặt hàng end-to-end) — FR-005, mở rộng bộ test đặt đơn của spec
+    /// 004.
     /// </summary>
     [Fact]
     public async Task PlaceOrder_IgnoresATenantNamedInTheRequestBody()

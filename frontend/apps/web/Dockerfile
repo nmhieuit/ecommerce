@@ -11,6 +11,8 @@
 # gateway's published host address, never the compose hostname `gateway-api:8080`, which resolves
 # only inside the network (005-one-command-local-run research.md Decision 6).
 ARG GATEWAY_ORIGIN=http://localhost:5300
+# Likewise inlined: the identity server's address as the browser reaches it, used by the sign-in form.
+ARG IDENTITY_ORIGIN=http://localhost:5205
 
 FROM node:22-alpine AS build
 WORKDIR /workspace
@@ -27,6 +29,8 @@ COPY . .
 
 ARG GATEWAY_ORIGIN
 ENV VITE_GATEWAY_ORIGIN=${GATEWAY_ORIGIN}
+ARG IDENTITY_ORIGIN
+ENV VITE_IDENTITY_ORIGIN=${IDENTITY_ORIGIN}
 
 # `pnpm build` typechecks and then builds; a type error fails the image rather than shipping.
 RUN pnpm --filter @ecommerce/web build

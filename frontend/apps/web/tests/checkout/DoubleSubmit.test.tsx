@@ -31,6 +31,12 @@ function renderWithQueryClient(ui: ReactNode) {
 }
 
 describe('CheckoutButton double submission', () => {
+  /**
+   * Kiểm tra: bấm thanh toán 2 lần liên tiếp nhanh chỉ phát ra đúng 1 request.
+   * Lý do phải test: FR-016/SC-008: chốt chặn phía client làm request không bao giờ được gửi lần
+   * thứ hai; chốt chặn còn lại (server từ chối giỏ đã rỗng) do CheckoutTests của BFF đảm nhiệm.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T055, US3 (FR-016, SC-008).
+   */
   it('issues exactly one checkout request when clicked twice in rapid succession', async () => {
     const attempts: string[] = [];
     let release: (() => void) | undefined;
@@ -65,15 +71,13 @@ describe('CheckoutButton double submission', () => {
   });
 
   /**
-   * The clicks land in the same tick, before React has re-rendered with the pending state.
-   *
-   * This is not a hypothetical. Running 004's walkthrough against the containerized stack produced
-   * **two orders six milliseconds apart** for one double-click, which is exactly what FR-016
-   * forbids. The dev-server run had passed, because its timing let the re-render win the race — so
-   * the guard was never really tested, only the timing was.
-   *
-   * `fireEvent` rather than `userEvent` on purpose: userEvent awaits between its steps, which is
-   * what let the original test miss this.
+   * Kiểm tra: hai cú bấm rơi cùng 1 tick, trước khi React kịp render lại, vẫn chỉ phát ra 1
+   * request.
+   * Lý do phải test: không phải giả định: chạy walkthrough 004 trên stack container từng tạo 2 đơn
+   * cách nhau 6 ms cho 1 lần double-click, trong khi dev-server pass vì timing. Dùng `fireEvent`
+   * thay `userEvent` có chủ đích vì userEvent chờ giữa các bước nên không tái hiện được race.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T055, US3 (FR-016) — bổ sung sau lỗi thật phát
+   * hiện lúc chạy walkthrough.
    */
   it('issues one request even when both clicks land before React re-renders', async () => {
     const attempts: string[] = [];
@@ -100,6 +104,12 @@ describe('CheckoutButton double submission', () => {
     expect(attempts).toHaveLength(1);
   });
 
+  /**
+   * Kiểm tra: đơn vừa tạo được báo lên đúng 1 lần.
+   * Lý do phải test: chống việc callback thành công bị gọi lặp khiến màn hình xác nhận/điều hướng
+   * chạy 2 lần.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T055, US3 (FR-016).
+   */
   it('reports the created order exactly once', async () => {
     const confirmations: { id: string }[] = [];
 
@@ -123,8 +133,9 @@ describe('CheckoutButton double submission', () => {
   });
 
   /**
-   * Spec US3 acceptance scenario 4: a failed checkout shows a clear error, no confirmation, and
-   * leaves the basket intact so the shopper can retry.
+   * Kiểm tra: checkout thất bại thì hiện lỗi rõ ràng, không báo đơn nào và giữ nguyên giỏ.
+   * Lý do phải test: US3 kịch bản 4: người mua phải thử lại được mà không mất giỏ.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T055, US3 (FR-012, US3-KB4).
    */
   it('shows an error and reports no order when checkout fails', async () => {
     const confirmations: unknown[] = [];
@@ -146,12 +157,12 @@ describe('CheckoutButton double submission', () => {
   });
 
   /**
-   * Spec FR-006 / SC-004, and constitution Principle II: "Consumers MUST tolerate unknown fields."
-   * An order confirmation the backend has grown a field on — an estimated delivery date, say —
-   * must still complete the checkout and still carry the three fields the confirmation screen
-   * reads. Asserted here rather than in `Confirmation.test.tsx` because this is the file that
-   * exercises the real checkout round trip; `Confirmation` itself is handed a hardcoded prop and
-   * never parses a response.
+   * Kiểm tra: đơn có thêm trường client chưa biết vẫn hoàn tất checkout và giữ đủ 3 trường màn hình
+   * xác nhận đọc.
+   * Lý do phải test: Principle II (tolerant reader), đặt ở đây vì đây là file chạy vòng checkout
+   * thật; `Confirmation` chỉ nhận prop cứng và không parse response.
+   * Task nguồn: bổ sung sau spec 004 (tolerant reader — Constitution Principle II); không thuộc
+   * danh sách task T001-T071 của 004.
    */
   it('completes checkout when the order carries a field the client does not know about', async () => {
     const confirmations: PlacedOrder[] = [];

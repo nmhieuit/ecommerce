@@ -1,8 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '@/App';
+import { clearSession, setSession } from '@/auth/tokenStore';
 import { server } from './msw/server';
 
 /**
@@ -14,6 +15,9 @@ describe('shell accessibility', () => {
     // jsdom's URL survives between tests, and a router reads it when it is created — so without
     // this the second test in this file would start wherever the first navigated to.
     window.history.replaceState({}, '', '/');
+
+    // The shell sits behind sign-in; these properties are about the signed-in screens.
+    setSession({ accessToken: 'test-token', expiresAt: Date.now() + 60_000 });
 
     server.use(
       http.get('http://localhost:5300/bff/products', () => HttpResponse.json({ items: [] })),
@@ -27,6 +31,8 @@ describe('shell accessibility', () => {
       ),
     );
   });
+
+  afterEach(() => clearSession());
 
   /**
    * WCAG 2.4.1 "Bypass Blocks". First in the tab order so it is reachable before the navigation it

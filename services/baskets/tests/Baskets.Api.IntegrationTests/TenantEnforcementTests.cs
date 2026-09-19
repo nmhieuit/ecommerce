@@ -22,6 +22,15 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
 {
     private static readonly Guid AnyBasketId = new("8a1f6f6e-0000-4000-8000-000000000001");
 
+    /// <summary>
+    /// Kiểm tra: lấy `BasketsDbContext` từ DI khi chưa có tenant nào được phân giải thì ném
+    /// `MissingTenantContextException`.
+    /// Lý do phải test: cổng tenant nằm ngay tại điểm gọi `AddDbContext` duy nhất (research.md
+    /// Decision 6), nên không thể có khoảng thời gian DbContext đã tồn tại mà chưa bị kiểm tra tenant.
+    /// Chạy với SQL Server thật để chứng minh lỗi đến từ cổng tenant chứ không phải từ việc không kết
+    /// nối được database.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T025, US2.
+    /// </summary>
     [Fact]
     public async Task ResolvingTheDbContext_Throws_WhenNoTenantHasBeenResolved()
     {
@@ -33,8 +42,12 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
     }
 
     /// <summary>
-    /// quickstart.md Scenario 3: a 500-class response is the accepted Phase 1 outcome — the point
-    /// under test is that it fails loudly rather than answering from some default tenant's data.
+    /// Kiểm tra: gọi thẳng `/baskets/{id}` mà không có `X-Tenant-Id` trả về `500 Internal Server Error`.
+    /// Lý do phải test: quickstart.md Scenario 3 — ở Phase 1 chấp nhận mã lỗi nhóm 500; điều cần chứng
+    /// minh là service thất bại to tiếng thay vì trả `200 OK` với dữ liệu của 1 tenant/schema mặc định
+    /// nào đó (FR-004, FR-005, SC-002). Có database thật phía sau nên nếu thiếu cổng tenant thì service
+    /// sẽ trả 200 — vì vậy việc lỗi ở đây là bằng chứng của cổng tenant.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T025, US2.
     /// </summary>
     [Fact]
     public async Task ARequestWithoutATenant_Fails_RatherThanServingDefaultSchemaData()

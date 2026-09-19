@@ -57,6 +57,12 @@ const apronLine = {
 };
 
 describe('BasketView', () => {
+  /**
+   * Kiểm tra: mỗi dòng giỏ hiển thị tên, số lượng, đơn giá và thành tiền.
+   * Lý do phải test: US2 kịch bản 3/FR-004: giỏ phải hiện tên, số lượng, giá từng mặt hàng; assert
+   * theo role trong phạm vi từng dòng để không bị mơ hồ khi thành tiền dòng bằng tổng giỏ.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T036, US2 (FR-004).
+   */
   it('shows each line with its name, quantity, unit price, and line total', async () => {
     respondWithBasket({
       id: 'b1b1b1b1-0000-4000-8000-000000000001',
@@ -81,9 +87,10 @@ describe('BasketView', () => {
   });
 
   /**
-   * The figure quickstart.md Scenarios 2 and 5 quote. The total comes from the backend and is
-   * displayed, never recomputed in the browser — a total the client works out for itself is a
-   * total that can disagree with the one being charged.
+   * Kiểm tra: hiển thị đúng tổng giỏ do backend báo ($59.25).
+   * Lý do phải test: tổng đến từ backend và chỉ được hiển thị, không tính lại ở trình duyệt — 1
+   * tổng client tự tính có thể lệch với số tiền bị tính thật (quickstart Scenario 2, 5).
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T036, US2 (FR-004).
    */
   it('shows the basket total the backend reported', async () => {
     respondWithBasket({
@@ -99,6 +106,11 @@ describe('BasketView', () => {
     expect(screen.getByText('$59.25')).toBeInTheDocument();
   });
 
+  /**
+   * Kiểm tra: các dòng giỏ được trình bày dưới dạng danh sách.
+   * Lý do phải test: trợ năng (FR-017): trình đọc màn hình đọc được số dòng trong giỏ.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T036, US2 (FR-017).
+   */
   it('presents the lines as a list', async () => {
     respondWithBasket({
       id: 'b1b1b1b1-0000-4000-8000-000000000001',
@@ -114,8 +126,10 @@ describe('BasketView', () => {
   });
 
   /**
-   * An empty basket is a legitimate state — a first-time shopper's, and the state right after a
-   * successful checkout (spec FR-010). Not an error.
+   * Kiểm tra: giỏ rỗng hiện trạng thái trống dễ hiểu.
+   * Lý do phải test: giỏ rỗng là trạng thái hợp lệ — của người mua lần đầu và ngay sau khi thanh
+   * toán (FR-010) — không phải lỗi.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T036, US2/US3 (FR-010).
    */
   it('tells the shopper when the basket is empty', async () => {
     respondWithBasket({
@@ -131,6 +145,12 @@ describe('BasketView', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  /**
+   * Kiểm tra: không tải được giỏ thì hiện lỗi đọc được.
+   * Lý do phải test: FR-012: mọi request tới backend thất bại đều phải cho người mua thấy thông báo
+   * rõ ràng.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T036, US2 (FR-012).
+   */
   it('shows a readable error when the basket cannot be loaded', async () => {
     server.use(
       http.get(`${GATEWAY_ORIGIN}/bff/basket`, () =>
@@ -145,11 +165,11 @@ describe('BasketView', () => {
   });
 
   /**
-   * Spec FR-006 / SC-004, and constitution Principle II: "Consumers MUST tolerate unknown fields."
-   * A line the backend has enriched — with a backorder date the client has never heard of — must
-   * not cost the shopper the basket. Mocked through `server.use` directly rather than
-   * `respondWithBasket`, because the point of the case is a body the declared `BasketBody` shape
-   * does not describe.
+   * Kiểm tra: dòng giỏ có thêm trường client chưa biết vẫn hiển thị được giỏ.
+   * Lý do phải test: Principle II (tolerant reader): 1 dòng được backend làm giàu thêm (vd. ngày
+   * backorder) không được làm người mua mất giỏ.
+   * Task nguồn: bổ sung sau spec 004 (tolerant reader — Constitution Principle II); không thuộc
+   * danh sách task T001-T071 của 004.
    */
   it('renders the basket when a line carries a field the client does not know about', async () => {
     server.use(

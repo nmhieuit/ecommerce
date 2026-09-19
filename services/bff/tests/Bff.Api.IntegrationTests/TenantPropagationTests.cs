@@ -22,6 +22,15 @@ public class TenantPropagationTests(DownstreamServicesFixture fixture)
 {
     private const string ResolvedTenant = "contoso";
 
+    /// <summary>
+    /// Kiểm tra: BFF nhận `X-Tenant-Id: contoso` thì lời gọi đi ra tới Products service cũng mang đúng
+    /// header `X-Tenant-Id: contoso`.
+    /// Lý do phải test: YARP tự chuyển tiếp header tới BFF, nhưng `HttpClient` có kiểu thì không — thiếu
+    /// `TenantPropagationHandler` thì chuỗi lan truyền đứt đúng chặng BFF → service (research.md
+    /// Decision 4). Assertion đặt trên request đi ra thật sự, qua 1 handler ghi nhận nằm trong pipeline
+    /// của client.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T017, US1.
+    /// </summary>
     [Fact]
     public async Task TheBffsOutboundCall_CarriesTheTenantTheBffReceived()
     {
@@ -40,9 +49,15 @@ public class TenantPropagationTests(DownstreamServicesFixture fixture)
     }
 
     /// <summary>
-    /// contracts/tenant-id-header.md: the BFF "relays, does not resolve". If its own context is
-    /// Unresolved — the gateway was bypassed — it must send no header rather than inventing one,
-    /// so the failure propagates downstream instead of being masked by a default.
+    /// Kiểm tra: khi BFF không nhận được tenant nào (không có `X-Tenant-Id` đi vào), MỌI lời gọi đi ra
+    /// tới Products service đều không mang header tenant.
+    /// Lý do phải test: theo contracts/tenant-id-header.md, BFF "relay chứ không phân giải". Nếu
+    /// context của BFF là Unresolved (gateway bị bỏ qua) thì nó phải không gửi header nào thay vì tự
+    /// bịa 1 giá trị, để lỗi lan xuống service thay vì bị 1 tenant mặc định che đi. Việc có nhiều hơn 1
+    /// lời gọi đi ra là chủ đích: cổng tenant của service từ chối request thiếu tenant nên pipeline
+    /// resilience thử lại — và mỗi lần thử lại đều phải không bịa tenant, vì retry chính là chỗ 1
+    /// fallback kiểu "lần này cứ dùng mặc định" dễ ẩn nấp nhất.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T017, US1.
     /// </summary>
     [Fact]
     public async Task TheBffsOutboundCall_CarriesNoTenant_WhenTheBffItselfHasNone()
@@ -53,13 +68,8 @@ public class TenantPropagationTests(DownstreamServicesFixture fixture)
         await using var bff = CreateRecordingBff(products, recorder);
         var client = bff.CreateClient().UseTestBearerToken();
 
-        // No X-Tenant-Id on the way in: nothing resolved this request's tenant.
         await client.GetAsync("/bff/products");
 
-        // More than one outbound call is expected here, not incidental: the downstream service's
-        // own gate rejects the untenanted request, so the resilience pipeline retries. Every one of
-        // those attempts must still refuse to invent a tenant — a retry is exactly where a "just
-        // use a default this time" fallback would hide.
         Assert.NotEmpty(recorder.Observed);
         Assert.All(recorder.Observed, Assert.Null);
     }

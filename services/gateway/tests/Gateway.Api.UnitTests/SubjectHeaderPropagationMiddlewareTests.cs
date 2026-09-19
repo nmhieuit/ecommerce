@@ -21,6 +21,13 @@ public class SubjectHeaderPropagationMiddlewareTests
 {
     private const string ResolvedSubject = "phase1-stub-user";
 
+    /// <summary>
+    /// Kiểm tra: principal đã xác thực có claim `NameIdentifier` thì gateway ghi header
+    /// `X-Subject-Id` bằng đúng giá trị đó.
+    /// Lý do phải test: gateway là thành phần duy nhất được nói ai là người gọi
+    /// (contracts/subject-id-header.md); đây là nhánh happy-case của cơ chế lan truyền subject.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T016, US2 (FR-006).
+    /// </summary>
     [Fact]
     public async Task InvokeAsync_StampsTheSubjectHeader_FromTheAuthenticatedPrincipal()
     {
@@ -34,8 +41,11 @@ public class SubjectHeaderPropagationMiddlewareTests
     }
 
     /// <summary>
-    /// A caller who could name their own subject would be reading and checking out somebody else's
-    /// basket. The inbound value is overwritten, never merged and never trusted.
+    /// Kiểm tra: client tự gửi `X-Subject-Id` khác thì gateway vẫn ghi đè bằng subject đã phân
+    /// giải.
+    /// Lý do phải test: người gọi tự đặt được subject của mình là đọc và thanh toán được giỏ của
+    /// người khác; giá trị đến bị ghi đè, không bao giờ trộn hay tin.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T016, US2 (FR-006).
     /// </summary>
     [Fact]
     public async Task InvokeAsync_OverwritesACallerSuppliedSubject_NeverTrustsIt()
@@ -53,8 +63,12 @@ public class SubjectHeaderPropagationMiddlewareTests
     }
 
     /// <summary>
-    /// Removing rather than leaving the inbound value alone is the point: passing a caller's own
-    /// header through unchecked is precisely the smuggling route the overwrite above closes.
+    /// Kiểm tra: khi principal không có subject (null, rỗng, khoảng trắng) thì header
+    /// `X-Subject-Id` bị XOÁ.
+    /// Lý do phải test: để nguyên giá trị client gửi là đúng cửa ngách mà việc ghi đè phía trên đã
+    /// đóng. Đây là test đơn vị vì nhánh này không thể tới được qua gateway thật khi stub luôn
+    /// thành công.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T016, US2 (FR-006).
     /// </summary>
     [Theory]
     [InlineData(null)]
@@ -71,6 +85,12 @@ public class SubjectHeaderPropagationMiddlewareTests
             httpContext.Request.Headers.ContainsKey(SubjectHeaderPropagationMiddleware.HeaderName));
     }
 
+    /// <summary>
+    /// Kiểm tra: dù có subject hay không, middleware luôn gọi tiếp pipeline.
+    /// Lý do phải test: middleware chỉ stamp/xoá header, không tự chặn request; việc từ chối do các
+    /// chặng phía sau đảm nhiệm.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T016, US2 (FR-006).
+    /// </summary>
     [Theory]
     [InlineData(ResolvedSubject)]
     [InlineData(null)]

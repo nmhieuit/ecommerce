@@ -7,6 +7,13 @@ namespace Tenancy.UnitTests;
 /// </summary>
 public class TenantContextTests
 {
+    /// <summary>
+    /// Kiểm tra: khi `TenantId` đã được gán ("acme"), `RequireTenantId()` trả về đúng giá trị đó.
+    /// Lý do phải test: đây là nhánh "Resolved" đối chứng cho các test ném exception bên dưới — thiếu
+    /// nó thì không có gì đảm bảo guard không bị lỗi ngược (luôn ném) mà vẫn "vô tình" pass các test
+    /// chỉ kiểm tra trường hợp thiếu tenant.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T005, US2.
+    /// </summary>
     [Fact]
     public void RequireTenantId_ReturnsTheResolvedTenant_WhenOneHasBeenSet()
     {
@@ -15,6 +22,12 @@ public class TenantContextTests
         Assert.Equal("acme", context.RequireTenantId());
     }
 
+    /// <summary>
+    /// Kiểm tra: `TenantContext` vừa tạo mới có `TenantId` là null.
+    /// Lý do phải test: trạng thái khởi đầu phải là "Unresolved". Nếu có giá trị mặc định nào đó được
+    /// điền sẵn, mọi service sẽ âm thầm chạy với 1 tenant không ai xác định — đúng điều FR-004 cấm.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T005, US2.
+    /// </summary>
     [Fact]
     public void TenantContext_IsUnresolved_BeforeAnythingSetsIt()
     {
@@ -23,6 +36,13 @@ public class TenantContextTests
         Assert.Null(context.TenantId);
     }
 
+    /// <summary>
+    /// Kiểm tra: khi chưa có tenant nào được phân giải, `RequireTenantId()` ném
+    /// `MissingTenantContextException`.
+    /// Lý do phải test: đây là cơ chế cốt lõi của FR-004/FR-005 — truy cập persistence khi chưa biết
+    /// tenant phải thất bại to tiếng, không được lặng lẽ chạy tiếp với tenant mặc định.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T005, US2.
+    /// </summary>
     [Fact]
     public void RequireTenantId_Throws_WhenNoTenantHasBeenResolved()
     {
@@ -32,9 +52,12 @@ public class TenantContextTests
     }
 
     /// <summary>
-    /// data-model.md is explicit that there is no "empty but present" state: a blank tenant
-    /// identifier is Unresolved, not a tenant whose name happens to be blank. Without this, an
-    /// empty <c>X-Tenant-Id</c> header would sail past the guard and reach persistence.
+    /// Kiểm tra: khi `TenantId` là chuỗi rỗng, khoảng trắng hoặc tab, `RequireTenantId()` vẫn ném
+    /// `MissingTenantContextException`.
+    /// Lý do phải test: data-model.md khẳng định không có trạng thái "rỗng nhưng có mặt" — tenant rỗng
+    /// là Unresolved, không phải 1 tenant có tên rỗng. Thiếu test này, 1 header `X-Tenant-Id` rỗng sẽ
+    /// lọt qua guard và chạm tới persistence.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T005, US2.
     /// </summary>
     [Theory]
     [InlineData("")]

@@ -9,7 +9,8 @@ Validates this feature against [spec.md](./spec.md)'s acceptance scenarios and s
 - .NET 10 SDK.
 - Node.js 22 LTS and pnpm 9+ (the frontend workspace — see [research.md](./research.md) Decision 1).
 - Docker, for the per-service SQL Server dependency containers in `docker-compose.deps.yml`.
-- A `.env` at the repository root with `MSSQL_SA_PASSWORD` set (copy `.env.example`).
+- A `.env` at the repository root (copy `.env.example`): `MSSQL_SA_PASSWORD`, plus `TestUserPassword`
+  — the password of the dev test user you sign in with (below).
 
 ## Setup
 
@@ -60,14 +61,37 @@ pnpm dev             # Vite dev server, :5173, configured against the gateway on
 
 ---
 
+## Signing in (spec FR-026)
+
+The storefront sits behind sign-in, so the backend must be the real identity server, not the Phase 1
+stub. The one-command local stack does that for you:
+
+```bash
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+It runs the gateway with `IdentityServerAuthCutover` on, pins the token issuer (`IssuerUri`), and
+registers the storefront's password sign-in client (`SpaPasswordClient__Enabled=true`) — none of which
+the deployed-shape `docker-compose.yml` does. The identity server must be reachable from the
+browser at `http://localhost:5205` (override with `VITE_IDENTITY_ORIGIN`).
+
+Sign in with the dev test user:
+
+- **Username**: `postman-test@local.test`
+- **Password**: the `TestUserPassword` value in your `.env`
+
+Then continue with the scenarios below. Expect: a signed-out visit to `/` lands on `/login`; a wrong
+password shows "Incorrect username or password."; **Sign out** returns to `/login`.
+
 ## Scenario 1 — Browse (spec US1, FR-001, FR-002)
 
-1. Open `http://localhost:5173`.
+1. Sign in, then open `http://localhost:5173` (or `http://localhost:4173` for the container).
 2. **Expect**: three products listed, each with its name and a price shown as US dollars with two
    decimal places (FR-024) — Field Notes Notebook $12.50, Ceramic Pour-Over Set $48.00, Linen Apron
    $34.25.
 3. Open the browser's network tab and confirm every request goes to `localhost:5300` (the gateway).
-   **Zero** requests to 5301, 5088, 5188, or 5041 (SC-010).
+   **Zero** requests to 5301, 5088, 5188, or 5041 (SC-010). The one other destination allowed is the
+   sign-in form's single `POST localhost:5205/connect/token`, made before the catalog loads.
 4. Open the console. **Expect**: no errors (SC-002).
 
 **Empty-catalog check (FR-002)**: delete the seeded rows from the products database, reload, and
@@ -165,7 +189,7 @@ cd frontend && pnpm test && pnpm lint && pnpm typecheck
 cd frontend && pnpm build && pnpm size
 
 # End-to-end walkthrough (SC-002, SC-005, SC-008, SC-009, SC-010)
-cd frontend && pnpm e2e
+cd frontend && E2E_USERNAME=postman-test@local.test E2E_PASSWORD=<TestUserPassword from .env> pnpm e2e
 ```
 
 **Codegen drift check** (ADR-0004): `pnpm generate` followed by a clean `git status` — a dirty tree

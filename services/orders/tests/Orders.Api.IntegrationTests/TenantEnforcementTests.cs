@@ -28,17 +28,17 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
     private static readonly Guid Notebook = new("9f8d6b1e-0001-4000-8000-000000000001");
 
     /// <summary>
-    /// 024-verify-transactional-outbox: deliberately the opposite of what this test asserted
-    /// before that feature. Construction is no longer gated on a resolved tenant — MassTransit's
-    /// outbox delivery/cleanup hosted services (Program.cs's <c>AddEntityFrameworkOutbox</c>)
-    /// construct this same context from their own background scope, with no HTTP request (and
-    /// therefore no resolved tenant) behind it; per MassTransit's own maintainers, gating
-    /// construction itself on a scoped, request-only dependency is unsupported. The guarantee
-    /// this suite actually cares about — that a real request cannot reach Order data without a
-    /// resolved tenant — moved to the call sites that touch that data
-    /// (<c>OrderEndpoints.MapOrderEndpoints</c>'s explicit <c>tenant.RequireTenantId()</c> calls)
-    /// and is what <see cref="ARequestWithoutATenant_Fails_RatherThanServingDefaultSchemaData"/>
-    /// and <see cref="AWriteWithoutATenant_CreatesNoOrder"/> below verify end-to-end.
+    /// Kiểm tra: lấy `OrdersDbContext` từ DI khi chưa có tenant nào được phân giải thì THÀNH CÔNG (không
+    /// ném exception).
+    /// Lý do phải test: cố ý ngược với những gì test này khẳng định ở 3 service còn lại (và ngược với
+    /// chính nó trước spec 024). Hosted service outbox/cleanup của MassTransit dựng cùng DbContext này
+    /// từ scope nền, không có HTTP request nên cũng không có tenant; theo chính maintainer MassTransit,
+    /// chặn ngay lúc dựng DbContext bằng 1 dependency scoped theo request là không được hỗ trợ. Cổng
+    /// tenant vì vậy đã dời xuống các điểm chạm dữ liệu Order (`tenant.RequireTenantId()` tường minh
+    /// trong `OrderEndpoints`) và được kiểm chứng đầu-cuối bởi 2 test bên dưới. Đây cũng là lý do
+    /// `TenantGatedConnectionTests.EveryDbContextRegistration_IsGatedOnAResolvedTenant` (SC-003) đang đỏ
+    /// ở `orders` — xem docs/QA/QA_Debt.md, mục 003.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T026 (đã đổi ý nghĩa bởi spec 024-verify-transactional-outbox), US2.
     /// </summary>
     [Fact]
     public async Task ResolvingTheDbContext_Succeeds_EvenWhenNoTenantHasBeenResolved()
@@ -52,8 +52,12 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
     }
 
     /// <summary>
-    /// quickstart.md Scenario 3: a 500-class response is the accepted Phase 1 outcome — the point
-    /// under test is that it fails loudly rather than answering from some default tenant's data.
+    /// Kiểm tra: gọi thẳng `/orders/{id}` mà không có `X-Tenant-Id` trả về `500 Internal Server Error`.
+    /// Lý do phải test: quickstart.md Scenario 3 — ở Phase 1 chấp nhận mã lỗi nhóm 500; điều cần chứng
+    /// minh là service thất bại to tiếng thay vì trả `200 OK` với dữ liệu của 1 tenant/schema mặc định
+    /// nào đó (FR-004, FR-005, SC-002). Có database thật phía sau nên nếu thiếu cổng tenant thì service
+    /// sẽ trả 200 — vì vậy việc lỗi ở đây là bằng chứng của cổng tenant.
+    /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T026, US2.
     /// </summary>
     [Fact]
     public async Task ARequestWithoutATenant_Fails_RatherThanServingDefaultSchemaData()
@@ -67,14 +71,12 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
     }
 
     /// <summary>
-    /// 006-e2e-order-demo FR-006 and User Story 2 scenario 2: a write that reaches this service with
-    /// no tenant resolved creates nothing.
+    /// Kiểm tra: `POST /orders` khi chưa có tenant trả `500` VÀ số dòng trong bảng Orders không đổi.
+    /// Lý do phải test: assert số dòng chứ không chỉ mã trạng thái — response lỗi chỉ chứng minh caller
+    /// bị từ chối, chưa chứng minh không có gì được ghi; đó là 2 khẳng định khác nhau. Đây chính là
+    /// assertion mà bước "WITHOUT A TENANT" của demo dựa vào.
+    /// Task nguồn: spec 006 (demo đặt hàng end-to-end) — FR-006, US2 kịch bản 2 (mở rộng bộ test tenant của 003).
     /// </summary>
-    /// <remarks>
-    /// The row count is what is asserted, not the status code. A failing response proves the caller
-    /// was told no; it does not prove nothing was written, and those are different claims. This is
-    /// the assertion the demo's "WITHOUT A TENANT" step stands on.
-    /// </remarks>
     [Fact]
     public async Task AWriteWithoutATenant_CreatesNoOrder()
     {

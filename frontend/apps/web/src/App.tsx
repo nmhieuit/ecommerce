@@ -1,14 +1,20 @@
 import { useState } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { configureApiClient } from '@ecommerce/api-client';
+import { configureApiClient, configureAuthHooks } from '@ecommerce/api-client';
 import { createQueryClient } from './app/queryClient';
 import { resolveGatewayOrigin } from './app/config';
 import { AppRoutes } from './app/routes';
+import { AuthProvider } from './auth/AuthContext';
+import { clearSession, getAccessToken } from './auth/tokenStore';
 
 // Configured at module load, before any component can render and therefore before any hook can
 // fire a request. The generated client throws rather than guessing if this has not run, so a
 // missing origin surfaces as a clear error instead of a same-origin 404 against the dev server.
 configureApiClient({ baseUrl: resolveGatewayOrigin() });
+
+// Every request carries the shopper's bearer token, and a 401 ends the session — RequireAuth then
+// sends them to /login. Wired here, beside the origin, so no screen can forget to do it.
+configureAuthHooks({ getAccessToken, onUnauthorized: clearSession });
 
 export function App() {
   // Held in state rather than created inline: a new QueryClient on every render would discard the
@@ -18,7 +24,9 @@ export function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppRoutes />
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -19,3 +19,21 @@ export function resolveGatewayOrigin(): string {
     ? configured
     : DEFAULT_GATEWAY_ORIGIN;
 }
+
+/**
+ * The identity server the storefront signs in against.
+ *
+ * Unlike every other request, the sign-in call cannot go through the gateway: the gateway forwards
+ * everything to the BFF, and a token is what it demands before forwarding anything. This is the one
+ * deliberate exception to "the storefront reaches the gateway and nothing else" (spec FR-014) — it
+ * addresses the token endpoint only, and only to obtain a token.
+ */
+const DEFAULT_IDENTITY_ORIGIN = 'http://localhost:5205';
+
+export function resolveIdentityOrigin(): string {
+  const configured = import.meta.env.VITE_IDENTITY_ORIGIN;
+
+  return configured !== undefined && configured.length > 0
+    ? configured
+    : DEFAULT_IDENTITY_ORIGIN;
+}

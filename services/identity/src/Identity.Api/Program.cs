@@ -44,6 +44,18 @@ builder.Services.AddIdentityServer(options =>
         // scope matching — every downstream service's AddIdentityValidation() checks it
         // (shared/Identity/IdentityValidationExtensions.cs).
         options.EmitStaticAudienceClaim = true;
+
+        // Left unset, Duende derives `iss` from the request's Host header, so a token fetched
+        // through a published host port (a browser calling localhost:5205) carries a different
+        // issuer than one fetched inside the network (identity-api:8080) — and every service
+        // validates against the latter. A browser cannot override Host the way the Postman
+        // collection does, so where a browser signs in this is set to the internal Authority
+        // (docker-compose.local.yml), pinning one issuer regardless of how the server was reached.
+        var issuerUri = builder.Configuration["IssuerUri"];
+        if (!string.IsNullOrWhiteSpace(issuerUri))
+        {
+            options.IssuerUri = issuerUri;
+        }
     })
     .AddConfigurationStore(options =>
         options.ConfigureDbContext = db =>

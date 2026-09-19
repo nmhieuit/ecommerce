@@ -23,6 +23,12 @@ describe('Confirmation', () => {
     total: 59.25,
   };
 
+  /**
+   * Kiểm tra: màn hình xác nhận hiển thị mã đơn hàng nguyên văn.
+   * Lý do phải test: FR-009/SC-005: so mã người mua thấy với đơn trong backend; mã bị rút gọn không
+   * còn duy nhất một cách đáng tin.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T053, US3 (FR-009, SC-005).
+   */
   it('shows the order identifier verbatim', () => {
     renderInRouter(<Confirmation order={order} />);
 
@@ -31,12 +37,24 @@ describe('Confirmation', () => {
     expect(screen.getByText(order.id)).toBeInTheDocument();
   });
 
+  /**
+   * Kiểm tra: hiển thị tổng đơn bằng USD với 2 chữ số thập phân.
+   * Lý do phải test: FR-009 và FR-024: tổng tiền trên màn hình xác nhận phải là số tiền người mua
+   * đọc được.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T053, US3 (FR-009, FR-024).
+   */
   it('shows the order total in the single Phase 1 currency', () => {
     renderInRouter(<Confirmation order={order} />);
 
     expect(screen.getByText('$59.25')).toBeInTheDocument();
   });
 
+  /**
+   * Kiểm tra: màn hình nói rõ đơn đã được đặt.
+   * Lý do phải test: người mua cần lời xác nhận rõ ràng ngoài con số, đúng tên gọi "màn hình xác
+   * nhận" của US3.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T053, US3 (FR-009).
+   */
   it('tells the shopper their order was placed', () => {
     renderInRouter(<Confirmation order={order} />);
 
@@ -44,8 +62,11 @@ describe('Confirmation', () => {
   });
 
   /**
-   * Spec Edge Cases: "direct navigation to the confirmation screen without having checked out shows
-   * a clear 'nothing to show' state rather than a broken screen or a fabricated order reference."
+   * Kiểm tra: vào thẳng màn hình xác nhận mà chưa thanh toán thì hiện trạng thái "không có gì để
+   * hiển thị".
+   * Lý do phải test: Edge Cases của spec: không được hiện màn hình hỏng hay bịa ra 1 mã đơn — tuyệt
+   * đối không có mã tự chế.
+   * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T053, US3 (FR-009).
    */
   it('shows a nothing-to-show state when there is no order', () => {
     renderInRouter(<Confirmation order={undefined} />);

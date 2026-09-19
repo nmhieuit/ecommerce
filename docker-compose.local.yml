@@ -329,6 +329,10 @@ services:
       ConnectionStrings__IdentityDb: Server=identity-db;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
       ClientSecret: ${ClientSecret:-}
       TestUserPassword: ${TestUserPassword:-}
+      # Registers the storefront's password sign-in client (Config.SpaPasswordClient) — the only
+      # way the SPA's login form can get a token until an interactive login page exists. Local
+      # stack only: docker-compose.yml and every real deployment leave this unset.
+      SpaPasswordClient__Enabled: "true"
     networks: [backbone]
     depends_on:
       identity-db:
@@ -439,6 +443,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__IdentityDb: Server=identity-db;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      # Pins `iss` to the name every other service validates against (Identity:Authority), so a
+      # token the browser fetches through the published port 5205 is accepted. Without it the
+      # issuer follows the Host header and would be http://localhost:5205.
+      IssuerUri: http://identity-api:8080
     ports:
       - "5205:8080"
     networks: [backbone]
@@ -529,6 +537,8 @@ services:
         # published host address, never `gateway-api:8080`, which resolves only inside this
         # network. Vite inlines this at build time, so it is fixed in the image.
         GATEWAY_ORIGIN: http://localhost:5300
+        # Where the browser signs in — the identity server's published host port.
+        IDENTITY_ORIGIN: http://localhost:5205
     ports:
       - "4173:80"
     networks: [backbone]
