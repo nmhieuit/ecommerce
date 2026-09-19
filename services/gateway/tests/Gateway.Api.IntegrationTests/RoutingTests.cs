@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using IntegrationTestSupport;
 
 namespace Gateway.Api.IntegrationTests;
 
@@ -27,7 +28,7 @@ public class RoutingTests
     {
         await using var bff = GatewayTestHost.CreateBff();
         await using var gateway = GatewayTestHost.CreateGateway(bff);
-        var client = gateway.CreateClient();
+        var client = gateway.CreateClient().UseTestBearerToken();
 
         var response = await client.GetAsync("/openapi/v1.json");
 

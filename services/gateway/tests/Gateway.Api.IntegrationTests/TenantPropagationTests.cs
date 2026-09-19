@@ -1,6 +1,7 @@
 extern alias BffApi;
 
 using Gateway.Api.Identity;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -29,7 +30,7 @@ public class TenantPropagationTests
         var recorder = new TenantHeaderRecorder();
         await using var bff = CreateRecordingBff(recorder);
         await using var gateway = GatewayTestHost.CreateGateway(bff);
-        var client = gateway.CreateClient();
+        var client = gateway.CreateClient().UseTestBearerToken(tenantId: ResolvedTenantOf(gateway));
 
         await client.GetAsync("/bff/products");
 
@@ -50,7 +51,7 @@ public class TenantPropagationTests
         var recorder = new TenantHeaderRecorder();
         await using var bff = CreateRecordingBff(recorder);
         await using var gateway = GatewayTestHost.CreateGateway(bff);
-        var client = gateway.CreateClient();
+        var client = gateway.CreateClient().UseTestBearerToken(tenantId: ResolvedTenantOf(gateway));
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/bff/products");
         request.Headers.Add(TenantHeaderPropagationMiddleware.HeaderName, CallerDeclaredTenant);
@@ -74,7 +75,7 @@ public class TenantPropagationTests
         var recorder = new TenantHeaderRecorder();
         await using var bff = CreateRecordingBff(recorder);
         await using var gateway = GatewayTestHost.CreateGateway(bff);
-        var client = gateway.CreateClient();
+        var client = gateway.CreateClient().UseTestBearerToken(tenantId: ResolvedTenantOf(gateway));
 
         await client.GetAsync(route);
 
