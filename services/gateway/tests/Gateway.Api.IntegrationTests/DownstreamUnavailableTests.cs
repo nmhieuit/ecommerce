@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 
@@ -32,7 +33,7 @@ public class DownstreamUnavailableTests
     public async Task ARequest_ReturnsAClearError_WhenTheBffIsUnreachable()
     {
         await using var gateway = CreateGatewayWithUnreachableBff();
-        var client = gateway.CreateClient();
+        var client = gateway.CreateClient().UseTestBearerToken();
 
         var stopwatch = Stopwatch.StartNew();
         var response = await client.GetAsync("/bff/products");
@@ -97,10 +98,14 @@ public class DownstreamUnavailableTests
     /// </summary>
     private static WebApplicationFactory<Program> CreateGatewayWithUnreachableBff() =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
                     // Syntactically valid, deliberately unroutable — nothing answers on port 1.
                     ["ReverseProxy:Clusters:bff-cluster:Destinations:bff:Address"] = "http://127.0.0.1:1",
-                })));
+                }));
+
+            builder.UseTestJwtBearer();
+        });
 }

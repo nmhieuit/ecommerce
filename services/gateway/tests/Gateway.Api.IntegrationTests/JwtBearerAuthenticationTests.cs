@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 
@@ -149,6 +150,12 @@ public class JwtBearerAuthenticationTests
             [
                 new Claim(JwtRegisteredClaimNames.Sub, TestSubjectId),
                 new Claim(TenantClaimType, TestTenantId),
+                // 015-deny-by-default-authz: appsettings.Development.json defaults
+                // AuthorizationRequireApiScope to true, so RequireApiScopeAuthorizationHandler
+                // requires this claim on the FallbackPolicy the gateway forwards through — without
+                // it the token is authenticated but still rejected (403) before ever reaching the
+                // BFF. Mirrors TestJwtBearer.CreateToken's default (IntegrationTestSupport).
+                new Claim("scope", "ecommerce-api"),
             ],
             expires: expired ? DateTime.UtcNow.AddMinutes(-5) : DateTime.UtcNow.AddMinutes(5),
             signingCredentials: credentials);
@@ -172,11 +179,18 @@ public class JwtBearerAuthenticationTests
             builder.ConfigureServices(services =>
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
                 {
-                    // A non-null Configuration stops JwtBearerHandler from fetching the OIDC
-                    // discovery document/JWKS over HTTP (research.md Decision 5) — this suite tests
-                    // the gateway's consumption of a token, not the identity server's issuance
-                    // (that's tasks.md T017, against a real running Identity.Api).
+                    // A non-null Configuration alone is not enough: AddToggleGatedIdentity() already
+                    // set a real Authority, so the framework's own PostConfigureOptions<JwtBearerOptions>
+                    // (registered inside AddJwtBearer(), run before this one) already built a real,
+                    // network-fetching ConfigurationManager from it before this PostConfigure runs.
+                    // JwtBearerHandler checks ConfigurationManager, not Configuration, so without the
+                    // line below it still calls out to the real (absent in tests) Authority on every
+                    // request that carries a token (research.md Decision 5 — this suite tests the
+                    // gateway's consumption of a token, not the identity server's issuance, that's
+                    // tasks.md T017, against a real running Identity.Api).
                     options.Configuration = new OpenIdConnectConfiguration();
+                    options.ConfigurationManager =
+                        new StaticConfigurationManager<OpenIdConnectConfiguration>(options.Configuration);
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = false,

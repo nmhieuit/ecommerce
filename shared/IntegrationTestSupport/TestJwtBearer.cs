@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 
@@ -38,7 +39,18 @@ public static class TestJwtBearer
     /// passes the policy unchanged; pass <see langword="false"/> only to build the one negative case
     /// the policy exists to reject (spec Test Scenario 2).
     /// </param>
-    public static string CreateToken(string subject = "test-user", DateTime? expires = null, bool includeApiScope = true)
+    /// <param name="tenantId">
+    /// 014-identity-server-auth: when given, adds a <c>tenant_id</c> claim — the same claim type
+    /// <c>Identity.HostedIdentity.TenantClaimsProfileService.TenantClaimType</c>/
+    /// <c>Gateway.Api.Identity.StubIdentityAuthenticationHandler.TenantClaimType</c> use — so
+    /// <c>TenantHeaderPropagationMiddleware</c> has something to resolve. Omitted by default: most
+    /// callers only need an authenticated, in-scope caller, not a resolved tenant.
+    /// </param>
+    public static string CreateToken(
+        string subject = "test-user",
+        DateTime? expires = null,
+        bool includeApiScope = true,
+        string? tenantId = null)
     {
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey)),
@@ -48,6 +60,11 @@ public static class TestJwtBearer
         if (includeApiScope)
         {
             claims.Add(new Claim("scope", "ecommerce-api"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(tenantId))
+        {
+            claims.Add(new Claim("tenant_id", tenantId));
         }
 
         var token = new JwtSecurityToken(
@@ -69,9 +86,17 @@ public static class TestJwtBearer
         return builder.ConfigureServices(services =>
             services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-                // A non-null Configuration stops JwtBearerHandler from fetching the OIDC discovery
-                // document/JWKS over HTTP.
+                // Setting Configuration alone is not enough: AddIdentityValidation()/
+                // AddToggleGatedIdentity() already set a real Authority, so the framework's own
+                // PostConfigureOptions<JwtBearerOptions> (registered inside AddJwtBearer(), and run
+                // before this one) already built a real, network-fetching ConfigurationManager from
+                // it — that assignment happens before this PostConfigure runs, and setting
+                // Configuration afterwards does not undo it. JwtBearerHandler checks
+                // ConfigurationManager, not Configuration, so without the line below it still calls
+                // out to the real (absent in tests) Authority on every request that carries a token.
                 options.Configuration = new OpenIdConnectConfiguration();
+                options.ConfigurationManager =
+                    new StaticConfigurationManager<OpenIdConnectConfiguration>(options.Configuration);
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = false,
@@ -82,12 +107,17 @@ public static class TestJwtBearer
     }
 
     /// <summary>Attaches a fresh valid token to every request this client sends.</summary>
-    public static HttpClient UseTestBearerToken(this HttpClient client, string subject = "test-user", bool includeApiScope = true)
+    public static HttpClient UseTestBearerToken(
+        this HttpClient client,
+        string subject = "test-user",
+        bool includeApiScope = true,
+        string? tenantId = null)
     {
         ArgumentNullException.ThrowIfNull(client);
 
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", CreateToken(subject, includeApiScope: includeApiScope));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            CreateToken(subject, includeApiScope: includeApiScope, tenantId: tenantId));
         return client;
     }
 }

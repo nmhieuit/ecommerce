@@ -52,14 +52,25 @@ public static class GatewayTestHost
     /// <summary>
     /// Starts the gateway with its configured routes, forwarding into <paramref name="bff"/>.
     /// </summary>
+    /// <remarks>
+    /// Also validates <see cref="TestJwtBearer.CreateToken"/>'s tokens (mirrors <see cref="CreateBff"/>):
+    /// the gateway runs behind the same deny-by-default <c>FallbackPolicy</c> every other service
+    /// does whenever <c>Development</c>'s default <c>FeatureToggles:IdentityServerAuthCutover</c> is
+    /// <see langword="true"/> (appsettings.Development.json), so a caller needs a token this host
+    /// accepts to reach anything below it.
+    /// </remarks>
     public static WebApplicationFactory<Program> CreateGateway(WebApplicationFactory<BffApi::Program> bff) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IForwarderHttpClientFactory>();
                 services.AddSingleton<IForwarderHttpClientFactory>(
                     new InProcessForwarderHttpClientFactory(bff.Server.CreateHandler()));
-            }));
+            });
+
+            builder.UseTestJwtBearer();
+        });
 
     /// <summary>
     /// Hands YARP an invoker bound to the in-process BFF's test server rather than a socket.
