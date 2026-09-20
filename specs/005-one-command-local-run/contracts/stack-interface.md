@@ -35,7 +35,8 @@ The start command fails before touching Compose, naming exactly one missing thin
 | What | Address | Notes |
 |---|---|---|
 | Storefront | `http://localhost:4173` | The URL the documentation tells you to open (FR-004) |
-| Platform entry point | `http://localhost:5300` | The only backend address the storefront uses (FR-005) |
+| Platform entry point | `http://localhost:5300` | The only backend address the storefront uses for data (FR-005) |
+| Identity server | `http://localhost:5205` | Added after the storefront gained sign-in (spec 004 FR-026). The browser's sign-in form posts to `/connect/token` here to obtain a token; nothing else is called on it. |
 
 **Nothing else is published.** The services, the database, the broker, the cache, and the collector
 are reachable only on the Compose network. A contributor cannot call the BFF or a domain service
@@ -63,6 +64,7 @@ which the override file does explicitly.
 | Variable | Set in | Purpose |
 |---|---|---|
 | `MSSQL_SA_PASSWORD` | `.env` (copied from `.env.example`, unedited) | The local database password. The only value a contributor touches |
+| `TestUserPassword` | `.env` (already filled in `.env.example`) | The password of the dev test user `postman-test@local.test`, used to sign in to the storefront and by the start command's warm-up. Read from `.env`; never written into the repository |
 
 Everything else is set by Compose and needs no contributor input: per-service connection strings,
 the OTLP endpoint, the gateway's allowed origins, and the storefront's backend origin.

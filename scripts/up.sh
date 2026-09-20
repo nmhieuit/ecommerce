@@ -68,14 +68,40 @@ fi
 # further steps, so paying that cost here — once, in the command that claims the platform is up —
 # is the difference between "the containers started" and "the platform works".
 printf '\033[36mWarming the request path…\033[0m\n'
-for path in /bff/products /bff/basket "/bff/orders/00000000-0000-4000-8000-000000000000"; do
-    # Each primes a different service's EF model and connection pool. Failures are ignored: the
-    # orders probe is expected to 404, and a warm-up that cannot warm is not a reason to refuse a
-    # stack whose health gates all passed.
-    curl -fsS -m 30 -o /dev/null "http://localhost:5300${path}" 2>/dev/null || true
-done
+
+# Every request behind the gateway needs a token (spec 014), so an anonymous warm-up is refused at
+# the edge and warms nothing. Sign in as the dev test user the identity server provisions, using the
+# password from .env — the file the stack was configured from — and warm with that. Without the
+# password the warm-up is skipped rather than failing: the health gates already passed.
+test_user='postman-test@local.test'
+test_password="$(grep -E '^TestUserPassword=' "$repository_root/.env" | head -n1 | cut -d= -f2- | tr -d '\r' || true)"
+token=''
+if [ -n "$test_password" ]; then
+    token="$(curl -fsS -m 30 -X POST 'http://localhost:5205/connect/token' \
+        -d grant_type=password -d client_id=ecommerce-web-spa-password \
+        -d 'scope=openid profile ecommerce-api' -d "username=$test_user" \
+        --data-urlencode "password=$test_password" 2>/dev/null \
+        | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p' || true)"
+fi
+
+if [ -z "$token" ]; then
+    printf '  (no TestUserPassword in .env, or sign-in unavailable: skipping the warm-up)\n'
+else
+    # Two passes: the first pays the cold cost (each service's first token validation fetches the
+    # identity server's signing keys on top of the JIT and EF costs), and can itself exceed the BFF's
+    # 3-second budget and answer 504. The second finds everything warm.
+    for pass in 1 2; do
+        for path in /bff/products /bff/basket "/bff/orders/00000000-0000-4000-8000-000000000000"; do
+            # Each primes a different service's EF model and connection pool. Failures are ignored:
+            # the orders probe is expected to 404, and a warm-up that cannot warm is not a reason to
+            # refuse a stack whose health gates all passed.
+            curl -fsS -m 30 -o /dev/null -H "Authorization: Bearer $token" "http://localhost:5300${path}" 2>/dev/null || true
+        done
+    done
+fi
 
 printf '\n\033[32mThe platform is up.\033[0m\n'
 printf '  Storefront   http://localhost:4173\n'
-printf '  Gateway      http://localhost:5300\n\n'
+printf '  Gateway      http://localhost:5300\n'
+printf '  Sign in as   postman-test@local.test  (password: TestUserPassword in .env)\n\n'
 printf 'Stop with ./scripts/down.sh, start over with ./scripts/reset.sh.\n'
