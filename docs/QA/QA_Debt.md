@@ -85,9 +85,8 @@ nào bị bỏ — chỉ gom lại 1 chỗ.*
 
 ## 004 — SPA mua sắm tối thiểu
 
-*Cập nhật lần 2, sau khi nhánh `claude/spa-identity-server-login-e6100d` thêm đăng nhập cho SPA. Nhánh này
-chưa có commit nào trước `master`; toàn bộ thay đổi (identity, compose, frontend, spec 004) đang là thay đổi
-chưa commit trong worktree.*
+*Cập nhật lần 2, sau khi nhánh `claude/spa-identity-server-login-e6100d` thêm đăng nhập cho SPA. Các thay đổi
+(identity, compose, frontend, spec 004) đã được commit (`bfb0162`) và merge vào `master` qua PR #43.*
 
 - **Đã khắc phục — storefront không chạy được (lượt 1 ghi FAIL)**: lượt 1 quan sát trang kẹt "Loading
   products…" (gateway trả `401`, SPA không có đăng nhập). Nay SPA có form đăng nhập (`frontend/apps/web/src/auth/`),

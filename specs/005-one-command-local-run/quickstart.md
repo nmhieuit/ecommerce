@@ -20,7 +20,9 @@ cp .env.example .env       # step 1: no editing required
 ./scripts/up.ps1           # step 2: or ./scripts/up.sh
 ```
 
-Then open **http://localhost:4173**.
+Then open **http://localhost:4173** and sign in as `postman-test@local.test` with the `TestUserPassword`
+value from `.env` (the storefront sits behind sign-in since spec 004 FR-026; the start command prints
+these details).
 
 That is the whole of it (SC-002). Anything you had to do beyond these two steps is a defect in this
 feature, not a missing instruction.
@@ -55,7 +57,8 @@ docker compose ps
 
 ## Scenario 2 — The storefront works end to end (spec US2, SC-003)
 
-1. Open `http://localhost:4173`.
+1. Open `http://localhost:4173`. **Expect**: the Sign in screen. Sign in as `postman-test@local.test`
+   with the `TestUserPassword` from `.env`.
 2. **Expect**: three products, each with a price — Field Notes Notebook $12.50, Ceramic Pour-Over Set
    $48.00, Linen Apron $34.25. Present without any seeding step (FR-003, US2 scenario 4).
 3. Add the notebook twice and the apron once, then open the basket.
@@ -66,7 +69,8 @@ docker compose ps
 7. Check out.
 8. **Expect**: a confirmation showing the order's identifier and $59.25.
 9. Open the browser's network tab and repeat the flow.
-10. **Expect**: every request goes to `localhost:5300`. Zero to any other address (FR-005).
+10. **Expect**: every request goes to `localhost:5300`, except the one `POST localhost:5205/connect/token`
+    the sign-in form makes before the catalog loads. Zero to any other address (FR-005).
 
 ## Scenario 3 — Stop and restart cleanly (spec US3, SC-004)
 

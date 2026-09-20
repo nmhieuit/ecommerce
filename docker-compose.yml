@@ -129,8 +129,8 @@ services:
       timeout: 5s
       retries: 30
       start_period: 60s
-    # No published port here — the default stack keeps exactly two published ports (storefront,
-    # gateway; spec 004 SC-010). `docker-compose.local.yml` republishes 5601 for by-hand use.
+    # No published port here — the default stack keeps three published ports (storefront,
+    # gateway, and the identity server's token endpoint for the sign-in form; spec 004 SC-010 / 005). `docker-compose.local.yml` republishes 5601 for by-hand use.
 
   otel-collector:
     # Pinned rather than `latest` (was `otel/opentelemetry-collector-contrib:latest` before
@@ -252,6 +252,10 @@ services:
       ConnectionStrings__IdentityDb: Server=sqlserver;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
       ClientSecret: ${ClientSecret:-}
       TestUserPassword: ${TestUserPassword:-}
+      # Registers the storefront's password sign-in client (Config.SpaPasswordClient): the storefront
+      # sits behind sign-in, and until the identity server has a login page a form is the only way
+      # for it to obtain a token. Dev/one-command stack only — never set for a real deployment.
+      SpaPasswordClient__Enabled: "true"
     networks: [backbone]
     depends_on:
       sqlserver:
@@ -349,7 +353,17 @@ services:
     environment:
       ConnectionStrings__IdentityDb: Server=sqlserver;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      # Pins `iss` to the name every other service validates against (Identity:Authority). Left
+      # unset, the issuer follows the Host header, so a token the browser fetches through the
+      # published port below would carry http://localhost:5205 and be refused with 401 everywhere.
+      IssuerUri: http://identity-api:8080
     networks: [backbone]
+    ports:
+      # The third published port, and the only one added since 005 was written. A browser cannot
+      # sign in to a server it cannot reach, and the storefront's sign-in form runs in the browser.
+      # It serves the token endpoint only as far as the storefront is concerned; every other request
+      # still goes through the gateway (004 FR-014).
+      - "5205:8080"
     depends_on:
       identity-migrate:
         condition: service_completed_successfully
@@ -386,9 +400,15 @@ services:
       # run as Production and never read that file. Configuration a stack depends on has to be in
       # the stack.
       Cors__AllowedOrigins__0: http://localhost:4173
+      # Every service behind the gateway validates a JWT (spec 014), so a gateway left on the Phase 1
+      # stub forwards requests the BFF then refuses with 401 — the stack reports healthy while the
+      # storefront can load nothing. Cut over, so the gateway checks the caller's token and passes it
+      # on. An environment variable rather than appsettings.Development.json: these containers run as
+      # Production and never read that file, as with the CORS origin above.
+      FeatureToggles__IdentityServerAuthCutover: "true"
     networks: [backbone]
     ports:
-      # One of only two published ports. Everything else is reachable on the network alone, so the
+      # One of three published ports (with the storefront and the identity server's token endpoint). Everything else is reachable on the network alone, so the
       # storefront's "single entry point" rule is a property of the environment rather than an
       # assertion — there is no address with which to call a service directly (research.md
       # Decision 8).
@@ -418,6 +438,9 @@ services:
         # published host address, never `gateway-api:8080`, which resolves only inside this network.
         # Vite inlines this at build time, so it is fixed in the image (research.md Decision 6).
         GATEWAY_ORIGIN: http://localhost:5300
+        # Where the browser signs in: the identity server's published host port, for the same reason
+        # as above. Inlined at build time.
+        IDENTITY_ORIGIN: http://localhost:5205
     networks: [backbone]
     ports:
       - "4173:80"

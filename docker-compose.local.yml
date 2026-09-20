@@ -9,8 +9,9 @@
 # WHY THIS FILE EXISTS, AND HOW IT DIFFERS FROM docker-compose.yml
 #
 # docker-compose.yml is the deployed shape in miniature: one SQL Server for all four databases, and
-# exactly two published ports, so "the storefront reaches the gateway and nothing else" is a
-# property of the environment rather than an assertion (004 SC-010).
+# three published ports (storefront, gateway, and the identity server's token endpoint, which the
+# browser's sign-in form must reach), so "the storefront reaches the gateway and nothing else" stays
+# a property of the environment rather than an assertion (004 SC-010, amended by 026/005).
 #
 # This file gives up both of those on purpose, to make failure modes reachable by hand:
 #

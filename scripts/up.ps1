@@ -95,15 +95,54 @@ try {
     # further steps, so paying that cost here is the difference between "the containers started" and
     # "the platform works".
     Write-Host "Warming the request path..." -ForegroundColor Cyan
-    foreach ($path in @('/bff/products', '/bff/basket', '/bff/orders/00000000-0000-4000-8000-000000000000')) {
-        # Each primes a different service's EF model and connection pool. Failures are ignored: the
-        # orders probe is expected to 404, and a warm-up that cannot warm is not a reason to refuse
-        # a stack whose health gates all passed.
+
+    # Every request behind the gateway needs a token (spec 014), so an anonymous warm-up is refused
+    # at the edge and warms nothing. Sign in as the dev test user the identity server provisions,
+    # using the password from .env (the file the stack was configured from), and warm with that.
+    # Without the password the warm-up is skipped rather than failing: the health gates already
+    # passed.
+    $testUser = 'postman-test@local.test'
+    $testPassword = $null
+    $passwordLine = Get-Content $envFile | Where-Object { $_ -match '^TestUserPassword=' } | Select-Object -First 1
+    if ($passwordLine) { $testPassword = ($passwordLine -split '=', 2)[1].Trim() }
+
+    $token = $null
+    if ($testPassword) {
         try {
-            Invoke-WebRequest -Uri "http://localhost:5300$path" -TimeoutSec 30 -UseBasicParsing | Out-Null
+            $response = Invoke-RestMethod -Method Post -Uri 'http://localhost:5205/connect/token' -TimeoutSec 30 -Body @{
+                grant_type = 'password'
+                client_id  = 'ecommerce-web-spa-password'
+                scope      = 'openid profile ecommerce-api'
+                username   = $testUser
+                password   = $testPassword
+            }
+            $token = $response.access_token
         }
         catch {
-            # Deliberately swallowed — see above.
+            # Sign-in unavailable: fall through to the skip message below.
+        }
+    }
+
+    if (-not $token) {
+        Write-Host "  (no TestUserPassword in .env, or sign-in unavailable: skipping the warm-up)"
+    }
+    else {
+        # Two passes: the first pays the cold cost (each service's first token validation fetches the
+        # identity server's signing keys on top of the JIT and EF costs), and can itself exceed the
+        # BFF's 3-second budget and answer 504. The second finds everything warm.
+        foreach ($pass in 1..2) {
+            foreach ($path in @('/bff/products', '/bff/basket', '/bff/orders/00000000-0000-4000-8000-000000000000')) {
+                # Each primes a different service's EF model and connection pool. Failures are
+                # ignored: the orders probe is expected to 404, and a warm-up that cannot warm is
+                # not a reason to refuse a stack whose health gates all passed.
+                try {
+                    Invoke-WebRequest -Uri "http://localhost:5300$path" -TimeoutSec 30 -UseBasicParsing `
+                        -Headers @{ Authorization = "Bearer $token" } | Out-Null
+                }
+                catch {
+                    # Deliberately swallowed — see above.
+                }
+            }
         }
     }
 
@@ -111,6 +150,7 @@ try {
     Write-Host "The platform is up." -ForegroundColor Green
     Write-Host "  Storefront   http://localhost:4173"
     Write-Host "  Gateway      http://localhost:5300"
+    Write-Host "  Sign in as   postman-test@local.test  (password: TestUserPassword in .env)"
     Write-Host ""
     Write-Host "Stop with ./scripts/down.ps1, start over with ./scripts/reset.ps1."
 }
