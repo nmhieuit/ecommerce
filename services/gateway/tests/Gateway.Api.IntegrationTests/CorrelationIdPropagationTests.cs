@@ -24,8 +24,8 @@ public class CorrelationIdPropagationTests
     /// <summary>
     /// Kiểm tra: khi caller không gửi kèm `X-Correlation-Id`, ID gateway tự sinh và trả về trong
     /// header response phải khớp CHÍNH XÁC với `correlationId` mà BFF ghi trong body lỗi.
-    /// Lý do phải test: đây là regression test cho 1 bug thật đã tìm thấy — `CorrelationIdMiddleware`
-    /// từng chỉ ghi ID vào header RESPONSE, không ghi vào header REQUEST khi forward tiếp, nên YARP
+    /// Lý do: đây là regression test cho 1 bug thật đã tìm thấy — `CorrelationIdMiddleware` từng
+    /// chỉ ghi ID vào header RESPONSE, không ghi vào header REQUEST khi forward tiếp, nên YARP
     /// không mang ID đó sang BFF được — BFF phải tự sinh 1 ID khác, và ID caller cầm trên tay không
     /// khớp gì với log thật của BFF (vi phạm Constitution Principle VII). Lỗi đã sửa bằng 1 dòng ở
     /// `shared/ServiceDefaults/CorrelationIdMiddleware.cs`.
@@ -44,20 +44,25 @@ public class CorrelationIdPropagationTests
         // reports the correlation ID the BFF actually saw.
         var response = await client.GetAsync("/bff/products");
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn. Header phản hồi phải có đúng 1 giá trị (đỏ khi thiếu header hoặc có nhiều).
         var callerFacingId = Assert.Single(
             response.Headers.GetValues(CorrelationIdMiddleware.HeaderName));
 
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
         var idTheBffSaw = problem.GetProperty("correlationId").GetString();
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Id gateway trả cho
+        // client phải bằng id BFF đã nhận; đỏ khi 2 phía dùng id khác nhau nên không dò log liền
+        // mạch được.
         Assert.Equal(callerFacingId, idTheBffSaw);
     }
 
     /// <summary>
-    /// Kiểm tra: khi caller tự gửi kèm `X-Correlation-Id`, giá trị đó phải được giữ nguyên xuyên suốt
-    /// — cả trong header response lẫn `correlationId` của body lỗi phía BFF.
-    /// Lý do phải test: 1 ID do caller cung cấp phải được TÁI SỬ DỤNG, không được thay bằng ID khác —
-    /// nếu không, 1 client đang cố đối chiếu log của chính họ với log hệ thống sẽ mất dấu vết ngay từ
+    /// Kiểm tra: khi caller tự gửi kèm `X-Correlation-Id`, giá trị đó phải được giữ nguyên xuyên
+    /// suốt — cả trong header response lẫn `correlationId` của body lỗi phía BFF.
+    /// Lý do: 1 ID do caller cung cấp phải được TÁI SỬ DỤNG, không được thay bằng ID khác — nếu
+    /// không, 1 client đang cố đối chiếu log của chính họ với log hệ thống sẽ mất dấu vết ngay từ
     /// điểm vào.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — phát hiện & sửa ngoài task chính thức, xem
     /// "Phase 6 implementation notes" trong specs/002-gateway-bff-routing/tasks.md, US3.
@@ -76,20 +81,25 @@ public class CorrelationIdPropagationTests
 
         var response = await client.SendAsync(request);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Header phản hồi phải giữ
+        // đúng id client gửi.
         Assert.Equal(
             supplied,
             Assert.Single(response.Headers.GetValues(CorrelationIdMiddleware.HeaderName)));
 
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Body lỗi cũng phải mang
+        // đúng id đó; đỏ khi gateway/BFF tự sinh id mới đè lên.
         Assert.Equal(supplied, problem.GetProperty("correlationId").GetString());
     }
 
     /// <summary>
-    /// Kiểm tra: nếu ID caller gửi lên (qua đường lách kiểm tra header thông thường) chứa ký tự điều
-    /// khiển `\r`/`\n`, gateway phải thay nó bằng 1 ID tự sinh khác — không giữ nguyên ký tự đó.
-    /// Lý do phải test: research.md Decision 2 — 1 giá trị do client tuỳ ý kiểm soát không bao giờ
-    /// được lọt vào structured log mà không lọc, vì `\r\n` bên trong có thể giả mạo thêm 1 dòng log
-    /// khác (log injection).
+    /// Kiểm tra: nếu ID caller gửi lên (qua đường lách kiểm tra header thông thường) chứa ký tự
+    /// điều khiển `\r`/`\n`, gateway phải thay nó bằng 1 ID tự sinh khác — không giữ nguyên ký tự
+    /// đó.
+    /// Lý do: research.md Decision 2 — 1 giá trị do client tuỳ ý kiểm soát không bao giờ được lọt
+    /// vào structured log mà không lọc, vì `\r\n` bên trong có thể giả mạo thêm 1 dòng log khác
+    /// (log injection).
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — phát hiện & sửa ngoài task chính thức, xem
     /// "Phase 6 implementation notes" trong specs/002-gateway-bff-routing/tasks.md, US3.
     /// </summary>
@@ -108,20 +118,24 @@ public class CorrelationIdPropagationTests
 
         var response = await client.SendAsync(request);
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn.
         var callerFacingId = Assert.Single(
             response.Headers.GetValues(CorrelationIdMiddleware.HeaderName));
+        // Assert.DoesNotContain(phần tử, tập hợp): xanh khi tập hợp không chứa phần tử, đỏ khi có.
         Assert.DoesNotContain('\r', callerFacingId);
         Assert.DoesNotContain('\n', callerFacingId);
 
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(callerFacingId, problem.GetProperty("correlationId").GetString());
     }
 
     /// <summary>
     /// Kiểm tra: nếu ID caller gửi lên dài hơn 128 ký tự, gateway phải thay bằng 1 ID tự sinh khác
     /// (độ dài ≤ 128).
-    /// Lý do phải test: research.md Decision 2 — 1 giá trị client tự đặt, không giới hạn độ dài, có
-    /// thể làm phình to vô hạn mọi dòng log mà nó xuất hiện.
+    /// Lý do: research.md Decision 2 — 1 giá trị client tự đặt, không giới hạn độ dài, có thể làm
+    /// phình to vô hạn mọi dòng log mà nó xuất hiện.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — phát hiện & sửa ngoài task chính thức, xem
     /// "Phase 6 implementation notes" trong specs/002-gateway-bff-routing/tasks.md, US3.
     /// </summary>
@@ -139,12 +153,19 @@ public class CorrelationIdPropagationTests
 
         var response = await client.SendAsync(request);
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn. Đúng 1 giá trị header.
         var callerFacingId = Assert.Single(
             response.Headers.GetValues(CorrelationIdMiddleware.HeaderName));
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau. Id phản hồi
+        // khác id quá dài (đã bị thay); đỏ nếu bị giữ nguyên.
         Assert.NotEqual(tooLong, callerFacingId);
+        // Assert.True(điều kiện): xanh khi điều kiện đúng, đỏ khi sai. Đạt khi độ dài ≤ 128.
         Assert.True(callerFacingId.Length <= 128);
 
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Header và body nhất
+        // quán.
         Assert.Equal(callerFacingId, problem.GetProperty("correlationId").GetString());
     }
 

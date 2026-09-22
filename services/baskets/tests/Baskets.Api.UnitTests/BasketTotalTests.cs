@@ -17,20 +17,21 @@ public class BasketTotalTests
 
     /// <summary>
     /// Kiểm tra: giỏ rỗng có tổng tiền bằng 0.
-    /// Lý do phải test: trạng thái khởi đầu và trạng thái sau khi thanh toán (FR-010) phải có tổng
-    /// xác định, không phải null hay lỗi.
+    /// Lý do: trạng thái khởi đầu và trạng thái sau khi thanh toán (FR-010) phải có tổng xác định,
+    /// không phải null hay lỗi.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T033, US2 (FR-004).
     /// </summary>
     [Fact]
     public void Total_IsZero_ForAnEmptyBasket()
     {
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(0m, Basket.ForCustomer("phase1-stub-user").Total);
     }
 
     /// <summary>
     /// Kiểm tra: tổng của giỏ 1 dòng bằng số lượng × đơn giá đã chụp.
-    /// Lý do phải test: công thức nền tảng của tổng giỏ theo data-model.md ("tính, không lưu"); mọi
-    /// tổng khác đều dựa trên nó.
+    /// Lý do: công thức nền tảng của tổng giỏ theo data-model.md ("tính, không lưu"); mọi tổng khác
+    /// đều dựa trên nó.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T033, US2 (FR-004).
     /// </summary>
     [Fact]
@@ -40,12 +41,14 @@ public class BasketTotalTests
 
         basket.AddItem(Notebook, quantity: 2, unitPrice: 12.50m);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. 2 × 12,50 = 25,00; đỏ
+        // khi không nhân số lượng.
         Assert.Equal(25.00m, basket.Total);
     }
 
     /// <summary>
     /// Kiểm tra: giỏ nhiều dòng có tổng bằng tổng thành tiền của từng dòng.
-    /// Lý do phải test: chứng minh tổng cộng dồn đủ mọi dòng, không bỏ sót dòng nào.
+    /// Lý do: chứng minh tổng cộng dồn đủ mọi dòng, không bỏ sót dòng nào.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T033, US2 (FR-004).
     /// </summary>
     [Fact]
@@ -56,13 +59,15 @@ public class BasketTotalTests
         basket.AddItem(Notebook, quantity: 2, unitPrice: 12.50m);
         basket.AddItem(PourOver, quantity: 1, unitPrice: 48.00m);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Tổng thành tiền của mọi
+        // dòng; đỏ khi bỏ sót dòng.
         Assert.Equal(73.00m, basket.Total);
     }
 
     /// <summary>
     /// Kiểm tra: 2 cuốn Notebook $12.50 + 1 Linen Apron $34.25 cho tổng $59.25.
-    /// Lý do phải test: quickstart.md Scenario 2 và 5 đều trích con số này; ghim ở test đơn vị để
-    /// mọi thay đổi cách tính làm hỏng test ngay, thay vì hỏng giữa lúc chạy thủ công.
+    /// Lý do: quickstart.md Scenario 2 và 5 đều trích con số này; ghim ở test đơn vị để mọi thay
+    /// đổi cách tính làm hỏng test ngay, thay vì hỏng giữa lúc chạy thủ công.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T033, US2 (quickstart Scenario 2, 5).
     /// </summary>
     [Fact]
@@ -74,14 +79,16 @@ public class BasketTotalTests
         basket.AddItem(Notebook, quantity: 1, unitPrice: 12.50m);
         basket.AddItem(new Guid("9f8d6b1e-0001-4000-8000-000000000003"), quantity: 1, unitPrice: 34.25m);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Đúng con số 59,25 mà
+        // walkthrough/E2E kỳ vọng.
         Assert.Equal(59.25m, basket.Total);
     }
 
     /// <summary>
     /// Kiểm tra: các số tiền mà số thực dấu phẩy động sẽ làm tròn sai (0.1 + 0.2) vẫn cho tổng
     /// chính xác.
-    /// Lý do phải test: dùng số thập phân (decimal) chứ không phải float — cùng phép cộng bằng
-    /// double ra 0.30000000000000004, tổng giỏ lệch 1 cent là lỗi người mua sẽ nhìn thấy.
+    /// Lý do: dùng số thập phân (decimal) chứ không phải float — cùng phép cộng bằng double ra
+    /// 0.30000000000000004, tổng giỏ lệch 1 cent là lỗi người mua sẽ nhìn thấy.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T033, US2 (FR-004, FR-024).
     /// </summary>
     [Fact]
@@ -92,13 +99,15 @@ public class BasketTotalTests
         basket.AddItem(Notebook, quantity: 1, unitPrice: 0.10m);
         basket.AddItem(PourOver, quantity: 1, unitPrice: 0.20m);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Decimal cộng chính xác
+        // ra 0,30 (số thực nhị phân sẽ ra 0,30000000000000004); đỏ nếu tính bằng double.
         Assert.Equal(0.30m, basket.Total);
     }
 
     /// <summary>
     /// Kiểm tra: xoá giỏ (Clear) làm mất mọi dòng và đưa tổng về 0.
-    /// Lý do phải test: nền tảng cho checkout: sau khi đặt đơn thành công giỏ phải rỗng (FR-010) và
-    /// tổng phải phản ánh đúng trạng thái đó.
+    /// Lý do: nền tảng cho checkout: sau khi đặt đơn thành công giỏ phải rỗng (FR-010) và tổng phải
+    /// phản ánh đúng trạng thái đó.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T033, US3 (FR-010).
     /// </summary>
     [Fact]
@@ -109,7 +118,9 @@ public class BasketTotalTests
 
         basket.Clear();
 
+        // Assert.Empty(tập hợp): xanh khi không có phần tử nào, đỏ khi có. Không còn dòng hàng.
         Assert.Empty(basket.LineItems);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Tổng về 0.
         Assert.Equal(0m, basket.Total);
     }
 }

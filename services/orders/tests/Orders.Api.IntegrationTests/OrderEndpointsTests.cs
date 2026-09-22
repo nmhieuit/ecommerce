@@ -24,6 +24,15 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
     /// </summary>
     private const string SeedTenantId = "contoso";
 
+    /// <summary>
+    /// Kiểm tra: `GET /orders/{id}` của 1 đơn đã có trả `200` với đúng `id`, thời điểm đặt và tổng
+    /// tiền.
+    /// Lý do: nhánh happy-case của việc đọc lại đơn qua service Orders; dùng SQL Server thật, giây
+    /// nguyên và UTC để 1 lỗi chỉ có thể là lỗi ánh xạ thật chứ không phải mất độ chính xác thời
+    /// gian.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — bề mặt đọc đơn hàng của Orders (FR-022), bộ
+    /// test này được spec 006 T023 mở rộng.
+    /// </summary>
     [Fact]
     public async Task GetOrder_ReturnsTheOrder_WhenItExists()
     {
@@ -43,9 +52,11 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
 
         var response = await client.GetAsync($"/orders/{order.Id}");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var actual = await response.Content.ReadFromJsonAsync<OrderResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null.
         Assert.NotNull(actual);
         Assert.Equal(order.Id, actual.Id);
         Assert.Equal(order.PlacedAtUtc, actual.PlacedAtUtc);
@@ -53,8 +64,12 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
     }
 
     /// <summary>
-    /// 006-e2e-order-demo FR-005a: reading an order back shows which tenant it belongs to, so the
-    /// demo's verification step can state it without inspecting the database or the source.
+    /// Kiểm tra: đọc lại đơn thì response có `tenantId` không rỗng và bằng đúng tenant đã lưu
+    /// ("contoso").
+    /// Lý do: FR-005a: quy thuộc tenant phải nhìn thấy được ngay từ kết quả đọc lại — bước kiểm
+    /// chứng của demo phát biểu được điều đó mà không cần soi database hay đọc mã nguồn; assert cả
+    /// "không rỗng" chứ không chỉ "có lưu".
+    /// Task nguồn: spec 006 (demo đặt hàng end-to-end) — T023, US2 (FR-005a).
     /// </summary>
     [Fact]
     public async Task GetOrder_ReturnsTheTenantTheOrderBelongsTo()
@@ -72,13 +87,25 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
 
         var actual = await client.GetFromJsonAsync<OrderResponse>($"/orders/{order.Id}");
 
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null. Có đơn trả về.
         Assert.NotNull(actual);
+        // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng. Đỏ khi đọc lại đơn mà thiếu
+        // tenant.
         Assert.False(
             string.IsNullOrWhiteSpace(actual.TenantId),
             "an order read back must name its tenant, not merely have one stored");
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Tenant trả về phải đúng
+        // tenant đã nạp.
         Assert.Equal(SeedTenantId, actual.TenantId);
     }
 
+    /// <summary>
+    /// Kiểm tra: đọc đơn không tồn tại trả `404`.
+    /// Lý do: người mua/người chạy demo tra 1 mã sai phải nhận câu trả lời rõ ràng, không phải lỗi
+    /// 500 hay đơn của tenant khác.
+    /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — bề mặt đọc đơn hàng của Orders; bộ test này
+    /// được spec 006 T023 mở rộng.
+    /// </summary>
     [Fact]
     public async Task GetOrder_ReturnsNotFound_WhenNoOrderHasThatId()
     {
@@ -87,6 +114,7 @@ public class OrderEndpointsTests(SqlServerFixture sqlServer) : IClassFixture<Sql
 
         var response = await client.GetAsync($"/orders/{Guid.NewGuid()}");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Đỏ khi 200 hoặc 500.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

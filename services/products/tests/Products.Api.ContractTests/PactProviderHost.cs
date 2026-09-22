@@ -1,5 +1,5 @@
 using System.Net;
-using Microsoft.AspNetCore.Authorization;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -52,17 +52,19 @@ internal sealed class PactProviderHost(
                 ["ConnectionStrings:ProductsDb"] = connectionString,
             }));
 
-        builder.ConfigureServices(services =>
-        {
-            services.AddSingleton<IStartupFilter>(new ProviderStateStartupFilter(tenantId, applyStateAsync));
+        // 015-deny-by-default-authz gated every route on AuthorizationPolicies.ApiScope
+        // (RequireAuthenticatedUser + the scope requirement), attached directly to each endpoint —
+        // not through AuthorizationOptions.FallbackPolicy, which this host used to null out instead
+        // (011-consumer-contract-tests QA_Debt entry, resolved). An endpoint-level policy ignores
+        // FallbackPolicy, so nulling it stopped being enough the moment 015 shipped; the verifier's
+        // replayed requests need a token this host actually accepts, which is what this configures —
+        // the same symmetric-key bypass every *.Api.IntegrationTests project already uses instead of
+        // a real identity server. *ProviderPactTests attaches the token itself via
+        // PactVerifierSource.WithCustomHeader.
+        builder.UseTestJwtBearer();
 
-            // Pact verifies request/response shape against interactions recorded by the BFF's
-            // consumer tests (011-consumer-contract-tests) — those recordings carry no Authorization
-            // header, predating 014-identity-server-auth's independent token validation. Whether a
-            // request is authenticated is a separate concern, covered by
-            // Products.Api.IntegrationTests.IndependentTokenValidationTests instead.
-            services.PostConfigure<AuthorizationOptions>(options => options.FallbackPolicy = null);
-        });
+        builder.ConfigureServices(services =>
+            services.AddSingleton<IStartupFilter>(new ProviderStateStartupFilter(tenantId, applyStateAsync)));
     }
 
     protected override IHost CreateHost(IHostBuilder builder)

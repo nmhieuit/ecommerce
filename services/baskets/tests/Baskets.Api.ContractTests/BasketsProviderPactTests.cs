@@ -1,4 +1,5 @@
 using Baskets.Api.Data;
+using IntegrationTestSupport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PactNet.Verifier;
@@ -20,6 +21,18 @@ public class BasketsProviderPactTests(SqlServerFixture sqlServer, ITestOutputHel
 
     private static readonly Guid SeededProductId = new("9f8d6b1e-0001-4000-8000-000000000001");
 
+    /// <summary>
+    /// Kiểm tra: dựng Baskets API thật rồi cho `PactVerifier` gửi lại đúng các request đã ghi trong
+    /// `pacts/bff-baskets.json` (4 interaction: đọc giỏ, thêm dòng, xoá giỏ có hàng, xoá giỏ rỗng) —
+    /// phản hồi thật phải khớp.
+    /// Lý do: đổi tên/bớt 1 trường `BasketResponse`, hoặc đổi mã trạng thái 204/409, phải làm ĐÚNG
+    /// build của baskets đỏ, không phải build của BFF.
+    /// Từng ĐỎ trên mọi interaction (401) từ 2026-09-03 (spec 015 gắn `.RequireAuthorization` thẳng
+    /// vào endpoint, `FallbackPolicy = null` cũ của host hết tác dụng) tới 2026-09-22, khi
+    /// `PactProviderHost` chuyển sang `UseTestJwtBearer()` và test này gắn token qua
+    /// `WithCustomHeader` — xem QA_Debt mục 011 (đã đánh dấu đã vá).
+    /// Task nguồn: spec 011 (kiểm thử hợp đồng tiêu dùng) — T014/T015, US1 (FR-001, FR-003, FR-005).
+    /// </summary>
     [Fact]
     public void BasketResponses_SatisfyTheBffsRecordedExpectations()
     {
@@ -33,10 +46,20 @@ public class BasketsProviderPactTests(SqlServerFixture sqlServer, ITestOutputHel
             "baskets",
             new PactVerifierConfig { Outputters = [new PactTestOutput(output)] });
 
+        // Kiểm chứng nằm ở .Verify() bên dưới: không có Assert.* nào — PactVerifier tự ném
+        // PactVerificationFailedException nếu response thật lệch khỏi file pact. Xanh khi cả 4
+        // interaction khớp, đỏ (kèm log nêu rõ trường/status sai) khi lệch.
         verifier
             .WithHttpEndpoint(provider.BaseUri)
             .WithFileSource(new FileInfo(Path.Combine(PactPaths.Directory, "bff-baskets.json")))
             .WithProviderStateUrl(provider.ProviderStateUri)
+            // 015-deny-by-default-authz: every replayed request must carry a token this host's
+            // UseTestJwtBearer() accepts, or AuthorizationPolicies.ApiScope refuses it with 401
+            // before the response body is ever compared. Minted fresh here rather than read from
+            // the pact file's own (regex-matched, not literal) Authorization header — see
+            // BffPact.AuthorizationHeader's remarks — so it is never stale relative to
+            // TestJwtBearer's 5-minute default expiry.
+            .WithCustomHeader("Authorization", "Bearer " + TestJwtBearer.CreateToken())
             .Verify();
     }
 

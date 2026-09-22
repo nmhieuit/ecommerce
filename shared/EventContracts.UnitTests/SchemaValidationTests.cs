@@ -37,6 +37,14 @@ public sealed class SchemaValidationTests
         RequireFormatValidation = true,
     };
 
+    /// <summary>
+    /// Kiểm tra: một `OrderPlacedV1` dựng thật, serialize bằng `System.Text.Json` (serializer mà
+    /// MassTransit dùng ở production) kiểm chứng hợp lệ với schema đã công bố (bật cả `format`).
+    /// Lý do: FR-009/US3-KB2: schema và record đều viết tay (research.md Decision 2) nên chỉ an
+    /// toàn nếu có thứ chứng minh chúng còn khớp nhau — test này là thứ đó; đây cũng là kịch bản
+    /// Jira "publish OrderPlaced và xác nhận hợp lệ với schema".
+    /// Task nguồn: spec 008 (event schema có version) — T016, US3 (FR-009).
+    /// </summary>
     [Fact]
     public void Serialized_OrderPlacedV1_Validates_Against_Its_Published_Schema()
     {
@@ -59,9 +67,17 @@ public sealed class SchemaValidationTests
                     UnitPrice: 19.99m),
             ]);
 
+        // Phần kiểm chứng (Assert.True) nằm trong hàm phụ AssertValidatesAgainst bên dưới.
         AssertValidatesAgainst(@event, EmbeddedSchema.OrderPlacedV1ResourceName);
     }
 
+    /// <summary>
+    /// Kiểm tra: một `BasketCheckedOutV1` dựng thật, serialize và kiểm chứng hợp lệ với
+    /// `BasketCheckedOut.v1.schema.json`.
+    /// Lý do: cùng lý do với `OrderPlaced` — bảo đảm record và schema của event thứ hai không lệch
+    /// nhau.
+    /// Task nguồn: spec 008 (event schema có version) — T017, US3 (FR-009).
+    /// </summary>
     [Fact]
     public void Serialized_BasketCheckedOutV1_Validates_Against_Its_Published_Schema()
     {
@@ -87,6 +103,7 @@ public sealed class SchemaValidationTests
             ],
             Total: 59.97m);
 
+        // Phần kiểm chứng (Assert.True) nằm trong hàm phụ AssertValidatesAgainst bên dưới.
         AssertValidatesAgainst(@event, EmbeddedSchema.BasketCheckedOutV1ResourceName);
     }
 
@@ -97,6 +114,9 @@ public sealed class SchemaValidationTests
 
         var results = schema.Evaluate(payload, StrictEvaluation);
 
+        // Assert.True(điều kiện, thông báo): xanh khi điều kiện đúng, thông báo hiện khi đỏ. Điều kiện:
+        // JSON của event hợp lệ theo schema đã công bố. Đỏ khi record C# và file schema lệch nhau;
+        // thông báo in cả payload lẫn kết quả đánh giá.
         Assert.True(
             results.IsValid,
             $"A serialized {typeof(T).Name} did not validate against '{schemaResourceName}'. " +

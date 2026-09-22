@@ -15,8 +15,22 @@
       ],
       "request": {
         "headers": {
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYWN0LXNob3BwZXIiLCJzY29wZSI6ImVjb21tZXJjZS1hcGkiLCJleHAiOjIxMDU2OTY0NzZ9.DLrpsu-bJgEGJy6per1Ju5fQp_eyo5jJKmizXf10aog",
           "X-Subject-Id": "pact-shopper",
           "X-Tenant-Id": "contoso"
+        },
+        "matchingRules": {
+          "header": {
+            "Authorization": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^Bearer .+$"
+                }
+              ]
+            }
+          }
         },
         "method": "GET",
         "path": "/orders/7c2e0d44-0003-4000-8000-000000000001"
@@ -76,9 +90,23 @@
           ]
         },
         "headers": {
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwYWN0LXNob3BwZXIiLCJzY29wZSI6ImVjb21tZXJjZS1hcGkiLCJleHAiOjIxMDU2OTY0NzZ9.DLrpsu-bJgEGJy6per1Ju5fQp_eyo5jJKmizXf10aog",
           "Content-Type": "application/json",
           "X-Subject-Id": "pact-shopper",
           "X-Tenant-Id": "contoso"
+        },
+        "matchingRules": {
+          "header": {
+            "Authorization": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^Bearer .+$"
+                }
+              ]
+            }
+          }
         },
         "method": "POST",
         "path": "/orders"

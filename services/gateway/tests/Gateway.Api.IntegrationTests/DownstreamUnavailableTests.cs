@@ -21,12 +21,12 @@ public class DownstreamUnavailableTests
     private static readonly TimeSpan ClearErrorBudget = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// Kiểm tra: khi BFF hoàn toàn không tới được (cluster trỏ vào cổng không ai lắng nghe), request
-    /// qua gateway trả về `502 Bad Gateway` trong dưới 5 giây, không treo.
-    /// Lý do phải test: FR-006 áp dụng ở phía gateway — chuỗi lỗi US3 không chỉ xảy ra khi 1 service
-    /// nghiệp vụ chết, mà cả khi chính BFF (tầng ngay sau gateway) chết. YARP tự báo `502` khi đích
-    /// không tới được; điều cần khẳng định là đây là lỗi rõ ràng có giới hạn thời gian, không phải
-    /// hang hay lộ exception thô ra caller.
+    /// Kiểm tra: khi BFF hoàn toàn không tới được (cluster trỏ vào cổng không ai lắng nghe),
+    /// request qua gateway trả về `502 Bad Gateway` trong dưới 5 giây, không treo.
+    /// Lý do: FR-006 áp dụng ở phía gateway — chuỗi lỗi US3 không chỉ xảy ra khi 1 service nghiệp
+    /// vụ chết, mà cả khi chính BFF (tầng ngay sau gateway) chết. YARP tự báo `502` khi đích không
+    /// tới được; điều cần khẳng định là đây là lỗi rõ ràng có giới hạn thời gian, không phải hang
+    /// hay lộ exception thô ra caller.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T055, US3.
     /// </summary>
     [Fact]
@@ -41,18 +41,21 @@ public class DownstreamUnavailableTests
 
         // YARP reports an unreachable destination as 502. What matters for FR-006 is that it is a
         // definite, server-side error rather than a hang or a socket exception reaching the caller.
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        // Assert.True(điều kiện): xanh khi điều kiện đúng, đỏ khi sai. Đạt khi gateway trả lỗi
+        // nhanh, không treo.
         Assert.True(
             stopwatch.Elapsed < ClearErrorBudget,
             $"Took {stopwatch.Elapsed.TotalSeconds:F1}s; FR-006 requires a bounded error, not a hang.");
     }
 
     /// <summary>
-    /// Kiểm tra: khi BFF không tới được, `/health/live` VÀ `/health/ready` của chính gateway vẫn trả
-    /// `200`.
-    /// Lý do phải test: BFF gặp sự cố không được kéo theo sức khoẻ tự báo cáo của gateway. Nếu
-    /// readiness của gateway phụ thuộc vào BFF, 1 lần BFF sập sẽ khiến Kubernetes coi toàn bộ pod
-    /// gateway là không sẵn sàng và restart hàng loạt — vì 1 lỗi ở tầng khác.
+    /// Kiểm tra: khi BFF không tới được, `/health/live` VÀ `/health/ready` của chính gateway vẫn
+    /// trả `200`.
+    /// Lý do: BFF gặp sự cố không được kéo theo sức khoẻ tự báo cáo của gateway. Nếu readiness của
+    /// gateway phụ thuộc vào BFF, 1 lần BFF sập sẽ khiến Kubernetes coi toàn bộ pod gateway là
+    /// không sẵn sàng và restart hàng loạt — vì 1 lỗi ở tầng khác.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T055, US3.
     /// </summary>
     [Fact]
@@ -64,16 +67,21 @@ public class DownstreamUnavailableTests
         var live = await client.GetAsync("/health/live");
         var ready = await client.GetAsync("/health/ready");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, live.StatusCode);
         Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
     }
 
     /// <summary>
-    /// Kiểm tra: body lỗi khi BFF không tới được không chứa địa chỉ nội bộ (`127.0.0.1`), tên cluster
-    /// (`bff-cluster`), tên route (`bff-route`), hay tên loại exception (`SocketException`).
-    /// Lý do phải test: áp dụng đúng yêu cầu "không lộ chi tiết định tuyến nội bộ" của FR-007 sang cả
-    /// đường xử lý lỗi — không chỉ path không khớp route mới phải giấu topology, lúc downstream chết
-    /// cũng vậy.
+    /// Kiểm tra: body lỗi khi BFF không tới được không chứa địa chỉ nội bộ (`127.0.0.1`), tên
+    /// cluster (`bff-cluster`), tên route (`bff-route`), hay tên loại exception
+    /// (`SocketException`).
+    /// Lý do: áp dụng đúng yêu cầu "không lộ chi tiết định tuyến nội bộ" của FR-007 sang cả đường
+    /// xử lý lỗi — không chỉ path không khớp route mới phải giấu topology, lúc downstream chết cũng
+    /// vậy.
+    /// Lưu ý: vì không gắn token, gateway trả `401 {"error":"unauthorized"}` — body này vốn không
+    /// chứa chuỗi nội bộ nên các Assert xanh mà chưa kiểm tra được thông báo lỗi 502. Xem QA_Debt
+    /// mục 002.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T055, US3.
     /// </summary>
     [Fact]
@@ -87,6 +95,8 @@ public class DownstreamUnavailableTests
 
         foreach (var leak in new[] { "127.0.0.1", "bff-cluster", "bff-route", "SocketException" })
         {
+            // Assert.DoesNotContain(phần tử, tập hợp): xanh khi tập hợp không chứa phần tử, đỏ khi
+            // có.
             Assert.DoesNotContain(leak, body, StringComparison.OrdinalIgnoreCase);
         }
     }

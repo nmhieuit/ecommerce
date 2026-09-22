@@ -19,9 +19,9 @@ public class ProductsRouteTests(DownstreamServicesFixture fixture)
     /// Kiểm tra: `GET /bff/products` (qua BFF, chạm 1 Products.Api thật với database thật) trả về
     /// `200` với danh sách sản phẩm đã định hình đúng từng trường (`id`/`name`/`price`) khớp
     /// `contracts/bff-openapi.yaml`, so khớp từng sản phẩm chứ không chỉ đếm số lượng.
-    /// Lý do phải test: đây chính là đường proxy cốt lõi mà cả spec 002 tồn tại để chứng minh, nên
-    /// được kiểm chứng bằng service + database thật, không phải bằng stand-in — so khớp từng trường
-    /// vì chỉ đếm `Items.Length` vẫn có thể pass dù BFF trả về 2 object rỗng.
+    /// Lý do: đây chính là đường proxy cốt lõi mà cả spec 002 tồn tại để chứng minh, nên được kiểm
+    /// chứng bằng service + database thật, không phải bằng stand-in — so khớp từng trường vì chỉ
+    /// đếm `Items.Length` vẫn có thể pass dù BFF trả về 2 object rỗng.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T033, US1.
     /// </summary>
     [Fact]
@@ -45,14 +45,18 @@ public class ProductsRouteTests(DownstreamServicesFixture fixture)
 
         var response = await client.GetAsync("/bff/products");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var listing = await response.Content.ReadFromJsonAsync<ProductListResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null.
         Assert.NotNull(listing);
         Assert.Equal(2, listing.Items.Length);
 
         // Field by field against contracts/bff-openapi.yaml's ProductSummary. Asserting the count
         // alone would pass even if the BFF returned two empty objects.
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn.
         var actualMug = Assert.Single(listing.Items, item => item.Id == mug.Id);
         Assert.Equal(mug.Name, actualMug.Name);
         Assert.Equal(mug.Price, actualMug.Price);
@@ -65,8 +69,8 @@ public class ProductsRouteTests(DownstreamServicesFixture fixture)
     /// <summary>
     /// Kiểm tra: khi catalog rỗng, `GET /bff/products` vẫn trả `200` với envelope `{"items": []}`,
     /// không phải mảng trần rỗng hay lỗi.
-    /// Lý do phải test: hợp đồng API bọc danh sách trong object `items`, không trả mảng trần. Catalog
-    /// rỗng vẫn phải giữ đúng shape đó, để SPA luôn đọc `items` một cách vô điều kiện thay vì phải rẽ
+    /// Lý do: hợp đồng API bọc danh sách trong object `items`, không trả mảng trần. Catalog rỗng
+    /// vẫn phải giữ đúng shape đó, để SPA luôn đọc `items` một cách vô điều kiện thay vì phải rẽ
     /// nhánh theo hình dạng response.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T033, US1.
     /// </summary>
@@ -87,10 +91,14 @@ public class ProductsRouteTests(DownstreamServicesFixture fixture)
 
         var response = await client.GetAsync("/bff/products");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Kỳ vọng 200 (không phải
+        // 404).
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var listing = await response.Content.ReadFromJsonAsync<ProductListResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null. Vẫn phải có "phong bì" items.
         Assert.NotNull(listing);
+        // Assert.Empty(tập hợp): xanh khi không có phần tử nào, đỏ khi có.
         Assert.Empty(listing.Items);
     }
 

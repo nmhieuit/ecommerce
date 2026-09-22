@@ -1,3 +1,4 @@
+using IntegrationTestSupport;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PactNet.Verifier;
@@ -23,6 +24,19 @@ public class ProductsProviderPactTests(SqlServerFixture sqlServer, ITestOutputHe
     /// <summary>Matches the tenant the consumer pact relays. Any non-blank value would do.</summary>
     private const string TenantId = "contoso";
 
+    /// <summary>
+    /// Kiểm tra: dựng Products API thật (SQL Server thật qua `SqlServerFixture`) rồi cho
+    /// `PactVerifier` gửi lại chính xác các request đã ghi trong `pacts/bff-products.json` — phản
+    /// hồi thật phải khớp đúng những gì BFF đã khai là cần.
+    /// Lý do: đây là nửa "bên phát tự kiểm mình" của spec 011 — đổi tên/bớt 1 trường
+    /// `ProductResponse` mà BFF đang đọc phải làm ĐÚNG build của products đỏ, không phải build của
+    /// BFF.
+    /// Từng ĐỎ trên mọi interaction (401) từ 2026-09-03 (spec 015 gắn `.RequireAuthorization` thẳng
+    /// vào endpoint, `FallbackPolicy = null` cũ của host hết tác dụng) tới 2026-09-22, khi
+    /// `PactProviderHost` chuyển sang `UseTestJwtBearer()` và test này gắn token qua
+    /// `WithCustomHeader` — xem QA_Debt mục 011 (đã đánh dấu đã vá).
+    /// Task nguồn: spec 011 (kiểm thử hợp đồng tiêu dùng) — T012/T013, US1 (FR-001, FR-003, FR-005).
+    /// </summary>
     [Fact]
     public void CatalogResponses_SatisfyTheBffsRecordedExpectations()
     {
@@ -36,10 +50,20 @@ public class ProductsProviderPactTests(SqlServerFixture sqlServer, ITestOutputHe
             "products",
             new PactVerifierConfig { Outputters = [new PactTestOutput(output)] });
 
+        // Kiểm chứng nằm ở .Verify() bên dưới: không có Assert.* nào — PactVerifier tự ném
+        // PactVerificationFailedException nếu response thật lệch khỏi file pact, xUnit coi đó là
+        // test đỏ. Xanh khi mọi interaction khớp, đỏ (kèm log nêu rõ trường/status sai) khi lệch.
         verifier
             .WithHttpEndpoint(provider.BaseUri)
             .WithFileSource(new FileInfo(Path.Combine(PactPaths.Directory, "bff-products.json")))
             .WithProviderStateUrl(provider.ProviderStateUri)
+            // 015-deny-by-default-authz: every replayed request must carry a token this host's
+            // UseTestJwtBearer() accepts, or AuthorizationPolicies.ApiScope refuses it with 401
+            // before the response body is ever compared. Minted fresh here rather than read from
+            // the pact file's own (regex-matched, not literal) Authorization header — see
+            // BffPact.AuthorizationHeader's remarks — so it is never stale relative to
+            // TestJwtBearer's 5-minute default expiry.
+            .WithCustomHeader("Authorization", "Bearer " + TestJwtBearer.CreateToken())
             .Verify();
     }
 

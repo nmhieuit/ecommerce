@@ -27,9 +27,9 @@ public class SubjectPropagationTests(DownstreamServicesFixture fixture)
     /// <summary>
     /// Kiểm tra: BFF nhận `X-Subject-Id` thì lời gọi đi ra tới downstream cũng mang đúng subject
     /// đó.
-    /// Lý do phải test: YARP chuyển header vào BFF miễn phí nhưng `HttpClient` có kiểu thì không —
-    /// thiếu handler đi ra thì subject dừng lại ở BFF và mọi lần tra giỏ phía sau đều không có
-    /// người gọi (contracts/subject-id-header.md).
+    /// Lý do: YARP chuyển header vào BFF miễn phí nhưng `HttpClient` có kiểu thì không — thiếu
+    /// handler đi ra thì subject dừng lại ở BFF và mọi lần tra giỏ phía sau đều không có người gọi
+    /// (contracts/subject-id-header.md).
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T018, US2 (FR-006).
     /// </summary>
     [Fact]
@@ -47,15 +47,18 @@ public class SubjectPropagationTests(DownstreamServicesFixture fixture)
 
         await client.SendAsync(request);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Single: BFF gửi đúng 1
+        // lời gọi ra; Equal: header danh tính trên đó bằng giá trị nhận vào. Đỏ khi thiếu (null)
+        // hoặc khác.
         Assert.Equal(ResolvedSubject, Assert.Single(recorder.Observed));
     }
 
     /// <summary>
     /// Kiểm tra: khi BFF không nhận subject nào thì mọi lời gọi đi ra đều không mang header
     /// subject.
-    /// Lý do phải test: BFF relay chứ không phân giải: nếu gateway bị bỏ qua, BFF không được bịa 1
-    /// người gọi mặc định — để lỗi lan xuống downstream thay vì bị che bởi 1 người gọi mà mọi người
-    /// dùng chung giỏ.
+    /// Lý do: BFF relay chứ không phân giải: nếu gateway bị bỏ qua, BFF không được bịa 1 người gọi
+    /// mặc định — để lỗi lan xuống downstream thay vì bị che bởi 1 người gọi mà mọi người dùng
+    /// chung giỏ.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T018, US2 (FR-006).
     /// </summary>
     [Fact]
@@ -74,7 +77,12 @@ public class SubjectPropagationTests(DownstreamServicesFixture fixture)
 
         await client.SendAsync(request);
 
+        // Assert.NotEmpty(tập hợp): xanh khi có ít nhất 1 phần tử, đỏ khi rỗng. Đỏ khi BFF không
+        // gọi service nào.
         Assert.NotEmpty(recorder.Observed);
+        // Assert.All(tập hợp, hành động): chạy hành động cho từng phần tử, đỏ nếu bất kỳ phần tử
+        // nào không đạt. Chạy Assert.Null (đạt khi giá trị null) cho từng lời gọi; đỏ khi BFF tự
+        // bịa danh tính.
         Assert.All(recorder.Observed, Assert.Null);
     }
 

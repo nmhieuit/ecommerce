@@ -25,10 +25,10 @@ namespace Gateway.Api.IntegrationTests;
 public class TenantPropagationTests
 {
     /// <summary>
-    /// Kiểm tra: request đi qua gateway tới `/bff/products` mang tới BFF đúng giá trị tenant mà gateway
-    /// được cấu hình để phân giải (`StubIdentity:TenantId`).
-    /// Lý do phải test: đây là nhánh happy-case của US1 kịch bản 1 — tenant được xác định 1 lần ở
-    /// gateway rồi lan truyền xuống chặng kế tiếp. Giá trị mong đợi được đọc từ host đang chạy (không
+    /// Kiểm tra: request đi qua gateway tới `/bff/products` mang tới BFF đúng giá trị tenant mà
+    /// gateway được cấu hình để phân giải (`StubIdentity:TenantId`).
+    /// Lý do: đây là nhánh happy-case của US1 kịch bản 1 — tenant được xác định 1 lần ở gateway rồi
+    /// lan truyền xuống chặng kế tiếp. Giá trị mong đợi được đọc từ host đang chạy (không
     /// hard-code) để test kiểm tra việc lan truyền chứ không phải khẳng định lại 1 hằng số.
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T016, US1.
     /// </summary>
@@ -42,15 +42,19 @@ public class TenantPropagationTests
 
         await client.GetAsync("/bff/products");
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn. Ở đây BFF phải nhận đúng 1 request.
         var observed = Assert.Single(recorder.Observed);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Kỳ vọng: tenant cấu hình
+        // ở gateway; thực tế: giá trị header BFF thấy. Đỏ khi thiếu (null) hoặc khác.
         Assert.Equal(ResolvedTenantOf(gateway), observed);
     }
 
     /// <summary>
-    /// Kiểm tra: client tự gửi kèm `X-Tenant-Id: some-other-tenant` thì BFF vẫn nhận tenant do gateway
-    /// phân giải, không phải giá trị client gửi.
-    /// Lý do phải test: theo contracts/tenant-id-header.md, gateway "luôn ghi đè mọi giá trị đến ...
-    /// tenant do client khai không bao giờ được tin". Nếu client tự chọn được tenant của mình thì ranh
+    /// Kiểm tra: client tự gửi kèm `X-Tenant-Id: some-other-tenant` thì BFF vẫn nhận tenant do
+    /// gateway phân giải, không phải giá trị client gửi.
+    /// Lý do: theo contracts/tenant-id-header.md, gateway "luôn ghi đè mọi giá trị đến ... tenant
+    /// do client khai không bao giờ được tin". Nếu client tự chọn được tenant của mình thì ranh
     /// giới cách ly đã bị phá ngay trước khi bất kỳ service nào nhìn thấy request (FR-002).
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T016, US1.
     /// </summary>
@@ -69,16 +73,22 @@ public class TenantPropagationTests
 
         await client.SendAsync(request);
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn. BFF nhận đúng 1 request.
         var observed = Assert.Single(recorder.Observed);
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau. Đỏ khi BFF
+        // thấy tenant do client tự khai (lỗ hổng giả mạo tenant).
         Assert.NotEqual(CallerDeclaredTenant, observed);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Giá trị BFF thấy phải
+        // đúng tenant do gateway xác định.
         Assert.Equal(ResolvedTenantOf(gateway), observed);
     }
 
     /// <summary>
-    /// Kiểm tra: với nhiều route khác nhau (`/bff/products`, `/bff/baskets/{id}`), request được chuyển
-    /// tiếp tới BFF luôn mang 1 tenant khác rỗng.
-    /// Lý do phải test: FR-001 yêu cầu phân giải tenant cho MỌI request, không chỉ vài route mẫu — mọi
-    /// đường đi qua pipeline danh tính của gateway đều phải được stamp tenant.
+    /// Kiểm tra: với nhiều route khác nhau (`/bff/products`, `/bff/baskets/{id}`), request được
+    /// chuyển tiếp tới BFF luôn mang 1 tenant khác rỗng.
+    /// Lý do: FR-001 yêu cầu phân giải tenant cho MỌI request, không chỉ vài route mẫu — mọi đường
+    /// đi qua pipeline danh tính của gateway đều phải được stamp tenant.
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T016, US1.
     /// </summary>
     [Theory]
@@ -93,6 +103,8 @@ public class TenantPropagationTests
 
         await client.GetAsync(route);
 
+        // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng. Single: đúng 1 request tới
+        // BFF; Đỏ khi route nào đó tới BFF mà không kèm tenant.
         Assert.False(string.IsNullOrWhiteSpace(Assert.Single(recorder.Observed)));
     }
 

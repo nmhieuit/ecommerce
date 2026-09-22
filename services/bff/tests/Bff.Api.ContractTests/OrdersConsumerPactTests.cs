@@ -22,6 +22,14 @@ public class OrdersConsumerPactTests
     private static readonly Guid ExistingOrderId = new("7c2e0d44-0003-4000-8000-000000000001");
     private static readonly Guid ProductId = new("9f8d6b1e-0001-4000-8000-000000000001");
 
+    /// <summary>
+    /// Kiểm tra: khai báo kỳ vọng của BFF ở 2 interaction (`GET /orders/{id}`, `POST /orders`) — ghi
+    /// vào `pacts/bff-orders.json`, cố ý KHÔNG khai `tenantId` dù orders có trả trường đó.
+    /// Lý do: `OrderResource` phía BFF không đọc `tenantId`; không khai nó trong pact là áp dụng
+    /// đúng quy tắc tolerant-reader (FR-007) — nếu khai, service orders sẽ bị buộc giữ mãi 1 trường
+    /// không ai dùng.
+    /// Task nguồn: spec 011 (kiểm thử hợp đồng tiêu dùng) — T011, US1 (FR-001, FR-002, FR-007).
+    /// </summary>
     [Fact]
     public async Task OrderInteractions_DependOnIdPlacedAtUtcAndTotal()
     {
@@ -35,6 +43,7 @@ public class OrdersConsumerPactTests
                 .WithRequest(HttpMethod.Get, $"/orders/{ExistingOrderId}")
                 .WithHeader("X-Tenant-Id", BffPact.TenantId)
                 .WithHeader("X-Subject-Id", BffPact.SubjectId)
+                .WithHeader("Authorization", BffPact.AuthorizationHeader)
             .WillRespond()
                 .WithStatus(HttpStatusCode.OK)
                 .WithHeader("Content-Type", "application/json; charset=utf-8")
@@ -45,6 +54,7 @@ public class OrdersConsumerPactTests
                 .WithRequest(HttpMethod.Post, "/orders")
                 .WithHeader("X-Tenant-Id", BffPact.TenantId)
                 .WithHeader("X-Subject-Id", BffPact.SubjectId)
+                .WithHeader("Authorization", BffPact.AuthorizationHeader)
                 // Lines only. No total is sent, and the pact says so: the total is the orders
                 // service's answer, not the BFF's claim (004 research.md Decision 8).
                 .WithJsonBody(new
@@ -83,11 +93,17 @@ public class OrdersConsumerPactTests
         total = Match.Number(25.00m),
     };
 
+    /// <summary>Assert dùng chung cho cả GET và POST — cùng kiểm 1 hình dạng.</summary>
     private static void AssertReadable(OrderResource? order)
     {
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null.
         Assert.NotNull(order);
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau — cho Id và
+        // PlacedAtUtc (không được là Guid rỗng / thời điểm mặc định).
         Assert.NotEqual(Guid.Empty, order.Id);
         Assert.NotEqual(default, order.PlacedAtUtc);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Cả 3 Assert chứng minh
+        // JSON dựng ở pact thật sự dựng lại được thành OrderResource, không chỉ đúng cú pháp JSON.
         Assert.Equal(25.00m, order.Total);
     }
 }

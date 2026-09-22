@@ -12,8 +12,8 @@ public class TenantContextMiddlewareTests
     /// <summary>
     /// Kiểm tra: khi request đến có header `X-Tenant-Id: acme`, middleware gán đúng "acme" vào
     /// `TenantContext`.
-    /// Lý do phải test: đây là nhánh happy-case của FR-003 — service chỉ đọc tenant mà gateway đã phân
-    /// giải, không tự suy luận lại.
+    /// Lý do: đây là nhánh happy-case của FR-003 — service chỉ đọc tenant mà gateway đã phân giải,
+    /// không tự suy luận lại.
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, nền tảng cho US1/US2.
     /// </summary>
     [Fact]
@@ -25,15 +25,17 @@ public class TenantContextMiddlewareTests
 
         await CreateMiddleware().InvokeAsync(httpContext, tenantContext);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Tenant trong context
+        // phải bằng giá trị header; đỏ khi middleware không đọc header (sẽ ném lỗi thiếu tenant).
         Assert.Equal("acme", tenantContext.RequireTenantId());
     }
 
     /// <summary>
     /// Kiểm tra: header `X-Tenant-Id` vắng mặt, rỗng hoặc chỉ có khoảng trắng đều khiến
     /// `TenantContext` vẫn ở trạng thái Unresolved (`RequireTenantId()` ném exception).
-    /// Lý do phải test: theo contracts/tenant-id-header.md (Failure Modes), "vắng" và "rỗng" là cùng 1
-    /// trạng thái — Unresolved. Tuyệt đối không có tenant dự phòng, vì đó chính là mục đích của tính
-    /// năng này.
+    /// Lý do: theo contracts/tenant-id-header.md (Failure Modes), "vắng" và "rỗng" là cùng 1 trạng
+    /// thái — Unresolved. Tuyệt đối không có tenant dự phòng, vì đó chính là mục đích của tính năng
+    /// này.
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, nền tảng cho US1/US2.
     /// </summary>
     [Theory]
@@ -51,14 +53,19 @@ public class TenantContextMiddlewareTests
 
         await CreateMiddleware().InvokeAsync(httpContext, tenantContext);
 
+        // Assert.Throws(loại ngoại lệ, đoạn mã): xanh khi đoạn mã ném đúng loại ngoại lệ, đỏ khi
+        // không ném hoặc ném loại khác. Đạt khi context vẫn chưa có tenant; đỏ khi middleware gán
+        // giá trị trắng.
         Assert.Throws<MissingTenantContextException>(() => tenantContext.RequireTenantId());
     }
 
     /// <summary>
-    /// Kiểm tra: khi tenant đã phân giải, middleware mở đúng 1 logging scope chứa `TenantId = "acme"`.
-    /// Lý do phải test: FR-006 / Constitution Principle VII — tenant phải hiện trong mọi dòng log có
-    /// cấu trúc của request, để truy vết 1 request xuyên các chặng theo tenant. Dùng cùng cơ chế
-    /// logging-scope mà `CorrelationIdMiddleware` đã dùng nên không cần cấu hình riêng ở từng service.
+    /// Kiểm tra: khi tenant đã phân giải, middleware mở đúng 1 logging scope chứa `TenantId =
+    /// "acme"`.
+    /// Lý do: FR-006 / Constitution Principle VII — tenant phải hiện trong mọi dòng log có cấu trúc
+    /// của request, để truy vết 1 request xuyên các chặng theo tenant. Dùng cùng cơ chế
+    /// logging-scope mà `CorrelationIdMiddleware` đã dùng nên không cần cấu hình riêng ở từng
+    /// service.
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, US1 (US1-KB2).
     /// </summary>
     [Fact]
@@ -70,14 +77,19 @@ public class TenantContextMiddlewareTests
 
         await CreateMiddleware(logger).InvokeAsync(httpContext, new TenantContext());
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn. Đúng 1 scope log được mở;
         var scope = Assert.Single(logger.Scopes);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Sau đó Equal so giá trị
+        // với "acme". Đỏ khi thiếu khoá TenantId hoặc sai giá trị (log không truy vết được theo
+        // tenant).
         Assert.Equal("acme", Assert.Contains("TenantId", scope));
     }
 
     /// <summary>
     /// Kiểm tra: request chưa phân giải được tenant thì middleware KHÔNG mở logging scope nào.
-    /// Lý do phải test: không được ghi 1 `TenantId` rỗng/null vào log như thể tenant có tồn tại — việc
-    /// vắng mặt chính là tín hiệu để người vận hành nhận ra request bị thiếu tenant.
+    /// Lý do: không được ghi 1 `TenantId` rỗng/null vào log như thể tenant có tồn tại — việc vắng
+    /// mặt chính là tín hiệu để người vận hành nhận ra request bị thiếu tenant.
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, nền tảng cho US1/US2.
     /// </summary>
     [Fact]
@@ -87,14 +99,16 @@ public class TenantContextMiddlewareTests
 
         await CreateMiddleware(logger).InvokeAsync(new DefaultHttpContext(), new TenantContext());
 
+        // Assert.Empty(tập hợp): xanh khi không có phần tử nào, đỏ khi có. Đỏ khi vẫn mở scope
+        // tenant khi chưa biết tenant.
         Assert.Empty(logger.Scopes);
     }
 
     /// <summary>
     /// Kiểm tra: dù có tenant ("acme") hay không (null), middleware luôn gọi tiếp phần còn lại của
     /// pipeline.
-    /// Lý do phải test: middleware này chỉ đọc và ghi nhận tenant, không được tự chặn request — việc
-    /// từ chối khi thiếu tenant là của cổng persistence ở `AddDbContext`. Nếu nó chặn sớm thì health
+    /// Lý do: middleware này chỉ đọc và ghi nhận tenant, không được tự chặn request — việc từ chối
+    /// khi thiếu tenant là của cổng persistence ở `AddDbContext`. Nếu nó chặn sớm thì health
     /// endpoint (không cần tenant) cũng sẽ hỏng theo.
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T006, nền tảng cho US1/US2.
     /// </summary>
@@ -120,6 +134,9 @@ public class TenantContextMiddlewareTests
 
         await middleware.InvokeAsync(httpContext, new TenantContext());
 
+        // Assert.True(điều kiện): xanh khi điều kiện đúng, đỏ khi sai. Đạt khi middleware kế tiếp
+        // đã chạy; đỏ khi middleware tự chặn request (việc từ chối là của cổng tenant phía sau,
+        // không phải của middleware này).
         Assert.True(called);
     }
 

@@ -47,6 +47,21 @@ const totalFile = resolve(repositoryRoot, 'artifacts/demo/last-total.txt');
  */
 const stillsDir = resolve(repositoryRoot, 'docs/demo');
 
+/**
+ * Kiểm tra: đi trọn luồng duyệt → thêm 2 Notebook + 1 Apron → giỏ ($59.25) → thanh toán → xác nhận
+ * (mã đơn + $59.25) trên stack container, chụp ảnh từng bước vào `docs/demo/`, rồi đọc lại đơn qua
+ * gateway và so mã/tổng với màn hình xác nhận.
+ * Lý do: bằng chứng "Phase 1 đã xong" phải chạy được trên nền tảng triển khai thật (không phải dev
+ * server), lặp lại được, và tự kiểm chứng: assert tiền điều kiện giỏ sạch thay vì giả định (để lỗi
+ * hiện đúng nguyên nhân), chờ từng lần thêm giỏ hoàn tất (tránh race trên container), và không giả
+ * một ảnh "thanh toán" trùng ảnh giỏ hàng. Chạy qua `./scripts/demo.ps1`/`demo.sh`, không chạy trực
+ * tiếp.
+ * Lưu ý: test và các script demo chưa có bước đăng nhập, trong khi từ spec 014 gateway chặn mọi
+ * request không token (401) và SPA yêu cầu đăng nhập — nên hiện `demo.ps1` không chạy qua được. Xem
+ * QA_Debt mục 006.
+ * Task nguồn: spec 006 (demo đặt hàng end-to-end) — T011, T015, T032, US1/US3 (FR-001…FR-004,
+ * FR-007, FR-013a).
+ */
 test('one order, placed end to end, on the running stack', async ({ page }) => {
   /**
    * Captures one committed still. Numbered so the walkthrough can embed them in flow order and a
@@ -60,6 +75,7 @@ test('one order, placed end to end, on the running stack', async ({ page }) => {
   const addToBasket = async (productName: string) => {
     const button = page.getByRole('button', { name: `Add ${productName} to basket` });
 
+    // toBeEnabled(): xanh khi phần tử bấm được.
     await expect(button).toBeEnabled();
     await button.click();
     await expect(button).toBeEnabled();
@@ -71,6 +87,7 @@ test('one order, placed end to end, on the running stack', async ({ page }) => {
   // below is wrong and the failure would look like a pricing defect; naming the real cause here
   // costs one assertion and saves the wrong investigation.
   await page.goto('/basket');
+  // toBeVisible(): Playwright tự chờ tới khi phần tử hiển thị, hết giờ thì đỏ.
   await expect(
     page.getByText(/your basket is empty/i),
     'the demo must start from a clean basket — run it through scripts/demo.ps1, which clears it',
@@ -122,6 +139,7 @@ test('one order, placed end to end, on the running stack', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /your order is placed/i })).toBeVisible();
 
   const reference = (await page.getByText(/^[0-9a-f-]{36}$/i).innerText()).trim();
+  // toMatch(regex): xanh khi chuỗi khớp biểu thức chính quy.
   expect(reference, 'the confirmation must show an order reference').toMatch(
     /^[0-9a-f-]{36}$/i,
   );
@@ -135,6 +153,7 @@ test('one order, placed end to end, on the running stack', async ({ page }) => {
   // reads it straight from the orders service afterwards, from the script — that call proves tenant
   // attribution and belongs to User Story 2.
   const response = await page.request.get(`${GATEWAY_ORIGIN}/bff/orders/${reference}`);
+  // toBe(kỳ vọng): so bằng chặt (===), đỏ khi khác.
   expect(response.ok(), `the order ${reference} could not be read back`).toBe(true);
 
   const order = await response.json();

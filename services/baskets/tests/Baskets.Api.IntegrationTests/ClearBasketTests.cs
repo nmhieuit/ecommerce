@@ -23,8 +23,8 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
     /// <summary>
     /// Kiểm tra: xoá giỏ làm mất mọi dòng nhưng giữ lại bản ghi giỏ.
-    /// Lý do phải test: FR-010: thanh toán xong giỏ phải rỗng; giữ lại chính giỏ để định danh giỏ
-    /// của người mua ổn định qua các lần mua.
+    /// Lý do: FR-010: thanh toán xong giỏ phải rỗng; giữ lại chính giỏ để định danh giỏ của người
+    /// mua ổn định qua các lần mua.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T051, US3 (FR-010).
     /// </summary>
     [Fact]
@@ -41,22 +41,30 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
         var response = await client.PostAsync("/baskets/current/clear", content: null);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Kỳ vọng 204 (xoá xong,
+        // không có body);
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         var after = await client.GetFromJsonAsync<BasketResponse>("/baskets/current");
 
+        // Assert.Empty(tập hợp): xanh khi không có phần tử nào, đỏ khi có. Đỏ khi giỏ còn dòng
+        // hàng.
         Assert.Empty(after!.Items);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Kỳ vọng tổng tiền 0 (hậu
+        // tố m = kiểu decimal); đỏ khi còn số dư.
         Assert.Equal(0m, after.Total);
 
         // The same basket, now empty — not a new one. A fresh identifier each checkout would mean
         // the basket row is being deleted and recreated, which is not what FR-010 asks for.
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Id giỏ trước và sau phải
+        // bằng nhau: giỏ được làm rỗng chứ không bị tạo giỏ mới. Đỏ khi id đổi.
         Assert.Equal(before!.Id, after.Id);
     }
 
     /// <summary>
     /// Kiểm tra: xoá giỏ đang rỗng trả 409 Conflict.
-    /// Lý do phải test: FR-008/FR-016: phải báo rõ thay vì lặng lẽ thành công, để checkout giỏ đã
-    /// rỗng không thể đi tiếp để tạo đơn thứ hai.
+    /// Lý do: FR-008/FR-016: phải báo rõ thay vì lặng lẽ thành công, để checkout giỏ đã rỗng không
+    /// thể đi tiếp để tạo đơn thứ hai.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T051, US3 (FR-008, FR-016).
     /// </summary>
     [Fact]
@@ -67,13 +75,15 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
         var response = await client.PostAsync("/baskets/current/clear", content: null);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Xoá giỏ đã rỗng bị coi
+        // là xung đột, không phải thành công.
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     /// <summary>
     /// Kiểm tra: xoá giỏ lần thứ hai liên tiếp cũng trả 409.
-    /// Lý do phải test: đây là thứ khiến 1 lần checkout lặp thất bại to tiếng thay vì lặng lẽ xoá
-    /// rỗng rồi chạy tiếp — chốt chặn thứ hai của FR-016.
+    /// Lý do: đây là thứ khiến 1 lần checkout lặp thất bại to tiếng thay vì lặng lẽ xoá rỗng rồi
+    /// chạy tiếp — chốt chặn thứ hai của FR-016.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T051, US3 (FR-016, SC-008).
     /// </summary>
     [Fact]
@@ -86,10 +96,13 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
             "/baskets/current/items",
             new { productId = Notebook, quantity = 1, unitPrice = 12.50m });
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Lần đầu phải là 204.
         Assert.Equal(
             HttpStatusCode.NoContent,
             (await client.PostAsync("/baskets/current/clear", content: null)).StatusCode);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Lần 2 phải là 409; đỏ
+        // khi lần 2 vẫn 204 (không phát hiện thao tác lặp, dẫn tới tạo 2 đơn khi checkout bấm đúp).
         Assert.Equal(
             HttpStatusCode.Conflict,
             (await client.PostAsync("/baskets/current/clear", content: null)).StatusCode);
@@ -97,8 +110,7 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
     /// <summary>
     /// Kiểm tra: sau khi xoá, người mua thêm hàng lại vào đúng giỏ cũ được.
-    /// Lý do phải test: thanh toán kết thúc 1 lần mua, không kết thúc quan hệ giữa người mua và giỏ
-    /// của họ.
+    /// Lý do: thanh toán kết thúc 1 lần mua, không kết thúc quan hệ giữa người mua và giỏ của họ.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T051, US3 (FR-010).
     /// </summary>
     [Fact]
@@ -118,7 +130,11 @@ public class ClearBasketTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
         var basket = await client.GetFromJsonAsync<BasketResponse>("/baskets/current");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Single: giỏ có đúng 1
+        // dòng; Equal: số lượng là 3 (không cộng dồn với lần mua trước).
         Assert.Equal(3, Assert.Single(basket!.Items).Quantity);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. 3 × 12,50 = 37,50; đỏ
+        // khi tổng sai.
         Assert.Equal(37.50m, basket.Total);
     }
 

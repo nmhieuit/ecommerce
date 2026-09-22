@@ -12,6 +12,13 @@ namespace Parties.Api.IntegrationTests;
 /// </summary>
 public class PartyConstraintsTests(SqlServerFixture sqlServer) : IClassFixture<SqlServerFixture>
 {
+    /// <summary>
+    /// Kiểm tra: chèn 1 `Party` với `DisplayName` dài 201 ký tự thẳng qua `PartiesDbContext` (SQL
+    /// Server thật) — phải bị `SaveChangesAsync` từ chối.
+    /// Lý do: chứng minh cột `nvarchar(200)` là ràng buộc THẬT của SQL Server, không phải guard tầng
+    /// ứng dụng; dùng provider giả (in-memory) sẽ không bắt được lỗi này.
+    /// Task nguồn: spec 010 (hạ tầng kiểm thử container thật) — T010/T011, US1 (FR-001, FR-002).
+    /// </summary>
     [Fact]
     public async Task DisplayName_ExceedingMaxLength_IsRejectedByTheDatabase()
     {
@@ -23,9 +30,9 @@ public class PartyConstraintsTests(SqlServerFixture sqlServer) : IClassFixture<S
             DisplayName = new string('a', 201),
         });
 
-        // The real nvarchar(200) column rejects the over-length value; an in-memory provider would
-        // not (research.md Decision 4 — Testcontainers.MsSql is what makes this assertion mean
-        // anything).
+        // Assert.ThrowsAsync(loại ngoại lệ, đoạn mã): xanh khi đoạn mã ném đúng loại ngoại lệ, đỏ
+        // khi không ném hoặc ném loại khác. Cột nvarchar(200) thật phải từ chối giá trị quá dài nên
+        // SaveChangesAsync ném DbUpdateException; đỏ nếu ai đó nới cột lên (ví dụ HasMaxLength(500)).
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
     }
 

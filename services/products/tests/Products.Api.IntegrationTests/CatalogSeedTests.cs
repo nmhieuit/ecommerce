@@ -28,9 +28,9 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
     /// <summary>
     /// Kiểm tra: sau khi áp dụng migration, bảng Products có đúng 3 sản phẩm đã biết với mã, tên,
     /// giá cố định (Notebook $12.50, Pour-Over $48.00, Apron $34.25).
-    /// Lý do phải test: từng sản phẩm được nêu tên riêng chứ không chỉ đếm — quickstart.md trích
-    /// các giá này và Playwright (T065) chọn theo các tên này, nên đổi âm thầm sẽ làm hỏng 1 kiểm
-    /// tra ở rất xa đây.
+    /// Lý do: từng sản phẩm được nêu tên riêng chứ không chỉ đếm — quickstart.md trích các giá này
+    /// và Playwright (T065) chọn theo các tên này, nên đổi âm thầm sẽ làm hỏng 1 kiểm tra ở rất xa
+    /// đây.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T023, US1 (FR-018).
     /// </summary>
     [Fact]
@@ -41,14 +41,18 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
         var response = await client.GetAsync("/products");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var page = await response.Content.ReadFromJsonAsync<PagedProductsResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null.
         Assert.NotNull(page);
         var products = page.Items;
 
         foreach (var expected in CatalogSeed.Products)
         {
+            // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+            // nhiều hơn.
             var actual = Assert.Single(products, product => product.Id == expected.Id);
             Assert.Equal(expected.Name, actual.Name);
             Assert.Equal(expected.Price, actual.Price);
@@ -58,8 +62,8 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
     /// <summary>
     /// Kiểm tra: chỉ áp dụng migration là catalog đã có ít nhất 1 sản phẩm mua được, không cần
     /// setup dữ liệu thủ công.
-    /// Lý do phải test: lời hứa thật của FR-018 là "ít nhất một" — reviewer kiểm được điều này mà
-    /// không cần quan tâm 3 sản phẩm cụ thể là gì.
+    /// Lý do: lời hứa thật của FR-018 là "ít nhất một" — reviewer kiểm được điều này mà không cần
+    /// quan tâm 3 sản phẩm cụ thể là gì.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T023, US1 (FR-018).
     /// </summary>
     [Fact]
@@ -70,20 +74,26 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
 
         var page = await client.GetFromJsonAsync<PagedProductsResponse>("/products");
 
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null.
         Assert.NotNull(page);
+        // Assert.NotEmpty(tập hợp): xanh khi có ít nhất 1 phần tử, đỏ khi rỗng.
         Assert.NotEmpty(page.Items);
+        // Assert.All(tập hợp, hành động): chạy hành động cho từng phần tử, đỏ nếu bất kỳ phần tử
+        // nào không đạt.
         Assert.All(page.Items, product =>
         {
+            // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng.
             Assert.False(string.IsNullOrWhiteSpace(product.Name));
+            // Assert.True(điều kiện): xanh khi điều kiện đúng, đỏ khi sai.
             Assert.True(product.Price > 0m, "A seeded product must have a real price to be purchasable.");
         });
     }
 
     /// <summary>
     /// Kiểm tra: mã sản phẩm seed giống hệt nhau trên các database mới.
-    /// Lý do phải test: mã là hằng cố định, không sinh ngẫu nhiên: test, quickstart và e2e đều gọi
-    /// tên sản phẩm cụ thể; mã đổi theo môi trường sẽ làm mọi tham chiếu đó vô dụng (research.md
-    /// Decision 10).
+    /// Lý do: mã là hằng cố định, không sinh ngẫu nhiên: test, quickstart và e2e đều gọi tên sản
+    /// phẩm cụ thể; mã đổi theo môi trường sẽ làm mọi tham chiếu đó vô dụng (research.md Decision
+    /// 10).
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T023, US1 (FR-018, research.md Decision 10).
     /// </summary>
     [Fact]
@@ -95,6 +105,9 @@ public class CatalogSeedTests(SqlServerFixture sqlServer) : IClassFixture<SqlSer
         var fromFirst = await CreateTenantClient(first).GetFromJsonAsync<PagedProductsResponse>("/products");
         var fromSecond = await CreateTenantClient(second).GetFromJsonAsync<PagedProductsResponse>("/products");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. 2 danh sách id (đã sắp
+        // xếp) so từng phần tử; đạt khi giống hệt. Đỏ khi id bị sinh ngẫu nhiên mỗi lần
+        // (Postman/walkthrough hard-code id nên sẽ hỏng).
         Assert.Equal(
             fromFirst!.Items.Select(product => product.Id).OrderBy(id => id),
             fromSecond!.Items.Select(product => product.Id).OrderBy(id => id));

@@ -35,3 +35,18 @@ dotnet test services/orders/tests/Orders.Api.ContractTests --filter FullyQualifi
 Regenerate deliberately, and review the diff: these files record what a consumer *relies on*, so a
 field disappearing from one is a consumer dropping a dependency, not housekeeping. A producer-side
 change must never be "fixed" by rewriting the pact.
+
+## Authorization
+
+Every provider host in `*.Api.ContractTests` accepts a token via `IntegrationTestSupport`'s
+`TestJwtBearer` (the same symmetric-key bypass every `*.Api.IntegrationTests` project uses) instead
+of a real identity server, and every `*ProviderPactTests` attaches a fresh one at verification time
+via `PactVerifierSource.WithCustomHeader` — see each provider host's `ConfigureWebHost` remarks.
+**If you add or change `.RequireAuthorization(...)` on an endpoint one of these boundaries covers,
+run that service's `*.Api.ContractTests` locally before merging.** This directory's own coverage
+check (`tests/ContractCoverageTests`) confirms a pact file and a verification test both exist; it
+does not — and structurally cannot, since it never sends an HTTP request — confirm the provider
+actually accepts what the verifier sends. `Jenkinsfile`'s `contract tests` stage does exercise every
+`*.Api.ContractTests` project for real and fails the build on a mismatch (011-consumer-contract-tests
+QA_Debt entry: this exact gap — spec 015 changing how every endpoint authorizes a caller, `pacts/`
+not updated to match — went undetected for about three weeks despite that gate existing).

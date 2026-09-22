@@ -24,7 +24,7 @@ public class SubjectHeaderPropagationMiddlewareTests
     /// <summary>
     /// Kiểm tra: principal đã xác thực có claim `NameIdentifier` thì gateway ghi header
     /// `X-Subject-Id` bằng đúng giá trị đó.
-    /// Lý do phải test: gateway là thành phần duy nhất được nói ai là người gọi
+    /// Lý do: gateway là thành phần duy nhất được nói ai là người gọi
     /// (contracts/subject-id-header.md); đây là nhánh happy-case của cơ chế lan truyền subject.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T016, US2 (FR-006).
     /// </summary>
@@ -35,6 +35,8 @@ public class SubjectHeaderPropagationMiddlewareTests
 
         await CreateMiddleware().InvokeAsync(httpContext);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Header danh tính trên
+        // request đi tiếp phải bằng subject của người dùng;
         Assert.Equal(
             ResolvedSubject,
             httpContext.Request.Headers[SubjectHeaderPropagationMiddleware.HeaderName].ToString());
@@ -43,8 +45,8 @@ public class SubjectHeaderPropagationMiddlewareTests
     /// <summary>
     /// Kiểm tra: client tự gửi `X-Subject-Id` khác thì gateway vẫn ghi đè bằng subject đã phân
     /// giải.
-    /// Lý do phải test: người gọi tự đặt được subject của mình là đọc và thanh toán được giỏ của
-    /// người khác; giá trị đến bị ghi đè, không bao giờ trộn hay tin.
+    /// Lý do: người gọi tự đặt được subject của mình là đọc và thanh toán được giỏ của người khác;
+    /// giá trị đến bị ghi đè, không bao giờ trộn hay tin.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T016, US2 (FR-006).
     /// </summary>
     [Fact]
@@ -58,16 +60,19 @@ public class SubjectHeaderPropagationMiddlewareTests
         await CreateMiddleware().InvokeAsync(httpContext);
 
         var observed = httpContext.Request.Headers[SubjectHeaderPropagationMiddleware.HeaderName].ToString();
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau. Đỏ khi giá
+        // trị giả của client được giữ.
         Assert.NotEqual(CallerDeclaredSubject, observed);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Header phải là subject
+        // thật của principal.
         Assert.Equal(ResolvedSubject, observed);
     }
 
     /// <summary>
     /// Kiểm tra: khi principal không có subject (null, rỗng, khoảng trắng) thì header
     /// `X-Subject-Id` bị XOÁ.
-    /// Lý do phải test: để nguyên giá trị client gửi là đúng cửa ngách mà việc ghi đè phía trên đã
-    /// đóng. Đây là test đơn vị vì nhánh này không thể tới được qua gateway thật khi stub luôn
-    /// thành công.
+    /// Lý do: để nguyên giá trị client gửi là đúng cửa ngách mà việc ghi đè phía trên đã đóng. Đây
+    /// là test đơn vị vì nhánh này không thể tới được qua gateway thật khi stub luôn thành công.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T016, US2 (FR-006).
     /// </summary>
     [Theory]
@@ -81,14 +86,16 @@ public class SubjectHeaderPropagationMiddlewareTests
 
         await CreateMiddleware().InvokeAsync(httpContext);
 
+        // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng. Đỏ khi header giả vẫn lọt
+        // xuống.
         Assert.False(
             httpContext.Request.Headers.ContainsKey(SubjectHeaderPropagationMiddleware.HeaderName));
     }
 
     /// <summary>
     /// Kiểm tra: dù có subject hay không, middleware luôn gọi tiếp pipeline.
-    /// Lý do phải test: middleware chỉ stamp/xoá header, không tự chặn request; việc từ chối do các
-    /// chặng phía sau đảm nhiệm.
+    /// Lý do: middleware chỉ stamp/xoá header, không tự chặn request; việc từ chối do các chặng
+    /// phía sau đảm nhiệm.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T016, US2 (FR-006).
     /// </summary>
     [Theory]
@@ -107,6 +114,8 @@ public class SubjectHeaderPropagationMiddlewareTests
 
         await middleware.InvokeAsync(CreateContextFor(resolvedSubject));
 
+        // Assert.True(điều kiện): xanh khi điều kiện đúng, đỏ khi sai. Đạt khi middleware kế tiếp
+        // đã được gọi; đỏ khi middleware này tự chặn request.
         Assert.True(called);
     }
 

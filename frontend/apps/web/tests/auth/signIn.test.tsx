@@ -45,23 +45,29 @@ describe('sign-in', () => {
   /**
    * Kiểm tra: người truy cập chưa đăng nhập mở `/` thì bị đưa tới form đăng nhập và không thấy
    * thanh điều hướng của cửa hàng.
-   * Lý do phải test: FR-026: mọi màn hình trừ đăng nhập đều yêu cầu đã đăng nhập; gateway đã đòi
-   * token cho mọi route nên storefront không thể hiển thị catalog cho khách vô danh.
+   * Lý do: FR-026: mọi màn hình trừ đăng nhập đều yêu cầu đã đăng nhập; gateway đã đòi token cho
+   * mọi route nên storefront không thể hiển thị catalog cho khách vô danh.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — FR-026 (đăng nhập, bổ sung cùng đợt cutover danh
    * tính của spec 014).
    */
   it('sends a signed-out visitor to the login form', async () => {
     render(<App />);
 
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM. FindBy chờ tiêu đề "Sign in" xuất hiện;
+    // đạt khi thấy, đỏ khi hết thời gian chờ mà chưa có (người chưa đăng nhập không được vào thẳng
+    // catalog).
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    // not.toBeInTheDocument(): xanh khi phần tử KHÔNG có trong DOM (queryBy trả null nếu không
+    // thấy). .not đảo lại: đạt khi thanh điều hướng chính KHÔNG hiển thị. Đỏ khi menu của trang đã
+    // đăng nhập lộ ra.
     expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
   });
 
   /**
    * Kiểm tra: đăng nhập đúng thì mở catalog và request tới gateway mang header `Authorization:
    * Bearer <token>`.
-   * Lý do phải test: nhánh happy-case của FR-026/FR-015: token là danh tính của người mua trên mọi
-   * request; tenant và subject vẫn do gateway suy ra từ claim của token, client không tự đặt.
+   * Lý do: nhánh happy-case của FR-026/FR-015: token là danh tính của người mua trên mọi request;
+   * tenant và subject vẫn do gateway suy ra từ claim của token, client không tự đặt.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — FR-026 (đăng nhập, bổ sung cùng đợt cutover danh
    * tính của spec 014).
    */
@@ -70,6 +76,7 @@ describe('sign-in', () => {
     server.use(
       http.post(`${IDENTITY}/connect/token`, async ({ request }) => {
         const form = new URLSearchParams(await request.text());
+        // toBe(kỳ vọng): so bằng chặt (===), đỏ khi khác.
         expect(form.get('grant_type')).toBe('password');
         expect(form.get('client_id')).toBe('ecommerce-web-spa-password');
         expect(form.get('username')).toBe('shopper@test');
@@ -82,17 +89,19 @@ describe('sign-in', () => {
 
     await signInWith('shopper@test', 'correct-password');
 
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM.
     expect(
       await screen.findByRole('heading', { name: 'Products' }, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(getAccessToken()).toBe('issued-token');
+    // toContain(phần tử): xanh khi mảng/chuỗi chứa phần tử.
     expect(seenAuthorization).toContain('Bearer issued-token');
   });
 
   /**
    * Kiểm tra: identity server từ chối (400 invalid_grant) thì form báo "Incorrect username or
    * password." và không lưu token.
-   * Lý do phải test: người mua phải biết mình nhập sai; không để lại token nào trong bộ nhớ phiên.
+   * Lý do: người mua phải biết mình nhập sai; không để lại token nào trong bộ nhớ phiên.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — FR-026 (đăng nhập, bổ sung cùng đợt cutover danh
    * tính của spec 014).
    */
@@ -107,15 +116,20 @@ describe('sign-in', () => {
 
     await signInWith('shopper@test', 'wrong');
 
+    // toHaveTextContent(chuỗi hoặc regex): xanh khi nội dung phần tử khớp. Chờ phần tử role="alert"
+    // xuất hiện; toHaveTextContent đạt khi nội dung chứa đúng câu này. Đỏ khi không có cảnh báo
+    // hoặc câu khác.
     expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect username or password.');
+    // toBeNull(): xanh khi giá trị là null. ToBeNull đạt khi giá trị là null: không được lưu token
+    // khi đăng nhập thất bại.
     expect(getAccessToken()).toBeNull();
   });
 
   /**
    * Kiểm tra: identity server không truy cập được (lỗi mạng) thì form báo "Sign-in is unavailable",
    * khác thông báo sai mật khẩu.
-   * Lý do phải test: phân biệt lỗi do người dùng với sự cố hệ thống, để người mua không đổi mật
-   * khẩu vô ích khi hệ thống đang gián đoạn (FR-012).
+   * Lý do: phân biệt lỗi do người dùng với sự cố hệ thống, để người mua không đổi mật khẩu vô ích
+   * khi hệ thống đang gián đoạn (FR-012).
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — FR-026 (đăng nhập, bổ sung cùng đợt cutover danh
    * tính của spec 014).
    */
@@ -126,13 +140,16 @@ describe('sign-in', () => {
 
     await signInWith('shopper@test', 'anything');
 
+    // toHaveTextContent(chuỗi hoặc regex): xanh khi nội dung phần tử khớp. Đạt khi cảnh báo chứa
+    // câu "Sign-in is unavailable" (sự cố), không phải "Incorrect username or password"; đỏ khi
+    // nhầm lẫn 2 loại lỗi.
     expect(await screen.findByRole('alert')).toHaveTextContent('Sign-in is unavailable');
   });
 
   /**
    * Kiểm tra: bấm "Sign out" thì quay về form đăng nhập và token bị xoá.
-   * Lý do phải test: kết thúc phiên phải xoá thật bằng chứng danh tính khỏi trình duyệt, không chỉ
-   * ẩn giao diện.
+   * Lý do: kết thúc phiên phải xoá thật bằng chứng danh tính khỏi trình duyệt, không chỉ ẩn giao
+   * diện.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — FR-026 (đăng nhập, bổ sung cùng đợt cutover danh
    * tính của spec 014).
    */
@@ -144,16 +161,18 @@ describe('sign-in', () => {
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Sign out' }));
 
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM. Quay lại form đăng nhập; đỏ khi vẫn ở
+    // catalog.
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    // toBeNull(): xanh khi giá trị là null. Phiên đã bị xoá.
     expect(getAccessToken()).toBeNull();
   });
 
   /**
    * Kiểm tra: gateway trả 401 cho request mang token (hết hạn/bị thu hồi/sai issuer) thì storefront
    * xoá phiên và quay về form đăng nhập.
-   * Lý do phải test: phiên đã hết hiệu lực thì người mua phải được đưa lại tới đăng nhập, thay vì
-   * kẹt ở màn hình "Loading…" mãi (lỗi từng quan sát khi chưa có đăng nhập: 401 mà không có thông
-   * báo).
+   * Lý do: phiên đã hết hiệu lực thì người mua phải được đưa lại tới đăng nhập, thay vì kẹt ở màn
+   * hình "Loading…" mãi (lỗi từng quan sát khi chưa có đăng nhập: 401 mà không có thông báo).
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — FR-026 (đăng nhập, bổ sung cùng đợt cutover danh
    * tính của spec 014).
    */
@@ -166,7 +185,10 @@ describe('sign-in', () => {
     );
     render(<App />);
 
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM. Bị 401 thì tự đưa về form đăng nhập; đỏ
+    // khi treo ở trang lỗi.
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    // toBeNull(): xanh khi giá trị là null. Token hết hạn bị xoá.
     expect(getAccessToken()).toBeNull();
   });
 });

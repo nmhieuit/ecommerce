@@ -12,6 +12,13 @@ namespace Orders.Api.IntegrationTests;
 /// </summary>
 public class OrderConstraintsTests(SqlServerFixture sqlServer) : IClassFixture<SqlServerFixture>
 {
+    /// <summary>
+    /// Kiểm tra: chèn 1 `Order` với `TenantId` dài 129 ký tự thẳng qua `OrdersDbContext` (SQL Server
+    /// thật) — phải bị `SaveChangesAsync` từ chối.
+    /// Lý do: chứng minh cột `nvarchar(128)` là ràng buộc THẬT của SQL Server, không phải guard tầng
+    /// ứng dụng; dùng provider giả (in-memory) sẽ không bắt được lỗi này.
+    /// Task nguồn: spec 010 (hạ tầng kiểm thử container thật) — T008/T009, US1 (FR-001, FR-002).
+    /// </summary>
     [Fact]
     public async Task TenantId_ExceedingMaxLength_IsRejectedByTheDatabase()
     {
@@ -25,9 +32,9 @@ public class OrderConstraintsTests(SqlServerFixture sqlServer) : IClassFixture<S
             TenantId = new string('a', 129),
         });
 
-        // The real nvarchar(128) column rejects the over-length value; an in-memory provider would
-        // not (research.md Decision 4 — Testcontainers.MsSql is what makes this assertion mean
-        // anything).
+        // Assert.ThrowsAsync(loại ngoại lệ, đoạn mã): xanh khi đoạn mã ném đúng loại ngoại lệ, đỏ
+        // khi không ném hoặc ném loại khác. Cột nvarchar(128) thật phải từ chối giá trị quá dài nên
+        // SaveChangesAsync ném DbUpdateException; đỏ nếu ai đó nới cột lên (ví dụ HasMaxLength(500)).
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
     }
 

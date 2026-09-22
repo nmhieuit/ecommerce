@@ -36,8 +36,8 @@ function respondWithProducts(items: unknown[]) {
 describe('ProductList', () => {
   /**
    * Kiểm tra: danh sách hiển thị đủ mọi sản phẩm với tên và giá đã định dạng (không phải số thô).
-   * Lý do phải test: US1 kịch bản 1/FR-001: người mua mở storefront thấy sản phẩm lấy từ backend;
-   * giá phải đọc được như tiền (FR-024) — "48" không phải 1 mức giá.
+   * Lý do: US1 kịch bản 1/FR-001: người mua mở storefront thấy sản phẩm lấy từ backend; giá phải
+   * đọc được như tiền (FR-024) — "48" không phải 1 mức giá.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024, US1 (FR-001, FR-024).
    */
   it('lists every product with its name and price', async () => {
@@ -48,6 +48,7 @@ describe('ProductList', () => {
 
     renderWithQueryClient(<ProductList />);
 
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM.
     expect(await screen.findByText('Field Notes Notebook')).toBeInTheDocument();
     expect(screen.getByText('Ceramic Pour-Over Set')).toBeInTheDocument();
 
@@ -58,8 +59,8 @@ describe('ProductList', () => {
 
   /**
    * Kiểm tra: catalog được trình bày dưới dạng danh sách (role `list`).
-   * Lý do phải test: người dùng trình đọc màn hình nhờ đó biết có bao nhiêu sản phẩm trước khi nghe
-   * từng mục (FR-017); assert theo role chứ không theo class hay test id.
+   * Lý do: người dùng trình đọc màn hình nhờ đó biết có bao nhiêu sản phẩm trước khi nghe từng mục
+   * (FR-017); assert theo role chứ không theo class hay test id.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024, US1 (FR-017).
    */
   it('presents the catalog as a list', async () => {
@@ -69,14 +70,17 @@ describe('ProductList', () => {
 
     renderWithQueryClient(<ProductList />);
 
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM. Có danh sách tên "products".
     expect(await screen.findByRole('list', { name: /products/i })).toBeInTheDocument();
+    // toHaveLength(n): xanh khi mảng/danh sách có đúng n phần tử. ToHaveLength đạt khi số mục đúng
+    // bằng 1.
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 
   /**
    * Kiểm tra: catalog không có sản phẩm nào thì hiển thị trạng thái rỗng tường minh.
-   * Lý do phải test: FR-002: 0 sản phẩm là câu trả lời hợp lệ và người mua phải được báo, thay vì
-   * nhìn 1 trang trông như bị hỏng.
+   * Lý do: FR-002: 0 sản phẩm là câu trả lời hợp lệ và người mua phải được báo, thay vì nhìn 1
+   * trang trông như bị hỏng.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024/T025, US1 (FR-002).
    */
   it('shows the empty state when the catalog holds nothing', async () => {
@@ -84,15 +88,18 @@ describe('ProductList', () => {
 
     renderWithQueryClient(<ProductList />);
 
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM. Hiện trạng thái rỗng.
     expect(await screen.findByText(/no products available/i)).toBeInTheDocument();
+    // not.toBeInTheDocument(): xanh khi phần tử KHÔNG có trong DOM (queryBy trả null nếu không
+    // thấy). Không hiện danh sách rỗng (queryBy trả null, .not đảo điều kiện).
     expect(screen.queryByRole('list', { name: /products/i })).not.toBeInTheDocument();
   });
 
   /**
    * Kiểm tra: backend lỗi thì hiện thông báo đọc được và trang vẫn dùng được.
-   * Lý do phải test: FR-012/US1 kịch bản 3: không màn hình trắng, không vòng quay vô tận. Test giả
-   * lập lỗi 500; trường hợp 401 (chưa đăng nhập/hết phiên) được xử lý riêng bằng việc đưa về form
-   * đăng nhập — xem tests/auth/signIn.test.tsx.
+   * Lý do: FR-012/US1 kịch bản 3: không màn hình trắng, không vòng quay vô tận. Test giả lập lỗi
+   * 500; trường hợp 401 (chưa đăng nhập/hết phiên) được xử lý riêng bằng việc đưa về form đăng nhập
+   * — xem tests/auth/signIn.test.tsx.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024/T026, US1 (FR-012).
    */
   it('shows a readable error when the backend fails', async () => {
@@ -106,14 +113,16 @@ describe('ProductList', () => {
 
     const alert = await screen.findByRole('alert', {}, { timeout: 5000 });
 
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM. Cảnh báo lỗi (chờ tối đa 5 giây).
     expect(alert).toBeInTheDocument();
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM. Có nút thử lại.
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
 
   /**
    * Kiểm tra: lời gọi lấy catalog đi tới đúng origin gateway đã cấu hình.
-   * Lý do phải test: SC-010: mọi request của storefront đi tới 1 bề mặt backend duy nhất. Kiểm tra
-   * ở mức đơn vị vì URL hard-code trong component nếu không sẽ chỉ bị e2e (T065) bắt.
+   * Lý do: SC-010: mọi request của storefront đi tới 1 bề mặt backend duy nhất. Kiểm tra ở mức đơn
+   * vị vì URL hard-code trong component nếu không sẽ chỉ bị e2e (T065) bắt.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T024, US1 (FR-014, SC-010).
    */
   it('requests the catalog from the configured gateway origin', async () => {
@@ -128,16 +137,19 @@ describe('ProductList', () => {
     renderWithQueryClient(<ProductList />);
     await screen.findByText(/no products available/i);
 
+    // toHaveLength(n): xanh khi mảng/danh sách có đúng n phần tử. Đúng 1 request.
     expect(requested).toHaveLength(1);
+    // toBe(kỳ vọng): so bằng chặt (===), đỏ khi khác. URL phải đúng bằng origin gateway đã cấu hình
+    // cộng đường dẫn; đỏ khi gọi thẳng service khác.
     expect(requested[0]).toBe(`${GATEWAY_ORIGIN}/bff/products`);
   });
 
   /**
-   * Kiểm tra: sản phẩm có thêm 1 trường client chưa biết (vd. `sku`) vẫn hiển thị bình thường.
-   * Lý do phải test: Principle II: "consumer phải chịu được trường lạ". BFF có thể thêm trường và
-   * deploy trước khi client được sinh lại; storefront không được trắng trang vì backend đi trước.
-   * Task nguồn: bổ sung sau spec 004 (tolerant reader — Constitution Principle II); không thuộc
-   * danh sách task T001-T071 của 004.
+   * Kiểm tra: sản phẩm có thêm 1 trường client chưa biết (vd. `sku`) vẫn hiển thị đủ tên và giá.
+   * Lý do: FR-006/US3-KB1/SC-004 của spec 007 (tolerant reader, Constitution Principle II): BFF có
+   * thể thêm trường và deploy trước khi client được sinh lại; storefront không được trắng trang hay
+   * báo lỗi vì backend đi trước.
+   * Task nguồn: spec 007 (hợp đồng OpenAPI cho BFF) — T010, US3 (FR-006, SC-004).
    */
   it('renders products carrying a field the client does not know about', async () => {
     respondWithProducts([
@@ -151,8 +163,11 @@ describe('ProductList', () => {
 
     renderWithQueryClient(<ProductList />);
 
+    // toBeInTheDocument(): xanh khi phần tử có trong DOM.
     expect(await screen.findByText('Enamel Camp Mug')).toBeInTheDocument();
     expect(screen.getByText('$18.00')).toBeInTheDocument();
+    // not.toBeInTheDocument(): xanh khi phần tử KHÔNG có trong DOM (queryBy trả null nếu không
+    // thấy).
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

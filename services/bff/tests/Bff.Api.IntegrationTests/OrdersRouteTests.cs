@@ -14,6 +14,16 @@ namespace Bff.Api.IntegrationTests;
 [Collection(DownstreamServicesCollectionDefinition.Name)]
 public class OrdersRouteTests(DownstreamServicesFixture fixture)
 {
+    /// <summary>
+    /// Kiểm tra: `GET /bff/orders/{id}` đọc 1 đơn từ service Orders thật (SQL Server thật) và trả
+    /// `200` với đúng `id`, thời điểm đặt và tổng tiền.
+    /// Lý do: spec 002 FR-002/US1: SPA đọc đơn qua BFF chứ không gọi thẳng Orders. Sau khi spec 006
+    /// thêm `tenantId` vào response của Orders, chính test này (không đổi) là bằng chứng BFF vẫn
+    /// đọc được response mới và giữ hình dạng client (research.md Decision 4 của 006); lưu ý test
+    /// chỉ deserialize 3 trường, không assert vắng `tenantId`.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — US1; được spec 006 T029 dùng làm bằng chứng
+    /// BFF không cần đổi.
+    /// </summary>
     [Fact]
     public async Task GetOrder_ReturnsShapedOrderFromTheOrdersService()
     {
@@ -30,15 +40,24 @@ public class OrdersRouteTests(DownstreamServicesFixture fixture)
 
         var response = await client.GetAsync($"/bff/orders/{order.Id}");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var actual = await response.Content.ReadFromJsonAsync<OrderResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null.
         Assert.NotNull(actual);
         Assert.Equal(order.Id, actual.Id);
         Assert.Equal(order.PlacedAtUtc, actual.PlacedAtUtc);
         Assert.Equal(order.Total, actual.Total);
     }
 
+    /// <summary>
+    /// Kiểm tra: Orders không có đơn đó thì BFF trả `404`.
+    /// Lý do: lỗi "không tìm thấy" của downstream phải được chuyển thành `404` rõ ràng cho client,
+    /// không biến thành `502` hay `200` rỗng.
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — US1; được spec 006 T029 dùng làm bằng chứng
+    /// BFF không cần đổi.
+    /// </summary>
     [Fact]
     public async Task GetOrder_ReturnsNotFound_WhenTheOrdersServiceHasNoSuchOrder()
     {
@@ -48,6 +67,8 @@ public class OrdersRouteTests(DownstreamServicesFixture fixture)
 
         var response = await client.GetAsync($"/bff/orders/{Guid.NewGuid()}");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Đỏ khi 200 hoặc 500. BFF
+        // phải chuyển 404 của Orders thành 404 cho client.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
