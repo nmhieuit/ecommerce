@@ -12,6 +12,13 @@ namespace Baskets.Api.IntegrationTests;
 /// </summary>
 public class BasketConstraintsTests(SqlServerFixture sqlServer) : IClassFixture<SqlServerFixture>
 {
+    /// <summary>
+    /// Kiểm tra: chèn 2 basket cùng `CustomerRef` thẳng qua `BasketsDbContext` (SQL Server thật qua
+    /// Testcontainers) — dòng thứ 2 phải bị `SaveChangesAsync` từ chối.
+    /// Lý do: chứng minh index unique trên `CustomerRef` là ràng buộc THẬT của SQL Server, không
+    /// phải guard tầng ứng dụng; dùng provider giả (in-memory) sẽ không bắt được lỗi này.
+    /// Task nguồn: spec 010 (hạ tầng kiểm thử container thật) — T006/T007, US1 (FR-001, FR-002).
+    /// </summary>
     [Fact]
     public async Task CustomerRef_Is_UniquePerBasket()
     {
@@ -22,8 +29,9 @@ public class BasketConstraintsTests(SqlServerFixture sqlServer) : IClassFixture<
 
         context.Baskets.Add(Basket.ForCustomer("duplicate-shopper"));
 
-        // A real unique index rejects the second row; an in-memory provider would not (research.md
-        // Decision 4 — Testcontainers.MsSql, not InMemory, is what makes this assertion meaningful).
+        // Assert.ThrowsAsync(loại ngoại lệ, đoạn mã): xanh khi đoạn mã ném đúng loại ngoại lệ, đỏ
+        // khi không ném hoặc ném loại khác. Index unique thật của SQL Server phải chặn dòng thứ 2
+        // nên SaveChangesAsync phải ném DbUpdateException; đỏ nếu ai đó gỡ `.IsUnique()` khỏi index.
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
     }
 

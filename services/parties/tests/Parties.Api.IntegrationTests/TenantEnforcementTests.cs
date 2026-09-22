@@ -25,10 +25,10 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
     /// <summary>
     /// Kiểm tra: lấy `PartiesDbContext` từ DI khi chưa có tenant nào được phân giải thì ném
     /// `MissingTenantContextException`.
-    /// Lý do phải test: cổng tenant nằm ngay tại điểm gọi `AddDbContext` duy nhất (research.md
-    /// Decision 6), nên không thể có khoảng thời gian DbContext đã tồn tại mà chưa bị kiểm tra tenant.
-    /// Chạy với SQL Server thật để chứng minh lỗi đến từ cổng tenant chứ không phải từ việc không kết
-    /// nối được database.
+    /// Lý do: cổng tenant nằm ngay tại điểm gọi `AddDbContext` duy nhất (research.md Decision 6),
+    /// nên không thể có khoảng thời gian DbContext đã tồn tại mà chưa bị kiểm tra tenant. Chạy với
+    /// SQL Server thật để chứng minh lỗi đến từ cổng tenant chứ không phải từ việc không kết nối
+    /// được database.
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T027, US2.
     /// </summary>
     [Fact]
@@ -37,16 +37,19 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
         await using var factory = CreateFactory();
         using var scope = factory.Services.CreateScope();
 
+        // Assert.Throws(loại ngoại lệ, đoạn mã): xanh khi đoạn mã ném đúng loại ngoại lệ, đỏ khi
+        // không ném hoặc ném loại khác.
         Assert.Throws<MissingTenantContextException>(
             () => scope.ServiceProvider.GetRequiredService<PartiesDbContext>());
     }
 
     /// <summary>
-    /// Kiểm tra: gọi thẳng `/parties/{id}` mà không có `X-Tenant-Id` trả về `500 Internal Server Error`.
-    /// Lý do phải test: quickstart.md Scenario 3 — ở Phase 1 chấp nhận mã lỗi nhóm 500; điều cần chứng
-    /// minh là service thất bại to tiếng thay vì trả `200 OK` với dữ liệu của 1 tenant/schema mặc định
-    /// nào đó (FR-004, FR-005, SC-002). Có database thật phía sau nên nếu thiếu cổng tenant thì service
-    /// sẽ trả 200 — vì vậy việc lỗi ở đây là bằng chứng của cổng tenant.
+    /// Kiểm tra: gọi thẳng `/parties/{id}` mà không có `X-Tenant-Id` trả về `500 Internal Server
+    /// Error`.
+    /// Lý do: quickstart.md Scenario 3 — ở Phase 1 chấp nhận mã lỗi nhóm 500; điều cần chứng minh
+    /// là service thất bại to tiếng thay vì trả `200 OK` với dữ liệu của 1 tenant/schema mặc định
+    /// nào đó (FR-004, FR-005, SC-002). Có database thật phía sau nên nếu thiếu cổng tenant thì
+    /// service sẽ trả 200 — vì vậy việc lỗi ở đây là bằng chứng của cổng tenant.
     /// Task nguồn: spec 003 (danh tính giả lập và tenant) — T027, US2.
     /// </summary>
     [Fact]
@@ -57,6 +60,9 @@ public class TenantEnforcementTests(SqlServerFixture sqlServer) : IClassFixture<
 
         var response = await client.GetAsync($"/parties/{AnyPartyId}");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Kỳ vọng 500 (cổng tenant
+        // chặn request không có X-Tenant-Id); thực tế là mã service trả. Đỏ khi service trả 200
+        // (tức phục vụ dữ liệu schema mặc định) hoặc mã khác.
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 

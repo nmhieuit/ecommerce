@@ -30,10 +30,12 @@ public class ConnectionStringIsolationTests
     private static readonly string[] StatelessServices = ["bff", "gateway"];
 
     /// <summary>
-    /// Kiểm tra: quét toàn bộ appsettings*.json dưới services/ — không service nào có connection
-    /// string trỏ vào database của 1 service khác.
-    /// Lý do phải test: đây chính là bài kiểm chứng cho SC-003 ("Zero successful cross-service data
-    /// accesses are possible") — assertion trực tiếp, ngắn gọn nhất cho tiêu chí nghiệm thu này.
+    /// Kiểm tra: quét toàn bộ file `appsettings*.json` dưới `services/` — không service nào có
+    /// chuỗi kết nối trỏ vào database của 1 service khác.
+    /// Lý do: đây chính là bài kiểm chứng cho SC-003 ("không có truy cập dữ liệu chéo service nào
+    /// thành công") — assertion trực tiếp, ngắn gọn nhất cho tiêu chí nghiệm thu này. Nó đọc thứ
+    /// thật sự được commit, không phải thứ 1 service tự tin về mình, nên vẫn đúng khi thêm service
+    /// mới.
     /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T036, US2.
     /// </summary>
     [Fact]
@@ -41,6 +43,10 @@ public class ConnectionStringIsolationTests
     {
         var result = ConnectionStringScanner.Scan(ConnectionStringScanner.LocateServicesDirectory());
 
+        // Assert.Empty(tập hợp): xanh khi không có phần tử nào, đỏ khi có. ĐẠT khi không có vi phạm
+        // nào. ĐỎ khi có: xUnit in từng vi phạm, cho biết service nào ("OwningService") đang trỏ
+        // vào database của service nào ("ForeignService") — 1 đường đọc/ghi chéo dữ liệu bị cấm bởi
+        // Constitution Principle I.
         Assert.Empty(result.Violations);
     }
 
@@ -70,14 +76,13 @@ public class ConnectionStringIsolationTests
     }
 
     /// <summary>
-    /// Kiểm tra: 2 service không sở hữu database (bff, gateway) không được khai bất kỳ connection
-    /// string nào trong file cấu hình của chúng.
-    /// Lý do phải test: đây là nửa còn lại của Constitution Principle I — không chỉ "không được đụng
-    /// database của service khác" mà "service không sở hữu dữ liệu thì không được cấp database nào
-    /// cả". gateway/bff gọi các service nghiệp vụ qua HTTP; nếu một trong hai bị lộ ra 1 connection
-    /// string, đó là 1 kiểu vi phạm ranh giới mà test phía trên (chỉ tìm connection string trỏ SANG
-    /// service khác) không thể phát hiện được — vì service không sở hữu database vốn không có
-    /// database của chính mình để so sánh.
+    /// Kiểm tra: 2 service không sở hữu database (bff, gateway) không khai bất kỳ mục
+    /// `ConnectionStrings` nào trong file `appsettings*.json` của chúng.
+    /// Lý do: nửa còn lại của Constitution Principle I — không chỉ "không đụng database của service
+    /// khác" mà "service không sở hữu dữ liệu thì không được cấp database nào cả". gateway/bff gọi
+    /// service nghiệp vụ qua HTTP; nếu 1 trong hai bị lộ chuỗi kết nối thì test kia (chỉ tìm chuỗi
+    /// trỏ SANG service khác) không phát hiện được, vì chúng vốn không có database của chính mình
+    /// để so.
     /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T036, US2.
     /// </summary>
     [Fact]
@@ -85,6 +90,8 @@ public class ConnectionStringIsolationTests
     {
         var servicesDirectory = ConnectionStringScanner.LocateServicesDirectory();
 
+        // Assert.All(tập hợp, hành động): chạy hành động cho từng phần tử, đỏ nếu bất kỳ phần tử
+        // nào không đạt.
         Assert.All(StatelessServices, service =>
         {
             var configurationFiles = Directory.GetFiles(
@@ -95,11 +102,13 @@ public class ConnectionStringIsolationTests
                             && !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
 
             // Guards against the assertion passing because the files were never found.
+            // Assert.NotEmpty(tập hợp): xanh khi có ít nhất 1 phần tử, đỏ khi rỗng.
             Assert.NotEmpty(configurationFiles);
 
             Assert.All(configurationFiles, file =>
             {
                 using var document = JsonDocument.Parse(File.ReadAllText(file));
+                // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng.
                 Assert.False(
                     document.RootElement.TryGetProperty("ConnectionStrings", out _),
                     $"'{file}' declares a ConnectionStrings section, but {service} owns no database "

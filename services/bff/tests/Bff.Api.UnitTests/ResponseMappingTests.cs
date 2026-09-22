@@ -21,9 +21,9 @@ public class ResponseMappingTests
     /// <summary>
     /// Kiểm tra: hàm `ProductsEndpoints.ToSummary` map đúng cả 3 trường (`Id`/`Name`/`Price`) từ
     /// `ProductResource` (downstream) sang `ProductSummary` (response BFF), không qua HTTP.
-    /// Lý do phải test: shaping là nghiệp vụ DUY NHẤT BFF sở hữu (mọi thứ khác là proxy thuần theo
-    /// FR-005) — test đơn vị trực tiếp trên hàm mapping bắt được lỗi field-by-field (vd. 2 trường
-    /// cùng kiểu bị đảo chỗ) mà 1 test tích hợp so sánh nguyên object có thể bỏ lọt.
+    /// Lý do: shaping là nghiệp vụ DUY NHẤT BFF sở hữu (mọi thứ khác là proxy thuần theo FR-005) —
+    /// test đơn vị trực tiếp trên hàm mapping bắt được lỗi field-by-field (vd. 2 trường cùng kiểu
+    /// bị đảo chỗ) mà 1 test tích hợp so sánh nguyên object có thể bỏ lọt.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
     [Fact]
@@ -33,6 +33,7 @@ public class ResponseMappingTests
 
         var summary = ProductsEndpoints.ToSummary(product);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(product.Id, summary.Id);
         Assert.Equal(product.Name, summary.Name);
         Assert.Equal(product.Price, summary.Price);
@@ -40,9 +41,10 @@ public class ResponseMappingTests
 
     /// <summary>
     /// Kiểm tra: `BasketsEndpoints.ToItem` nối tên sản phẩm (tra từ dictionary catalog) vào dòng
-    /// giỏ hàng, đồng thời giữ nguyên mọi trường khác (`ProductId`/`Quantity`/`UnitPrice`/`LineTotal`).
-    /// Lý do phải test: dòng giỏ hàng người mua thấy = dòng gốc từ baskets service + tên sản phẩm nối
-    /// từ catalog. `LineTotal` đặc biệt phải được TRUYỀN NGUYÊN, không được tính lại ở BFF — vì phép
+    /// giỏ hàng, đồng thời giữ nguyên mọi trường khác
+    /// (`ProductId`/`Quantity`/`UnitPrice`/`LineTotal`).
+    /// Lý do: dòng giỏ hàng người mua thấy = dòng gốc từ baskets service + tên sản phẩm nối từ
+    /// catalog. `LineTotal` đặc biệt phải được TRUYỀN NGUYÊN, không được tính lại ở BFF — vì phép
     /// toán tiền tệ thuộc về baskets service (spec 004 plan.md), BFF chỉ shaping.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
@@ -57,6 +59,7 @@ public class ResponseMappingTests
             [productId] = "Field Notes Notebook",
         });
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(productId, item.ProductId);
         Assert.Equal("Field Notes Notebook", item.Name);
         Assert.Equal(2, item.Quantity);
@@ -66,11 +69,10 @@ public class ResponseMappingTests
 
     /// <summary>
     /// Kiểm tra: khi dictionary catalog không có tên cho sản phẩm của dòng giỏ hàng (sản phẩm đã bị
-    /// xoá khỏi catalog), dòng đó vẫn xuất hiện trong response, `LineTotal` không đổi, và `Name` vẫn
-    /// có giá trị (không rỗng/trắng).
-    /// Lý do phải test: 1 dòng có sản phẩm đã rời khỏi catalog vẫn phải giữ chỗ, không được biến mất
-    /// — người mua đã chọn nó và đang bị tính tiền cho nó, xoá dòng sẽ làm sai lệch tổng tiền họ sắp
-    /// trả.
+    /// xoá khỏi catalog), dòng đó vẫn xuất hiện trong response, `LineTotal` không đổi, và `Name`
+    /// vẫn có giá trị (không rỗng/trắng).
+    /// Lý do: 1 dòng có sản phẩm đã rời khỏi catalog vẫn phải giữ chỗ, không được biến mất — người
+    /// mua đã chọn nó và đang bị tính tiền cho nó, xoá dòng sẽ làm sai lệch tổng tiền họ sắp trả.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
     [Fact]
@@ -80,15 +82,18 @@ public class ResponseMappingTests
 
         var item = BasketsEndpoints.ToItem(line, new Dictionary<Guid, string>());
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Tổng dòng vẫn đúng.
         Assert.Equal(9.99m, item.LineTotal);
+        // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng. Đạt khi có tên thay thế
+        // không rỗng; đỏ khi tên rỗng hoặc ánh xạ ném lỗi trước đó.
         Assert.False(string.IsNullOrWhiteSpace(item.Name));
     }
 
     /// <summary>
     /// Kiểm tra: `OrdersEndpoints.ToResponse` map đúng cả 3 trường (`Id`/`PlacedAtUtc`/`Total`) từ
     /// `OrderResource` (downstream) sang response BFF.
-    /// Lý do phải test: cùng lý do với test mapping sản phẩm — shaping là nghiệp vụ duy nhất BFF sở
-    /// hữu, nên cần khẳng định trực tiếp từng trường, không chỉ qua test tích hợp.
+    /// Lý do: cùng lý do với test mapping sản phẩm — shaping là nghiệp vụ duy nhất BFF sở hữu, nên
+    /// cần khẳng định trực tiếp từng trường, không chỉ qua test tích hợp.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
     [Fact]
@@ -101,6 +106,7 @@ public class ResponseMappingTests
 
         var response = OrdersEndpoints.ToResponse(order);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(order.Id, response.Id);
         Assert.Equal(order.PlacedAtUtc, response.PlacedAtUtc);
         Assert.Equal(order.Total, response.Total);
@@ -109,7 +115,7 @@ public class ResponseMappingTests
     /// <summary>
     /// Kiểm tra: sau khi qua `OrdersEndpoints.ToResponse`, `PlacedAtUtc.Kind` vẫn là
     /// `DateTimeKind.Utc`, không bị mất đi trong lúc shaping.
-    /// Lý do phải test: thời điểm phải sống sót qua bước shaping đúng là 1 UTC instant. Nếu
+    /// Lý do: thời điểm phải sống sót qua bước shaping đúng là 1 UTC instant. Nếu
     /// `DateTimeKind.Utc` bị đánh rơi, SPA sẽ hiển thị giờ đặt hàng sai múi giờ mà không có gì báo
     /// hiệu điều đó đã xảy ra.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
@@ -121,14 +127,16 @@ public class ResponseMappingTests
 
         var response = OrdersEndpoints.ToResponse(new OrderResource(Guid.NewGuid(), placedAtUtc, 1m));
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Kỳ vọng Kind là UTC; đỏ
+        // khi thành Unspecified/Local (client sẽ hiểu sai múi giờ).
         Assert.Equal(DateTimeKind.Utc, response.PlacedAtUtc.Kind);
     }
 
     /// <summary>
     /// Kiểm tra: `PartiesEndpoints.ToResponse` map đúng cả 2 trường (`Id`/`DisplayName`) từ
     /// `PartyResource` (downstream) sang response BFF.
-    /// Lý do phải test: hàm shaping thứ 4 (cuối cùng trong 4 route) cần cùng mức khẳng định trực tiếp
-    /// như 3 hàm shaping còn lại, không bỏ sót route nào.
+    /// Lý do: hàm shaping thứ 4 (cuối cùng trong 4 route) cần cùng mức khẳng định trực tiếp như 3
+    /// hàm shaping còn lại, không bỏ sót route nào.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
     [Fact]
@@ -138,6 +146,7 @@ public class ResponseMappingTests
 
         var response = PartiesEndpoints.ToResponse(party);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(party.Id, response.Id);
         Assert.Equal(party.DisplayName, response.DisplayName);
     }
@@ -146,9 +155,9 @@ public class ResponseMappingTests
     /// Kiểm tra: với 3 giá trị tiền tệ khác nhau (kể cả số có nhiều số 9 và số thập phân nhỏ), giá
     /// sau khi qua `ProductsEndpoints.ToSummary` giữ nguyên CHÍNH XÁC — kể cả số 0 thừa ở cuối, so
     /// khớp bằng chuỗi chứ không chỉ bằng giá trị số.
-    /// Lý do phải test: tiền không được làm tròn khi đi qua shaping. 1 bước shaping vô tình thu hẹp
-    /// `decimal` thành `double` sẽ vẫn pass mọi phép so sánh bằng nhau ở các test phía trên (vì đó là
-    /// số tròn), nhưng âm thầm làm sai lệch giá dạng như test này — dùng số có nhiều chữ số thập phân
+    /// Lý do: tiền không được làm tròn khi đi qua shaping. 1 bước shaping vô tình thu hẹp `decimal`
+    /// thành `double` sẽ vẫn pass mọi phép so sánh bằng nhau ở các test phía trên (vì đó là số
+    /// tròn), nhưng âm thầm làm sai lệch giá dạng như test này — dùng số có nhiều chữ số thập phân
     /// mới bắt được lỗi đó.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T061, US1.
     /// </summary>
@@ -162,9 +171,13 @@ public class ResponseMappingTests
 
         var summary = ProductsEndpoints.ToSummary(new ProductResource(Guid.NewGuid(), "Anything", exact));
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Decimal sau ánh xạ phải
+        // bằng đúng giá gốc; đỏ khi bị làm tròn/đi qua double.
         Assert.Equal(exact, summary.Price);
         // Trailing zeros are part of a decimal's representation; a round trip through double or
         // float would not preserve them.
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Chuỗi biểu diễn phải y
+        // hệt chuỗi đầu vào (kể cả số 0 cuối "12.50"); đỏ khi mất chữ số.
         Assert.Equal(price, summary.Price.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 }

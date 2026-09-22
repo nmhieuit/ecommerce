@@ -29,6 +29,19 @@ public class BasketCheckedOutProviderPactTests(ITestOutputHelper output)
 {
     private static readonly Guid ProductId = new("9f8d6b1e-0001-4000-8000-000000000001");
 
+    /// <summary>
+    /// Kiểm tra: dựng 1 basket thật (`Basket.ForCustomer`/`AddItem`), gọi thẳng
+    /// `BasketCheckedOutMapper.ToEvent` thật (không hand-write payload), rồi cho `PactVerifier` đối
+    /// chiếu kết quả với `pacts/orders-basketcheckedout.json` — payload thật phải khớp kỳ vọng của
+    /// orders.
+    /// Lý do: đây là nửa "bên phát (tương lai) tự kiểm mình" của boundary event — nếu mapper đổi
+    /// hình dạng payload (bớt trường, đổi kiểu), build của baskets phải đỏ trước khi ai publish
+    /// thật.
+    /// Lưu ý: hiện ĐANG ĐỎ trên máy đang rà soát — xung đột cổng Windows/Docker Desktop
+    /// (`HttpListener` không mở được cổng nằm trong dải Hyper-V/WSL2 đã giữ trước), không phải lỗi
+    /// mapper hay lỗi hợp đồng. Xem QA_Debt mục 011.
+    /// Task nguồn: spec 011 (kiểm thử hợp đồng tiêu dùng) — T020/T021, US2 (FR-004, FR-005, FR-006).
+    /// </summary>
     [Fact]
     public void CheckedOutPayload_SatisfiesTheOrdersServicesRecordedExpectations()
     {
@@ -36,6 +49,10 @@ public class BasketCheckedOutProviderPactTests(ITestOutputHelper output)
             "basketcheckedout",
             new PactVerifierConfig { Outputters = [new PactTestOutput(output)] });
 
+        // Kiểm chứng nằm ở .Verify() bên dưới: không có Assert.* nào — PactVerifier tự ném
+        // PactVerificationFailedException nếu payload thật lệch khỏi file pact. Xanh khi khớp, đỏ
+        // (kèm log nêu rõ trường sai, vd. "$.items -> Expected [] to have minimum size of 1") khi
+        // lệch.
         verifier
             // A placeholder, and two things about it are load-bearing. It comes first because
             // PactNet initialises the provider from whichever transport is registered first, and

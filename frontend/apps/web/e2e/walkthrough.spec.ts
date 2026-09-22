@@ -69,8 +69,10 @@ test.describe('shopping walkthrough', () => {
   /**
    * Kiểm tra: lượt đi trọn vẹn duyệt → thêm vào giỏ → tải lại giữa chừng → thanh toán → xác nhận,
    * không lỗi console, mọi request chỉ đi tới gateway.
-   * Lý do phải test: SC-002/005/007/010 không quan sát được trong jsdom: cần trình duyệt thật, cả
-   * stack chạy, và ghi lại mọi lỗi console lẫn mọi đích request cho cả hành trình.
+   * Lý do: SC-002/005/007/010 không quan sát được trong jsdom: cần trình duyệt thật, cả stack chạy,
+   * và ghi lại mọi lỗi console lẫn mọi đích request cho cả hành trình.
+   * Lưu ý: assert `storedKeys` hiện ĐỎ: sau spec 004 phiên đăng nhập được lưu ở `sessionStorage`
+   * với khoá `storefront.session`, nên danh sách khoá không còn rỗng. Xem QA_Debt mục 004.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T065, US1-US3 (SC-002, SC-005, SC-007, SC-010).
    */
   test('browse, add to basket, check out, and see the confirmation', async ({ page }) => {
@@ -79,6 +81,7 @@ test.describe('shopping walkthrough', () => {
     // ---- browse (US1) ----
     await page.goto('/');
 
+    // toBeVisible(): Playwright tự chờ tới khi phần tử hiển thị, hết giờ thì đỏ.
     await expect(page.getByRole('heading', { name: 'Products' })).toBeVisible();
     await expect(page.getByRole('listitem').filter({ hasText: NOTEBOOK })).toBeVisible();
     await expect(page.getByText('$12.50').first()).toBeVisible();
@@ -91,6 +94,7 @@ test.describe('shopping walkthrough', () => {
     await page.getByRole('link', { name: 'Basket' }).click();
 
     await expect(page.getByRole('heading', { name: 'Basket' })).toBeVisible();
+    // toHaveCount(n): xanh khi có đúng n phần tử khớp locator (tự chờ).
     await expect(page.getByRole('list', { name: 'Basket' }).getByRole('listitem')).toHaveCount(2);
 
     // Two notebooks merged onto one line, not two lines (spec FR-005).
@@ -109,6 +113,7 @@ test.describe('shopping walkthrough', () => {
       ...Object.keys(window.localStorage),
       ...Object.keys(window.sessionStorage),
     ]);
+    // toHaveLength(n): xanh khi mảng/danh sách có đúng n phần tử.
     expect(storedKeys).toHaveLength(0);
 
     // ---- check out (US3) ----
@@ -123,6 +128,7 @@ test.describe('shopping walkthrough', () => {
     const order = await page.request.get(`${GATEWAY_ORIGIN}/bff/orders/${reference}`, {
       headers: await authorizationHeader(page),
     });
+    // toBe(kỳ vọng): so bằng chặt (===), đỏ khi khác.
     expect(order.ok()).toBe(true);
     expect((await order.json()).total).toBe(59.25);
 
@@ -131,6 +137,7 @@ test.describe('shopping walkthrough', () => {
     await expect(page.getByText(/your basket is empty/i)).toBeVisible();
 
     // ---- SC-010: only the gateway was ever addressed ----
+    // toEqual(kỳ vọng): so sánh sâu từng trường, đỏ khi khác.
     expect([...requestOrigins]).toEqual([GATEWAY_ORIGIN]);
 
     // ---- SC-002: no console errors anywhere in that journey ----
@@ -139,8 +146,8 @@ test.describe('shopping walkthrough', () => {
 
   /**
    * Kiểm tra: giỏ rỗng thì nút thanh toán bị chặn và không có request nào được gửi.
-   * Lý do phải test: FR-008/SC-004: đếm số request chính là assertion — 1 request bị server từ chối
-   * sẽ là thất bại của test này.
+   * Lý do: FR-008/SC-004: đếm số request chính là assertion — 1 request bị server từ chối sẽ là
+   * thất bại của test này.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T065, US3 (FR-008, SC-004).
    */
   test('checkout is blocked, and unsent, when the basket is empty', async ({ page }) => {
@@ -154,19 +161,22 @@ test.describe('shopping walkthrough', () => {
     await page.goto('/basket');
 
     const checkout = page.getByRole('button', { name: 'Check out' });
+    // toBeDisabled(): xanh khi phần tử bị vô hiệu. Nút bị vô hiệu khi giỏ rỗng.
     await expect(checkout).toBeDisabled();
 
     await checkout.click({ force: true }).catch(() => {
       // A disabled control may refuse the click outright; that is the behaviour under test.
     });
 
+    // toHaveLength(n): xanh khi mảng/danh sách có đúng n phần tử. Không có request checkout nào
+    // được gửi.
     expect(checkoutRequests).toHaveLength(0);
   });
 
   /**
    * Kiểm tra: thanh toán 2 lần liên tiếp nhanh chỉ tạo đúng 1 đơn.
-   * Lý do phải test: FR-016/SC-008: nút bị vô hiệu khi đang xử lý nên cú bấm thứ 2 không thành
-   * request; backend cũng sẽ từ chối vì giỏ đã rỗng.
+   * Lý do: FR-016/SC-008: nút bị vô hiệu khi đang xử lý nên cú bấm thứ 2 không thành request;
+   * backend cũng sẽ từ chối vì giỏ đã rỗng.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T065, US3 (FR-016, SC-008).
    */
   test('checking out twice in rapid succession creates exactly one order', async ({ page }) => {
@@ -182,6 +192,7 @@ test.describe('shopping walkthrough', () => {
     await page.getByRole('link', { name: 'Basket' }).click();
 
     const checkout = page.getByRole('button', { name: 'Check out' });
+    // toBeEnabled(): xanh khi phần tử bấm được. Nút bấm được trước khi thử.
     await expect(checkout).toBeEnabled();
 
     // Two clicks with no wait between them — the race the requirement is about.
@@ -190,24 +201,28 @@ test.describe('shopping walkthrough', () => {
       checkout.click({ force: true }).catch(() => undefined),
     ]);
 
+    // toBeVisible(): Playwright tự chờ tới khi phần tử hiển thị, hết giờ thì đỏ. Đơn được đặt.
     await expect(page.getByRole('heading', { name: /your order is placed/i })).toBeVisible();
 
+    // toHaveLength(n): xanh khi mảng/danh sách có đúng n phần tử. Đúng 1 POST checkout; đỏ khi 2.
     expect(checkoutRequests).toHaveLength(1);
   });
 
   /**
    * Kiểm tra: toàn bộ luồng hoàn thành chỉ bằng Tab/Enter, phần tử đang focus luôn nhìn thấy được.
-   * Lý do phải test: FR-017/SC-009 (WCAG 2.4.7): phải là chỉ dấu focus nhìn thấy được chứ không chỉ
-   * là phần tử đang được focus.
+   * Lý do: FR-017/SC-009 (WCAG 2.4.7): phải là chỉ dấu focus nhìn thấy được chứ không chỉ là phần
+   * tử đang được focus.
    * Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T065, US1-US3 (FR-017, SC-009).
    */
   test('the whole flow can be completed using only the keyboard', async ({ page }) => {
     await page.goto('/');
+    // toBeVisible(): Playwright tự chờ tới khi phần tử hiển thị, hết giờ thì đỏ.
     await expect(page.getByRole('heading', { name: 'Products' })).toBeVisible();
 
     // Tab until the first add-to-basket control has focus, then activate it with the keyboard.
     const addNotebook = page.getByRole('button', { name: `Add ${NOTEBOOK} to basket` });
     await focusByTabbing(page, addNotebook);
+    // toBeFocused(): xanh khi phần tử đang giữ focus (tự chờ).
     await expect(addNotebook).toBeFocused();
     await page.keyboard.press('Enter');
 
@@ -224,6 +239,7 @@ test.describe('shopping walkthrough', () => {
     // is correctly disabled until the basket is known to hold something. Against a local dev server
     // the fetch beat the tabbing; against containers it does not, which is a difference in latency
     // rather than in behaviour.
+    // toBeEnabled(): xanh khi phần tử bấm được.
     await expect(checkout).toBeEnabled();
 
     await focusByTabbing(page, checkout);
@@ -234,6 +250,7 @@ test.describe('shopping walkthrough', () => {
     const outline = await checkout.evaluate((element) =>
       window.getComputedStyle(element).outlineStyle,
     );
+    // not.toBe(giá trị cấm): xanh khi khác giá trị đó.
     expect(outline).not.toBe('none');
 
     await page.keyboard.press('Enter');

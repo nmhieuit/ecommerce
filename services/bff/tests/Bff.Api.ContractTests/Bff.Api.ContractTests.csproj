@@ -26,6 +26,10 @@
        (ProductResource, BasketResource, OrderResource) rather than a copy that can drift. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\Bff.Api\Bff.Api.csproj" />
+    <!-- 015-deny-by-default-authz: every downstream boundary now needs an authenticated,
+         in-scope caller (AuthorizationPolicies.ApiScope). TestJwtBearer.CreateToken mints one
+         without a real identity server (011-consumer-contract-tests QA_Debt entry, resolved). -->
+    <ProjectReference Include="..\..\..\..\shared\IntegrationTestSupport\IntegrationTestSupport.csproj" />
   </ItemGroup>
 
 </Project>

@@ -35,6 +35,13 @@ public class BasketsConsumerPactTests
 
     private static readonly Guid ProductId = new("9f8d6b1e-0001-4000-8000-000000000001");
 
+    /// <summary>
+    /// Kiểm tra: khai báo cả 4 kỳ vọng của BFF ở boundary baskets trong 1 test (đọc giỏ, thêm dòng,
+    /// xoá giỏ có hàng, xoá giỏ đã rỗng) — ghi chung vào `pacts/bff-baskets.json`.
+    /// Lý do: gộp vào 1 builder vì file pact được GHI ĐÈ theo lượt chạy — tách ra nhiều test sẽ để
+    /// lọt 1 interaction cũ không còn tồn tại vẫn sống sót trong file đã commit.
+    /// Task nguồn: spec 011 (kiểm thử hợp đồng tiêu dùng) — T010, US1 (FR-001, FR-002).
+    /// </summary>
     [Fact]
     public async Task BasketInteractions_DependOnIdCustomerRefItemsAndTotal()
     {
@@ -46,6 +53,7 @@ public class BasketsConsumerPactTests
                 .WithRequest(HttpMethod.Get, "/baskets/current")
                 .WithHeader("X-Tenant-Id", BffPact.TenantId)
                 .WithHeader("X-Subject-Id", ShopperWithItems)
+                .WithHeader("Authorization", BffPact.AuthorizationHeader)
             .WillRespond()
                 .WithStatus(HttpStatusCode.OK)
                 .WithHeader("Content-Type", "application/json; charset=utf-8")
@@ -57,6 +65,7 @@ public class BasketsConsumerPactTests
                 .WithRequest(HttpMethod.Post, "/baskets/current/items")
                 .WithHeader("X-Tenant-Id", BffPact.TenantId)
                 .WithHeader("X-Subject-Id", ShopperWithEmptyBasket)
+                .WithHeader("Authorization", BffPact.AuthorizationHeader)
                 .WithJsonBody(new
                 {
                     productId = ProductId,
@@ -74,6 +83,7 @@ public class BasketsConsumerPactTests
                 .WithRequest(HttpMethod.Post, "/baskets/current/clear")
                 .WithHeader("X-Tenant-Id", BffPact.TenantId)
                 .WithHeader("X-Subject-Id", ShopperWithItems)
+                .WithHeader("Authorization", BffPact.AuthorizationHeader)
             .WillRespond()
                 // No body is expected: the BFF reads the status alone, and asking for one here
                 // would pin the producer to something no consumer looks at (FR-007).
@@ -85,6 +95,7 @@ public class BasketsConsumerPactTests
                 .WithRequest(HttpMethod.Post, "/baskets/current/clear")
                 .WithHeader("X-Tenant-Id", BffPact.TenantId)
                 .WithHeader("X-Subject-Id", ShopperWithEmptyBasket)
+                .WithHeader("Authorization", BffPact.AuthorizationHeader)
             .WillRespond()
                 // 409, not a 4xx of any kind: the BFF turns this exact status into "there was
                 // nothing to check out" rather than a failure, so the status itself is the contract.
@@ -108,9 +119,12 @@ public class BasketsConsumerPactTests
                 CancellationToken.None);
             AssertReadable(afterAdd);
 
+            // Assert.True(điều kiện): xanh khi điều kiện đúng, đỏ khi sai. Xoá giỏ đang có hàng
+            // (204) phải trả về true theo cách BasketsApiClient hiểu status đó.
             Assert.True(await readClient.ClearCurrentBasketAsync(CancellationToken.None));
 
-            // False rather than an exception is the whole reason the 409 is in this pact.
+            // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng. Xoá giỏ đã rỗng (409)
+            // phải trả về false, KHÔNG ném ngoại lệ — đây chính là lý do 409 có mặt trong pact này.
             Assert.False(await emptyBasketClient.ClearCurrentBasketAsync(CancellationToken.None));
         });
     }
@@ -142,12 +156,19 @@ public class BasketsConsumerPactTests
         total = Match.Number(25.00m),
     };
 
+    /// <summary>Assert dùng chung cho cả 2 lần đọc giỏ ở trên — cùng kiểm 1 hình dạng.</summary>
     private static void AssertReadable(BasketResource basket)
     {
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau.
         Assert.NotEqual(Guid.Empty, basket.Id);
+        // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng.
         Assert.False(string.IsNullOrWhiteSpace(basket.CustomerRef));
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử, đỏ khi 0 hoặc nhiều hơn.
         var line = Assert.Single(basket.Items);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — cho Quantity, LineTotal
+        // và Total. Ba Assert này chứng minh JSON dựng ở pact thật sự dựng lại được thành
+        // BasketResource, không chỉ đúng cú pháp JSON.
         Assert.Equal(2, line.Quantity);
         Assert.Equal(25.00m, line.LineTotal);
         Assert.Equal(25.00m, basket.Total);

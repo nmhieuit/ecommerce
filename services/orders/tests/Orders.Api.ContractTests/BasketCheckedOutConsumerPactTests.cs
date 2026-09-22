@@ -29,6 +29,14 @@ public class BasketCheckedOutConsumerPactTests
 {
     private static readonly Guid ProductId = new("9f8d6b1e-0001-4000-8000-000000000001");
 
+    /// <summary>
+    /// Kiểm tra: khai báo kỳ vọng của orders (consumer) ở message `BasketCheckedOut` — ghi vào
+    /// `pacts/orders-basketcheckedout.json` (message Pact, không phải HTTP) cho baskets tự verify.
+    /// Lý do: nửa "consumer khai kỳ vọng" của boundary event thí điểm — chưa có broker/MassTransit
+    /// nào kết nối thật (research.md Decision 3), nhưng hình dạng payload vẫn phải được chốt trước
+    /// khi có publisher thật.
+    /// Task nguồn: spec 011 (kiểm thử hợp đồng tiêu dùng) — T018, US2 (FR-004).
+    /// </summary>
     [Fact]
     public async Task BasketCheckedOut_DependsOnTheIdentifiersTenantLinesAndTotal()
     {
@@ -66,15 +74,21 @@ public class BasketCheckedOutConsumerPactTests
             })
             .VerifyAsync<BasketCheckedOutV1>(message =>
             {
-                // Deserialised into the published contract type, which is what proves the shape
-                // recorded above is one this service could actually consume.
+                // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau — cho
+                // EventId và BasketId (không được là Guid rỗng).
                 Assert.NotEqual(Guid.Empty, message.EventId);
                 Assert.NotEqual(Guid.Empty, message.BasketId);
+                // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng — CustomerRef,
+                // TenantId, CorrelationId đều không được rỗng/trắng. Deserialize thành
+                // BasketCheckedOutV1 (kiểu hợp đồng thật) rồi Assert lên đó, không phải lên JSON
+                // thô — đó là bằng chứng hình dạng đã khai dựng lại được thành kiểu dữ liệu thật.
                 Assert.False(string.IsNullOrWhiteSpace(message.CustomerRef));
                 Assert.False(string.IsNullOrWhiteSpace(message.TenantId));
                 Assert.False(string.IsNullOrWhiteSpace(message.CorrelationId));
 
+                // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử, đỏ khi 0 hoặc nhiều hơn.
                 var line = Assert.Single(message.Items);
+                // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
                 Assert.Equal(ProductId, line.ProductId);
                 Assert.Equal(25.00m, line.LineTotal);
                 Assert.Equal(25.00m, message.Total);

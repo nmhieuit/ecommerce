@@ -30,6 +30,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Baskets.Api\Baskets.Api.csproj" />
     <ProjectReference Include="..\..\..\..\shared\EventContracts\EventContracts.csproj" />
+    <!-- 015-deny-by-default-authz: the HTTP provider host now needs to accept an authenticated,
+         in-scope caller (AuthorizationPolicies.ApiScope) without a real identity server
+         (011-consumer-contract-tests QA_Debt entry, resolved) — same helper every
+         *.Api.IntegrationTests project already uses. The event provider test does not need this. -->
+    <ProjectReference Include="..\..\..\..\shared\IntegrationTestSupport\IntegrationTestSupport.csproj" />
   </ItemGroup>
 
 </Project>

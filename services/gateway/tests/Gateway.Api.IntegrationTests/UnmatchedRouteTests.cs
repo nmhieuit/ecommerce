@@ -34,10 +34,11 @@ public class UnmatchedRouteTests
     private static readonly TimeSpan ClearlyNotAHang = TimeSpan.FromSeconds(15);
 
     /// <summary>
-    /// Kiểm tra: với 3 kiểu path không khớp route nào (path lạ hoàn toàn, path con giả của BFF, path
-    /// thật nhưng thừa segment), request qua gateway trả về `404` trong thời gian ngắn, không treo.
-    /// Lý do phải test: đây là assertion trực tiếp cho FR-007 — "path không khớp route nào PHẢI trả
-    /// về not-found rõ ràng, không được treo". Đo cả thời gian phản hồi vì "treo" chính là hành vi bị
+    /// Kiểm tra: với 3 kiểu path không khớp route nào (path lạ hoàn toàn, path con giả của BFF,
+    /// path thật nhưng thừa segment), request qua gateway trả về `404` trong thời gian ngắn, không
+    /// treo.
+    /// Lý do: đây là assertion trực tiếp cho FR-007 — "path không khớp route nào PHẢI trả về
+    /// not-found rõ ràng, không được treo". Đo cả thời gian phản hồi vì "treo" chính là hành vi bị
     /// cấm, không chỉ sai mã trạng thái.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T050, US2.
     /// </summary>
@@ -55,7 +56,11 @@ public class UnmatchedRouteTests
         var response = await client.GetAsync(path);
         stopwatch.Stop();
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Đỏ khi gateway trả 5xx
+        // hoặc 200.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        // Assert.True(điều kiện): xanh khi điều kiện đúng, đỏ khi sai. Đỏ khi gateway treo/chờ quá
+        // lâu.
         Assert.True(
             stopwatch.Elapsed < ClearlyNotAHang,
             $"'{path}' took {stopwatch.Elapsed.TotalSeconds:F1}s; FR-007 requires a clear error, not a hang.");
@@ -64,9 +69,9 @@ public class UnmatchedRouteTests
     /// <summary>
     /// Kiểm tra: body của response `404` không chứa tên cluster (`bff-cluster`), tên route
     /// (`bff-route`), tên service nội bộ (`products-api`) hay số cổng nội bộ (`8080`).
-    /// Lý do phải test: nửa còn lại của FR-007 — "…không được để lộ chi tiết định tuyến nội bộ". Test
-    /// phía trên chỉ xác nhận không treo; test này xác nhận thêm nội dung trả về không tiết lộ
-    /// topology mà gateway lẽ ra sẽ chuyển tiếp tới.
+    /// Lý do: nửa còn lại của FR-007 — "…không được để lộ chi tiết định tuyến nội bộ". Test phía
+    /// trên chỉ xác nhận không treo; test này xác nhận thêm nội dung trả về không tiết lộ topology
+    /// mà gateway lẽ ra sẽ chuyển tiếp tới.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T050, US2.
     /// </summary>
     [Fact]
@@ -79,9 +84,12 @@ public class UnmatchedRouteTests
         var response = await client.GetAsync("/no-such-path");
         var body = await response.Content.ReadAsStringAsync();
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         foreach (var internalDetail in new[] { "bff-cluster", "bff-route", "products-api", "8080" })
         {
+            // Assert.DoesNotContain(phần tử, tập hợp): xanh khi tập hợp không chứa phần tử, đỏ khi
+            // có.
             Assert.DoesNotContain(internalDetail, body, StringComparison.OrdinalIgnoreCase);
         }
     }

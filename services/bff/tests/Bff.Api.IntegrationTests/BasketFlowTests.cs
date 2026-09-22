@@ -27,8 +27,8 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
 
     /// <summary>
     /// Kiểm tra: `GET /bff/basket` của người mua chưa thêm gì trả về giỏ rỗng.
-    /// Lý do phải test: lần đầu vào cửa hàng không phải lỗi; storefront cần 1 giỏ rỗng hợp lệ để
-    /// hiện trạng thái trống (FR-004, FR-020).
+    /// Lý do: lần đầu vào cửa hàng không phải lỗi; storefront cần 1 giỏ rỗng hợp lệ để hiện trạng
+    /// thái trống (FR-004, FR-020).
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-004, FR-020).
     /// </summary>
     [Fact]
@@ -40,20 +40,25 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
 
         var response = await BffTestHost.CreateShopperClient(bff).GetAsync("/bff/basket");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Đỏ khi khác (ví dụ
+        // 401/404/500).
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var basket = await response.Content.ReadFromJsonAsync<BasketResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null. Body đọc được.
         Assert.NotNull(basket);
+        // Assert.Empty(tập hợp): xanh khi không có phần tử nào, đỏ khi có. Không có dòng hàng.
         Assert.Empty(basket.Items);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Tổng bằng 0.
         Assert.Equal(0m, basket.Total);
     }
 
     /// <summary>
     /// Kiểm tra: `POST /bff/basket/items` trả về giỏ có tên sản phẩm và đơn giá do BFF tra từ
     /// catalog.
-    /// Lý do phải test: FR-004: giỏ hiển thị tên chứ không chỉ số lượng và giá. Baskets chỉ lưu mã
-    /// sản phẩm, nên tên chỉ có thể do BFF ghép từ catalog vào — đúng nhiệm vụ tổng hợp của BFF
-    /// (spec 002 FR-003).
+    /// Lý do: FR-004: giỏ hiển thị tên chứ không chỉ số lượng và giá. Baskets chỉ lưu mã sản phẩm,
+    /// nên tên chỉ có thể do BFF ghép từ catalog vào — đúng nhiệm vụ tổng hợp của BFF (spec 002
+    /// FR-003).
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-004, FR-021).
     /// </summary>
     [Fact]
@@ -68,9 +73,12 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
             "/bff/basket/items",
             new { productId = Notebook, quantity = 1 });
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var basket = await response.Content.ReadFromJsonAsync<BasketResponse>();
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn.
         var line = Assert.Single(basket!.Items);
 
         Assert.Equal(Notebook, line.ProductId);
@@ -83,9 +91,8 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
 
     /// <summary>
     /// Kiểm tra: client gửi kèm 1 đơn giá tự khai thì BFF bỏ qua, giá ghi nhận là giá catalog.
-    /// Lý do phải test: đặc tính bảo mật cốt lõi: giá do client khai chính là giảm giá do client tự
-    /// đặt. Thiếu test này thì chính client của storefront có thể tự đặt giá (research.md Decision
-    /// 7).
+    /// Lý do: đặc tính bảo mật cốt lõi: giá do client khai chính là giảm giá do client tự đặt.
+    /// Thiếu test này thì chính client của storefront có thể tự đặt giá (research.md Decision 7).
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (research.md Decision 7).
     /// </summary>
     [Fact]
@@ -100,16 +107,20 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
             "/bff/basket/items",
             new { productId = Notebook, quantity = 1, unitPrice = 0.01m });
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Đỏ khi khác (ví dụ
+        // 401/404/500).
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var basket = await response.Content.ReadFromJsonAsync<BasketResponse>();
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Giá trong giỏ vẫn là giá
+        // catalog 12,50, không phải giá client gửi; đỏ khi tin giá từ client (gian lận giá).
         Assert.Equal(NotebookPrice, Assert.Single(basket!.Items).UnitPrice);
     }
 
     /// <summary>
     /// Kiểm tra: thêm lại cùng 1 sản phẩm qua BFF thì giỏ có 1 dòng với số lượng cộng dồn.
-    /// Lý do phải test: quy tắc gộp dòng (FR-005) phải giữ nguyên qua cả chặng BFF, không chỉ ở
-    /// service Baskets.
+    /// Lý do: quy tắc gộp dòng (FR-005) phải giữ nguyên qua cả chặng BFF, không chỉ ở service
+    /// Baskets.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-005, FR-021).
     /// </summary>
     [Fact]
@@ -125,14 +136,17 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
 
         var basket = await client.GetFromJsonAsync<BasketResponse>("/bff/basket");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Single: 1 dòng; Equal:
+        // số lượng 2.
         Assert.Equal(2, Assert.Single(basket!.Items).Quantity);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. 2 × 12,50.
         Assert.Equal(25.00m, basket.Total);
     }
 
     /// <summary>
     /// Kiểm tra: thêm 1 sản phẩm không có trong catalog trả 404.
-    /// Lý do phải test: sản phẩm không tồn tại thì không có giá để tra nên không có gì để thêm. Trả
-    /// 404 chứ không phải 502: downstream trả lời đúng, chỉ là request sai.
+    /// Lý do: sản phẩm không tồn tại thì không có giá để tra nên không có gì để thêm. Trả 404 chứ
+    /// không phải 502: downstream trả lời đúng, chỉ là request sai.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-021).
     /// </summary>
     [Fact]
@@ -146,13 +160,15 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
             "/bff/basket/items",
             new { productId = Guid.NewGuid(), quantity = 1 });
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Đỏ khi 200 (thêm hàng
+        // ma) hoặc 500.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     /// <summary>
     /// Kiểm tra: thêm với số lượng nhỏ hơn 1 (0, -2) bị từ chối.
-    /// Lý do phải test: validate hình dạng request ngay ở BFF (FR-005 của spec 002 cho phép); tránh
-    /// gọi downstream với dữ liệu chắc chắn sai.
+    /// Lý do: validate hình dạng request ngay ở BFF (FR-005 của spec 002 cho phép); tránh gọi
+    /// downstream với dữ liệu chắc chắn sai.
     /// Task nguồn: spec 004 (SPA mua sắm tối thiểu) — T035, US2 (FR-021).
     /// </summary>
     [Theory]
@@ -168,6 +184,8 @@ public class BasketFlowTests(DownstreamServicesFixture fixture)
             "/bff/basket/items",
             new { productId = Notebook, quantity });
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Kỳ vọng 400 (yêu cầu sai
+        // bị từ chối); đỏ khi service chấp nhận (200/201) hoặc trả mã khác.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 

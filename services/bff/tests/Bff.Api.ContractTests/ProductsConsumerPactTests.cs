@@ -19,6 +19,13 @@ public class ProductsConsumerPactTests
 {
     private const string Provider = "products";
 
+    /// <summary>
+    /// Kiểm tra: khai báo kỳ vọng của BFF ở `GET /products` (qua `ProductsApiClient` thật) — ghi
+    /// thành file `pacts/bff-products.json` cho service products tự verify trong build của nó.
+    /// Lý do: đây là "hợp đồng" mà spec 011 dựa vào — nếu khai sai thứ BFF thật sự cần, cả bộ máy
+    /// consumer-driven contract sẽ kiểm chứng nhầm thứ.
+    /// Task nguồn: spec 011 (kiểm thử hợp đồng tiêu dùng) — T009, US1 (FR-001, FR-002).
+    /// </summary>
     [Fact]
     public async Task GetProducts_DependsOnIdNameAndPrice()
     {
@@ -31,6 +38,7 @@ public class ProductsConsumerPactTests
                 .WithQuery("page", "1")
                 .WithQuery("pageSize", "20")
                 .WithHeader("X-Tenant-Id", BffPact.TenantId)
+                .WithHeader("Authorization", BffPact.AuthorizationHeader)
             .WillRespond()
                 .WithStatus(HttpStatusCode.OK)
                 .WithHeader("Content-Type", "application/json; charset=utf-8")
@@ -62,9 +70,16 @@ public class ProductsConsumerPactTests
 
             // Asserting on the deserialised resource, not on raw JSON: it is what proves the shape
             // recorded above is one ProductResource can actually be built from.
+            // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+            // nhiều hơn.
             var product = Assert.Single(page.Items);
+            // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau.
             Assert.NotEqual(Guid.Empty, product.Id);
+            // Assert.False(điều kiện): xanh khi điều kiện sai, đỏ khi đúng. Tên sản phẩm không rỗng.
             Assert.False(string.IsNullOrWhiteSpace(product.Name));
+            // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Cả 4 Assert cùng
+            // chứng minh 1 điều: JSON khai ở pact thật sự dựng lại được thành ProductResource mà
+            // ProductsApiClient đọc — không chỉ "đúng cú pháp JSON".
             Assert.Equal(12.50m, product.Price);
         });
     }

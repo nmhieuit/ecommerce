@@ -32,15 +32,34 @@ public sealed class SchemaImmutabilityTests
     private const string BasketCheckedOutV1Sha256 =
         "4BCE5A5DF0A3B296F94AEAC6A08CAB711C593B377342BBF36AE910ECF0172DCF";
 
+    /// <summary>
+    /// Kiểm tra: SHA-256 của `OrderPlaced.v1.schema.json` (chuẩn hoá xuống dòng) bằng đúng hằng số
+    /// đã đóng băng lúc công bố.
+    /// Lý do: FR-003/FR-006/SC-002: 1 phiên bản đã công bố là bất biến — mọi chỉnh sửa (kể cả thêm
+    /// trường bắt buộc mà không tạo phiên bản mới) làm test đỏ và chặn merge ở tầng unit của CI.
+    /// Nếu test này đỏ thì KHÔNG sửa hằng số; phải thêm `OrderPlaced.v{N+1}.schema.json` và record
+    /// mới. Cố ý thô (hash cả tài liệu) thay vì phân loại thay đổi phá vỡ/không phá vỡ (research.md
+    /// Decision 3).
+    /// Task nguồn: spec 008 (event schema có version) — T012, US2 (FR-003, FR-006, SC-002).
+    /// </summary>
     [Fact]
     public void OrderPlaced_V1_Schema_Content_Is_Frozen()
     {
+        // Phần kiểm chứng (Assert.True) nằm trong hàm phụ AssertSchemaUnchanged bên dưới.
         AssertSchemaUnchanged(EmbeddedSchema.OrderPlacedV1ResourceName, OrderPlacedV1Sha256);
     }
 
+    /// <summary>
+    /// Kiểm tra: SHA-256 của `BasketCheckedOut.v1.schema.json` bằng đúng hằng số đã đóng băng lúc
+    /// công bố.
+    /// Lý do: như test `OrderPlaced` bên trên, áp dụng cho event thứ hai — mỗi event có hằng số
+    /// hash riêng để thay đổi 1 event không lọt qua khi chỉ cập nhật event kia.
+    /// Task nguồn: spec 008 (event schema có version) — T012, US2 (FR-003, FR-006, SC-002).
+    /// </summary>
     [Fact]
     public void BasketCheckedOut_V1_Schema_Content_Is_Frozen()
     {
+        // Phần kiểm chứng (Assert.True) nằm trong hàm phụ AssertSchemaUnchanged bên dưới.
         AssertSchemaUnchanged(EmbeddedSchema.BasketCheckedOutV1ResourceName, BasketCheckedOutV1Sha256);
     }
 
@@ -49,6 +68,9 @@ public sealed class SchemaImmutabilityTests
         var actual = Convert.ToHexString(
             SHA256.HashData(EmbeddedSchema.ReadNormalisedBytes(resourceName)));
 
+        // Assert.True(điều kiện, thông báo): xanh khi điều kiện đúng, thông báo hiện khi đỏ. Điều kiện:
+        // SHA-256 hiện tại của file schema bằng hằng số đã chốt lúc công bố (so chuỗi phân biệt
+        // hoa/thường). Đỏ khi ai đó sửa schema đã công bố; thông báo nêu cả mã kỳ vọng lẫn thực tế.
         Assert.True(
             string.Equals(expectedSha256, actual, StringComparison.Ordinal),
             $"'{resourceName}' has changed since it was published (expected SHA-256 " +

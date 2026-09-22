@@ -17,11 +17,11 @@ public class VerticalSliceStructureTests
         ["baskets", "bff", "gateway", "identity", "orders", "parties", "products"];
 
     /// <summary>
-    /// Kiểm tra: không service nào có thư mục lớp kỹ thuật (Controllers/, Services/, Repositories/...)
-    /// ở cấp cao nhất của project API.
-    /// Lý do phải test: đây chính là bài kiểm chứng cho SC-004 — assertion trực tiếp cho tiêu chí
-    /// "tìm toàn bộ code của 1 capability ở đúng 1 chỗ, không phải lục qua nhiều thư mục theo lớp
-    /// kỹ thuật".
+    /// Kiểm tra: không project API của service nào có thư mục "lớp kỹ thuật" (`Controllers/`,
+    /// `Services/`, `Repositories/`...) ở cấp cao nhất.
+    /// Lý do: đây chính là bài kiểm chứng cho SC-004 — tìm toàn bộ code của 1 capability ở đúng 1
+    /// chỗ (vertical slice, mặc định của Constitution Principle I), không phải lục qua nhiều thư
+    /// mục theo lớp kỹ thuật; nó chặn việc cấu trúc này bị bào mòn dần từng thư mục `Services/`.
     /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T043, US3.
     /// </summary>
     [Fact]
@@ -30,6 +30,9 @@ public class VerticalSliceStructureTests
         var result = VerticalSliceStructureScanner.Scan(
             VerticalSliceStructureScanner.LocateServicesDirectory());
 
+        // Assert.Empty(tập hợp): xanh khi không có phần tử nào, đỏ khi có. Danh sách vi phạm phải
+        // có 0 phần tử. ĐẠT khi không service nào có thư mục lớp kỹ thuật ở cấp cao nhất. ĐỎ khi
+        // có: thông báo nêu service và thư mục vi phạm, vd. "parties / Services".
         Assert.Empty(result.Violations);
     }
 
@@ -52,11 +55,11 @@ public class VerticalSliceStructureTests
     }
 
     /// <summary>
-    /// Kiểm tra: mỗi service phải có ít nhất 1 thư mục con dưới Features/ (tức có tổ chức ít nhất 1
-    /// capability theo tính năng).
-    /// Lý do phải test: "không có thư mục lớp kỹ thuật" mới là một nửa của SC-004 — 1 service không
-    /// có Features/ nào cả cũng không hề tổ chức theo capability, nhưng vẫn "vượt qua" nếu chỉ kiểm
-    /// tra những gì KHÔNG được tồn tại.
+    /// Kiểm tra: mỗi service trong 7 service kỳ vọng có ÍT NHẤT 1 thư mục capability dưới
+    /// `Features/`.
+    /// Lý do: "không có thư mục lớp kỹ thuật" mới chỉ là nửa SC-004 — 1 service không có
+    /// `Features/` nào cũng không hề tổ chức theo capability nhưng vẫn "vượt qua" nếu chỉ kiểm tra
+    /// những gì KHÔNG được tồn tại.
     /// Task nguồn: spec 001 (dựng khung 4 dịch vụ) — T043, US3.
     /// </summary>
     [Fact]
@@ -65,6 +68,8 @@ public class VerticalSliceStructureTests
         var result = VerticalSliceStructureScanner.Scan(
             VerticalSliceStructureScanner.LocateServicesDirectory());
 
+        // Assert.All(tập hợp, hành động): chạy hành động cho từng phần tử, đỏ nếu bất kỳ phần tử
+        // nào không đạt.
         Assert.All(
             ExpectedServices,
             service => Assert.Contains(

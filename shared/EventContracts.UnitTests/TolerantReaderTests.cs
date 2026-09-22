@@ -27,6 +27,16 @@ public sealed class TolerantReaderTests
 {
     private static readonly JsonSerializerOptions ConsumerOptions = new(JsonSerializerDefaults.General);
 
+    /// <summary>
+    /// Kiểm tra: payload `OrderPlaced` hợp lệ cộng thêm trường lạ (cấp trên cùng và lồng nhau) vẫn
+    /// deserialize thành công vào `OrderPlacedV1` và các trường đã biết còn nguyên.
+    /// Lý do: FR-007/SC-003/US3-KB1 (tolerant reader): schema cấm trường lạ với bên PHÁT
+    /// (`additionalProperties: false`) nhưng bên TIÊU THỤ không được vỡ — nhờ vậy 1 phiên bản mới
+    /// chỉ thêm trường triển khai được mà không cần redeploy mọi consumer. `System.Text.Json` mặc
+    /// định bỏ qua trường lạ; test biến điều đó thành cam kết (chống đổi option như
+    /// `UnmappedMemberHandling.Disallow`).
+    /// Task nguồn: spec 008 (event schema có version) — T018, US3 (FR-007, SC-003).
+    /// </summary>
     [Fact]
     public void OrderPlacedV1_Deserializes_Payload_Carrying_Unknown_Fields()
     {
@@ -53,7 +63,9 @@ public sealed class TolerantReaderTests
 
         var @event = JsonSerializer.Deserialize<OrderPlacedV1>(futureVersionPayload, ConsumerOptions);
 
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null.
         Assert.NotNull(@event);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(Guid.Parse("6f9619ff-8b86-d011-b42d-00cf4fc964ff"), @event.EventId);
         Assert.Equal(
             new DateTime(2026, 8, 22, 10, 15, 30, DateTimeKind.Utc),
@@ -63,12 +75,20 @@ public sealed class TolerantReaderTests
         Assert.Equal("0HN7A2C3D4E5F-00000001", @event.CorrelationId);
         Assert.Equal(59.97m, @event.Total);
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn.
         var line = Assert.Single(@event.Lines);
         Assert.Equal(Guid.Parse("9a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9"), line.ProductId);
         Assert.Equal(2, line.Quantity);
         Assert.Equal(19.99m, line.UnitPrice);
     }
 
+    /// <summary>
+    /// Kiểm tra: payload `BasketCheckedOut` có trường lạ vẫn deserialize thành công, giữ nguyên các
+    /// trường đã biết.
+    /// Lý do: cùng lý do (FR-007/SC-003) cho event thứ hai.
+    /// Task nguồn: spec 008 (event schema có version) — T019, US3 (FR-007, SC-003).
+    /// </summary>
     [Fact]
     public void BasketCheckedOutV1_Deserializes_Payload_Carrying_Unknown_Fields()
     {
@@ -97,7 +117,9 @@ public sealed class TolerantReaderTests
 
         var @event = JsonSerializer.Deserialize<BasketCheckedOutV1>(futureVersionPayload, ConsumerOptions);
 
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null.
         Assert.NotNull(@event);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(Guid.Parse("c56a4180-65aa-42ec-a945-5fd21dec0538"), @event.EventId);
         Assert.Equal(
             new DateTime(2026, 8, 22, 10, 15, 29, DateTimeKind.Utc),
@@ -108,6 +130,8 @@ public sealed class TolerantReaderTests
         Assert.Equal("0HN7A2C3D4E5F-00000001", @event.CorrelationId);
         Assert.Equal(39.98m, @event.Total);
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn.
         var item = Assert.Single(@event.Items);
         Assert.Equal(Guid.Parse("9a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9"), item.ProductId);
         Assert.Equal(2, item.Quantity);

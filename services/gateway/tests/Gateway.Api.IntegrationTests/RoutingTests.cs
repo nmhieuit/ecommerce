@@ -16,11 +16,11 @@ namespace Gateway.Api.IntegrationTests;
 public class RoutingTests
 {
     /// <summary>
-    /// Kiểm tra: gọi `/openapi/v1.json` qua gateway trả về `200` và đúng là tài liệu OpenAPI của BFF
-    /// (có path `/bff/products`).
-    /// Lý do phải test: đây là bằng chứng mạnh nhất cho việc request thật sự "tới nơi" — tài liệu này
-    /// chỉ BFF sinh ra được, gateway không tự tạo ra nó, và test không cần bật service nghiệp vụ nào
-    /// cả để chạy.
+    /// Kiểm tra: gọi `/openapi/v1.json` qua gateway trả về `200` và đúng là tài liệu OpenAPI của
+    /// BFF (có path `/bff/products`).
+    /// Lý do: đây là bằng chứng mạnh nhất cho việc request thật sự "tới nơi" — tài liệu này chỉ BFF
+    /// sinh ra được, gateway không tự tạo ra nó, và test không cần bật service nghiệp vụ nào cả để
+    /// chạy.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T049, US2.
     /// </summary>
     [Fact]
@@ -32,20 +32,30 @@ public class RoutingTests
 
         var response = await client.GetAsync("/openapi/v1.json");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Thực tế: mã gateway trả.
+        // Đỏ khi 401/404/502...
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var document = await response.Content.ReadFromJsonAsync<OpenApiDocument>();
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi null. Tài liệu đọc từ body phải khác
+        // null; đỏ khi body không phải OpenAPI hợp lệ.
         Assert.NotNull(document);
+        // Assert.Contains(phần tử, tập hợp): xanh khi tập hợp có chứa phần tử, đỏ khi không. Tập
+        // đường dẫn của tài liệu phải chứa /bff/products; đạt chứng tỏ tài liệu do BFF sinh ra
+        // (gateway không có route này). Đỏ nếu tài liệu là của thứ khác.
         Assert.Contains("/bff/products", document.Paths.Keys);
     }
 
     /// <summary>
     /// Kiểm tra: gọi `/bff/products` (route thật, không phải tài liệu) qua gateway KHÔNG trả về
     /// `404`.
-    /// Lý do phải test: route hướng người dùng cũng phải được chuyển tiếp, không chỉ tài liệu OpenAPI
-    /// ở test trên. Products service không chạy trong test này nên downstream call của BFF sẽ lỗi —
-    /// nhưng việc chạm được tới handler của BFF (dù nó lỗi) mới là điều US2 khẳng định; nếu gateway
-    /// chưa từng chuyển tiếp, kết quả sẽ là `404`.
+    /// Lý do: route hướng người dùng cũng phải được chuyển tiếp, không chỉ tài liệu OpenAPI ở test
+    /// trên. Products service không chạy trong test này nên downstream call của BFF sẽ lỗi — nhưng
+    /// việc chạm được tới handler của BFF (dù nó lỗi) mới là điều US2 khẳng định; nếu gateway chưa
+    /// từng chuyển tiếp, kết quả sẽ là `404`.
+    /// Lưu ý: test không gắn token nên (từ spec 014, deny-by-default) gateway trả `401` trước khi
+    /// chuyển tiếp; 401 khác 404 nên test vẫn xanh dù chưa chứng minh được việc chuyển tiếp tới
+    /// BFF. Xem QA_Debt mục 002.
     /// Task nguồn: spec 002 (định tuyến gateway-BFF) — T049, US2.
     /// </summary>
     [Fact]
@@ -57,19 +67,22 @@ public class RoutingTests
 
         var response = await client.GetAsync("/bff/products");
 
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau. Đỏ khi mã là
+        // 404.
         Assert.NotEqual(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     /// <summary>
-    /// Kiểm tra: `/health/live` và `/health/ready` gọi qua gateway trả về `200` — tức route catch-all
-    /// không "nuốt" mất 2 health probe của chính gateway.
-    /// Lý do phải test: Kubernetes gọi thẳng 2 probe này vào chính gateway. Nếu chúng bị route
-    /// catch-all chuyển tiếp xuống BFF, gateway sẽ báo cáo sức khoẻ của BFF như thể là sức khoẻ của
-    /// chính nó — 1 lần BFF gặp sự cố sẽ khiến Kubernetes restart toàn bộ pod gateway. ASP.NET Core
-    /// vốn ưu tiên route cụ thể hơn catch-all nên hiện tại việc này tự đúng, nhưng không có test này
-    /// thì 1 thay đổi route-table sau này có thể âm thầm phá vỡ nó (ghi trong "Phase 5 implementation
+    /// Kiểm tra: `/health/live` và `/health/ready` gọi qua gateway trả về `200` — tức route
+    /// catch-all không "nuốt" mất 2 health probe của chính gateway.
+    /// Lý do: Kubernetes gọi thẳng 2 probe này vào chính gateway. Nếu chúng bị route catch-all
+    /// chuyển tiếp xuống BFF, gateway sẽ báo cáo sức khoẻ của BFF như thể là sức khoẻ của chính nó
+    /// — 1 lần BFF gặp sự cố sẽ khiến Kubernetes restart toàn bộ pod gateway. ASP.NET Core vốn ưu
+    /// tiên route cụ thể hơn catch-all nên hiện tại việc này tự đúng, nhưng không có test này thì 1
+    /// thay đổi route-table sau này có thể âm thầm phá vỡ nó (ghi trong "Phase 5 implementation
     /// notes" của tasks.md, không có mã task T riêng).
-    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — US2 (không có mã T riêng, xem Phase 5 notes).
+    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — US2 (không có mã T riêng, xem Phase 5
+    /// notes).
     /// </summary>
     [Theory]
     [InlineData("/health/live")]
@@ -82,6 +95,8 @@ public class RoutingTests
 
         var response = await client.GetAsync(probe);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác. Đỏ khi catch-all nuốt
+        // probe và chuyển xuống BFF (404/401/5xx).
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
