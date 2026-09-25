@@ -280,3 +280,448 @@ nào bị bỏ — chỉ gom lại 1 chỗ.*
   `tasks.md` T020 xác nhận test từng PASS lúc viết feature; đây là vấn đề môi trường máy, không cần
   sửa mã. Không loại trừ khả năng ảnh hưởng các máy Windows + Docker Desktop khác — QA nên biết để
   không nhầm là lỗi hợp đồng thật khi gặp lại.
+  **Cập nhật 2026-09-23**: chạy lại cùng test, cùng máy, không đổi gì — PASS. Cổng OS cấp cho
+  `HttpListener` là ngẫu nhiên mỗi lần chạy nên đây là rủi ro chập chờn thật, không phải đã hết vấn
+  đề; không có thay đổi mã nào liên quan (chỉ mục 401 phía trên được vá).
+
+## 013 — Cổng chất lượng CI
+
+- **[NGHIÊM TRỌNG] Cơ chế chặn merge — giá trị cốt lõi duy nhất của spec 013 — hiện không còn hoạt
+  động, từ khoảng 3 tuần nay, chưa ai phát hiện (đã tự kiểm tra bằng API công khai của GitHub, không
+  suy diễn)**: `curl https://api.github.com/repos/nmhieuit/ecommerce/commits/master/status` trả về
+  `total_count: 0` cho HEAD của `master` và cho ít nhất 13 commit merge gần nhất khác (PR #32 → #45,
+  2026-09-05 → 09-22). Dò ngược tìm mốc chuyển tiếp: PR #17 (`bb61212`, 2026-09-02) vẫn có 3 check
+  `success` (`ci/build`, `ci/unit-tests`, `continuous-integration/jenkins/branch`); PR #18 (`d309283`,
+  ngay sau đó, cùng đợt spec 015 deny-by-default-authz) đã là `total_count: 0` — và không PR nào từ đó
+  (ít nhất 27 PR, #18 → #45) từng có lại CI check nào. Xác nhận độc lập bằng
+  `curl https://api.github.com/repos/nmhieuit/ecommerce/rules/branches/master` → trả về `[]` (không
+  rule nào đang thật sự áp dụng cho `master`) — khớp đúng với việc 27+ PR đó vẫn merge bình thường dù
+  0 check từng chạy. Phủ định trực tiếp FR-003 ("chặn merge khi cổng chất lượng thất bại, không đường
+  vòng cho bất kỳ vai trò nào") vì hiện tại không có gì để thất bại và không có gì chặn.
+  Trang `github.com/nmhieuit/ecommerce/branches` (xem qua trình duyệt, không đăng nhập) vẫn hiển thị
+  tooltip "This branch is protected by branch protections" — gây hiểu nhầm là còn hoạt động; hợp lý
+  nhất là rule protection vẫn TỒN TẠI nhưng danh sách "required status checks" bên trong đã rỗng hoặc
+  tuỳ chọn liên quan đã tắt — đúng loại lỗi `tasks.md` T009 từng ghi nhận xảy ra 1 lần lúc setup ban
+  đầu ("lần lưu đầu chỉ lưu đúng option boolean, danh sách 5 required check bị lưu rỗng"). Không xác
+  nhận được nguyên nhân chính xác trong phiên này — không có token GitHub hợp lệ để đọc trực tiếp cấu
+  hình protection (xem phát hiện tiếp theo). Cần chủ sở hữu: (1) xác nhận lại danh sách required
+  status checks trên `Settings → Branches` của `master`, (2) quyết định có dựng lại Jenkins/SonarQube
+  cục bộ để CI chạy thật trở lại hay không.
+- **Jenkins/SonarQube cục bộ hiện không chạy (nhất quán với phát hiện đầu, không phải phát hiện độc lập)**:
+  `docker ps -a` rỗng — không container `jenkins`/`sonarqube` nào tồn tại, kể cả đã dừng; volume dữ liệu
+  (`ecomerce-ci_jenkins-data`, `ecomerce-ci_sonarqube-data`, `-extensions`, `-logs`) vẫn còn, tức
+  `docker compose -f docker-compose.ci.yml down` (không kèm `-v`) đã được chạy ở 1 thời điểm nào đó. Tự nó không
+  phải lỗi (instance dev cục bộ, `technical-debt.md` mục 013 ghi "chưa cần chạy thường trực") nhưng giải thích
+  trực tiếp vì sao không còn check nào báo về GitHub. Quickstart Kịch bản 1–5 (5 stage đúng thứ tự) không chạy
+  lại được trong phiên QA vì cần setup tương tác (Jenkins wizard, đăng nhập SonarQube, PAT mới).
+- **Token CI cục bộ (`.ci-secrets/github-pat`) đã hết hạn**: `curl -H "Authorization: Bearer ..."
+  https://api.github.com/repos/nmhieuit/ecommerce` → `401 Bad credentials`. Token tạo 2026-08-23,
+  nhiều khả năng đã hết hạn dùng (~30 ngày). Ai dựng lại Jenkins từ `docker-compose.ci.yml` sẽ cần
+  sinh PAT mới trước khi `githubNotify`/`scripts/ci/setup-branch-protection.sh` hoạt động lại được —
+  bước này không nằm trong "Điều kiện tiên quyết" của `quickstart.md` vì lúc viết token còn hạn.
+- **`docs/github-jenkins-sonarqube-setup.md` (thành quả T016, runbook dựng lại CI từ đầu) đã bị xoá
+  khỏi repo, nhiều khả năng do nhầm lẫn**: bị xoá nguyên vẹn (286 dòng) trong commit `8fcbbdf` ("Add
+  specifications for cluster secret store and liveness/readiness probes", 2026-09-07) — nội dung
+  commit đó hoàn toàn về spec 018/019, không nhắc gì tới việc xoá tài liệu CI, nên nhiều khả năng là
+  side effect của một thao tác khác (merge/rebase), không phải quyết định có chủ đích. `quickstart.md`
+  mục "Còn thiếu" vẫn trỏ tới file này — hiện là link chết. Mã cấu hình mà file đó mô tả cách dựng
+  (`docker/ci/jenkins.Dockerfile`, `docker-compose.ci.yml`) vẫn còn nguyên trên `master`, chỉ tài liệu
+  runbook bị mất — cần viết lại hoặc khôi phục từ lịch sử Git (`git show f6128cc:docs/github-jenkins-sonarqube-setup.md`)
+  nếu muốn dựng lại instance CI từ đầu trong tương lai.
+
+## 014 — Máy chủ định danh thật
+
+- **`JwtBearerAuthenticationTests.ARequestWithNoToken_StillReachesTheBff_WhenToggleIsOff` đang ĐỎ —
+  tương tác thật giữa 014 và 015 (đã chạy thật, xác nhận nguyên nhân bằng probe tạm rồi hoàn tác)**:
+  `StubIdentityAuthenticationHandler.cs` (viết cho 014, chưa từng sửa) chỉ phát hành claim `tenant_id`
+  và `NameIdentifier`, không có `scope`. `shared/Identity/AuthenticationFallbackPolicy.cs` (sửa bởi
+  015) giờ đòi cả `RequireApiScopeRequirement()` trong `FallbackPolicy` dùng chung — enforce thật khi
+  `AuthorizationRequireApiScope=true`, giá trị mặc định của
+  `services/gateway/src/Gateway.Api/appsettings.Development.json` (Production giữ `false`, không ảnh
+  hưởng). Response thật đo được: `403 {"error":"forbidden_scope","message":"Authentication succeeded,
+  but the token does not carry the required scope."}` thay vì request được chuyển tiếp tới BFF.
+  **Hệ quả thật, không chỉ lý thuyết**: `docker-compose.local.yml` (stack QA thủ công dùng xuyên suốt
+  bộ tài liệu này) đặt `ASPNETCORE_ENVIRONMENT: Development` cho cả 6 service — tức đúng cấu hình bị
+  ảnh hưởng. Kịch bản rollback khẩn cấp mà `specs/014-identity-server-auth/quickstart.md` Scenario 7
+  mô tả (gạt `IdentityServerAuthCutover` về `false` ngay trên container đang chạy, không redeploy) —
+  trên chính stack này — sẽ không còn phục hồi hành vi "gateway chuyển tiếp request không token" như
+  tài liệu hứa; gateway tự chặn bằng `403 forbidden_scope`, sớm hơn cả điểm BFF được ghi là sẽ chặn.
+  Bằng chứng T047 (`502` khi tắt `bff-api`, dùng làm bằng chứng rollback trong `technical-debt.md` mục
+  014) được đo TRƯỚC KHI `AuthorizationRequireApiScope` tồn tại nên không sai tại thời điểm đó, chỉ là
+  chưa được đo lại sau khi 015 chồng lên. Cần chủ sở hữu quyết định hướng vá: thêm claim `scope` vào
+  `StubIdentityAuthenticationHandler`, hoặc đặt `AuthorizationRequireApiScope=false` mặc định trong
+  `appsettings.Development.json` (đánh đổi: mất khả năng tự phục vụ quickstart của 015 mà không cấu
+  hình thêm).
+
+## 015 — Phân quyền từ chối theo mặc định
+
+- **2/4 `AuthorizationPolicyDeclaredScannerTests` đang ĐỎ — đúng kịch bản "Failure Modes" mà chính
+  hợp đồng của 015 tự dự đoán, lần đầu xảy ra thật (đã chạy thật, không suy diễn)**:
+  `dotnet test tests/CrossServiceIsolation.Tests --filter FullyQualifiedName~AuthorizationPolicyDeclaredScanner`
+  → `EveryMessageConsumer_DeclaresATrustedSource` và `ScanConsumers_ActuallyExaminesEveryService` đỏ.
+  Nguyên nhân: `specs/024-verify-transactional-outbox/` (sau 015) thêm `IConsumer<T>` **đầu tiên** trong
+  toàn repo —
+  [`services/orders/tests/Orders.Api.IntegrationTests/Support/OrderPlacedVerificationConsumer.cs`](../../services/orders/tests/Orders.Api.IntegrationTests/Support/OrderPlacedVerificationConsumer.cs) —
+  có doc-comment giải thích mục đích nhưng không chứa đúng cụm chữ literal `/// Trusted source: ...` mà
+  `AuthorizationPolicyDeclaredScanner.cs` (hằng số `TrustedSourceMarker`, dòng 66) đòi hỏi.
+  `specs/015-deny-by-default-authz/contracts/message-handler-authorization-contract.md` (mục "Failure
+  Modes") tự viết trước đúng kịch bản này: "Handler mới không có khai báo nguồn tin cậy → Scanner thất
+  bại, chặn merge (FR-004)" — và `technical-debt.md` mục 015 cũng tự ghi trước rằng `ScanConsumers()`
+  "chưa được chứng minh bắt được vi phạm thật" vì lúc viết chưa có `IConsumer<T>` nào trong repo để thử.
+  Cả 2 điều đó nay đã đúng: cơ chế hoạt động y như thiết kế, chỉ là hoạt động theo hướng "chặn", và
+  chưa ai gắn nhãn.
+  **Điểm mơ hồ phạm vi cần chủ sở hữu quyết định**: `OrderPlacedVerificationConsumer` là 1 class TEST
+  HELPER (namespace `Orders.Api.IntegrationTests.Support`, dùng để xác minh cơ chế outbox/inbox của
+  024, không xử lý sự kiện nghiệp vụ thật), nhưng scanner quét `services/**/*.cs` theo nghĩa đen, không
+  phân biệt project production/test. Hợp đồng 015 viết phạm vi là "Mọi kiểu implement `IConsumer<T>`...
+  được thêm vào bất kỳ service nào trong `services/`" — không loại trừ tường minh test project. Hai
+  hướng xử lý khả dĩ: (a) thêm dòng `/// Trusted source: ...` cho đúng vì đây đúng là 1 consumer đọc từ
+  message bus dùng chung (RabbitMQ), kể cả khi chỉ phục vụ test; (b) sửa scanner loại trừ
+  `*.IntegrationTests`/`*.Tests`/`*.UnitTests` khỏi phạm vi quét consumer (nhưng vẫn giữ quét route, vì
+  route test-only không tồn tại trong repo này). Vì đây là mã test, không phải mã sản xuất, QA không tự
+  sửa (đúng nguyên tắc không suy diễn/không tự đổi hành vi) — chỉ ghi nhận để chủ sở hữu quyết định.
+  **Xác nhận cơ chế chính (route, không phải consumer) vẫn hoạt động đúng**: tự thêm tạm 1 route
+  `/qa-probe-015-temp-route` không khai `.RequireAuthorization()`/`.AllowAnonymous()` vào
+  `services/products/src/Products.Api/Features/Catalog/CatalogEndpoints.cs`, chạy lại
+  `EveryMappedRoute_DeclaresAnAuthorizationDecision` → đỏ, nêu đích danh route/file vi phạm (đúng
+  `quickstart.md` Scenario 3, đúng "sanity check" `technical-debt.md` mục 015 đã tự làm lúc viết spec);
+  `git checkout --` khôi phục, chạy lại → xanh, `git status` sạch.
+- **Ghi chú đối chiếu hồi quy (không phải phát hiện mới)**: `technical-debt.md` mục 015 ghi 27/48 test `Bff.Api.IntegrationTests`
+  đỏ lúc viết spec (quy cho độ trễ Docker khởi động lại). Chạy lại toàn suite 2026-09-23: **49/50 PASS** (7 phút 16 giây) — chỉ
+  1 đỏ, `DownstreamUnavailableTests.EveryRoute_FailsAsAProblemDetails_WhenItsDownstreamIsUnreachable` (`BasketsApi`), thuộc phạm
+  vi spec 020, không phải họ test phân quyền của 015; chạy riêng ở QA 020 thì xanh (8/8) → chập chờn do tải.
+
+## 016 — Lan truyền Correlation ID từ Edge đến Frontend
+
+- **[ĐÃ VÁ] 2/4 test trong `CorrelationIdPropagationTests.cs` (gateway) bị gán nhầm "Task nguồn: spec
+  002" thay vì spec 016 — lỗi từ lượt dịch comment ở QA 002, tự phát hiện và sửa ở QA 016 (đã xác nhận
+  bằng `git show`, không suy diễn)**: QA_Debt mục 002 (ở trên) đã đúng khi tách file
+  [`Gateway.Api.IntegrationTests/CorrelationIdPropagationTests.cs`](../../services/gateway/tests/Gateway.Api.IntegrationTests/CorrelationIdPropagationTests.cs)
+  ra khỏi `Bff.Api.IntegrationTests/CorrelationPropagationTests.cs` (file kia mới thật sự của 016) —
+  nhưng khi dịch toàn bộ 4 test của file gateway sang tiếng Việt (lúc QA 002), cả 4 đều bị gắn chung
+  "Task nguồn: spec 002". `git show 2abe34d --stat -- .../CorrelationIdPropagationTests.cs` (chính commit
+  hoàn tất 016) cho thấy diff "72 insertions" — 2 test `ACorrelationIdContainingControlCharacters_...`
+  và `ACorrelationIdLongerThan128Characters_...` **không tồn tại trước 016**, được thêm mới hoàn toàn bởi
+  chính spec này (khớp `quickstart.md` "Automated Coverage": "`CorrelationIdPropagationTests.cs` (mở
+  rộng) — thêm test cho ràng buộc hợp lệ mới, Decision 2"). Chỉ 2 test đầu (`AGeneratedCorrelationId_...`,
+  `ACallerSuppliedCorrelationId_...`) thật sự có từ spec 002 (`git show --stat` xác nhận commit `c9db644`).
+  Đã tự sửa lại comment của đúng 2 test bị gán nhầm ngay trong file (chỉ sửa comment, không đổi hành vi
+  — rebuild + chạy lại 4/4 vẫn PASS). Bài học phương pháp: khi 1 file test có tuổi đời trải dài nhiều
+  spec, "file được tạo bởi spec X" không đồng nghĩa "mọi test trong file thuộc về spec X" — cần soi
+  từng hàm bằng `git show <commit> --stat` khi file đó được sửa bởi spec sau, không chỉ soi `git log
+  --follow` ở mức file.
+- **Nhánh async (US1 AC3, FR-004) vẫn chưa có test tự động xác nhận correlation ID xuyên suốt outbox →
+  consumer, dù spec 024 đã nối publisher thật (đã đọc mã + đọc test thật, không suy diễn)**:
+  `technical-debt.md` (nhóm "Broker/messaging", Amendment 2026-09-12) khẳng định "016: xác nhận thay vì
+  còn là giới hạn — payload `OrderPlacedV1` nay thực sự mang `CorrelationId` qua publisher thật (024)" —
+  đúng ở mức TĨNH: đọc
+  [`services/orders/src/Orders.Api/Features/Orders/OrderEndpoints.cs:101`](../../services/orders/src/Orders.Api/Features/Orders/OrderEndpoints.cs#L101)
+  xác nhận `httpContext.Items[CorrelationIdMiddleware.HeaderName]` thật sự được gán vào trường
+  `CorrelationId` của `OrderPlacedV1` khi publish. Nhưng đọc toàn bộ hạ tầng test outbox/inbox của 024
+  ([`Orders.Api.IntegrationTests/Support/OrderPlacedVerificationConsumer.cs`](../../services/orders/tests/Orders.Api.IntegrationTests/Support/OrderPlacedVerificationConsumer.cs))
+  cho thấy `ProcessedCounts` (dùng để chứng minh idempotency) chỉ đếm theo `EventId`, không hề đọc hoặc
+  so sánh `context.Message.CorrelationId` — grep `CorrelationId` trong toàn bộ
+  `Orders.Api.IntegrationTests` (gồm cả `Support/`) trả về 0 kết quả. Nghĩa là Jira Test Scenario 1 gốc
+  của SCRUM-26 ("consumer xử lý `OrderPlaced` cũng chứa đúng correlation ID") — chính nhánh mà spec 016's
+  research.md Decision 3 tự nhận "chưa xác minh đầy đủ, chờ SCRUM-31" — **vẫn để ngỏ** dù SCRUM-31/024 đã
+  xong và có sẵn `VerificationConsumerHost` (bus MassTransit độc lập, đóng vai người tiêu thụ thật) để
+  viết đúng bài test đó. Không phải lỗi hành vi (mã đã đúng, xác nhận tĩnh) — là khoảng hở coverage: nếu
+  tương lai ai đó vô tình xoá tham số `CorrelationId` khỏi lệnh `Publish(new OrderPlacedV1(...))`, không
+  có test nào bắt được. Đề xuất: thêm 1 assertion vào bộ test hiện có của 024 (hoặc 1 test mới cạnh
+  `OrderPlacedVerificationConsumer`) so khớp `context.Message.CorrelationId` với giá trị request gốc —
+  không cần hạ tầng mới, chỉ cần dùng lại `VerificationConsumerHost` đã có.
+- **Ghi chú công cụ (không phải phát hiện về sản phẩm)**: `corepack pnpm ...` chạy từ thư mục gốc repo trên máy QA trỏ nhầm 1 bản
+  cache hỏng (`pnpm@12.5.1`, thiếu `bin/pnpm.cjs`) → `Cannot find module …pnpm.cjs`. `frontend/package.json` đã ghim
+  `packageManager: "pnpm@9.15.9"`; chạy `corepack pnpm ...` **từ trong thư mục `frontend/`** (để corepack đọc đúng field) là cách
+  khắc phục, không cần sửa gì trong repo.
+
+## 017 — Phát telemetry OTel qua ServiceDefaults tới Elastic
+
+- **[NGHIÊM TRỌNG] Mọi histogram metric — bao gồm đúng chỉ số độ trễ FR-009/SC-005 yêu cầu để đo SLO —
+  bị `otel-collector` âm thầm loại bỏ hoàn toàn trước khi tới Elasticsearch, chưa từng được phát hiện
+  (đã tự dựng stack thật, đọc log collector thật, truy vấn Elasticsearch thật để xác nhận, không suy
+  diễn)**: `docker logs ecomerce-local-otel-collector-1` phát cảnh báo lặp lại mỗi ~20 giây:
+  `elasticsearchexporter@v0.160.0/exporter.go:352 validation errors ... "dropping cumulative
+  temporality histogram \"http.server.request.duration\""` (kèm 15-30 tên histogram khác mỗi lần, gồm
+  cả `resilience.polly.pipeline.duration`, `kestrel.connection.duration`...). Xác nhận trực tiếp bằng
+  truy vấn `exists: metrics.http.server.request.duration` trên `metrics-generic.otel-default*` →
+  **0 kết quả** trên toàn bộ dữ liệu đã thu thập (7 service, hàng nghìn document). Nguyên nhân gốc:
+  exporter `elasticsearch` (`mapping.mode: otel`) của `otel-collector-contrib 0.160.0` chỉ chấp nhận
+  histogram temporality **delta**; SDK OpenTelemetry .NET (dùng bởi `ServiceDefaults`) mặc định phát
+  **cumulative** — `docker/otel-collector-config.yaml`'s pipeline `metrics` chỉ có processor `[batch]`,
+  không có `cumulativetodeltaprocessor` hay tương đương để chuyển đổi trước khi xuất. Ảnh hưởng đều
+  nhau trên mọi service (không phải lỗi riêng 1 nơi).
+  **Đối chiếu trực tiếp với yêu cầu spec**: FR-009 viết "Metrics phát ra bởi ServiceDefaults PHẢI đủ để
+  đo các SLO đã khai báo... độ trễ (p95/p99)"; SC-005 viết "...xác nhận được qua Elastic mà không cần
+  công cụ đo bổ sung nào khác" — theo đúng nghĩa đen (dữ liệu **metrics**), cả hai đều SAI trên thực tế.
+  **Giảm nhẹ tự phát hiện, không suy diễn**: đọc
+  [`docs/architecture/021_Architect_khai báo và đo SLO theo từng service.md`](021_Architect_khai%20báo%20và%20đo%20SLO%20theo%20từng%20service.md)
+  (dòng 24, 63) cho thấy dashboard SLO của spec 021 (sau 017) đo "Latency p95, p99 **từ traces OTel
+  thật**" — tức 021 đã độc lập né được đúng lỗ hổng này bằng cách tính percentile từ trường `duration`
+  của span trong `traces-generic.otel-default*` (đã xác nhận có mặt, đơn vị nanosecond, trong dữ liệu
+  trace đo được ở lượt QA này) thay vì dùng data stream `metrics`. Kết quả cuối (SRE đo được p95/p99
+  qua Elastic) vẫn đạt trên thực tế nhờ lối đi vòng này — nhưng không đạt được bằng cơ chế FR-009 mô tả
+  (metrics), và nếu sau này có công cụ/dashboard nào đọc trực tiếp histogram OTel chuẩn (thay vì tự
+  tính lại từ trace như 021 đã làm), lỗ hổng sẽ lộ ra ngay. Đề xuất hướng vá: thêm processor
+  `cumulativetodeltaprocessor` (có sẵn trong `otel-collector-contrib`) vào pipeline `metrics` của
+  `docker/otel-collector-config.yaml`, hoặc đổi cấu hình OTel SDK phía `ServiceDefaults` sang phát
+  delta temporality trực tiếp.
+- **Sự cố hạ tầng không liên quan 017, tái hiện độc lập hồ sơ đã có ở mục 026**: trong lúc làm sống
+  Scenario 5 (gỡ `ServiceDefaults`), `identity-api` bị recreate nhiều lần và mỗi lần đều báo
+  `Duende.IdentityServer...KeyManager: CryptographicException: The key {...} was not found in the key
+  ring` — dẫn tới `401`/`504` dây chuyền ở mọi service khác (JWKS backchannel timeout). Đúng hiện tượng
+  `technical-debt.md` mục 026 đã ghi ("dấu hiệu race/deadlock khi identity-api tự sinh signing key...
+  chưa kết luận nguyên nhân gốc") — bằng chứng mới ở đây cho thấy nguyên nhân liên quan tới vòng đời
+  container (Data Protection key ring không sống sót qua lần khởi động lại của `identity-api`, trong
+  khi khóa ký IdentityServer đã lưu trong `identity-db` từ trước), không chỉ riêng tải đồng thời như
+  026 nghi ngờ ban đầu. `docker compose restart identity-api` (+ `gateway-api`/`bff-api` để xoá JWKS
+  cache cũ) khắc phục ngay. Đề xuất liên kết bằng chứng này với mục 026 khi có ai điều tra nguyên nhân
+  gốc.
+- **Lệch nhỏ giữa tài liệu và mã (không ảnh hưởng hành vi)**: `research.md` Decision 7 và
+  `contracts/otel-collector-elasticsearch-export-contract.md` viết "cùng một tag 8.x" cho Elasticsearch/Kibana, còn
+  `docker-compose*.yml` thực tế ghim `9.4.4` (cả 2 image cùng tag — đúng phần "cùng một tag"; `otel-collector` ghim
+  riêng `0.160.0`). `research.md` tự nói không đóng đinh số phiên bản vì có thể lỗi thời lúc triển khai, nhưng contract viết sau
+  triển khai chưa được cập nhật.
+- **Ghi chú phương pháp luận QA (không phải lỗi sản phẩm)**: khi làm sống kịch bản "sửa mã → rebuild → quan sát", lần
+  `docker compose up -d --build products-api` có cache đầu tiên vẫn cho ra span `Products.Api` dù đã comment
+  `AddServiceDefaults()`/`UseServiceDefaults()` (container chạy code cũ; nghi do 2 lượt `docker compose up --build` chạy đè
+  nhau khi dựng stack để lại trạng thái cache BuildKit không nhất quán — cũng gây xung đột tên container). Chỉ
+  `docker compose build --no-cache products-api` rồi `up -d` mới phản ánh đúng thay đổi (image ID đổi `917e16…` → `99e580…`).
+  Bài học: khi kết quả không khớp dự đoán, trước tiên xác nhận image thật sự mới bằng
+  `docker images <tên> --format "{{.ID}} {{.CreatedAt}}"` và cân nhắc `--no-cache`; không chạy 2 `docker compose up` cùng lúc.
+- **Môi trường**: `nginx:alpine` không pull được từ Docker Hub lúc dựng stack (timeout) nên bỏ `storefront` khỏi lượt QA;
+  `grep -r` của shell treo bất thường khi quét toàn `services/` (gồm `bin/`/`obj/`) — dùng công cụ Grep của agent thay thế.
+
+## 018 — Secrets qua Cluster Secret Store, loại bỏ cấu hình hardcode
+
+- **[NGHIÊM TRỌNG] Cổng `ci/secret-scan` hiện sẽ ĐỎ ngay nếu chạy thật — 36 phát hiện gitleaks mới
+  (34 fingerprint) không nằm trong `.gitleaks-baseline.json`, chưa từng được review (đã tự chạy
+  gitleaks thật qua Docker — máy QA không cài sẵn CLI — không suy diễn từ tài liệu)**:
+  ```
+  docker run --rm -v "$(pwd)":/repo zricethezav/gitleaks:latest detect --source /repo \
+    --config /repo/.gitleaks.toml --baseline-path /repo/.gitleaks-baseline.json \
+    --log-opts="--all" --redact
+  ```
+  → `leaks found: 36`. Đã xác nhận `.gitleaks-baseline.json` đúng 9 fingerprint như tài liệu mô tả
+  (toàn bộ thuộc 5 `appsettings.Development.json` trước khi 018 xoá) — 36 phát hiện này hoàn toàn MỚI,
+  phát sinh từ các spec SAU 018 (009-011's `pacts/*.json`, và chính 018's tài liệu/test tự trích dẫn
+  lại các mẫu credential làm ví dụ) mà không ai chạy lại gitleaks để cập nhật baseline. Phân rã: rule
+  `connection-string-password` (28 — hầu hết là chuỗi ví dụ trong `RequiredSecretsValidationTests.cs`
+  và trong chính văn bản `docs/architecture/018...`/`development/018...`/`onboarding/11-...`/ADR-0007/
+  `specs/018-.../{research,quickstart,tasks,contracts}.md` mô tả lại giá trị ĐÃ BỊ XOÁ), rule `jwt`
+  (7 — token ví dụ PactNet ghi literal vào phần "request" của `pacts/bff-{baskets,orders,products}.json`
+  dù `matchingRules` verify bằng regex, không dùng giá trị cố định — xem thêm QA_Debt mục 011), rule
+  `generic-api-key` (1 — `SecurityStamp` GUID ngẫu nhiên trong 1 EF migration seed, bị heuristic entropy
+  nhận nhầm). Lấy mẫu xác nhận không phải secret thật: JWT trong pact ký bằng khoá test dùng chung toàn
+  bộ suite (`TestJwtBearer`, không phải secret sản xuất); chuỗi trong unit test không kết nối database
+  thật; GUID trong migration không phải mật khẩu.
+  **Vẫn là vi phạm thật đối với SC-001/FR-004 theo nghĩa đen** ("0 phát hiện") — không phải vấn đề "false
+  positive nên bỏ qua được", vì baseline hiện có chính là cơ chế spec 018 tự thiết kế để phân biệt
+  "đã review, chấp nhận" khỏi "chưa ai xem qua", và 36 phát hiện này rơi vào nhóm sau. Kết hợp với
+  [QA_Debt mục 013](#013--cổng-chất-lượng-ci) (CI thật đã ngừng chạy ~3 tuần) tạo thành 1 "khoá kép"
+  chưa ai lường trước: ngay cả khi CI được khôi phục hôm nay, `ci/secret-scan` sẽ chặn merge của MỌI PR
+  ngay lập tức cho tới khi có người chủ động rà soát + cập nhật baseline — khác hẳn kỳ vọng "cổng đã
+  sẵn sàng chờ CI chạy lại là dùng được ngay". Đề xuất hướng vá (cần chủ sở hữu quyết định, QA không tự
+  sửa): (a) chạy `gitleaks detect` 1 lần, review đủ 34 fingerprint, cập nhật baseline; (b) cân nhắc thu
+  hẹp rule `connection-string-password` bỏ qua `*.md`/`*Tests.cs`/`pacts/` — phạm vi gốc FR-001 chỉ nói
+  "mã nguồn, appsettings.json, Dockerfile", không nói tài liệu; (c) đưa bước "gitleaks + cập nhật
+  baseline" thành yêu cầu bắt buộc trước mỗi lần merge, không chỉ làm 1 lần lúc viết spec 018.
+
+## 019 — Liveness/Readiness Probe cho mọi service
+
+*Cả 3 phát hiện dưới đây nằm ở "lớp kiểm tra 2" (`scripts/ci/lint-deployment-manifests.sh`) — phần mà
+chính `technical-debt.md` mục 019 tự thừa nhận "CHƯA từng chạy thật trong chính phiên triển khai —
+Ansible không chạy native trên Windows (`WinError 87`), WSL thiếu quyền `sudo`". Lần đầu tiên chạy thật
+là ở lượt QA này, qua Docker (bỏ qua đúng rào cản Windows/WSL đó). Không phát hiện nào ảnh hưởng hành vi
+runtime thật — 58/58 test C# lớp kiểm tra 1 vẫn xanh, và bằng chứng cluster `kind` thật của phiên gốc
+không bị ảnh hưởng.*
+
+- **[NGHIÊM TRỌNG] `ansible-lint` báo ĐỎ thật với 7 vi phạm — CI stage `deployment manifest lint` sẽ
+  dừng ngay dòng đầu tiên nếu được kích hoạt (đã tự chạy thật qua Docker, exit code 2)**:
+  ```
+  docker run --rm -v "$(pwd)":/code -w /code pipelinecomponents/ansible-lint:latest \
+    ansible-lint roles/service_deployment deploy.yml
+  ```
+  → `var-naming[no-role-prefix]` × 6 (`service_name`, `service_vars`, `probe_defaults`, `probe_group`,
+  `resolved_liveness`, `resolved_readiness` — biến của role phải có tiền tố `service_deployment_`) +
+  `name[template]` × 1 (`"Áp dụng manifest {{ service_name }} vào cluster"` — Jinja phải nằm cuối tên
+  task). `lint-deployment-manifests.sh` dùng `set -eu` và gọi `ansible-lint ...` không bọc `if` — exit
+  2 dừng script ngay tại đây, không bao giờ chạy tới phần render/kubeconform phía sau. Đây là style
+  violation (không phải lỗi hành vi — manifest vẫn render đúng, test C# vẫn xanh), nhưng đủ để làm ĐỎ
+  cả stage nếu bật.
+- **[NGHIÊM TRỌNG] `--limit "$service"` trong vòng lặp per-service của chính script CI không khớp được
+  host nào — luôn exit 0 "thành công giả", rồi `kubeconform` fail vì thiếu file, chẩn đoán sai hướng
+  (đã tự chạy thật, xác nhận từng bước)**: `deploy.yml` khai `hosts: localhost` + `loop: "{{ services |
+  dict2items }}"` — không có host nào tên `orders`/`parties`/... để `--limit` khớp. Chạy
+  `ansible-playbook deploy.yml --check --diff --limit orders` → `[WARNING]: Could not match supplied
+  host pattern, ignoring: orders`, `skipping: no hosts matched`, **exit code 0**. Đoạn
+  `if ! ansible-playbook ... --limit "$service" >/dev/null; then failed=...(render)` do đó KHÔNG BAO
+  GIỜ kích hoạt; file `.rendered/${service}.deployment.yaml` KHÔNG BAO GIỜ được tạo; `kubeconform` chạy
+  tiếp báo `lstat ...: no such file or directory` (exit 1, xác nhận trực tiếp bằng `kubeconform` chạy
+  tay), script ghi nhận `${service}(kubeconform)` — trông như "manifest không hợp lệ theo schema
+  Kubernetes" trong khi sự thật là "chưa từng render được file nào". Nếu phát hiện đầu (ansible-lint)
+  được vá, script vẫn sẽ ĐỎ tiếp — nhưng thông báo lỗi sẽ dẫn người sửa đi sai hướng (sửa nội dung
+  template thay vì sửa logic filter service).
+- **`--check --diff` (dry-run) tự mâu thuẫn với chuỗi task `template` → `k8s` của chính role, độc lập
+  với phát hiện trên (đã tự chạy thật, bỏ `--limit`)**: `ansible.builtin.template` ở `--check` chỉ
+  hiển thị diff, không ghi file thật (đúng bản chất dry-run); task kế `kubernetes.core.k8s` cần đọc
+  lại chính file đó (`src: "{{ playbook_dir }}/.rendered/{{ service_name }}.deployment.yaml"`) →
+  `fatal: ... Could not find or access '/code/.rendered/parties.deployment.yaml'`. Playbook dừng ngay
+  ở service đầu tiên (`parties`), 6 service còn lại không bao giờ được thử. Sửa lỗi `--limit` ở trên
+  KHÔNG tự động sửa lỗi này — cần thay đổi cấu trúc role (tách "render ra file" khỏi "áp dụng vào
+  cluster") hoặc bỏ `--check` khỏi kịch bản lint. Giải thích tại sao `technical-debt.md` mục 019 có
+  bằng chứng cluster `kind` thành công: phiên đó chạy `ansible-playbook` KHÔNG kèm `--check`, không
+  chạm lỗi này; chính script CI mới dùng `--check` (hợp lý cho lint không chạm cluster) và chính lựa
+  chọn đó đối đầu với thiết kế của role.
+  **Đề xuất hướng vá cho cả 3** (cần chủ sở hữu quyết định, QA không tự sửa mã sản xuất): (a) đổi 6
+  biến thành tiền tố `service_deployment_*`, đưa Jinja ra cuối tên task; (b) bỏ `--limit "$service"`
+  khỏi vòng lặp script, thay bằng cách truyền `services` được lọc qua `-e` hoặc tách playbook riêng
+  cho lint offline; (c) thêm điều kiện `when: apply_to_cluster | default(true)` bọc quanh
+  `kubernetes.core.k8s`, để kịch bản lint chạy render-rồi-dừng mà không cần `--check` hay cluster thật.
+
+## 020 — Timeout, retry và circuit breaker cho mọi cuộc gọi ra ngoài
+
+- **[ĐÁNG KỂ] Circuit breaker BFF→4 downstream chưa từng có ngưỡng mở được đặt tường minh — mặc định
+  Polly `MinimumThroughput = 100` (trong cửa sổ `SamplingDuration` 10 s) khiến mạch không mở ở lưu lượng
+  thường (đã tự làm sống trên stack Docker thật, đọc sự kiện Polly thật trong Elasticsearch)**:
+  `services/bff/src/Bff.Api/DownstreamClients/DownstreamClientRegistrationExtensions.cs` chỉ đặt
+  `CircuitBreaker.SamplingDuration`; `FailureRatio` (0.1), `MinimumThroughput` (100), `BreakDuration` (5 s)
+  giữ mặc định — đã grep `.cs/.json/.md` toàn services/shared/tests/specs/020/docs: không nơi nào đặt hay nêu
+  `MinimumThroughput` ngoài 1 dòng ghi chú ở `tasks.md` T025 ("cần khoảng 100 request lỗi liên tiếp ... chưa
+  thử ở quy mô đó"). Thí nghiệm: `docker compose stop baskets-api`, gọi `GET /bff/basket` qua gateway —
+  8 request tuần tự (~30 s) đều `504` sau 3.2-4.0 s (mạch KHÔNG mở, mỗi request chờ trọn
+  `TotalRequestTimeout`); dồn 150 request/50 song song thì mạch mở: 116×`502` + 34×`504`, rồi các GET đơn lẻ
+  kế tiếp trả `502` trong **36-77 ms**; Elastic ghi `OnCircuitOpened`, `OnCircuitHalfOpened`,
+  `OnCircuitClosed` (chu kỳ đủ sau khi `start baskets-api`). Hệ quả: fail-fast (FR-003, SC-003, US2-KB2) chỉ
+  hoạt động khi ≥ ~10 request/giây tới đúng 1 downstream; dưới ngưỡng đó — mọi môi trường dev/QA và nhiều
+  môi trường thật — 1 downstream sập không được ngắt mạch. Rất có thể là 1 nguyên nhân của phát hiện ở
+  `technical-debt.md` mục 025 (breaker `OrdersApiClient`/`BasketsApiClient` "chưa từng trip" qua 4 lần
+  thử, chỉ 8-9 lỗi rải rác — 025 quy cho tiêm độ trễ không chặn thread và không xét ngưỡng này). Gateway→BFF
+  dùng `MinimalTotalCountThreshold` mặc định 10 của YARP nên mở sớm hơn (~10 request). Đề xuất: đặt tường
+  minh `MinimumThroughput` (vd 5-10), `FailureRatio`, `BreakDuration` và ghi vào `research.md`; hoặc ghi rõ
+  ngưỡng ≥100 request/10 s vào tài liệu.
+- **FR-007 ("kể cả điểm gọi mới thêm sau này") chưa được thực thi bởi cơ chế tự động — `Orders.Api →
+  RabbitMQ` (spec 024) là ví dụ sống**: `ResilienceCoverageScanner.ExpectedCallSites` là danh sách viết tay;
+  scanner chỉ kiểm tra marker trong file đã liệt kê, không tự phát hiện `AddHttpClient`/`AddMassTransit`
+  mới. `Orders.Api/Program.cs:62-93` (`AddMassTransit ... UsingRabbitMq`, thêm bởi 024 sau 020) không có
+  `UseMessageRetry`/`UseCircuitBreaker`/timeout kết nối tường minh, không nằm trong inventory, và
+  `Scan_ReportsNoViolations_ForCurrentInventory` vẫn xanh 5/5. Đúng loại điểm gọi FR-001 nêu đích danh
+  ("service gửi message tới broker"); Amendment 024 ở `technical-debt.md` đã tự ghi "chưa rà soát ... chưa
+  có ticket riêng" nhưng không test nào bắt nên sẽ không tự lộ. Giảm nhẹ: Bus Outbox đưa `Publish` trên
+  đường request thành 1 lệnh ghi DB cùng transaction nên broker chậm/sập không làm treo `POST /orders`; rủi
+  ro còn lại ở hosted service giao outbox chạy nền. Đề xuất: thêm test quét `services/**/*.cs` tìm
+  `AddHttpClient`/`AddMassTransit`/`UsingRabbitMq` rồi so với `ExpectedCallSites`.
+- **`architecture/020` và `technical-debt.md` mục 020 lỗi thời về Bước 6 quickstart/T025**: `tasks.md` ghi
+  T025 `[X]`, 27/27 task, kèm bằng chứng Elastic thật ngày 2026-09-12 (commit `a695c6f`, `development/020` đã
+  nhắc), nhưng `architecture/020` (dòng 12-15, 81) và phần giới hạn phạm vi của `technical-debt.md` vẫn
+  viết "26/27 task, Bước 6 chưa thực hiện được ... chưa có bằng chứng runtime thật". QA đã tự xác nhận độc lập
+  Bước 6 (Polly `OnRetry` 155 / `OnTimeout` 196 / 3 sự kiện mạch trong `logs-generic.otel-default*`). Liên
+  quan QA_Debt mục 017: histogram `resilience.polly.strategy.attempt.duration`/`resilience.polly.pipeline.duration`
+  bị collector loại bỏ (`dropping cumulative temporality histogram`) — sự kiện Polly tới Elastic qua log,
+  nhưng phân bố thời gian từng attempt thì không.
+
+## 021 — Khai báo và đo lường liên tục SLO theo từng service
+
+*Nửa "khai báo" (US1/US2) đạt đầy đủ: 29/29 test xanh, Bước 2 quickstart tự làm sống (đổi p95 của `orders`
+→ đúng 1 test đỏ nêu `orders` → revert → xanh), hằng số mặc định khớp hiến chương. Các phát hiện dưới đây
+thuộc nửa "đo liên tục" (US3, dashboard) — đã import dashboard vào Kibana thật và tự chạy đúng công thức của
+nó trên Elasticsearch (trình duyệt tích hợp từ chối `localhost:5601` nên không render được).*
+
+- **[NGHIÊM TRỌNG cho FR-006/SC-005] Span health-probe khiến service KHÔNG có traffic thật vẫn hiển thị "0 %
+  lỗi, p95 ≈ 1 ms" thay vì "không có dữ liệu"**: công thức dashboard (`count(kql='...status_code >= 500') /
+  count()`, `percentile(duration, …)`) không lọc route nên đếm cả `/health/live`, `/health/ready` (Docker/K8s
+  probe mỗi vài giây; spec 019 đặt probe cho cả 7 service). Đo thật, 30 phút không có request người dùng nào:
+  `Bff.Api` 65 span `Server` = 65 `/health/ready`; `Orders.Api` 65/65 `/health/ready`; `Gateway.Api` 65/65
+  `/health/live`; bucket idle 20 phút của `Bff.Api`: `n=161, err=0.0 %, p95=0 ms`. Service idle do đó hiện
+  "đạt hoàn hảo" — đúng điều FR-006/SC-005/contract bất biến 3 cấm — và khi có ít traffic thật, span probe
+  (luôn 200, ~1 ms) pha loãng error-rate và p95 về phía đẹp hơn thực tế. Quickstart Bước 5 gốc chỉ kiểm
+  khoảng thời gian **trước khi hệ thống tồn tại** (2020 → 0 hit → "No results found", đã tự tái hiện) — trường
+  hợp rỗng hoàn toàn, không phải trường hợp service còn sống nhưng không có người dùng. Đề xuất: lọc
+  `attributes.http.route` khác `/health/*` (và `kind: Server`) trong mọi công thức, hoặc thêm điều kiện số
+  request tối thiểu để hiện "không có dữ liệu".
+- **Công thức đếm MỌI loại span thay vì chỉ request đến (`kind: Server`) — số đo lệch khỏi định nghĩa SLO
+  ("5xx dưới 0.1 % số request") ở Gateway/BFF**: 5 domain service gần như không có span `Client` nên lệch không
+  đáng kể; Gateway/BFF thì có nhiều lời gọi ra. Đo thật 24 h: error-rate Gateway 19.19 % (công thức dashboard)
+  vs 11.02 % (chỉ span Server); p95 Gateway 4518.9 vs 3403.9 ms (+33 %), p95 BFF 1323.7 vs 1047.1 ms (+26 %);
+  error-rate BFF 10.14 % vs 11.09 % (chiều lệch không cố định nên không phải "lệch an toàn"). Số cao do đợt
+  ngắt `baskets-api` ở QA 020 nhưng cơ chế lệch là cấu trúc. Đề xuất lọc `kind : "Server"` trong Lens Formula và
+  panel theo ngày.
+- **Ngưỡng trên dashboard là chữ cứng trong tên cột, không nối với manifest, và không test nào giữ chúng
+  khớp**: cột ghi "ngưỡng 150ms; riêng Bff.Api 300ms", "ngưỡng ≤ 0.1%, cả 7 service" (phương án (c) đã chốt có
+  lý do ở `06-dashboard...md`). 1 service sau này khai ngoại lệ có `slos.justification` (đúng cơ chế US2) thì
+  test manifest vẫn xanh nhưng nhãn dashboard giữ ngưỡng cũ; 29 test chỉ đọc manifest, không đọc `.ndjson`.
+  Test cũng chỉ so 4 giá trị cấp service, không kiểm `latency` theo từng endpoint trong `endpoints:`. Chi tiết
+  lỗi thời nhỏ đi kèm: `services/gateway/src/Gateway.Api/service-manifest.yaml` vẫn ghi
+  `authentication: anonymous  # no identity server yet` cho route catch-all, trong khi từ spec 014 gateway đòi
+  Bearer (QA 014 đo `401` không token).
+
+## 023 — Rà soát N+1 query, truy vấn không giới hạn và thiếu phân trang
+
+*Mọi tiêu chí happy-case đạt (đã gieo 500 sản phẩm vào stack Docker rồi dọn sạch; mặc định 20, trần 100, render giỏ đúng
+1 span `GET /products`, 23+8+22+1 test xanh). Các phát hiện dưới đây là điểm yếu của bộ test và của xử lý đầu vào.*
+
+- **[NGHIÊM TRỌNG] Hồi quy ở đúng "khoảng hở nặng nhất" của spec (BFF render giỏ over-fetch) không làm test nào đỏ
+  (đã tự mutate, `git checkout --` hoàn tác)**: đổi `BasketsEndpoints.cs:129` từ `GetProductsByIdsAsync(distinctProductIds, …)`
+  sang `GetProductsAsync(1, 100, …).Items` (vẫn 1 lời gọi HTTP, chỉ lấy 100 mục đầu catalog) → `Bff.Api.UnitTests` 22/22 xanh,
+  `QueryCoverageTests` 8/8 xanh. Lý do: (1) `ProductLookupBatchingTests` chỉ đếm `InvocationCount == 1` — code CŨ trước bản sửa
+  cũng 1 lời gọi (toàn catalog) nên test không phân biệt bản sửa với lỗi gốc, và tự ghi "no assertions on the request itself";
+  (2) scanner `ScanBoundedQuerySites` kiểm chuỗi `GetProductsByIdsAsync` có mặt trong file, mà route add-item (dòng 57) vẫn
+  dùng nó nên marker còn dù đường render đã đổi; `ProductsEndpointPaginationTests` chỉ chứng minh hình dạng request của
+  client. Hệ quả thực: catalog > 100 mục thì tên sản phẩm ngoài 100 mục đầu không join được — lỗi chỉ lộ ở dữ liệu lớn.
+  Đề xuất: cho handler giả bắt `RequestUri`, assert query chứa `ids=` và không có `pageSize`.
+- **Đầu vào `page`/`pageSize` bất thường gây `500`/`502` thay vì `400`; tràn số nguyên → `OFFSET` âm (đã tự tái hiện trên
+  stack thật, 503 sản phẩm)**: `?pageSize=abc`, `?page=abc`, `?pageSize=99999999999` → BFF `500`
+  (`BadHttpRequestException: Failed to bind parameter "Nullable<int> pageSize" from "abc"` bị exception handler biến thành
+  500, đáng ra 400). `?page=2147483647&pageSize=100` → Products `SqlException: The offset specified in a OFFSET clause may not
+  be negative.` do `(effectivePage - 1) * effectivePageSize` nhân 2 `int` tràn số (`CatalogEndpoints.cs`) → Products 500 → BFF
+  retry `GET` 2 lần (spec 020) → `502`; đo: 9 `SqlException` cho 3 request thử — 1 request có token hợp lệ tạo 3 lỗi 5xx ở
+  Products, cộng vào error-rate SLO (spec 021) và mẫu breaker (spec 020). Test hiện có chỉ phủ `pageSize` = 0/âm/1000000.
+  Đề xuất: tính offset bằng `long` + chặn `page` tối đa; trả `400` cho lỗi binding.
+- **Nhánh `ids` không chịu trần `MaxPageSize = 100`**: đo trực tiếp `products-api` (`:5088`, có token + `X-Tenant-Id`) —
+  100 id → 100 mục, 150 → 150, 200 → 200 (`pageSize=5` bị bỏ qua hoàn toàn); chỉ bị chặn bởi độ dài request line của Kestrel
+  (~220 GUID). `research.md` Decision 4 chủ đích để `ids` bị chặn bởi tập id, nhưng FR-004/US3-KB1/SC-003 viết "không vượt
+  quá mức trần bất kể giá trị client truyền vào". BFF không mở `ids` cho SPA nên rủi ro thấp; Products publish cổng `5088` ở
+  `docker-compose.local.yml`. Đề xuất: ghi ngoại lệ vào FR-004 hoặc kẹp số id tối đa.
+- **`quickstart.md` Bước 3 chạy 0 test và thoát mã 0 ("xanh giả")**: lệnh trỏ `Products.Api.UnitTests` (chỉ có
+  `HealthCheckTests`) với filter `ProductListingPaginationTests` (thực tế nằm ở `Products.Api.IntegrationTests`); đã chạy
+  đúng lệnh → "A total of 1 test files matched" rồi exit 0, không test nào chạy. Phần "Kết quả xác thực" cuối chính quickstart
+  tự ghi Bước 3 "nằm trong 23/23 ở Bước 2". Đề xuất sửa đường dẫn sang `Products.Api.IntegrationTests`.
+
+## 024 — Xác minh outbox pattern giao dịch trên dịch vụ phát sự kiện đơn hàng
+
+*Happy-case đạt cả trên test lẫn trên stack thật: 4/4 test outbox và 29/29 toàn `Orders.Api.IntegrationTests` xanh; 20 `POST /orders` đồng thời → 20 đơn, 20 bản ghi outbox, 20 message riêng biệt tới RabbitMQ, 0 tồn đọng; broker sập + `docker kill orders-api` → khởi động lại tự giao message. Các phát hiện dưới đây là điểm yếu của bộ test, cấu hình triển khai và tài liệu. Toàn bộ mutation đều đã `git checkout --` hoàn tác.*
+
+- **[NGHIÊM TRỌNG] "Cùng một transaction" (FR-001) ở đường `POST /orders` thật không được test nào bảo vệ (đã tự mutate)**: thêm 1 dòng `await dbContext.SaveChangesAsync(cancellationToken);` ngay sau `dbContext.Orders.Add(order)` trong `OrderEndpoints.cs` (đơn hàng commit ở transaction riêng, tách khỏi bản ghi outbox — sập giữa 2 lần commit là mất sự kiện, đúng điều spec cấm) → **4/4 test outbox vẫn xanh**. Lý do: `PlaceOrder_WritesTheOrder_AndTheOutboxRecord_InTheSameTransaction` chỉ khẳng định "sau khi xong, cả 2 hàng cùng tồn tại"; `PlaceOrder_WhenTheTransactionRollsBack_…` không đi qua endpoint mà tự dựng `OrdersDbContext` + `IPublishEndpoint`, nên không bảo vệ logic ghi thật. Đề xuất: test qua HTTP với 1 lỗi ép ở `SaveChanges` (interceptor/trùng khoá) rồi assert cả `Orders` lẫn `OutboxMessage` không đổi.
+- **Test rollback rỗng nghĩa khi bus outbox bị tắt (đã tự mutate)**: comment `o.UseBusOutbox();` trong `Program.cs` → 2 test đỏ (`PlaceOrder_WritesTheOrder…` với `Collection: []`, `…CrashRecovery…` với `Expected: 1, Actual: 0`) nhưng `PlaceOrder_WhenTheTransactionRollsBack_…` và `Consumer_ProcessesTheSameRedeliveredMessage_ExactlyOnce` vẫn **xanh** — bảng `OutboxMessage` luôn rỗng nên `0 == 0`; test rollback không khẳng định outbox từng có hàng trong đơn hợp lệ trước đó ở mức "đúng 1". Đề xuất: assert `outboxCountAfterFirstOrder == 1` trước khi thử đơn trùng, và assert số hàng outbox đúng bằng 1 ở test đầu (US1-KB3/SC-001 nói "đúng một").
+- **Test crash-recovery không khẳng định premise và không giữ cấu hình chu kỳ quét (đã tự mutate)**: (1) gán cứng `QueryDelay = 1s` trong `Program.cs` (bỏ qua `Outbox:QueryDelaySeconds`) → test vẫn **xanh** — Host A có thể tự gửi trước khi bị huỷ mà test không phát hiện, vì chỉ đếm `ProcessedCounts.Count` toàn cục (static, chung mọi sự kiện) tăng sau khi Host B khởi động, không khẳng định "chưa gửi trước Host B"; (2) ngược lại bỏ Host B → test **đỏ sau ~48 s** (`Host B never delivered…`), nên test thật sự phụ thuộc vào lần khởi động lại. Chỉ chứng minh 1 lần khởi động lại (US2-KB3 "nhiều lần" không có test); "đánh dấu đã gửi để không gửi lại" (US2-KB2) không có test.
+- **5 kịch bản chấp nhận không có test tự động**: US1-KB3 (nhiều yêu cầu đồng thời), US2-KB2, US2-KB3, US3-KB2 (2 bản sao gần như đồng thời — test chỉ publish 2 lần nối tiếp), US3-KB3 (2 sự kiện khác nhau của cùng 1 đơn). SC-001 "100% đơn hàng" chỉ được thử trên 1 đơn. Đã tự làm sống US1-KB3 trên stack thật (20 POST song song với `X-Correlation-Id` riêng): 20 `201`, `Orders` 3 → 23, `OutboxMessage` về 0 sau ~4 s, 20 message vào queue tạm (bind vào exchange `EventContracts:OrderPlacedV1`) với 20 `messageId`/`orderId`/`eventId` khác nhau và `correlationId` trong payload = đúng `X-Correlation-Id` đã gửi (20/20) — đồng thời đóng khoảng hở FR-004 của QA 016 ("nhánh async chưa có bằng chứng"). Test idempotency có "cắn": gỡ `UseEntityFrameworkOutbox` khỏi consumer host → `Expected: 1, Actual: 2`.
+- **`orders-api` của `docker-compose.local.yml` không được cấu hình RabbitMQ → outbox không bao giờ giao được (đã đo)**: chỉ `docker-compose.yml:326` có `ConnectionStrings__RabbitMq: amqp://guest:guest@rabbitmq:5672`; `docker-compose.local.yml` (stack QA/local đang chạy) không có, nên `orders-api` rơi về mặc định `localhost` — log có 411 dòng `Connection Failed: rabbitmq://localhost/` sau ~8 giờ; bản ghi outbox từ đơn của QA 017 kẹt suốt 7+ giờ (`EnqueueTime` NULL), đơn mới cũng chỉ tích luỹ thêm. `POST /orders` vẫn `201` trong 0.33 s (đúng FR-007) và `/health/ready` vẫn healthy (cố ý lọc, xem `HealthCheckEndpoints.cs`), nên **không có tín hiệu nào ngoài log**. Thêm `ConnectionStrings__RabbitMq` qua file override tạm rồi tạo lại container → cả 2 message kẹt được giao ngay (exchange `publish_in: 2`), bảng outbox về 0. Tương tự K8s: `deploy/k8s/orders/external-secret.yaml` chỉ khai `ConnectionStrings__OrdersDb`, không có cấu hình RabbitMQ nào trong `deploy/` (kể cả role Ansible) — khi triển khai thật `orders` sẽ ở đúng trạng thái này. Đề xuất: bổ sung biến vào `docker-compose.local.yml` và `ExternalSecret`; cân nhắc metric/health "outbox backlog" thay vì chỉ warn log.
+- **Tài liệu mô tả sai ý nghĩa cột outbox**: `specs/024-verify-transactional-outbox/data-model.md` dòng 16 và `quickstart.md` Kịch bản 1 bước 3 viết "`SentTime` còn rỗng" = chưa gửi. Thực tế MassTransit 8.5.4 ghi `SentTime` ngay lúc xếp hàng (đo: `2026-09-24 14:06:48` có giá trị dù chưa gửi); chưa gửi = `EnqueueTime` NULL, và sau khi giao bản ghi bị xoá luôn (0 hàng sau ~5 s) thay vì "đánh dấu đã gửi" như US2-KB2/spec-summary mô tả — kết quả tương đương (không gửi lại) nhưng ai kiểm tay theo quickstart sẽ tìm sai cột. Đề xuất sửa 2 chỗ trên.
+- **Quickstart 3 kịch bản thủ công không tái hiện nguyên văn được**: Kịch bản 1 khó "dừng trước khi log delivered" vì chu kỳ quét mặc định 1 s (đã tái hiện bằng cách dừng RabbitMQ + `docker kill`, xem trên: `POST` `201` trong 0.91 s, bản ghi còn nguyên sau khi kill, khởi động lại thì được giao); Kịch bản 2 cần "queue của consumer xác minh" nhưng consumer chỉ tồn tại trong test (production chưa có) — phải tự tạo queue tạm bind vào exchange; Kịch bản 3 (ép lỗi HTTP sau khi transaction bắt đầu) không thực hiện được qua API thật, chỉ qua test. Đề xuất ghi rõ 3 điểm này vào quickstart.
+- **Ghi chú phương pháp**: tải trọng thủ công gọi thẳng `orders-api :5041` cần thêm `X-Tenant-Id` **và** `X-Subject-Id` (thiếu `X-Subject-Id` → `500` `MissingCallerContextException`, không phải `401/400`); `Orders.Api.IntegrationTests` mỗi lần chạy dựng SQL Server + RabbitMQ Testcontainers riêng (~2.6 phút cho 4 test outbox, 29 test toàn suite chạy được cùng lúc với stack Docker đang bật). Dữ liệu QA (22 đơn thêm, queue `qa024`) đã dọn.
+
+## 025 — Diễn tập chaos engineering: giết pod / tiêm độ trễ
+
+*Cơ chế tiêm độ trễ đúng hợp đồng (đã đo sống Bất biến 1–6 trên `orders-api` thật; 8/8 test đơn vị xanh); kill-pod trên Kubernetes thật với image thật phục hồi ≈ 14 s, lặp lại được; độ trễ tiêm hiện lên trong Elasticsearch trong ~13 s. Các phát hiện dưới đây làm thay đổi cách đọc "kết luận sai lệch" của 3 bản ghi kết quả. Mọi mutation đã `git checkout --` hoàn tác.*
+
+- **[NGHIÊM TRỌNG] Header `X-Chaos-Latency-Ms` không bao giờ tới `orders` khi đi qua gateway/BFF — công cụ tiêm độ trễ không thể làm BFF timeout hay mở breaker (đã đo)**: bật `Chaos__AllowLatencyInjection=true` cho `orders-api`, gọi trực tiếp `GET /orders/{id}` + header `2000` → `2.01 s`; gọi cùng route qua `gateway :5300/bff/orders/{id}` + header `2000` → `0.016–0.031 s` (3/3 lần, như không có header). Không có dòng mã nào ở `services/bff`/`services/gateway` chuyển tiếp header này (grep `Chaos`/`X-Chaos` = 0 kết quả). Hệ quả: Quickstart Bước 2 ("`AttemptTimeout=1s` < 2 s nên BFF timeout ở lần thử đầu … circuit breaker mở mạch") và Acceptance Criteria SCRUM-34 ("circuit breaker trips") **không thể xảy ra bằng thiết kế hiện tại**, bất kể tải mạnh cỡ nào; 4 lần thử trong bản ghi (`autocannon -c 50` …) đều gửi header THẲNG vào orders, trong khi tải nền qua BFF không mang header nên không bao giờ bị làm chậm. Các `504` quan sát được (7/90, 1/100, 2/120) là nhiễu không liên quan tới độ trễ tiêm. Kết luận trong `2026-09-14-inject-latency.md` ("nguyên nhân là `Task.Delay` không chặn thread") vì vậy là **giả thuyết sai**, và câu hỏi mở ở `technical-debt.md` mục 025 nên được trả lời lại. (Ngay cả khi header được chuyển tiếp thì breaker BFF→orders vẫn cần ≥100 mẫu/10 s — xem QA_Debt mục 020.) Đề xuất: cho gateway/BFF chuyển tiếp header khi cờ bật (allow-list), hoặc tiêm ở phía BFF; sửa lại kết luận của bản ghi.
+- **Bản ghi kết quả vi phạm chính hợp đồng của nó**: `exercise-outcome-writeup-contract.md` Bất biến 3 — bản ghi `sai_lech` PHẢI có `jira_ticket` khác rỗng; 3/3 bản ghi ở `docs/dien-tap-chaos-engineering/ket-qua/` đều `sai_lech` với `jira_ticket: (chưa mở …)`. Đây cũng là FR-008, US3-KB2 và SC-004 ("100% … có kết luận 'xác nhận đạt' hoặc 'đã mở bug ticket kèm liên kết'"). Hợp đồng tự ghi "kiểm bằng mắt, không có test tự động" nên không gì chặn được. Đề xuất: mở ticket cho phát hiện ở trên rồi điền link; cân nhắc 1 test/CI check đơn giản quét `ket-qua/*.md`.
+- **Test đơn vị chỉ bảo vệ middleware đứng riêng (đã tự mutate)**: chạy `Orders.Api.UnitTests` (8 ca chaos xanh) — chuyển `app.UseMiddleware<ChaosLatencyInjectionMiddleware>()` xuống sau `UseTenancy()` trong `Program.cs` (phá Bất biến 5: độ trễ phải áp dụng TRƯỚC xác thực) → **vẫn xanh**; đổi `"AllowLatencyInjection": false` thành `true` trong `appsettings.json` (phá Bất biến 1: mặc định phải tắt) → **vẫn xanh**. Ngược lại bỏ `Math.Min` (kẹp trần) → `InvokeAsync_HeaderAboveSafetyCap_ClampsToMax` đỏ; bỏ điều kiện `AllowLatencyInjection &&` → `InvokeAsync_InjectionDisabled_IgnoresHeaderEntirely` đỏ. Bất biến 6 chỉ được kiểm ở mức "`next` được gọi", không so status/body. Đề xuất: 1 test tích hợp `WebApplicationFactory` khẳng định cấu hình mặc định tắt + thứ tự middleware (request chưa xác thực vẫn bị trễ khi bật; 401 vẫn trả về).
+- **Kill-pod: số liệu cũ (35–42 s) không đại diện; đo lại trên Kubernetes thật với image thật ≈ 14 s**: dựng `baskets` (image `ecomerce-local-baskets-api` nạp vào worker bằng `docker save | docker exec -i desktop-worker ctr -n k8s.io images import -`, probe/`maxUnavailable: 0` đúng mẫu `deployment.yaml.j2`, `initialDelaySeconds: 10`), thăm dò `/health/ready` qua API-server proxy mỗi 0.2 s, `kubectl delete pod` ×3: lần cuối thất bại sau khi xoá **+13.2 s / +14.9 s / +13.8 s** (21/20/21 lần thăm dò lỗi), lặp lại được (SC-001). Phần lớn là `initialDelaySeconds: 10` + chu kỳ readiness 5 s của nhóm db_backed. Bản ghi cũ 35–42 s gồm thao tác thủ công `kubectl cp` + `kubectl exec` (chính bản ghi thừa nhận) nên không phản ánh Kubernetes thuần; nên ghi 1 bản ghi mới với số liệu này.
+- **SC-002 ("100% lần kill-pod quan sát được breaker engage") không đạt được với tải nền quickstart đề nghị**: quickstart cho phép "vòng lặp `curl` thủ công là đủ" (~2 req/s); breaker BFF→baskets mặc định cần `MinimumThroughput 100` mẫu/10 s (QA_Debt mục 020) nên với ~2 req/s và cửa sổ gián đoạn ≈ 14 s chỉ thấy `OnRetry`/`OnTimeout`, không bao giờ `OnCircuitOpened` — khớp mọi bản ghi ("breaker không trip"). Cần tải ≥ ~10 req/s để breaker có cơ hội mở (QA 020 đã tái hiện: 150 request/50 song song mở mạch).
+- **Dọn dẹp chưa hoàn tất từ lần diễn tập gốc**: namespace `chaos-exercise` và `chaos-exercise-2` vẫn `Terminating` sau 10 ngày trên cluster docker-desktop — `kubectl get ns … -o jsonpath` báo "`service.kubernetes.io/load-balancer-cleanup` còn trong 1 Service" (finalizer của 1 Service loại LoadBalancer không được gỡ). Mục "Dọn dẹp" của quickstart chỉ nói về header và cờ, không nhắc xoá namespace/Service. Không xử lý ở lượt QA này (không phải do QA tạo).
+- **Ghi nhận mặt tích cực/thiết kế**: khi cờ bật, request CHƯA xác thực vẫn bị trễ trước khi trả `401` (đo `2.05 s` so với `0.11 s` khi không header — đúng Bất biến 5, có chủ đích), nghĩa là bất kỳ ai với tới cổng service đều làm chậm được tới 30 s/request — chấp nhận được trên cluster diễn tập, không được bật ở nơi khác (Bất biến 1/FR-006). Độ trễ tiêm hiện trong Elasticsearch: 6 request có `X-Chaos-Latency-Ms: 2500` → span `Orders.Api` (`duration ≥ 2 s`, p95 = 3117 ms) truy vấn được sau ≈ 12.7 s kể từ khi request kết thúc (batch OTLP + collector) — đủ "near real time" cho FR-005/SC-003, còn các sai lệch của dashboard nêu ở QA_Debt mục 021.
+- **Ghi chú phương pháp**: yêu cầu mở `NodePort` để nối BFF tới pod trên cluster bị chặn bởi chính sách môi trường nên đổi sang Service `ClusterIP` + đo qua API-server proxy của `kubectl` (không nối BFF vào pod k8s; hành vi BFF khi mất baskets đã có ở QA 020). Đã dọn: xoá namespace `qa025`, gỡ image khỏi worker, ngắt worker khỏi mạng compose, tạo lại `orders-api` đúng theo compose gốc. `Orders.Api.UnitTests` có sẵn 1 test đỏ `HealthCheckTests.HealthLive_ReturnsOk` do thiếu `ConnectionStrings__OrdersDb` (đã ghi ở mục 001/009).
+
+## 026 — Kiểm thử tải/hiệu năng luồng trọng yếu đối chiếu ngân sách hiến chương
+
+*Ghi chú đánh số: tài liệu 026 tương ứng thư mục spec `specs/025-load-performance-test-budgets/` (SCRUM-32). Khi có token, cơ chế đo → báo cáo → cổng chạy đúng cả 3 kịch bản Jira: baseline PASS; chèn `Task.Delay(600)` vào `baskets` → FAIL đúng bước `POST /bff/basket/items` (p95 930.3 ms và 675.3 ms so với ngưỡng 300 ms, exit 1); hoàn tác → PASS (exit 0); 6 test thuần xanh. Các phát hiện dưới đây là điểm yếu của chính cổng. Đã hoàn tác mọi mutation và dọn `artifacts/performance` do QA tạo.*
+
+- **[NGHIÊM TRỌNG] Bài kiểm thử tải không đính token nên trên stack hiện tại luôn đỏ — và đỏ sai cách, không có báo cáo (đã chạy thật)**: `GatewayClient.Create()` không gắn `Authorization`; tài liệu (`architecture/026`, `quickstart.md`, `technical-debt.md`) mô tả đây là "khoảng trống xác thực toàn nền tảng, không có cách lấy token". Nay không còn đúng: từ spec 014 có identity thật và tài khoản test `postman-test@local.test` (nạp bằng `TestUserPassword` trong `.env`, `scripts/up.sh` đã dùng để lấy token và làm ấm); tôi lấy được token qua `/connect/token` ngay. Chạy `dotnet test tests/CriticalPathLoadTests` trên stack local: 60/60 request `401`, test đỏ bằng `InvalidOperationException: Sequence contains no matching element` ở `CriticalPathLoadTest.cs:38` (`StepStats.Single(...)` — 3 bước sau không bao giờ chạy nên không có số liệu), **không có báo cáo nào được ghi** (`artifacts/performance/` không tồn tại) — trái tài liệu ("FAIL đúng thiết kế") và trái `load-test-run-contract.md` bất biến 5 (báo cáo phải được ghi vô điều kiện trước khi fail). Thông báo lỗi không nhắc tới 401 hay ngân sách. Đề xuất: đọc token từ biến môi trường (hoặc tự gọi `/connect/token` như `up.sh`), và xử lý bước không có số liệu thành 1 vi phạm có tên thay vì `Single`.
+- **Cổng chỉ xét độ trễ của request THÀNH CÔNG — tỷ lệ lỗi không nằm trong cổng và không có trong báo cáo (đã đo)**: `CriticalPathLoadTest.cs` lấy `stepStats.Ok.Latency.Percent95/99`, báo cáo không có cột lỗi/số request. Với token (giỏ hàng dùng chung 1 subject nên các luồng đồng thời đụng nhau; baskets log `DbUpdateConcurrencyException` → `500`, BFF trả `502/504`): 5/60 luồng lỗi ở lần chạy thứ 2, 17/60 ở lần 1, 27/60 ở lần sau khi khởi động lại, 4/60 ở lần ổn định — nhưng báo cáo ghi `Overall: PASS` khi các bước còn lại nhanh (vd `Overall: PASS`, checkout p95 110.5 ms với 5 luồng lỗi). Nghĩa là 1 hồi quy "một phần request lỗi nhanh" (5xx trả về trong vài ms) không làm cổng đỏ — trái tinh thần FR-004/SC-002. Phần lớn lỗi ở bước checkout còn cho thấy 1 vấn đề thật của baskets: sửa đồng thời cùng 1 giỏ trả `500` (`DbUpdateConcurrencyException`) thay vì `409`/thử lại. Đề xuất: thêm ngưỡng tỷ lệ lỗi tối đa vào `BudgetAssertions` và cột lỗi vào báo cáo.
+- **Lần chạy đầu sau khi khởi động/triển khai dịch vụ thường đỏ do độ trễ nguội — pipeline không làm ấm (đã đo)**: kịch bản `.WithoutWarmUp()` và `scripts/ci/run-performance-tests.sh` chỉ `docker compose up --build --wait` rồi chạy luôn (không gọi khối làm ấm 2 lượt mà `scripts/up.sh` có, vốn ghi rõ lượt đầu "có thể vượt ngân sách 3 s của BFF"). Đo: sau khi tạo lại `orders-api`, lần 1 `Overall: FAIL` (GET products p95 564.7 ms, add-item 829.4 ms — cả 2 vượt 300 ms), lần 2 `PASS` (29.7/100.2/110.5/27.3 ms); sau khi khởi động lại `bff/baskets/orders/products/gateway` (docker báo `healthy`), lần 1 **60/60 request `503`/`504`** (crash `Single` như trên, không báo cáo), lần 2 `FAIL` (45 % checkout lỗi; p95 511.7/408.6/369.1 ms), lần 3 `PASS`. Với cron hằng đêm dựng stack mới rồi chạy ngay, cổng có nguy cơ đỏ giả thường xuyên và chỉ đỏ "vì nguội", không vì hồi quy thật. Đề xuất: thêm bước làm ấm (bỏ qua N lần chạy đầu) trước khi đo.
+- **FR-008/US3-KB3 ("có khả năng chặn phát hành") chưa hiện thực — chỉ đăng 1 trạng thái GitHub không ai đọc**: `Jenkinsfile.performance` chỉ `githubNotify` `ci/performance-gate` (cron `H 2 * * *`), hợp đồng nêu rõ "KHÔNG đăng ký vào required status checks", và "cơ chế wiring cụ thể vào bước phát hành … thuộc `tasks.md`" — nhưng `tasks.md` không có task nào về việc này; grep `performance-gate` trong `scripts/`, `.github/`, `Jenkinsfile` chỉ thấy đúng `Jenkinsfile.performance`. Không có quy trình phát hành nào đọc check này, nên FAIL hằng đêm không chặn được gì. Ngoài ra Jenkins/SonarQube cục bộ không chạy (QA 013) nên cả pipeline chưa từng chạy thật; tôi chạy tương đương bằng `dotnet test` trực tiếp.
+- **Bất biến "không hard-code ngân sách" (`research.md` Quyết định 0) không được test giữ (đã tự mutate)**: hard-code `var p95 = 300.0; var p99 = 800.0;` trong `CriticalPathStepBudgets.LoadAll` → 6/6 test vẫn xanh vì `LoadAll_MatchesTheClientFacingBffDefaultDeclaredInTheManifest` khẳng định thẳng literal `300`/`800` (comment gốc nói "đọc lại giá trị trên đĩa" — không đúng). Ngược lại đổi `<=` thành `<` trong `StepResult.Passed` → `AssertAllStepsWithinBudget_DoesNotThrow_…` đỏ đúng. Đề xuất: so sánh `LoadAll()` với giá trị đọc trực tiếp từ `ServiceManifestFixture` trong test.
+- **6 test thuần của `CriticalPathLoadTests` không chạy trên PR**: project bị loại khỏi tier `unit` (đúng chủ đích của hợp đồng) nên `BudgetAssertionsTests`/`CriticalPathStepBudgetsTests` — logic thuần, chạy 0.3 s không cần stack — chỉ chạy khi cron nightly chạy được; 1 lỗi ở `BudgetAssertions` sẽ chỉ bị phát hiện sau khi cổng thật đã sai. Đề xuất: tách phần thuần sang project thuộc tier `unit`.
+- **Tài liệu lỗi thời sau spec 014/QA**: `architecture/026`, `quickstart.md` ("Trạng thái đã biết"), `technical-debt.md` mục 026 và comment của `GatewayClient.cs` còn mô tả "gateway chế độ stub không chuyển tiếp token; SeedData không có tài khoản demo" — không còn đúng trên stack hiện tại (xem phát hiện đầu). Đề xuất cập nhật khi vá `GatewayClient`.
+- **Ghi chú phương pháp**: chạy `dotnet test` trực tiếp trên stack `docker-compose.local.yml` (cổng gateway `:5300` = mặc định `GATEWAY_ORIGIN`) thay cho `scripts/ci/run-performance-tests.sh` (dựng stack `docker-compose.yml` + `demo.yml` — không chạy để khỏi đè stack QA đang dùng); để chạy có token, tôi vá tạm `GatewayClient` đọc `LOADTEST_TOKEN` rồi `git checkout --` hoàn tác. Hồi quy chèn vào `services/baskets/.../BasketEndpoints.cs` (handler `POST /baskets/current/items`, 600 ms trước `FindOrCreateCurrentAsync`), dựng lại image `baskets-api` cho cả 2 lượt. Mỗi lần chạy tạo thêm ~60 đơn hàng thật trong `orders-db` (bước reset giỏ `POST /bff/checkout` cũng tạo đơn khi giỏ có hàng) — đã dọn sau khi chạy (giữ lại đơn gốc của QA 017, xoá bảng outbox). Script tìm project của tier `performance` (`find`) cũng khớp bản sao trong `.claude/worktrees/*` trên máy này.

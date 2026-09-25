@@ -3,13 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/004`](../architecture/004_Architect_SPA%20mua%20sắm%20tối%20thiểu.md) ·
-[`development/004`](../development/004_Development_SPA%20mua%20sắm%20tối%20thiểu.md) ·
-[`summary/004`](../summary/004_PO_SPA%20mua%20sắm%20tối%20thiểu.md) ·
-[`spec-summary-vi/004`](../spec-summary-vi/004-minimal-shopping-spa.json) — đối chiếu chéo cả 4,
-kèm xác minh lại với source code thật khi có nghi vấn.
-
 > **Cập nhật lần 2** (nhánh `claude/spa-identity-server-login-e6100d`): lượt QA đầu ghi **FAIL** vì
 > storefront kẹt "Loading products…" (gateway đã đòi JWT mà SPA chưa có đăng nhập). Nhánh này thêm
 > form đăng nhập cho SPA (FR-026 trong `specs/004-minimal-shopping-spa/spec.md`) — luồng đã chạy được,

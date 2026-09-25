@@ -3,13 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/008`](../architecture/008_Architect_event%20schema%20có%20version.md) ·
-[`development/008`](../development/008_Development_event%20schema%20có%20version.md) ·
-[`summary/008`](../summary/008_PO_event%20schema%20có%20version.md) ·
-[`spec-summary-vi/008`](../spec-summary-vi/008-versioned-event-schemas.json) — đối chiếu chéo cả 4,
-kèm xác minh lại với source code thật khi có nghi vấn.
-
 ## Luồng happy-case đã rà soát (US1 → US3)
 
 1. **Hợp đồng ở 1 nơi** (US1): JSON Schema 2020-12 + record C# của `OrderPlaced`/`BasketCheckedOut` nằm trong `shared/EventContracts`,

@@ -19,6 +19,12 @@ namespace Bff.Api.IntegrationTests;
 /// </remarks>
 public class IndependentTokenValidationTests
 {
+    /// <summary>
+    /// Kiểm tra: gọi thẳng BFF (`GET /products`) không kèm token nào bị chính BFF từ chối `401`.
+    /// Lý do: FR-004/FR-011 — BFF không được tin rằng "gateway đã kiểm rồi", phải tự xác thực độc
+    /// lập; không token thì không có danh tính mặc định.
+    /// Task nguồn: spec 014 (máy chủ định danh thật) — US2, US2 Acceptance Scenario 2/3 (FR-011).
+    /// </summary>
     [Fact]
     public async Task ARequestWithNoToken_IsRejected()
     {
@@ -27,9 +33,17 @@ public class IndependentTokenValidationTests
 
         var response = await client.GetAsync("/products");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>
+    /// Kiểm tra: token hợp lệ bị nối thêm chuỗi rác (làm hỏng chữ ký), gửi thẳng tới BFF (bỏ qua
+    /// gateway hoàn toàn) — vẫn bị chính BFF từ chối `401`.
+    /// Lý do: US2 Test Scenario 2 — chứng minh "phòng thủ theo chiều sâu" thật: dù không đi qua
+    /// gateway, BFF vẫn tự phát hiện chữ ký sai.
+    /// Task nguồn: spec 014 (máy chủ định danh thật) — US2, Test Scenario 2 (FR-005, SC-002).
+    /// </summary>
     [Fact]
     public async Task ARequestWithATamperedToken_IsRejected()
     {
@@ -41,10 +55,17 @@ public class IndependentTokenValidationTests
 
         var response = await client.SendAsync(request);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    /// <summary>research.md Decision 6: health probes are the only explicit AllowAnonymous exception.</summary>
+    /// <summary>
+    /// Kiểm tra: `/health/live` và `/health/ready` vẫn trả lời bình thường (không phải `401`) dù
+    /// không có token nào (`[Theory]` chạy 2 lần, mỗi lần 1 route từ `[InlineData]`).
+    /// Lý do: research.md Decision 6 — health probe là ngoại lệ `[AllowAnonymous]` DUY NHẤT; nếu
+    /// deny-by-default lỡ áp cả lên đây, Kubernetes sẽ không bao giờ thăm dò được service.
+    /// Task nguồn: spec 014 (máy chủ định danh thật) — research.md Decision 6.
+    /// </summary>
     [Theory]
     [InlineData("/health/live")]
     [InlineData("/health/ready")]
@@ -55,6 +76,7 @@ public class IndependentTokenValidationTests
 
         var response = await client.GetAsync(route);
 
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau.
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 

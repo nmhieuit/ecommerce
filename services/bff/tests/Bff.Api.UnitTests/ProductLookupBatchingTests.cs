@@ -8,20 +8,30 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bff.Api.UnitTests;
 
 /// <summary>
-/// specs/023-audit-n1-unbounded-pagination spec FR-002/FR-003, User Story 2; Jira SCRUM-33 Test
-/// Scenario 2 ("load a basket with multiple items — confirm one query, not one query per item").
-/// Before this feature, <see cref="BasketsEndpoints.ToResponseAsync"/> called
-/// <c>ProductsApiClient.GetProductsAsync()</c> — the entire catalog — on every render, regardless of
-/// basket size. This suite locks in the fix: exactly one bounded call, for any basket size, and none
-/// at all for an empty basket.
+/// Spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) FR-002/FR-003, User Story 2; Jira SCRUM-33
+/// Test Scenario 2 ("tải 1 giỏ nhiều món — xác nhận 1 truy vấn, không phải 1 truy vấn cho mỗi món").
+/// Trước tính năng này, <see cref="BasketsEndpoints.ToResponseAsync"/> gọi
+/// <c>ProductsApiClient.GetProductsAsync()</c> — TOÀN BỘ catalog — mỗi lần render, bất kể giỏ lớn
+/// hay nhỏ. Bộ test này khoá bản sửa: đúng 1 lời gọi có giới hạn cho mọi cỡ giỏ, và không lời gọi nào
+/// cho giỏ rỗng.
 /// </summary>
 /// <remarks>
-/// Exercises <see cref="BasketsEndpoints.ToResponseAsync"/> directly (no HTTP host, no baskets
-/// service) with a real <see cref="ProductsApiClient"/> whose primary handler is a counting fake —
-/// same technique as <c>RetryMethodPolicyTests</c> and <c>ProductsEndpointPaginationTests</c>.
+/// Gọi trực tiếp <see cref="BasketsEndpoints.ToResponseAsync"/> (không host HTTP, không baskets
+/// service) với 1 <see cref="ProductsApiClient"/> thật có primary handler là 1 handler giả biết đếm —
+/// cùng kỹ thuật với <c>RetryMethodPolicyTests</c> và <c>ProductsEndpointPaginationTests</c>.
+/// Lưu ý về phạm vi: test chỉ ĐẾM số lần gọi, không kiểm tra request có mang `ids=` hay không — nên
+/// 1 hồi quy về "1 lời gọi lấy 1 trang catalog" (đo thật: đổi thành `GetProductsAsync(1, 100, …)`) vẫn
+/// qua toàn bộ 22 test BFF + 8 test scanner; xem QA_Debt mục 023.
 /// </remarks>
 public class ProductLookupBatchingTests
 {
+    /// <summary>
+    /// Kiểm tra: render 1 giỏ có 5 dòng thuộc 5 sản phẩm khác nhau → `ProductsApiClient` bị gọi ĐÚNG 1
+    /// lần.
+    /// Lý do: US2/Jira Test Scenario 2 — số lời gọi tới Products không được tăng theo số dòng (không
+    /// N+1 xuyên service).
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-002/FR-003, US2.
+    /// </summary>
     [Fact]
     public async Task RenderingBasket_WithMultipleDistinctProducts_CallsProductsClientExactlyOnce()
     {
@@ -39,13 +49,16 @@ public class ProductLookupBatchingTests
 
         await BasketsEndpoints.ToResponseAsync(basket, productsClient, CancellationToken.None);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — đúng 1 lần gọi; nhiều hơn
+        // nghĩa là quay lại kiểu 1 lời gọi/dòng.
         Assert.Equal(1, handler.InvocationCount);
     }
 
     /// <summary>
-    /// Two basket lines can name the same product (e.g. quantity bumped in a separate add-item
-    /// call before the baskets service merges them) — the lookup must still resolve to the
-    /// <em>distinct</em> id set, not one call per line.
+    /// Kiểm tra: 2 dòng giỏ cùng trỏ tới 1 sản phẩm → vẫn chỉ 1 lời gọi (tra theo tập id RIÊNG BIỆT).
+    /// Lý do: 2 dòng có thể cùng 1 sản phẩm (vd tăng số lượng bằng 1 lệnh add-item riêng trước khi
+    /// baskets service gộp) — tra cứu vẫn phải theo tập id khác nhau, không phải 1 lời gọi cho mỗi dòng.
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-002, US2.
     /// </summary>
     [Fact]
     public async Task RenderingBasket_WithDuplicateProductAcrossLines_StillCallsProductsClientExactlyOnce()
@@ -69,12 +82,15 @@ public class ProductLookupBatchingTests
 
         await BasketsEndpoints.ToResponseAsync(basket, productsClient, CancellationToken.None);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — đúng 1 lần gọi.
         Assert.Equal(1, handler.InvocationCount);
     }
 
     /// <summary>
-    /// Already-correct behaviour before this feature (the empty-basket early return) — kept as a
-    /// regression guard alongside the two fixes above, not a new fix itself.
+    /// Kiểm tra: render giỏ RỖNG → không gọi `ProductsApiClient` lần nào.
+    /// Lý do phải test: hành vi đã đúng từ trước tính năng này (return sớm khi giỏ rỗng) — giữ làm
+    /// regression guard cạnh 2 bản sửa ở trên, không phải 1 bản sửa mới.
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-002, Edge Case (giỏ rỗng).
     /// </summary>
     [Fact]
     public async Task RenderingEmptyBasket_DoesNotCallProductsClient()
@@ -85,6 +101,7 @@ public class ProductLookupBatchingTests
 
         await BasketsEndpoints.ToResponseAsync(basket, productsClient, CancellationToken.None);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — 0 lần gọi.
         Assert.Equal(0, handler.InvocationCount);
     }
 

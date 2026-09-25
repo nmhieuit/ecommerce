@@ -3,13 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/007`](../architecture/007_Architect_hợp%20đồng%20OpenAPI%20cho%20BFF.md) ·
-[`summary/007`](../summary/007_PO_hợp%20đồng%20OpenAPI%20cho%20BFF.md) ·
-[`spec-summary-vi/007`](../spec-summary-vi/007-bff-openapi-contracts.json) — đối chiếu chéo cả 3
-nguồn (spec 007 không có `docs/development/007` — thiết kế đúng: spec không đổi code sản xuất ròng, xem
-"Phạm vi" của 008/011), kèm xác minh lại với source code thật khi có nghi vấn.
-
 ## Luồng happy-case đã rà soát (US1 → US3)
 
 1. **Hợp đồng luôn khớp route** (US1): BFF tự sinh tài liệu OpenAPI từ chính các route (chỉ công bố ở Development,

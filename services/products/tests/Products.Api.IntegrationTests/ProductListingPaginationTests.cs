@@ -11,24 +11,26 @@ using Tenancy;
 namespace Products.Api.IntegrationTests;
 
 /// <summary>
-/// specs/023-audit-n1-unbounded-pagination spec FR-001/FR-004, User Story 1 and User Story 3: every
-/// call to <c>GET /products</c> returns a bounded page, whether the caller supplied no paging
-/// parameters at all (defaults to a bounded page) or supplied an excessively large one (server-side
-/// cap wins over the caller's value).
+/// Spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) FR-001/FR-004, User Story 1 và 3: mọi lời
+/// gọi <c>GET /products</c> đều trả về 1 trang có giới hạn — dù caller không truyền tham số phân trang
+/// nào (mặc định 1 trang có giới hạn) hay truyền 1 giá trị quá lớn (trần phía server thắng giá trị
+/// caller).
 /// </summary>
 /// <remarks>
-/// Constitution Principle III: real SQL Server via Testcontainers — a seed of 500 rows only proves
-/// the endpoint is bounded if the 500 rows genuinely exist in a real database, not an in-memory
-/// stand-in that could paginate an already-small collection by coincidence.
+/// Hiến chương Principle III: SQL Server thật qua Testcontainers — gieo 500 dòng chỉ chứng minh
+/// endpoint có giới hạn nếu 500 dòng đó thật sự tồn tại trong 1 database thật, không phải 1 giả lập
+/// in-memory có thể "vô tình" phân trang 1 tập vốn đã nhỏ.
 /// </remarks>
 public class ProductListingPaginationTests(SqlServerFixture sqlServer) : IClassFixture<SqlServerFixture>
 {
     private const string SeedTenantId = "contoso";
 
     /// <summary>
-    /// Jira SCRUM-33 Test Scenario 1, spec User Story 1 Acceptance Scenario 1 / SC-001: seeding 500
-    /// products and calling the listing endpoint without a page parameter must still return a
-    /// bounded page, not all 500.
+    /// Kiểm tra: gieo 500 sản phẩm, gọi `GET /products` KHÔNG truyền tham số phân trang → trả đúng 20
+    /// mục (mặc định), `TotalCount = 500`, `Page = 1`, `PageSize = 20` — không phải cả 500.
+    /// Lý do: Jira SCRUM-33 Test Scenario 1, US1 Acceptance Scenario 1 / SC-001 — "quên truyền tham số
+    /// thì lấy hết" là đúng lỗ hổng tính năng này đóng lại.
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-001, US1, SC-001.
     /// </summary>
     [Fact]
     public async Task ListProducts_WithoutQueryParameters_ReturnsOnlyDefaultPageSize_NotTheWholeCatalog()
@@ -38,10 +40,13 @@ public class ProductListingPaginationTests(SqlServerFixture sqlServer) : IClassF
 
         var response = await client.GetAsync("/products");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var page = await response.Content.ReadFromJsonAsync<PagedProductsResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null, đỏ khi body không đọc được thành envelope.
         Assert.NotNull(page);
+        // Đúng 20 mục (mặc định) dù có 500 bản ghi; nhiều hơn nghĩa là trần mặc định đã mất.
         Assert.Equal(20, page.Items.Count);
         Assert.Equal(500, page.TotalCount);
         Assert.Equal(1, page.Page);
@@ -49,8 +54,14 @@ public class ProductListingPaginationTests(SqlServerFixture sqlServer) : IClassF
     }
 
     /// <summary>
-    /// Jira SCRUM-33 Test Scenario 3, spec User Story 3 Acceptance Scenario 1 / SC-003: a caller
-    /// requesting an absurdly large page size must still be capped server-side, not honoured as-is.
+    /// Kiểm tra: gọi `GET /products?pageSize=1000000` → trả đúng 100 mục (`MaxPageSize`), `PageSize =
+    /// 100`, `TotalCount = 500`.
+    /// Lý do: Jira SCRUM-33 Test Scenario 3, US3 Acceptance Scenario 1 / SC-003 — trần phải do server
+    /// ép (FR-004), không được thực thi nguyên giá trị caller đòi.
+    /// Lưu ý: chỉ phủ tham số `pageSize` hợp lệ về kiểu; KHÔNG phủ `page`/`pageSize` không phải số
+    /// (BFF trả `500`) hay `page` cực lớn (tràn số nguyên → `OFFSET` âm) và cũng KHÔNG phủ nhánh `ids`
+    /// (không bị trần) — xem QA_Debt mục 023.
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-004, US3, SC-003.
     /// </summary>
     [Fact]
     public async Task ListProducts_WithExcessivePageSize_IsCappedAtMaxPageSize()
@@ -60,18 +71,23 @@ public class ProductListingPaginationTests(SqlServerFixture sqlServer) : IClassF
 
         var response = await client.GetAsync("/products?pageSize=1000000");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var page = await response.Content.ReadFromJsonAsync<PagedProductsResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null.
         Assert.NotNull(page);
+        // Đúng 100 (trần), không phải 500 hay 1000000; đỏ khi trần không được ép.
         Assert.Equal(100, page.Items.Count);
         Assert.Equal(100, page.PageSize);
         Assert.Equal(500, page.TotalCount);
     }
 
     /// <summary>
-    /// An invalid page size (zero or negative) must not slip past the cap or fail the request — it
-    /// falls back to the same default a caller who supplied nothing at all would get.
+    /// Kiểm tra: `pageSize = 0` hoặc `-5` (`[Theory]` chạy 2 lần) không vượt trần và không làm request
+    /// thất bại — quay về đúng mặc định (20 mục) như caller không truyền gì.
+    /// Lý do: 1 kích thước trang không hợp lệ (0/âm) không được lách qua trần hay gây lỗi.
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-004, US3-KB3.
     /// </summary>
     [Theory]
     [InlineData(0)]
@@ -83,18 +99,25 @@ public class ProductListingPaginationTests(SqlServerFixture sqlServer) : IClassF
 
         var response = await client.GetAsync($"/products?pageSize={requestedPageSize}");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var page = await response.Content.ReadFromJsonAsync<PagedProductsResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null.
         Assert.NotNull(page);
         Assert.Equal(20, page.Items.Count);
         Assert.Equal(20, page.PageSize);
     }
 
     /// <summary>
-    /// research.md Decision 4: an explicit <c>ids</c> filter is bounded by the caller-supplied id
-    /// set itself, not by page/pageSize — this is what lets the BFF resolve exactly the products a
-    /// basket needs in one call (spec User Story 2 / <c>ProductLookupBatchingTests</c> at the BFF).
+    /// Kiểm tra: `GET /products?ids=a,b` trả đúng 2 sản phẩm được yêu cầu (`TotalCount = 2`, `Page = 1`),
+    /// bỏ qua `page`/`pageSize`.
+    /// Lý do: research.md Decision 4 — bộ lọc `ids` tường minh bị chặn bởi chính tập id caller truyền,
+    /// không phải bởi page/pageSize; nhờ đó BFF lấy đúng các sản phẩm 1 giỏ cần chỉ với 1 lời gọi (US2 /
+    /// `ProductLookupBatchingTests` ở BFF).
+    /// Lưu ý: nghĩa là nhánh `ids` KHÔNG chịu trần `MaxPageSize` (đo thật: 200 id → trả 200 mục, bị giới
+    /// hạn chỉ bởi độ dài URL) — xem QA_Debt mục 023.
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — US2, research.md Decision 4.
     /// </summary>
     [Fact]
     public async Task ListProducts_WithIdsFilter_ReturnsExactlyTheMatchingProducts_IgnoringPageSize()
@@ -107,13 +130,16 @@ public class ProductListingPaginationTests(SqlServerFixture sqlServer) : IClassF
 
         var response = await client.GetAsync($"/products?ids={wanted[0]},{wanted[1]}");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var page = await response.Content.ReadFromJsonAsync<PagedProductsResponse>();
+        // Assert.NotNull(giá trị): xanh khi khác null.
         Assert.NotNull(page);
         Assert.Equal(2, page.Items.Count);
         Assert.Equal(2, page.TotalCount);
         Assert.Equal(1, page.Page);
+        // Assert.All(tập hợp, hành động): đỏ nếu bất kỳ mục trả về không thuộc tập id đã yêu cầu.
         Assert.All(page.Items, item => Assert.Contains(item.Id, wanted));
     }
 

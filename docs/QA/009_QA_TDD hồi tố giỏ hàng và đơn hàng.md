@@ -3,16 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/009`](../architecture/009_Architect_TDD%20hồi%20tố%20giỏ%20hàng%20và%20đơn%20hàng.md) ·
-[`summary/009`](../summary/009_PO_TDD%20hồi%20tố%20giỏ%20hàng%20và%20đơn%20hàng.md) ·
-[`spec-summary-vi/009`](../spec-summary-vi/009-retrofit-tdd-basket-order.json) — spec này không có
-tài liệu `development/` (đúng thiết kế, giống 007 và 010). Đối chiếu thêm với
-[`specs/009-retrofit-tdd-basket-order/spec.md`](../../specs/009-retrofit-tdd-basket-order/spec.md),
-`research.md`, `quickstart.md`, `data-model.md`, `tasks.md`, và
-[`docs/engineering/test-first-commits.md`](../engineering/test-first-commits.md) — rồi tự chạy lại
-thật các bước trong `quickstart.md` (không chỉ đọc).
-
 Khác mọi spec trước: đây không phải 1 feature sinh code mới. Bản thân spec tự tuyên bố "không có gì
 cần sửa" (research.md Decision 1) — mã tính giá giỏ hàng/tạo đơn đã đúng và đã có test bảo vệ từ
 trước; việc "làm" của spec 009 là **chứng minh lại bằng thực nghiệm** (cố ý gỡ từng quy tắc, xác nhận

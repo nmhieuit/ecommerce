@@ -3,17 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/010`](../architecture/010_Architect_hạ%20tầng%20kiểm%20thử%20container%20thật.md) ·
-[`summary/010`](../summary/010_PO_hạ%20tầng%20kiểm%20thử%20container%20thật.md) ·
-[`spec-summary-vi/010`](../spec-summary-vi/010-testcontainers-integration-tests.json) — spec này
-không có tài liệu `development/` (đúng thiết kế, giống 007 và 009). Đối chiếu thêm với
-[`specs/010-testcontainers-integration-tests/spec.md`](../../specs/010-testcontainers-integration-tests/spec.md),
-`research.md`, `quickstart.md`, `data-model.md`, `tasks.md`, và `docs/architecture/technical-debt.md`
-(mục 010, gồm Amendment 2026-09-12 liên quan tới spec 024) — rồi **tự chạy lại thật** 4 test audit
-ràng buộc SQL, fixture Redis, fixture RabbitMQ, và 2 lượt cố ý phá vỡ (1 ràng buộc SQL thật, 1 tên
-image container sai) để xác nhận "fail loudly" chứ không suy diễn từ tài liệu.
-
 ## Luồng happy-case đã rà soát
 
 1. **Cả 4 service đã audit (baskets/orders/parties/products) vẫn kiểm thử bằng SQL Server thật**,

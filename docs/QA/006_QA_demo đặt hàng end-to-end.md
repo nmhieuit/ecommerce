@@ -3,13 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/006`](../architecture/006_Architect_demo%20đặt%20hàng%20end-to-end.md) ·
-[`development/006`](../development/006_Development_demo%20đặt%20hàng%20end-to-end.md) ·
-[`summary/006`](../summary/006_PO_demo%20đặt%20hàng%20end-to-end.md) ·
-[`spec-summary-vi/006`](../spec-summary-vi/006-e2e-order-demo.json) — đối chiếu chéo cả 4,
-kèm xác minh lại với source code thật khi có nghi vấn.
-
 ## Luồng happy-case đã rà soát (US1 → US3)
 
 1. **Demo một lệnh** (US1): `./scripts/demo.ps1` (hoặc `demo.sh`) đưa stack vào "demo mode", dọn giỏ, chạy

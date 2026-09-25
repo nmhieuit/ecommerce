@@ -8,18 +8,25 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bff.Api.UnitTests;
 
 /// <summary>
-/// specs/023-audit-n1-unbounded-pagination spec FR-001, User Story 1: <c>GET /bff/products</c> must
-/// forward the caller's <c>page</c>/<c>pageSize</c> to the products service rather than silently
-/// re-introducing an unbounded fetch at the BFF layer, and the downstream page metadata must survive
-/// into <see cref="ProductsEndpoints.ProductListResponse"/> untouched (spec FR-007 — additive only).
+/// Spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) FR-001, User Story 1: <c>GET /bff/products</c>
+/// phải chuyển tiếp <c>page</c>/<c>pageSize</c> của caller sang products service thay vì âm thầm đưa
+/// việc lấy không giới hạn quay lại ở tầng BFF, và metadata trang từ downstream phải sống sót nguyên
+/// vẹn vào <see cref="ProductsEndpoints.ProductListResponse"/> (FR-007 — chỉ thêm, không đổi hợp đồng).
 /// </summary>
 /// <remarks>
-/// Two halves, mirroring <c>RetryMethodPolicyTests</c> (client-forwarding, through the real DI
-/// registration with a captured request) and <c>ResponseMappingTests</c> (pure shaping function, no
-/// HTTP at all) — each half is independently the simplest test that can fail for its own reason.
+/// Hai nửa, mô phỏng <c>RetryMethodPolicyTests</c> (chuyển tiếp qua client, đăng ký DI thật, bắt lấy
+/// request) và <c>ResponseMappingTests</c> (hàm định hình thuần, không HTTP) — mỗi nửa độc lập là
+/// test đơn giản nhất có thể fail vì đúng lý do của nó.
 /// </remarks>
 public class ProductsEndpointPaginationTests
 {
+    /// <summary>
+    /// Kiểm tra: `GetProductsAsync(page: 3, pageSize: 50)` gửi đúng `page=3&pageSize=50` trong query
+    /// string tới Products.
+    /// Lý do: FR-001 — BFF chỉ chuyển tiếp những gì caller đòi; Products (không phải BFF) là nguồn sự
+    /// thật duy nhất của kích thước mặc định và trần.
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-001, US1.
+    /// </summary>
     [Fact]
     public async Task GetProductsAsync_ForwardsPageAndPageSize_AsQueryParameters()
     {
@@ -28,12 +35,23 @@ public class ProductsEndpointPaginationTests
 
         await productsClient.GetProductsAsync(page: 3, pageSize: 50, CancellationToken.None);
 
+        // Assert.NotNull(giá trị): xanh khi handler đã bắt được 1 request, đỏ khi không có request nào.
         Assert.NotNull(handler.LastRequestUri);
         var query = System.Web.HttpUtility.ParseQueryString(handler.LastRequestUri!.Query);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal("3", query["page"]);
         Assert.Equal("50", query["pageSize"]);
     }
 
+    /// <summary>
+    /// Kiểm tra: `GetProductsByIdsAsync([id1, id2])` gửi `ids=id1,id2` (phân tách dấu phẩy) và KHÔNG
+    /// kèm `page` — không phải lời gọi lấy cả catalog.
+    /// Lý do: research.md Decision 4 — tra cứu theo `ids` bị chặn bởi chính tập id, không phải bởi 1
+    /// trang.
+    /// Lưu ý: test này chứng minh hình dạng request CỦA CLIENT — không chứng minh `BasketsEndpoints`
+    /// thật sự dùng phương thức này khi render giỏ (xem QA_Debt mục 023).
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-002, US2.
+    /// </summary>
     [Fact]
     public async Task GetProductsByIdsAsync_SendsIdsAsCommaSeparatedQueryParameter_NotFullCatalogFetch()
     {
@@ -44,14 +62,23 @@ public class ProductsEndpointPaginationTests
 
         await productsClient.GetProductsByIdsAsync([id1, id2], CancellationToken.None);
 
+        // Assert.NotNull(giá trị): xanh khi đã bắt được 1 request.
         Assert.NotNull(handler.LastRequestUri);
         var query = System.Web.HttpUtility.ParseQueryString(handler.LastRequestUri!.Query);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal($"{id1},{id2}", query["ids"]);
-        // No page/pageSize at all — an ids lookup is bounded by the id set itself
-        // (research.md Decision 4), not by a page.
+        // Không có page/pageSize nào — tra cứu `ids` bị chặn bởi chính tập id (research.md Decision 4),
+        // không phải bởi 1 trang.
+        // Assert.Null(giá trị): xanh khi null, đỏ khi có `page`.
         Assert.Null(query["page"]);
     }
 
+    /// <summary>
+    /// Kiểm tra: `GetProductsByIdsAsync([])` (danh sách id rỗng) trả tập rỗng và KHÔNG gọi downstream
+    /// lần nào.
+    /// Lý do: 1 giỏ không có dòng nào không được chạm tới products service (Edge Case giỏ rỗng).
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-002, Edge Case.
+    /// </summary>
     [Fact]
     public async Task GetProductsByIdsAsync_WithNoIds_DoesNotCallDownstreamAtAll()
     {
@@ -60,11 +87,20 @@ public class ProductsEndpointPaginationTests
 
         var result = await productsClient.GetProductsByIdsAsync([], CancellationToken.None);
 
+        // Assert.Empty(tập hợp): xanh khi rỗng, đỏ khi có phần tử.
         Assert.Empty(result);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau — 0 lần gọi downstream.
         Assert.Equal(0, handler.InvocationCount);
     }
 
-    /// <summary>Pure shaping, no HTTP — mirrors <c>ResponseMappingTests.ProductSummary_CarriesEveryFieldFromTheDownstreamProduct</c>.</summary>
+    /// <summary>
+    /// Kiểm tra: hàm định hình thuần `ToListResponse` giữ nguyên `Page`/`PageSize`/`TotalCount` từ
+    /// downstream cạnh các mục đã định hình. Không có HTTP — mô phỏng
+    /// <c>ResponseMappingTests.ProductSummary_CarriesEveryFieldFromTheDownstreamProduct</c>.
+    /// Lý do: FR-007 — thay đổi hợp đồng chỉ được thêm phần phân trang, và phần thêm đó không được rơi
+    /// rụng giữa Products và SPA.
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-007, US1.
+    /// </summary>
     [Fact]
     public void ToListResponse_MapsDownstreamPageMetadata_AlongsideShapedItems()
     {
@@ -76,7 +112,9 @@ public class ProductsEndpointPaginationTests
 
         var response = ProductsEndpoints.ToListResponse(page);
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử, đỏ khi 0 hoặc nhiều hơn.
         Assert.Single(response.Items);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(2, response.Page);
         Assert.Equal(20, response.PageSize);
         Assert.Equal(45, response.TotalCount);

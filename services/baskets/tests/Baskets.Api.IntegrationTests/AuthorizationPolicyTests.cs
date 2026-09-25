@@ -6,16 +6,20 @@ using Microsoft.AspNetCore.Mvc.Testing;
 namespace Baskets.Api.IntegrationTests;
 
 /// <summary>
-/// 015-deny-by-default-authz, spec US1 Acceptance Scenario 2, Test Scenario 2: a request that
-/// authenticated successfully but whose token lacks the <c>ApiScope</c> policy's required claim is
-/// rejected 403, not processed as if it were 200. The policy is toggle-gated (research.md Decision 5)
-/// — <c>appsettings.Development.json</c> turns it on, which is what
-/// <see cref="Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory{TEntryPoint}"/> loads by default.
+/// Kiểm tra: token đã xác thực hợp lệ nhưng thiếu claim `scope` mà policy `ApiScope` đòi hỏi bị từ chối
+/// đúng `403`, không được xử lý như thể là `200`.
+/// Lý do: spec 015 (phân quyền từ chối theo mặc định) US1 Acceptance Scenario 2, Test Scenario 2.
+/// Lưu ý: policy này được gạt bởi toggle (research.md Decision 5) — `appsettings.Development.json` bật
+/// toggle, đúng là file `WebApplicationFactory` nạp mặc định khi chạy test.
 /// </summary>
 public class AuthorizationPolicyTests
 {
     private static readonly string BasketRoute = $"/baskets/{Guid.NewGuid():D}";
 
+    /// <summary>
+    /// Task nguồn: spec 015 (phân quyền từ chối theo mặc định) — US1 Acceptance Scenario 2, Test
+    /// Scenario 2 (FR-003).
+    /// </summary>
     [Fact]
     public async Task ARequestWithATokenMissingTheApiScopeClaim_IsForbidden()
     {
@@ -28,10 +32,17 @@ public class AuthorizationPolicyTests
 
         var response = await client.SendAsync(request);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — phải đúng `403 Forbidden`,
+        // không phải `401`/`200`.
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
-    /// <summary>Regression guard: a token carrying the required scope is not newly rejected.</summary>
+    /// <summary>
+    /// Kiểm tra: token có đủ claim `scope` không bị từ chối vì lý do phân quyền.
+    /// Lý do phải test: chặn hồi quy — đảm bảo việc thêm policy `ApiScope` không vô tình chặn luôn cả
+    /// những request hợp lệ đã có đủ scope.
+    /// Task nguồn: spec 015 (phân quyền từ chối theo mặc định) — regression guard cho FR-003.
+    /// </summary>
     [Fact]
     public async Task ARequestWithATokenCarryingTheApiScopeClaim_IsNotRejectedForAuthorization()
     {
@@ -44,9 +55,11 @@ public class AuthorizationPolicyTests
 
         var response = await client.SendAsync(request);
 
-        // Whether this particular basket id exists (404) is not this test's concern — only that
-        // the request was not turned away for lacking authorization.
+        // Id giỏ hàng này có tồn tại hay không (404) không phải điều test quan tâm — chỉ cần request
+        // không bị từ chối vì lý do phân quyền.
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau.
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau.
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
