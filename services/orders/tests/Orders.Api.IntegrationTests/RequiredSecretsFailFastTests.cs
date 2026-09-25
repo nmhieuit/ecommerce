@@ -4,17 +4,30 @@ using Microsoft.AspNetCore.Mvc.Testing;
 namespace Orders.Api.IntegrationTests;
 
 /// <summary>
-/// specs/018-cluster-secret-store FR-007 and User Story 2's Independent Test: a service that
-/// never received its required secret from the cluster secret store must fail to start, with a
-/// clear reason, rather than start in an undefined state. The committed, non-Development
-/// appsettings.json deliberately still carries a host/database-only connection string with no
-/// credential (contracts/service-configuration-contract.md rule 2) — this is exactly the shape a
-/// real cluster deployment falls back to if the ExternalSecret/Secret was never wired up, so the
-/// test does not need to remove the key, only decline to supply a credential for it, matching
-/// production reality rather than an artificial "config entirely absent" case.
+/// Spec 018 (secrets qua cluster secret store) FR-007, Independent Test của User Story 2: 1 service
+/// chưa từng nhận được secret bắt buộc từ cluster secret store phải khởi động THẤT BẠI, kèm lý do rõ
+/// ràng — không được khởi động ở trạng thái chưa xác định. `appsettings.json` (không phải
+/// `.Development`) đã commit cố tình vẫn giữ 1 connection string chỉ có host/database, không
+/// credential (`contracts/service-configuration-contract.md` rule 2) — đúng hình dạng 1 cluster thật
+/// sẽ rơi vào nếu `ExternalSecret`/`Secret` chưa từng được nối — nên test này không cần xoá hẳn key,
+/// chỉ cần không cấp credential cho nó, khớp đúng thực tế production hơn là 1 ca giả lập "cấu hình
+/// hoàn toàn không tồn tại".
 /// </summary>
 public class RequiredSecretsFailFastTests
 {
+    /// <summary>
+    /// Kiểm tra: khi chạy ở môi trường `Production` (không có `ASPNETCORE_ENVIRONMENT`, giống
+    /// `docker-compose.yml` thật) mà `ConnectionStrings:OrdersDb` chỉ có host/database (không
+    /// credential — đúng giá trị base `appsettings.json` đã commit), host ném exception ngay khi
+    /// khởi động, và chuỗi exception (kể cả inner exception) phải nêu đích danh
+    /// `ConnectionStrings:OrdersDb` là secret còn thiếu.
+    /// Lý do: FR-007 — đây là bằng chứng chạy thật (không chỉ unit test thuần của
+    /// `RequiredSecretsValidator`) cho việc toàn bộ pipeline khởi động ASP.NET Core thật sự dừng lại
+    /// trước khi phục vụ bất kỳ request nào, và lý do dừng lại phải đọc được, không phải 1
+    /// exception mơ hồ xảy ra ở lần chạm database đầu tiên.
+    /// Task nguồn: spec 018 (secrets qua cluster secret store) — FR-007, User Story 2 Independent
+    /// Test.
+    /// </summary>
     [Fact]
     public async Task HostFailsToStart_WhenOrdersDbConnectionStringHasNoCredential()
     {
@@ -22,6 +35,9 @@ public class RequiredSecretsFailFastTests
 
         var exception = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
 
+        // Assert.True(điều kiện, thông báo): xanh khi chuỗi exception (đệ quy qua InnerException/
+        // AggregateException) có nhắc đúng tên secret còn thiếu; đỏ (kèm toàn bộ chuỗi exception
+        // thật để dễ chẩn đoán) khi không tìm thấy tên secret đó ở đâu trong lỗi.
         Assert.True(ExceptionChainMentions(exception, "ConnectionStrings:OrdersDb"),
             $"Expected the startup failure to name the missing secret 'ConnectionStrings:OrdersDb'. Actual exception chain: {Describe(exception)}");
     }

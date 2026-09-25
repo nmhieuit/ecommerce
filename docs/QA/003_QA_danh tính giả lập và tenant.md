@@ -3,13 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/003`](../architecture/003_Architect_danh%20tính%20giả%20lập%20và%20tenant.md) ·
-[`development/003`](../development/003_Development_danh%20tính%20giả%20lập%20và%20tenant.md) ·
-[`summary/003`](../summary/003_PO_danh%20tính%20giả%20lập%20và%20tenant.md) ·
-[`spec-summary-vi/003`](../spec-summary-vi/003-stub-identity-tenant-context.json) — đối chiếu chéo cả 4,
-kèm xác minh lại với source code thật khi có nghi vấn.
-
 ## Luồng happy-case đã rà soát (US1 → US2)
 
 1. Gateway xác định tenant đúng 1 lần (danh tính giả lập), ghi đè `X-Tenant-Id` (không tin giá trị

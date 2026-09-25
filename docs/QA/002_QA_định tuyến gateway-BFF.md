@@ -3,13 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/002`](../architecture/002_Architect_định%20tuyến%20gateway-BFF.md) ·
-[`development/002`](../development/002_Development_định%20tuyến%20gateway-BFF.md) ·
-[`summary/002`](../summary/002_PO_định%20tuyến%20gateway-BFF.md) ·
-[`spec-summary-vi/002`](../spec-summary-vi/002-gateway-bff-routing.json) — đối chiếu chéo cả 4, kèm
-xác minh lại với source code thật khi có nghi vấn.
-
 ## Luồng happy-case đã rà soát (US1 → US3)
 
 1. Gateway chỉ định tuyến tới BFF (một cụm duy nhất); BFF gọi 4 service downstream qua `HttpClient`

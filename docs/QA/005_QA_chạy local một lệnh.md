@@ -3,13 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/005`](../architecture/005_Architect_chạy%20local%20một%20lệnh.md) ·
-[`development/005`](../development/005_Development_chạy%20local%20một%20lệnh.md) ·
-[`summary/005`](../summary/005_PO_chạy%20local%20một%20lệnh.md) ·
-[`spec-summary-vi/005`](../spec-summary-vi/005-one-command-local-run.json) — đối chiếu chéo cả 4,
-kèm xác minh lại với source code thật khi có nghi vấn.
-
 ## Luồng happy-case đã rà soát (US1 → US3)
 
 1. **Một lệnh dựng cả nền tảng** (US1): `cp .env.example .env` rồi `./scripts/up.ps1` (hoặc `up.sh`) —

@@ -7,34 +7,41 @@ using Microsoft.Extensions.Options;
 namespace Bff.Api.UnitTests;
 
 /// <summary>
-/// 020-timeouts-retry-circuit-breaker spec FR-001 / research.md Decision 4: the JwtBearer
-/// backchannel (OIDC discovery + JWKS fetch against the identity server) is an outbound call like
-/// any other, and must declare an explicit resilience policy instead of relying on the framework's
-/// implicit default <see cref="System.Net.Http.HttpClient"/>.
+/// Spec 020 (timeout/retry/circuit breaker) FR-001 / research.md Decision 4: backchannel của JwtBearer
+/// (fetch OIDC discovery + JWKS từ identity server) là 1 lời gọi ra ngoài như mọi lời gọi khác, và
+/// phải khai báo TƯỜNG MINH 1 chính sách resilience thay vì dựa vào <see cref="System.Net.Http.HttpClient"/>
+/// mặc định ngầm của framework.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <c>AddIdentityValidation</c> (<c>shared/Identity/IdentityValidationExtensions.cs</c>) is the one
-/// registration every non-gateway service in the platform shares (parties, products, orders,
-/// baskets, and the BFF here) — fixing it once here covers all five (research.md Decision 4). The
-/// gateway's own scheme is covered separately by
-/// <c>Gateway.Api.UnitTests/IdentityBackchannelResilienceTests.cs</c>, since it cannot call this
-/// helper directly (see <c>ToggleGatedAuthenticationExtensions</c>'s remarks).
+/// <c>AddIdentityValidation</c> (<c>shared/Identity/IdentityValidationExtensions.cs</c>) là đăng ký
+/// duy nhất mà mọi service không phải gateway dùng chung (parties, products, orders, baskets, và BFF
+/// ở đây) — sửa 1 lần ở đó bao phủ cả 5 (research.md Decision 4). Scheme riêng của gateway được test
+/// tách ở <c>Gateway.Api.UnitTests/IdentityBackchannelResilienceTests.cs</c>, vì gateway không gọi
+/// trực tiếp helper này được (xem remarks của <c>ToggleGatedAuthenticationExtensions</c>).
 /// </para>
 /// <para>
-/// Asserted at the <c>IHttpClientFactory</c> registration level rather than by inspecting
-/// <c>JwtBearerOptions.Backchannel</c> directly: that property is non-null even before this feature
-/// (the framework's own default is a plain <c>HttpClient</c> assigned at options-construction time),
-/// so a null-check cannot tell "explicit resilience pipeline" apart from "framework default".
-/// Whether <c>AddHttpClient("IdentityBackchannel").AddStandardResilienceHandler(...)</c> actually ran
-/// shows up as extra <see cref="HttpClientFactoryOptions.HttpMessageHandlerBuilderActions"/> registered
-/// for that name — a name nobody configured has none.
+/// Khẳng định đặt ở tầng đăng ký <c>IHttpClientFactory</c>, không kiểm tra thẳng
+/// <c>JwtBearerOptions.Backchannel</c>: thuộc tính đó khác null kể cả TRƯỚC tính năng này (mặc định
+/// của framework là 1 <c>HttpClient</c> trơn gán lúc dựng options), nên kiểm tra null không phân biệt
+/// được "resilience pipeline tường minh" với "mặc định framework". <c>AddHttpClient("IdentityBackchannel")
+/// .AddStandardResilienceHandler(...)</c> có chạy thật hay không thể hiện qua số
+/// <see cref="HttpClientFactoryOptions.HttpMessageHandlerBuilderActions"/> đăng ký thêm cho tên đó —
+/// 1 tên chưa ai cấu hình thì không có action nào.
 /// </para>
 /// </remarks>
 public class IdentityBackchannelResilienceTests
 {
     private const string BackchannelClientName = "IdentityBackchannel";
 
+    /// <summary>
+    /// Kiểm tra: sau `AddIdentityValidation`, client đặt tên `IdentityBackchannel` có nhiều
+    /// handler-builder action hơn 1 tên client chưa từng đăng ký (nghĩa là có pipeline resilience gắn
+    /// vào).
+    /// Lý do: FR-001 — không lời gọi ra ngoài nào (kể cả fetch OIDC/JWKS ít được để ý) được dựa vào
+    /// timeout ngầm 60 giây của framework.
+    /// Task nguồn: spec 020 (timeout/retry/circuit breaker) — FR-001, research.md Decision 4.
+    /// </summary>
     [Fact]
     public void AddIdentityValidation_RegistersAResiliencePipelineForTheBackchannelClient()
     {
@@ -48,6 +55,8 @@ public class IdentityBackchannelResilienceTests
         var configured = factoryOptions.Get(BackchannelClientName);
         var neverRegistered = factoryOptions.Get("a-name-nobody-configured");
 
+        // Assert.True(điều kiện, thông báo): xanh khi client backchannel có NHIỀU handler-builder action
+        // hơn tên client chưa đăng ký (đã gắn resilience); đỏ kèm thông báo khi không nhiều hơn.
         Assert.True(
             configured.HttpMessageHandlerBuilderActions.Count > neverRegistered.HttpMessageHandlerBuilderActions.Count,
             $"Expected '{BackchannelClientName}' to have a resilience handler pipeline attached via "

@@ -11,28 +11,37 @@ using Tenancy;
 namespace Baskets.Api.IntegrationTests;
 
 /// <summary>
-/// specs/023-audit-n1-unbounded-pagination spec FR-002/SC-002, User Story 2: the number of SQL
-/// statements issued to load a basket and its line items must not grow with the number of lines.
+/// Spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) FR-002/SC-002, User Story 2: số câu lệnh
+/// SQL phát ra để tải 1 giỏ cùng các dòng của nó không được tăng theo số dòng.
 /// </summary>
 /// <remarks>
 /// <para>
-/// This locks in behaviour that was already correct before this feature —
-/// <c>BasketEndpoints</c>'s <c>.Include(b =&gt; b.LineItems)</c> eager-loads in a single query — as
-/// an automated regression test. Spec User Story 2's Independent Test calls for "profiling it with
-/// EF Core logging", not just reading the code, so this replaces that manual step with
-/// <see cref="QueryCountInterceptor"/> attached to a real SQL Server via Testcontainers
-/// (constitution Principle III).
+/// Test này khoá lại hành vi vốn đã đúng từ trước tính năng —
+/// <c>.Include(b =&gt; b.LineItems)</c> của <c>BasketEndpoints</c> eager-load trong 1 truy vấn duy
+/// nhất — thành 1 regression test tự động. Independent Test của US2 đòi "profile bằng EF Core
+/// logging", không chỉ đọc mã, nên test này thay bước thủ công đó bằng
+/// <see cref="QueryCountInterceptor"/> gắn vào 1 SQL Server thật qua Testcontainers (hiến chương
+/// Principle III).
 /// </para>
 /// <para>
-/// Two baskets, not one basket asserted against a hard-coded number: comparing a 1-line basket
-/// against a 5-line basket is what actually proves the count is independent of N, rather than
-/// merely small for one particular N.
+/// 2 giỏ, không phải 1 giỏ đem so với 1 con số cứng: so 1 giỏ 1 dòng với 1 giỏ 5 dòng mới chứng minh
+/// được số câu lệnh độc lập với N, thay vì chỉ "nhỏ" với 1 giá trị N cụ thể.
 /// </para>
 /// </remarks>
 public class BasketQueryCountTests(SqlServerFixture sqlServer) : IClassFixture<SqlServerFixture>
 {
     private const string TenantId = "contoso";
 
+    /// <summary>
+    /// Kiểm tra: tải giỏ 1 dòng và giỏ 5 dòng qua `GET /baskets/{id}` thật (SQL Server thật) → số câu
+    /// lệnh SQL phát ra BẰNG NHAU (không tăng theo số dòng).
+    /// Lý do: FR-002/SC-002 — 5 dòng là 5 hàng trong CÙNG 1 result set của `.Include()`, không phải 5
+    /// round trip; so sánh bằng nhau (chặt hơn "nhỏ hơn 1 hằng số nào đó") là khẳng định sắc nhất mà 1
+    /// truy vấn eager-load đơn có thể đưa ra.
+    /// Lưu ý: chỉ phủ đường `GET /baskets/{id}` của Baskets — lời gọi xuyên service ở BFF (đường thật sự
+    /// nặng nhất theo `architecture/023`) được test ở `ProductLookupBatchingTests`.
+    /// Task nguồn: spec 023 (rà soát N+1/không giới hạn/thiếu phân trang) — FR-002, SC-002, US2.
+    /// </summary>
     [Fact]
     public async Task GetBasket_IssuesTheSameNumberOfStatements_RegardlessOfLineItemCount()
     {
@@ -52,18 +61,20 @@ public class BasketQueryCountTests(SqlServerFixture sqlServer) : IClassFixture<S
         var fiveLineResponse = await client.GetAsync($"/baskets/{fiveLineBasketId}");
         var statementsForFiveLines = interceptor.ExecutedCommandCount;
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — cả 2 request đều phải `200`.
         Assert.Equal(HttpStatusCode.OK, oneLineResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, fiveLineResponse.StatusCode);
 
         var oneLineBasket = await oneLineResponse.Content.ReadFromJsonAsync<BasketResponse>();
         var fiveLineBasket = await fiveLineResponse.Content.ReadFromJsonAsync<BasketResponse>();
+        // Assert.Single(tập hợp): xanh khi đúng 1 dòng — bảo đảm 2 giỏ thật sự có 1 và 5 dòng để so sánh.
         Assert.Single(oneLineBasket!.Items);
         Assert.Equal(5, fiveLineBasket!.Items.Count);
 
-        // The actual assertion: statement count does not track line-item count. Equality (not just
-        // "bounded by some constant") is the sharpest statement `.Include()`'s single-query eager
-        // load can make here — 5 items are one row-per-item in the SAME result set, not 5 round
-        // trips.
+        // Khẳng định chính: số câu lệnh KHÔNG tăng theo số dòng. Bằng nhau (không chỉ "bị chặn bởi 1
+        // hằng số") là khẳng định sắc nhất mà eager-load 1 truy vấn của `.Include()` đưa ra ở đây — 5
+        // dòng là mỗi dòng 1 hàng trong CÙNG 1 result set, không phải 5 round trip.
+        // Assert.Equal(kỳ vọng, thực tế): đỏ khi giỏ 5 dòng tốn nhiều câu lệnh hơn giỏ 1 dòng (N+1).
         Assert.Equal(statementsForOneLine, statementsForFiveLines);
     }
 

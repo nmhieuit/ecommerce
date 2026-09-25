@@ -100,8 +100,9 @@ public class CorrelationIdPropagationTests
     /// Lý do: research.md Decision 2 — 1 giá trị do client tuỳ ý kiểm soát không bao giờ được lọt
     /// vào structured log mà không lọc, vì `\r\n` bên trong có thể giả mạo thêm 1 dòng log khác
     /// (log injection).
-    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — phát hiện & sửa ngoài task chính thức, xem
-    /// "Phase 6 implementation notes" trong specs/002-gateway-bff-routing/tasks.md, US3.
+    /// Task nguồn: spec 016 (lan truyền correlation ID từ edge đến frontend) — FR-009, research.md
+    /// Decision 2. Test này được thêm bởi chính spec 016 (commit `2abe34d`), không phải spec 002 dù
+    /// nằm chung file với 2 test cũ hơn của 002 — xem QA_Debt mục 016.
     /// </summary>
     [Fact]
     public async Task ACorrelationIdContainingControlCharacters_IsReplacedWithAGeneratedOne()
@@ -136,8 +137,9 @@ public class CorrelationIdPropagationTests
     /// (độ dài ≤ 128).
     /// Lý do: research.md Decision 2 — 1 giá trị client tự đặt, không giới hạn độ dài, có thể làm
     /// phình to vô hạn mọi dòng log mà nó xuất hiện.
-    /// Task nguồn: spec 002 (định tuyến gateway-BFF) — phát hiện & sửa ngoài task chính thức, xem
-    /// "Phase 6 implementation notes" trong specs/002-gateway-bff-routing/tasks.md, US3.
+    /// Task nguồn: spec 016 (lan truyền correlation ID từ edge đến frontend) — FR-009, research.md
+    /// Decision 2. Test này được thêm bởi chính spec 016 (commit `2abe34d`), không phải spec 002 dù
+    /// nằm chung file với 2 test cũ hơn của 002 — xem QA_Debt mục 016.
     /// </summary>
     [Fact]
     public async Task ACorrelationIdLongerThan128Characters_IsReplacedWithAGeneratedOne()

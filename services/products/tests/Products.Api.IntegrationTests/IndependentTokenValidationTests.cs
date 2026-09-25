@@ -19,6 +19,13 @@ namespace Products.Api.IntegrationTests;
 /// </remarks>
 public class IndependentTokenValidationTests
 {
+    /// <summary>
+    /// Kiểm tra: gọi thẳng `Products.Api` (không qua gateway/BFF) mà không kèm token nào bị chính
+    /// service này từ chối `401`.
+    /// Lý do: FR-004/FR-011 — service không được tin rằng "gateway đã kiểm rồi", phải tự xác thực
+    /// độc lập; không token thì không có danh tính mặc định.
+    /// Task nguồn: spec 014 (máy chủ định danh thật) — US2, US2 Acceptance Scenario 2/3 (FR-011).
+    /// </summary>
     [Fact]
     public async Task ARequestWithNoToken_IsRejected()
     {
@@ -27,9 +34,17 @@ public class IndependentTokenValidationTests
 
         var response = await client.GetAsync("/products");
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>
+    /// Kiểm tra: token hợp lệ bị nối thêm chuỗi rác (làm hỏng chữ ký), gửi thẳng tới `Products.Api`
+    /// (bỏ qua gateway hoàn toàn) — vẫn bị chính service này từ chối `401`.
+    /// Lý do: US2 Test Scenario 2 — chứng minh "phòng thủ theo chiều sâu" thật: dù không đi qua
+    /// gateway, service vẫn tự phát hiện chữ ký sai.
+    /// Task nguồn: spec 014 (máy chủ định danh thật) — US2, Test Scenario 2 (FR-005, SC-002).
+    /// </summary>
     [Fact]
     public async Task ARequestWithATamperedToken_IsRejected()
     {
@@ -41,13 +56,16 @@ public class IndependentTokenValidationTests
 
         var response = await client.SendAsync(request);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     /// <summary>
-    /// spec US3 Acceptance Scenario 1/2, Test Scenario 3: an expired token is rejected with a clear,
-    /// distinguishable response — not the framework's default empty-body 401, and not conflated with
-    /// a tampered or malformed token (data-model.md — Token, trạng thái Expired).
+    /// Kiểm tra: token đã hết hạn (5 phút trước), gửi thẳng tới `Products.Api`, bị từ chối `401` với
+    /// body nêu rõ `token_expired`.
+    /// Lý do: US3/FR-006 — mỗi service tự phân biệt "hết hạn" khỏi các lỗi xác thực khác, không chỉ
+    /// riêng gateway mới làm việc đó.
+    /// Task nguồn: spec 014 (máy chủ định danh thật) — US3, Test Scenario 3 (FR-006, SC-003).
     /// </summary>
     [Fact]
     public async Task ARequestWithAnExpiredToken_IsRejected_WithAClearExpiredMessage()
@@ -61,13 +79,21 @@ public class IndependentTokenValidationTests
 
         var response = await client.SendAsync(request);
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác.
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
 
         var body = await response.Content.ReadAsStringAsync();
+        // Assert.Contains(chuỗi con, chuỗi): xanh khi chuỗi có chứa chuỗi con, đỏ khi không.
         Assert.Contains("token_expired", body, StringComparison.Ordinal);
     }
 
-    /// <summary>research.md Decision 6: health probes are the only explicit AllowAnonymous exception.</summary>
+    /// <summary>
+    /// Kiểm tra: `/health/live` và `/health/ready` vẫn trả lời bình thường (không phải `401`) dù
+    /// không có token nào (`[Theory]` chạy 2 lần, mỗi lần 1 route từ `[InlineData]`).
+    /// Lý do: research.md Decision 6 — health probe là ngoại lệ `[AllowAnonymous]` DUY NHẤT; nếu
+    /// deny-by-default lỡ áp cả lên đây, Kubernetes sẽ không bao giờ thăm dò được service.
+    /// Task nguồn: spec 014 (máy chủ định danh thật) — research.md Decision 6.
+    /// </summary>
     [Theory]
     [InlineData("/health/live")]
     [InlineData("/health/ready")]
@@ -78,6 +104,7 @@ public class IndependentTokenValidationTests
 
         var response = await client.GetAsync(route);
 
+        // Assert.NotEqual(giá trị cấm, thực tế): xanh khi khác nhau, đỏ khi bằng nhau.
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 

@@ -9,18 +9,18 @@ using Tenancy;
 namespace Bff.Api.IntegrationTests;
 
 /// <summary>
-/// 016-correlation-id-propagation spec US1/US3, research.md Decision 1/7: the BFF → domain-service
-/// hop is the one place a typed <see cref="HttpClient"/> forwards nothing by itself — unlike the
-/// gateway → BFF hop, which YARP relays for free (<c>Gateway.Api.IntegrationTests.CorrelationIdPropagationTests</c>).
-/// Without an outbound handler carrying it, this hop is where a correlation ID generated at the edge
-/// would silently stop, and every domain service reachable only through the BFF would mint its own
-/// instead.
+/// Spec 016 (lan truyền correlation ID từ edge đến frontend) US1/US3, research.md Decision 1/7: hop
+/// BFF → domain service là nơi DUY NHẤT mà 1 typed <see cref="HttpClient"/> không tự chuyển tiếp gì
+/// cả — khác hop gateway → BFF, nơi YARP tự relay header miễn phí
+/// (<c>Gateway.Api.IntegrationTests.CorrelationIdPropagationTests</c>). Không có 1 handler outbound
+/// mang nó đi, đây chính là nơi correlation ID sinh ở edge sẽ âm thầm dừng lại, và mỗi domain service
+/// chỉ tới được qua BFF sẽ tự sinh ID riêng của nó thay vì mang theo ID đã có.
 /// </summary>
 /// <remarks>
-/// Mirrors <see cref="TenantPropagationTests"/> exactly: the assertion is made on the outbound
-/// request itself, via a recording handler inside the client's pipeline, because that is the thing
-/// under test — whether the downstream service then likes what it received is that service's own
-/// suite's business.
+/// Giống hệt <see cref="TenantPropagationTests"/>: khẳng định được đặt ngay trên outbound request,
+/// qua 1 recording handler nằm trong pipeline của client — vì đó chính là thứ đang được kiểm tra;
+/// domain service phía dưới có "thích" giá trị nhận được hay không là việc của bộ test riêng của
+/// chính service đó.
 /// </remarks>
 [Collection(DownstreamServicesCollectionDefinition.Name)]
 public class CorrelationPropagationTests(DownstreamServicesFixture fixture)
@@ -35,6 +35,10 @@ public class CorrelationPropagationTests(DownstreamServicesFixture fixture)
     /// </summary>
     private const string ResolvedTenant = "contoso";
 
+    /// <summary>
+    /// Task nguồn: spec 016 (lan truyền correlation ID từ edge đến frontend) — US1/US3, research.md
+    /// Decision 1 (FR-003).
+    /// </summary>
     [Fact]
     public async Task TheBffsOutboundCall_CarriesTheCorrelationIdTheBffReceived()
     {
@@ -52,16 +56,25 @@ public class CorrelationPropagationTests(DownstreamServicesFixture fixture)
 
         await client.SendAsync(request);
 
+        // Assert.Single(tập hợp): xanh khi có đúng 1 phần tử (trả phần tử đó ra), đỏ khi 0 hoặc
+        // nhiều hơn — outbound call phải mang đúng 1 giá trị correlation ID.
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — id BFF nhận từ request
+        // phải khớp đúng id gửi đi tới domain service, không bị rớt hoặc bị đổi.
         Assert.Equal(supplied, Assert.Single(recorder.Observed));
     }
 
     /// <summary>
-    /// research.md Decision 7: the real risk this hop introduces is a pooled <see cref="HttpClient"/>
-    /// handler capturing one request's state and replaying it for another — the same failure class
-    /// <see cref="TenantPropagationHandler"/>'s own remarks warn about for the tenant. Reading
-    /// <c>IHttpContextAccessor.HttpContext</c> fresh on every <c>SendAsync</c> call (rather than
-    /// capturing it at construction) is what should prevent that; this proves it under real
-    /// concurrent load rather than by argument alone.
+    /// Kiểm tra: gửi 10 request đồng thời, mỗi request mang 1 correlation ID riêng — outbound call
+    /// tới domain service phải khớp 1-1 với đúng correlation ID của chính request đó, không request
+    /// nào bị lẫn ID của request khác.
+    /// Lý do: research.md Decision 7 — rủi ro thật nằm ở 1 handler `HttpClient` được pool và tái sử
+    /// dụng giữa các request (`IHttpClientFactory`) chụp lại state của 1 request rồi phát lại cho
+    /// request khác — cùng lớp lỗi mà chính doc-comment của `TenantPropagationHandler` đã cảnh báo
+    /// cho tenant. Đọc `IHttpContextAccessor.HttpContext` tươi mỗi lần gọi `SendAsync` (không capture
+    /// lúc khởi tạo) là cơ chế phải ngăn được lỗi đó; test này chứng minh bằng tải đồng thời thật,
+    /// không chỉ bằng lý luận đọc mã.
+    /// Task nguồn: spec 016 (lan truyền correlation ID từ edge đến frontend) — US3, research.md
+    /// Decision 7 (FR-007).
     /// </summary>
     [Fact]
     public async Task TheBffsOutboundCalls_DoNotCrossContaminateCorrelationIds_UnderConcurrentRequests()
@@ -87,9 +100,12 @@ public class CorrelationPropagationTests(DownstreamServicesFixture fixture)
         }));
 
         var observed = recorder.Observed;
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — số outbound call quan sát
+        // được phải đúng bằng số request đã gửi, không thiếu không thừa.
         Assert.Equal(sent.Length, observed.Count);
-        // Every sent id is observed exactly once — no id missing, no id duplicated onto a different
-        // request's outbound call (which is what cross-contamination would look like).
+        // Mỗi id đã gửi phải được quan sát đúng 1 lần — không id nào thiếu, không id nào bị nhân đôi
+        // lên outbound call của 1 request khác (đó chính là biểu hiện của lẫn lộn correlation ID).
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi 2 tập hợp (đã sắp xếp) giống hệt nhau, đỏ khi khác.
         Assert.Equal(sent.OrderBy(id => id), observed.OrderBy(id => id));
     }
 

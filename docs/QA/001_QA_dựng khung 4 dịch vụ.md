@@ -3,13 +3,6 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-**Nguồn đối chiếu**:
-[`architecture/001`](../architecture/001_Architect_dựng%20khung%204%20dịch%20vụ.md) ·
-[`development/001`](../development/001_Development_dựng%20khung%204%20dịch%20vụ.md) ·
-[`summary/001`](../summary/001_PO_dựng%20khung%204%20dịch%20vụ.md) ·
-[`spec-summary-vi/001`](../spec-summary-vi/001-scaffold-service-shells.json) — đối chiếu chéo cả 4,
-kèm xác minh lại với source code thật khi có nghi vấn.
-
 ## Luồng happy-case đã rà soát (US1 → US3)
 
 1. Khởi động 1 service độc lập (không cần 3 service kia) — readiness phản ánh đúng khả năng kết nối

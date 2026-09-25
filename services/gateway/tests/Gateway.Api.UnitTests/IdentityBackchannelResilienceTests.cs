@@ -7,23 +7,30 @@ using Microsoft.Extensions.Options;
 namespace Gateway.Api.UnitTests;
 
 /// <summary>
-/// 020-timeouts-retry-circuit-breaker spec FR-001 / research.md Decision 4: the JwtBearer
-/// backchannel (OIDC discovery + JWKS fetch against the identity server) is an outbound call like
-/// any other, and must declare an explicit resilience policy instead of relying on the framework's
-/// implicit default <see cref="System.Net.Http.HttpClient"/>.
+/// Spec 020 (timeout/retry/circuit breaker) FR-001 / research.md Decision 4: backchannel của JwtBearer
+/// (fetch OIDC discovery + JWKS từ identity server) là 1 lời gọi ra ngoài như mọi lời gọi khác, và
+/// phải khai báo TƯỜNG MINH 1 chính sách resilience thay vì dựa vào <see cref="System.Net.Http.HttpClient"/>
+/// mặc định ngầm của framework.
 /// </summary>
 /// <remarks>
-/// The gateway registers its JwtBearer scheme through <c>AddToggleGatedIdentity</c> rather than the
-/// shared <c>AddIdentityValidation</c> every other service uses (see that class's remarks), so it
-/// needs its own copy of this fix and its own copy of this test — mirrors
-/// <c>Bff.Api.UnitTests/IdentityBackchannelResilienceTests.cs</c>, including why the assertion is
-/// made at the <c>IHttpClientFactory</c> registration level rather than by inspecting
-/// <c>JwtBearerOptions.Backchannel</c> directly (that property is non-null by framework default).
+/// Gateway đăng ký scheme JwtBearer qua <c>AddToggleGatedIdentity</c> chứ không qua
+/// <c>AddIdentityValidation</c> dùng chung của mọi service khác (xem remarks của class đó), nên cần
+/// bản sao riêng của bản sửa này và bản sao riêng của test này — phản chiếu
+/// <c>Bff.Api.UnitTests/IdentityBackchannelResilienceTests.cs</c>, kể cả lý do khẳng định đặt ở tầng
+/// đăng ký <c>IHttpClientFactory</c> thay vì kiểm tra thẳng <c>JwtBearerOptions.Backchannel</c>
+/// (thuộc tính đó khác null theo mặc định của framework).
 /// </remarks>
 public class IdentityBackchannelResilienceTests
 {
     private const string BackchannelClientName = "IdentityBackchannel";
 
+    /// <summary>
+    /// Kiểm tra: sau `AddToggleGatedIdentity` (đường đăng ký riêng của gateway), client đặt tên
+    /// `IdentityBackchannel` có pipeline resilience gắn vào.
+    /// Lý do: FR-001 — gateway cũng gọi identity server (OIDC/JWKS) và không được dựa vào timeout ngầm
+    /// 60 giây của framework; gateway không dùng chung helper của các service khác nên cần test riêng.
+    /// Task nguồn: spec 020 (timeout/retry/circuit breaker) — FR-001, research.md Decision 4.
+    /// </summary>
     [Fact]
     public void AddToggleGatedIdentity_RegistersAResiliencePipelineForTheBackchannelClient()
     {
@@ -37,6 +44,8 @@ public class IdentityBackchannelResilienceTests
         var configured = factoryOptions.Get(BackchannelClientName);
         var neverRegistered = factoryOptions.Get("a-name-nobody-configured");
 
+        // Assert.True(điều kiện, thông báo): xanh khi client backchannel có NHIỀU handler-builder action
+        // hơn tên client chưa đăng ký (đã gắn resilience); đỏ kèm thông báo khi không nhiều hơn.
         Assert.True(
             configured.HttpMessageHandlerBuilderActions.Count > neverRegistered.HttpMessageHandlerBuilderActions.Count,
             $"Expected '{BackchannelClientName}' to have a resilience handler pipeline attached via "

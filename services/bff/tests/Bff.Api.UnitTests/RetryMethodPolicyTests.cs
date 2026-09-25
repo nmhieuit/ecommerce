@@ -5,30 +5,35 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bff.Api.UnitTests;
 
 /// <summary>
-/// 020-timeouts-retry-circuit-breaker User Story 3 (spec FR-006; Edge Case 1): a write call must
-/// never be silently retried by the resilience pipeline. Before this feature,
-/// <c>AddStandardResilienceHandler</c>'s default retry predicate does not look at the HTTP method at
-/// all, so a <c>POST /basket/items</c> that timed out after the baskets service had already
-/// processed it could be retried — and could add the item twice.
+/// Spec 020 (timeout/retry/circuit breaker) User Story 3 (FR-006; Edge Case 1): 1 lời gọi GHI không
+/// bao giờ được resilience pipeline âm thầm retry. Trước tính năng này, predicate retry mặc định của
+/// <c>AddStandardResilienceHandler</c> hoàn toàn không xét HTTP method, nên 1 <c>POST /basket/items</c>
+/// bị timeout SAU KHI baskets service đã xử lý xong vẫn có thể bị gửi lại — và thêm món 2 lần.
 /// </summary>
 /// <remarks>
-/// Exercises <see cref="BasketsApiClient"/> directly through the real DI registration
-/// (<see cref="DownstreamClientRegistrationExtensions.AddDownstreamClients"/>) with its primary
-/// HTTP handler substituted for one that always fails and counts its own invocations — no ASP.NET
-/// Core host or route mapping needed, since the policy under test lives entirely in the resilience
-/// pipeline attached to the named <c>HttpClient</c>. <see cref="BasketsApiClient.GetCurrentBasketAsync"/>
-/// (<c>GET</c>) and <see cref="BasketsApiClient.AddItemAsync"/> (<c>POST</c>) are both proxy calls
-/// to the same client and the same pipeline configuration, so comparing their invocation counts
-/// isolates the method-based restriction from everything else the pipeline does.
+/// Gọi trực tiếp <see cref="BasketsApiClient"/> qua đăng ký DI thật
+/// (<see cref="DownstreamClientRegistrationExtensions.AddDownstreamClients"/>), thay primary HTTP
+/// handler bằng 1 handler luôn thất bại và tự đếm số lần được gọi — không cần host ASP.NET Core hay
+/// map route, vì chính sách đang kiểm tra nằm hoàn toàn trong resilience pipeline gắn vào
+/// <c>HttpClient</c> đặt tên. <see cref="BasketsApiClient.GetCurrentBasketAsync"/> (<c>GET</c>) và
+/// <see cref="BasketsApiClient.AddItemAsync"/> (<c>POST</c>) đều là lời gọi proxy qua cùng 1 client,
+/// cùng 1 cấu hình pipeline — nên so sánh số lần được gọi tách riêng được ràng buộc theo method khỏi
+/// mọi thứ khác pipeline làm.
 /// </remarks>
 public class RetryMethodPolicyTests
 {
     /// <summary>
-    /// Matches <c>DownstreamClientRegistrationExtensions.MaxRetryAttempts</c>: 1 initial attempt + 2
-    /// retries.
+    /// Khớp <c>DownstreamClientRegistrationExtensions.MaxRetryAttempts</c>: 1 lần gọi đầu + 2 lần retry.
     /// </summary>
     private const int ExpectedAttemptsWhenRetried = 3;
 
+    /// <summary>
+    /// Kiểm tra: `GET` (đọc giỏ hàng) gặp lỗi tạm thời thì được retry — handler bị gọi đúng 3 lần
+    /// (1 + 2 retry).
+    /// Lý do phải test: chặn hồi quy — thu hẹp retry theo method không được vô tình tắt luôn retry của
+    /// `GET`, vì đọc lại 2 lần không đổi kết quả nghiệp vụ.
+    /// Task nguồn: spec 020 (timeout/retry/circuit breaker) — FR-005/FR-006, US3, research.md Decision 5.
+    /// </summary>
     [Fact]
     public async Task GetCurrentBasket_IsRetried_OnATransientFailure()
     {
@@ -38,9 +43,18 @@ public class RetryMethodPolicyTests
         await Assert.ThrowsAnyAsync<Exception>(
             () => basketsClient.GetCurrentBasketAsync(CancellationToken.None));
 
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — đúng 3 lần gọi thật
+        // (1 lần đầu + 2 retry); ít hơn nghĩa là GET đã mất khả năng retry.
         Assert.Equal(ExpectedAttemptsWhenRetried, handler.InvocationCount);
     }
 
+    /// <summary>
+    /// Kiểm tra: `POST` (thêm món vào giỏ) gặp lỗi tạm thời thì TUYỆT ĐỐI không được retry — handler
+    /// chỉ bị gọi đúng 1 lần.
+    /// Lý do: FR-006 — hệ thống không có cơ chế idempotency-key nào, nên 1 POST đã tới server thành
+    /// công nhưng mất phản hồi trên đường về mà bị retry sẽ tạo dòng giỏ hàng (hoặc đơn hàng) trùng.
+    /// Task nguồn: spec 020 (timeout/retry/circuit breaker) — FR-006, US3, Edge Case 1.
+    /// </summary>
     [Fact]
     public async Task AddItem_IsNeverRetried_OnATransientFailure()
     {
@@ -52,8 +66,8 @@ public class RetryMethodPolicyTests
                 new AddBasketItemCommand(Guid.NewGuid(), Quantity: 1, UnitPrice: 9.99m),
                 CancellationToken.None));
 
-        // Exactly the one real attempt — a second would mean the resilience pipeline retried a
-        // write, which is precisely the duplicate-side-effect risk spec FR-006 forbids.
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi bằng nhau, đỏ khi khác — đúng 1 lần gọi thật; lần
+        // thứ 2 nghĩa là pipeline đã retry 1 lệnh ghi, đúng rủi ro trùng side effect mà FR-006 cấm.
         Assert.Equal(1, handler.InvocationCount);
     }
 
@@ -84,9 +98,9 @@ public class RetryMethodPolicyTests
     }
 
     /// <summary>
-    /// Fails every call immediately with a transient-classified exception (matching
-    /// <c>Bff.Api.IntegrationTests/BffTestHost.cs</c>'s <c>FailingTransportHandler</c>), counting how
-    /// many times the resilience pipeline actually invoked it.
+    /// Làm mọi lời gọi thất bại ngay với 1 exception được phân loại là tạm thời (khớp
+    /// <c>FailingTransportHandler</c> của <c>Bff.Api.IntegrationTests/BffTestHost.cs</c>), đồng thời
+    /// đếm số lần resilience pipeline thật sự gọi tới nó.
     /// </summary>
     private sealed class CountingFailingHandler : HttpMessageHandler
     {
