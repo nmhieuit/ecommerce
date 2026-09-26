@@ -3833,6 +3833,444 @@
           ]
         }
       ]
+    },
+    {
+      "name": "11 - Hợp đồng BFF ↔ service (Pact)",
+      "description": "Kiểm chứng spec 011 (consumer-driven contract) trên hệ thống chạy thật: gọi THẲNG 3 service phía sau BFF (products, baskets, orders) và kiểm đúng những gì BFF ghi trong pacts/bff-*.json — mã trạng thái và kiểu của từng trường mà BFF dựa vào (đặc biệt: price/total/unitPrice phải là SỐ). Đây là bản 'provider verification' làm tay; bản tự động chạy trong build của từng provider.\n\nKhông có công tắc cấu hình — cần stack chạy (products-api, baskets-api, orders-api, identity-api và DB) và đã lấy token ở folder '00 - Xác thực & phân quyền'. Chạy 01 → 08; bước 07 tạo 1 đơn thật mỗi lần chạy. Hợp đồng sự kiện BasketCheckedOut chưa có luồng thật nên không kiểm được ở đây.",
+      "item": [
+        {
+          "name": "01 products — trang catalog (pact bff-products)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{productsUrl}}/products?page=1&pageSize=20",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Kỳ vọng BFF ghi trong pacts/bff-products.json: 200, `items` ≥ 1 phần tử có id (UUID), name (chuỗi), price (SỐ); kèm page, pageSize, totalCount (số)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "const isNum = function (x) { return typeof x === 'number'; };",
+                  "pm.test(\"200; items >= 1 với id UUID, name chuỗi, price kiểu số; page/pageSize/totalCount là số\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const p = pm.response.json();",
+                  "    pm.expect(Array.isArray(p.items) && p.items.length >= 1).to.equal(true);",
+                  "    p.items.forEach(function (i) { pm.expect(i.id).to.match(UUID); pm.expect(typeof i.name).to.equal('string'); pm.expect(isNum(i.price)).to.equal(true); });",
+                  "    pm.expect(isNum(p.page) && isNum(p.pageSize) && isNum(p.totalCount)).to.equal(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Chuẩn bị — dọn giỏ (trạng thái 'giỏ rỗng')",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Đưa giỏ về rỗng để khớp provider state 'an empty basket exists for the caller'. 204 = vừa dọn, 409 = vốn đã rỗng."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "const isNum = function (x) { return typeof x === 'number'; };",
+                  "pm.test(\"204 hoặc 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 baskets — thêm hàng vào giỏ rỗng (pact bff-baskets)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/items",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "items"
+              ]
+            },
+            "description": "Kỳ vọng: 200 và hình dạng giỏ — id (UUID), customerRef (chuỗi), items[] {productId UUID, quantity nguyên, unitPrice/lineTotal số}, total (số).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 2,\n  \"unitPrice\": 12.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "const isNum = function (x) { return typeof x === 'number'; };",
+                  "pm.test(\"200 và đúng hình dạng giỏ\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b.id).to.match(UUID);",
+                  "    pm.expect(typeof b.customerRef).to.equal('string');",
+                  "    pm.expect(isNum(b.total)).to.equal(true);",
+                  "    pm.expect(Array.isArray(b.items) && b.items.length >= 1).to.equal(true);",
+                  "    b.items.forEach(function (l) {",
+                  "        pm.expect(l.productId).to.match(UUID);",
+                  "        pm.expect(Number.isInteger(l.quantity)).to.equal(true);",
+                  "        pm.expect(isNum(l.unitPrice) && isNum(l.lineTotal)).to.equal(true);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 baskets — giỏ hiện tại (pact bff-baskets)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current"
+              ]
+            },
+            "description": "Kỳ vọng: cùng hình dạng giỏ như bước 03, giỏ đang có 1 dòng."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "const isNum = function (x) { return typeof x === 'number'; };",
+                  "pm.test(\"200 và đúng hình dạng giỏ\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b.id).to.match(UUID);",
+                  "    pm.expect(typeof b.customerRef).to.equal('string');",
+                  "    pm.expect(isNum(b.total)).to.equal(true);",
+                  "    pm.expect(Array.isArray(b.items) && b.items.length >= 1).to.equal(true);",
+                  "    b.items.forEach(function (l) {",
+                  "        pm.expect(l.productId).to.match(UUID);",
+                  "        pm.expect(Number.isInteger(l.quantity)).to.equal(true);",
+                  "        pm.expect(isNum(l.unitPrice) && isNum(l.lineTotal)).to.equal(true);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 baskets — dọn giỏ đang có hàng (pact bff-baskets)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Kỳ vọng: 204 không thân."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "const isNum = function (x) { return typeof x === 'number'; };",
+                  "pm.test(\"204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 baskets — dọn giỏ đã rỗng (pact bff-baskets)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Kỳ vọng: 409 kèm thân có trường `error` (chuỗi)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "const isNum = function (x) { return typeof x === 'number'; };",
+                  "pm.test(\"409 và có error kiểu chuỗi\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(typeof pm.response.json().error).to.equal('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 orders — đặt đơn (pact bff-orders)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Kỳ vọng: 201; thân có id (UUID), placedAtUtc (date-time), total (số). Tạo 1 đơn thật mỗi lần chạy. Lưu mã đơn cho bước 08.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "const isNum = function (x) { return typeof x === 'number'; };",
+                  "pm.test(\"201 và đúng hình dạng đơn\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const o = pm.response.json();",
+                  "    pm.expect(o.id).to.match(UUID);",
+                  "    pm.expect(Number.isNaN(Date.parse(o.placedAtUtc))).to.equal(false);",
+                  "    pm.expect(isNum(o.total)).to.equal(true);",
+                  "    pm.collectionVariables.set('event011OrderId', o.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 orders — đọc đơn theo id (pact bff-orders)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders/{{event011OrderId}}",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{event011OrderId}}"
+              ]
+            },
+            "description": "Kỳ vọng: 200; cùng hình dạng đơn như bước 07."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "const isNum = function (x) { return typeof x === 'number'; };",
+                  "pm.test(\"200 và đúng hình dạng đơn\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const o = pm.response.json();",
+                  "    pm.expect(o.id).to.match(UUID);",
+                  "    pm.expect(Number.isNaN(Date.parse(o.placedAtUtc))).to.equal(false);",
+                  "    pm.expect(isNum(o.total)).to.equal(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
