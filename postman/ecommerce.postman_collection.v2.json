@@ -2990,6 +2990,539 @@
           ]
         }
       ]
+    },
+    {
+      "name": "09 - Quy tắc giỏ hàng & đơn hàng (TDD hồi tố)",
+      "description": "Kiểm chứng spec 009 trên hệ thống chạy thật: 6 quy tắc tính tiền/tạo đơn (FR-001…006) của Basket.AddItem và Order.PlaceFrom, quan sát qua HTTP. Các quy tắc nằm trong mã domain nên KHÔNG có công tắc cấu hình — chỉ cần stack chạy (baskets-api, orders-api, identity-api và database của chúng) và đã lấy token ở folder '00 - Xác thực & phân quyền'.\n\nChạy lần lượt 01 → 10 (Runner hoặc bấm tay). Bước 01 và 06 dọn giỏ nên chạy lại bao nhiêu lần cũng được; bước 10 tạo thêm 1 đơn hàng thật mỗi lần chạy. Một số bước trùng có chủ đích với request có sẵn (Basket → số lượng 0, Order → 0 dòng / số lượng 0 / đặt hàng trực tiếp) để folder này chạy trọn vẹn một mình.",
+      "item": [
+        {
+          "name": "01 Chuẩn bị — dọn giỏ của người mua",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Đưa giỏ về rỗng để các bước sau bắt đầu từ trạng thái biết trước. 204 = vừa dọn xong, 409 = giỏ vốn đã rỗng."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"giỏ đã rỗng (204 vừa dọn, hoặc 409 vốn đã rỗng)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 FR-001 Số lượng âm bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/items",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "items"
+              ]
+            },
+            "description": "Quy tắc sàn số lượng: số lượng < 1 (ở đây -1) bị chặn. Request có sẵn 'Basket → Thêm hàng với số lượng 0' đã kiểm ca 0.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": -1,\n  \"unitPrice\": 12.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 400 kèm thông báo nêu số lượng tối thiểu là 1\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.include('Quantity must be at least 1');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 FR-002/003 Thêm Notebook giá 12.50, số lượng 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/items",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "items"
+              ]
+            },
+            "description": "Lần thêm đầu: tạo dòng mới, giá đơn vị được chốt ở 12.50.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1,\n  \"unitPrice\": 12.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200, giỏ có đúng 1 dòng: số lượng 1, giá 12.50\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b.items.length).to.equal(1);",
+                  "    pm.expect(b.items[0].quantity).to.equal(1);",
+                  "    pm.expect(Number(b.items[0].unitPrice)).to.equal(12.5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 FR-002/003 Thêm lại Notebook với giá 20.00, số lượng 2 — gộp dòng, giữ giá cũ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/items",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "items"
+              ]
+            },
+            "description": "Thêm cùng sản phẩm lần nữa nhưng gửi giá khác (20.00): dòng cũ được cộng dồn số lượng (1 + 2 = 3), KHÔNG tạo dòng trùng, và giá vẫn là 12.50 đã chốt lần đầu.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 2,\n  \"unitPrice\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"vẫn 1 dòng, số lượng 3, giá giữ 12.50, tổng 37.50 (không phải 60.00)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b.items.length).to.equal(1);",
+                  "    pm.expect(b.items[0].quantity).to.equal(3);",
+                  "    pm.expect(Number(b.items[0].unitPrice)).to.equal(12.5);",
+                  "    pm.expect(Number(b.total)).to.equal(37.5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Đơn giá âm bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/items",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "items"
+              ]
+            },
+            "description": "Giá âm bị chặn ở tầng HTTP của baskets (kiểm ở endpoint, không phải ở Basket.AddItem).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1,\n  \"unitPrice\": -1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 400 kèm thông báo giá không được âm\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.include('Unit price cannot be negative');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Dọn dẹp — dọn giỏ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Trả giỏ về rỗng sau khi kiểm xong."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"dọn giỏ thành công (204)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 FR-004 Đặt hàng không có dòng nào bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Đơn 0 dòng bị chặn ở tầng HTTP của orders (tầng domain Order.PlaceFrom chặn tương tự — kiểm bằng test đơn vị).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 400 kèm thông báo cần ít nhất 1 dòng\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.include('at least one line');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 FR-005 Dòng đơn có số lượng 0 bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Dòng số lượng không dương bị chặn.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 0,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 FR-005 Dòng đơn có đơn giá âm bị từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Dòng giá âm bị chặn.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 1,\n      \"unitPrice\": -1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 FR-006 Tổng do server tự tính, tổng client gửi bị bỏ qua",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "3 dòng: 2 x 12.50 + 1 x 34.25 + 3 x 48.00 = 203.25. Body cố ý gửi thêm \"total\": 1 để chứng minh server không nhận tổng từ caller.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"total\": 1,\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"unitPrice\": 12.5\n    },\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000003\",\n      \"quantity\": 1,\n      \"unitPrice\": 34.25\n    },\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000002\",\n      \"quantity\": 3,\n      \"unitPrice\": 48\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 201 và tổng tiền là 203.25 do server tính (không phải 1)\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(Number(pm.response.json().total)).to.equal(203.25);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
