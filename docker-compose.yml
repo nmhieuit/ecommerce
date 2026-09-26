@@ -284,6 +284,14 @@ services:
     environment:
       ConnectionStrings__ProductsDb: Server=sqlserver;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      # 015-deny-by-default-authz toggle, set on every service whose appsettings carries it (gateway,
+      # bff, and the four domain services) so the stack flips it in one place: .env or the shell
+      # (FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE=false), then `docker compose up -d`. Defaults to on,
+      # overriding appsettings.json's off, so this stack enforces the scope the way the deployed
+      # platform is meant to (same default as docker-compose.local.yml). Keep it on at the gateway
+      # only while IdentityServerAuthCutover is on too: the Phase 1 stub principal carries no scope
+      # claim, so the pairing cutover-off/scope-on answers 403 to every request.
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     networks: [backbone]
     depends_on:
       products-migrate:
@@ -305,6 +313,7 @@ services:
     environment:
       ConnectionStrings__BasketsDb: Server=sqlserver;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     depends_on:
       baskets-migrate:
         condition: service_completed_successfully
@@ -319,6 +328,7 @@ services:
     environment:
       ConnectionStrings__OrdersDb: Server=sqlserver;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       # 024-verify-transactional-outbox: first service to actually connect to the `rabbitmq`
       # container declared above (guest/guest, same local-dev posture as every other datastore in
       # this file) — publishes OrderPlacedV1 via the transactional outbox. Full connection string,
@@ -340,6 +350,7 @@ services:
     environment:
       ConnectionStrings__PartiesDb: Server=sqlserver;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     depends_on:
       parties-migrate:
         condition: service_completed_successfully
@@ -376,6 +387,7 @@ services:
       dockerfile: services/bff/src/Bff.Api/Dockerfile
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     networks: [backbone]
     # The BFF owns no database, so it holds no connection string. It waits for all four services it
     # aggregates: a BFF that is up before them would answer 502 to its first caller.
@@ -404,8 +416,11 @@ services:
       # stub forwards requests the BFF then refuses with 401 — the stack reports healthy while the
       # storefront can load nothing. Cut over, so the gateway checks the caller's token and passes it
       # on. An environment variable rather than appsettings.Development.json: these containers run as
-      # Production and never read that file, as with the CORS origin above.
-      FeatureToggles__IdentityServerAuthCutover: "true"
+      # Production and never read that file, as with the CORS origin above. Overridable from .env or
+      # the shell (FEATURE_IDENTITY_SERVER_AUTH_CUTOVER=false) to exercise the rollback path; turn
+      # FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE off with it (see products-api above).
+      FeatureToggles__IdentityServerAuthCutover: ${FEATURE_IDENTITY_SERVER_AUTH_CUTOVER:-true}
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     networks: [backbone]
     ports:
       # One of three published ports (with the storefront and the identity server's token endpoint). Everything else is reachable on the network alone, so the
