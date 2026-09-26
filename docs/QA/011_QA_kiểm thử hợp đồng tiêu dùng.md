@@ -16,20 +16,33 @@
 
 ## Hướng dẫn kiểm thử happy-case (thủ công + tự động)
 
-Cần Docker Desktop chạy (SQL Server thật cho 3 provider host phía HTTP, research.md Decision 5); phần consumer-side
-và event pilot không cần. Gần như nguyên văn `quickstart.md`, khác ở chỗ đã tự chạy thật và ghi kết quả đo được.
+### Thủ công — làm "provider verification" bằng Postman trên hệ thống chạy thật
 
-### Thủ công — chạy đúng như spec mô tả
+Spec 011 là kiểm thử hợp đồng nên **không có công tắc cấu hình**. Điều làm tay được là gọi thẳng 3 service phía sau BFF và kiểm đúng những gì BFF đã ghi trong `pacts/bff-*.json` (mã trạng thái và kiểu từng trường — đặc biệt `price`/`total`/`unitPrice` phải là **số**). Dựng stack rồi bấm Postman:
 
-| Bước (quickstart) | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát** |
-|---|---|---|---|
-| Sinh pact phía consumer | `dotnet test services/bff/tests/Bff.Api.ContractTests` và consumer event của orders | Ghi 3 file pact + pact event | 3/3 PASS; ghi `bff-products.json`, `bff-baskets.json`, `bff-orders.json`; consumer event PASS (không cần Docker) |
-| SC-001 — đúng 4 boundary | `find pacts -name "*.json"` | 4 file | Đúng 4 file (`bff-products`, `bff-baskets`, `bff-orders`, `orders-basketcheckedout`), khớp `pacts/README.md` |
-| SC-002 — build bên phát tự bắt lỗi | 4 lệnh `dotnet test` của 3 provider HTTP + provider event | PASS | **Lượt 2026-09-22 đỏ cả 4** (401 nền ở 3 provider HTTP; xung đột cổng Windows/Docker ở provider event); **sau khi vá 2026-09-23: 12/12 PASS** — xem QA_Debt |
-| SC-002 — cổng còn tác dụng sau khi vá | Đổi `ProductResponse.Price` thành `UnitPrice`, chạy `Products.Api.ContractTests` | Đỏ vì lệch hợp đồng, không phải vì auth | Đỏ đúng: `status code 200 OK` + `Actual map is missing the following keys: price`; khôi phục → xanh |
-| SC-003/SC-004 — gỡ 1 test bắt buộc | Đổi tên `ProductsProviderPactTests.cs` thành `.bak`, chạy `ContractCoverageTests` | Đỏ nêu tên boundary | Đỏ đúng: `Boundary = BFF-products`, `MissingPath = …/ProductsProviderPactTests.cs`; khôi phục (`mv`) → PASS, `git status` sạch |
+```bash
+docker compose -f docker-compose.local.yml up -d --wait products-api baskets-api orders-api   # kéo theo identity-api và DB tương ứng
+```
+
+Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) và
+[`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn environment **Ecommerce - Local**; chạy `00 - Xác thực & phân quyền → 01 Lấy access token` một lần, rồi folder
+**`11 - Hợp đồng BFF ↔ service (Pact)`** (bước 01 → 08; bước 07 tạo 1 đơn thật). Pact ở [`pacts/`](../../pacts/README.md) liệt kê 4 boundary.
+
+| Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-26)** |
+|---|---|---|---|---|
+| SC-001 — đúng 4 boundary | (không có công tắc) — mở thư mục `pacts/` | (không có) | 4 file, khớp bảng `pacts/README.md` | Đúng: `bff-products`, `bff-baskets`, `bff-orders`, `orders-basketcheckedout` |
+| products khớp pact `bff-products` | (không có công tắc) | `11` bước 01 | `200`; `items` ≥ 1 có id (UUID), name (chuỗi), price (số); page/pageSize/totalCount là số | Đúng, 1 assertion xanh |
+| baskets khớp pact `bff-baskets` (thêm, đọc, dọn, dọn lần hai) | (không có công tắc) | `11` bước 02 → 06 | `200` hình dạng giỏ (id UUID, customerRef, items[], total số); dọn `204`; dọn lần hai `409` kèm `error` chuỗi | Đúng cả 4 request (giỏ `unitPrice`/`lineTotal`/`total` đều kiểu số) |
+| orders khớp pact `bff-orders` (đặt, đọc lại) | (không có công tắc) | `11` bước 07 → 08 | `201` / `200`, thân có id UUID, placedAtUtc date-time, total số | Đúng |
+| **Toàn folder** | (không có công tắc) | `11` bước 01 → 08 | Mọi assertion xanh | **10/10 xanh** |
+| SC-002 — provider tự bắt thay đổi phá vỡ *(ngoại lệ: sửa mã, dựng lại image)* | Đổi `ProductResponse(Guid Id, string Name, decimal Price)` thành `…decimal UnitPrice)` trong `CatalogEndpoints.cs`, `docker compose … up -d --build products-api`; xong `git checkout --` và dựng lại | Chạy lại folder `11` | Bước 01 đỏ vì lệch hợp đồng | **Đỏ đúng bước 01** (thiếu `price`); provider test đỏ `$.items[0] -> Actual map is missing the following keys: price`; khôi phục + dựng lại → 10/10 xanh |
+| SC-003/SC-004 — gỡ 1 test bắt buộc *(ngoại lệ: thao tác file)* | Đổi tên `ProductsProviderPactTests.cs` thành `.bak`, chạy `ContractCoverageTests`; khôi phục | (không có) | Đỏ nêu tên boundary | Đỏ đúng: `Boundary = BFF-products`, `MissingPath = …/ProductsProviderPactTests.cs`; khôi phục → 6/6 xanh |
+| Hợp đồng sự kiện `BasketCheckedOut` *(ngoại lệ: chưa có luồng thật)* | — | (không có) | Có luồng phát/nhận | Không kiểm tay được: chỉ có `BasketCheckedOutMapper` dựng payload cho provider test; xem QA_Debt mục 008 |
+| Dọn dẹp | Trả compose/`.env` về mặc định (không đổi gì) | (không có) | Không dữ liệu dư; `pacts/` sạch | Đã xoá đơn do QA tạo (giữ đơn gốc QA 017); chạy consumer làm 3 file pact bị `M` → `git checkout -- pacts`; `products-api` dựng lại từ mã sạch |
 
 ### Tự động — chạy thẳng bộ test đã có, không cần viết mới
+
+Cần Docker Desktop chạy (SQL Server thật cho 3 provider phía HTTP); consumer-side và event pilot không cần.
 
 | Cần xác nhận (FR) | Test case (bấm để mở) | Lệnh chạy riêng test đó |
 |---|---|---|
@@ -44,11 +57,8 @@ và event pilot không cần. Gần như nguyên văn `quickstart.md`, khác ở
 | FR-008/SC-001/SC-003 — 4 boundary có đủ pact + test verify | [`ContractCoverageTests.cs:22`](../../tests/ContractCoverageTests/ContractCoverageTests.cs#L22) · [`:44`](../../tests/ContractCoverageTests/ContractCoverageTests.cs#L44) | `dotnet test tests/ContractCoverageTests --filter "FullyQualifiedName~AllThinSliceBoundaries\|FullyQualifiedName~Scan_ActuallyExamines"` |
 | FR-009/SC-004 — scanner tự bảo vệ | [`ContractCoverageTests.cs:70`](../../tests/ContractCoverageTests/ContractCoverageTests.cs#L70) (3 case) · [`:111`](../../tests/ContractCoverageTests/ContractCoverageTests.cs#L111) | `dotnet test tests/ContractCoverageTests --filter "FullyQualifiedName~Scan_FlagsABoundaryMissingEitherFile\|FullyQualifiedName~Scan_ReportsNoViolations"` |
 
-**Kết quả lượt QA này (2026-09-23, sau khi vá)**: toàn bộ **12 test hợp đồng PASS** + cổng coverage PASS xuyên suốt.
+**Kết quả lượt QA này (2026-09-26)**: consumer BFF **3/3**, consumer event **1/1**, provider baskets **2/2**, provider orders **2/2**, `ContractCoverageTests` **6/6**; provider products **1/1** ở 3 lần chạy riêng nhưng **đỏ 1 lần** khi chạy nối tiếp sau các consumer (không tái hiện, xem QA_Debt). Mỗi lần chạy consumer BFF làm 3 file pact bị `M` (token giả ký lại) — cần `git checkout -- pacts`.
 
 ## Kết luận
 
-**PASS** (cập nhật 2026-09-23). 4 nguồn mô tả đúng thiết kế/phạm vi, không mâu thuẫn nhau. Lượt 2026-09-22 từng hạ xuống **FAIL** vì
-(1) cả 3 provider HTTP đỏ 401 nền do spec 015 làm hỏng patch của 014, và (2) provider event vướng xung đột cổng Windows/Docker Desktop;
-(1) đã vá ngay trong ngày, còn (2) chạy lại thì xanh nhưng vẫn là rủi ro chập chờn trên máy Windows. Chi tiết nguyên nhân gốc,
-hướng vá đã chọn và phát hiện phụ (interaction thừa trong `pacts/bff-products.json`): [QA_Debt.md](QA_Debt.md) mục 011.
+**PASS kèm ghi chú.** 4 nguồn mô tả đúng thiết kế/phạm vi; 3 provider HTTP đã xanh trở lại sau bản vá 2026-09-22; trên hệ thống thật, cả 3 service trả đúng hình dạng mà BFF dựa vào (10/10 Postman) và 1 thay đổi phá vỡ thật (`Price` → `UnitPrice`) bị bắt cả ở Postman lẫn provider test, hoàn tác thì xanh lại. Ghi chú: (1) 1 lần đỏ chưa giải thích ở provider products; (2) mỗi lần chạy consumer làm bẩn 3 file pact; (3) hợp đồng sự kiện chưa có luồng thật để kiểm tay; (4) lịch sử: lượt 2026-09-22 từng FAIL vì 401 nền (đã vá). Chi tiết: [QA_Debt.md](QA_Debt.md) mục 011.
