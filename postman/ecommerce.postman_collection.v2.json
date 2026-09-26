@@ -5023,6 +5023,328 @@
           ]
         }
       ]
+    },
+    {
+      "name": "14 - Xác thực tại gateway và từng service",
+      "description": "Kiểm chứng spec 014 (máy chủ định danh thật) trên hệ thống chạy thật, ở trạng thái MẶC ĐỊNH (FEATURE_IDENTITY_SERVER_AUTH_CUTOVER=true, FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE=true). Cần stack: identity-api, gateway-api, bff-api, products-api, baskets-api, orders-api, parties-api. Chạy 'folder 00 → 01 Lấy access token' trước để điền accessToken.\n\n**Công tắc**: đổi trong .env rồi `docker compose -f docker-compose.local.yml up -d --force-recreate gateway-api bff-api products-api baskets-api orders-api parties-api`:\n- FEATURE_IDENTITY_SERVER_AUTH_CUTOVER (chỉ gateway): false = quay về stub Phase 1.\n- FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE (gateway, bff, products, baskets, orders, parties — spec 015).\nĐừng ghép cutover=false với scope=true (stub không có claim scope → gateway trả 403 cho mọi request); muốn rollback đặt cả hai = false. Kết quả thật ở mỗi trạng thái xem doc QA 014.",
+      "item": [
+        {
+          "name": "01 Token phát hành có sub, tenant_id và scope (FR-001/FR-002)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Không gọi mạng ý nghĩa — bước này giải mã payload của access token (lấy ở folder '00 - Xác thực & phân quyền' bước 01) và kiểm claim: `sub`, `tenant_id` = tenant của người dùng thử, `scope` gồm `ecommerce-api`. Nguồn `tenant_id` duy nhất là TenantClaimsProfileService."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"payload có sub, tenant_id = contoso và scope chứa ecommerce-api\", function () {",
+                  "    const tok = pm.environment.get('accessToken');",
+                  "    pm.expect(tok, 'chưa có accessToken — chạy folder 00 bước 01 trước').to.be.a('string');",
+                  "    const p = JSON.parse(atob(tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                  "    pm.expect(p.sub).to.be.a('string');",
+                  "    pm.expect(p.tenant_id).to.equal('contoso');",
+                  "    pm.expect([].concat(p.scope)).to.include('ecommerce-api');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Gateway — không token thì bị chặn (FR-011)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Cutover BẬT (mặc định): gateway đòi JWT thật. Kỳ vọng `401`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Gateway — token hợp lệ đi qua và tới được BFF (FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Gateway xác thực token rồi chuyển tiếp; BFF và domain service tự xác thực lần nữa. Kỳ vọng `200` kèm danh sách sản phẩm."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và có items\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Gateway — token bị sửa chữ ký thì bị chặn (FR-005)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Token đúng định dạng nhưng chữ ký bị sửa. Kỳ vọng `401`."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sửa vài ký tự chữ ký (phần cuối) của access token để tạo token 'giả mạo' nhưng vẫn đúng định dạng JWT.",
+                  "const t = pm.environment.get('accessToken') || '';",
+                  "const bad = t.slice(0, -6) + (t.slice(-6) === 'AAAAAA' ? 'BBBBBB' : 'AAAAAA');",
+                  "pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + bad });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Service trực tiếp (bỏ qua gateway) — token giả bị chặn tại chính service (FR-004, US2)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "Gọi thẳng orders (cổng 5041) với token bị sửa: service tự xác thực độc lập nên vẫn chặn — không phụ thuộc gateway."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sửa vài ký tự chữ ký (phần cuối) của access token để tạo token 'giả mạo' nhưng vẫn đúng định dạng JWT.",
+                  "const t = pm.environment.get('accessToken') || '';",
+                  "const bad = t.slice(0, -6) + (t.slice(-6) === 'AAAAAA' ? 'BBBBBB' : 'AAAAAA');",
+                  "pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + bad });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Service trực tiếp — không token bị chặn (FR-004)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "Gọi thẳng orders không token. Kỳ vọng `401`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Service trực tiếp — token hợp lệ được chấp nhận (FR-004)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "Token hợp lệ + header tenant/subject: xác thực qua, id không tồn tại nên `404` (không phải `401`/`403`)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 — token được chấp nhận, đơn không tồn tại\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
