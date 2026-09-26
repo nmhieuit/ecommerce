@@ -333,7 +333,8 @@ services:
       # container declared above (guest/guest, same local-dev posture as every other datastore in
       # this file) — publishes OrderPlacedV1 via the transactional outbox. Full connection string,
       # same convention as every ConnectionStrings__* above.
-      ConnectionStrings__RabbitMq: amqp://guest:guest@rabbitmq:5672
+      # Công tắc: ORDERS_RABBITMQ_CONNECTION= (đặt rỗng trong .env) để TẮT kết nối broker; để trống/không khai báo = BẬT như cũ.
+      ConnectionStrings__RabbitMq: ${ORDERS_RABBITMQ_CONNECTION-amqp://guest:guest@rabbitmq:5672}
     depends_on:
       orders-migrate:
         condition: service_completed_successfully

@@ -2641,6 +2641,355 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "08 - Event schema OrderPlaced (RabbitMQ)",
+      "description": "Kiểm chứng spec 008 (event schema có version) trên hệ thống chạy thật: orders-api phát OrderPlacedV1 qua outbox (spec 024) và payload phải khớp shared/EventContracts/schemas/OrderPlaced.v1.schema.json.\n\n**Công tắc cấu hình** — biến ORDERS_RABBITMQ_CONNECTION trong .env (xem .env.example), rồi `docker compose -f docker-compose.local.yml up -d --force-recreate orders-api`:\n- BẬT: amqp://guest:guest@rabbitmq:5672 → bước 04 thấy message, mọi test xanh.\n- TẮT: để trống → orders-api không kết nối RabbitMQ, bước 04 không thấy message (test đầu tiên đỏ với thông báo giải thích).\n\n**Cách chạy**: lấy token ở folder '00 - Xác thực & phân quyền', rồi chạy lần lượt 01 → 05 (Runner hoặc bấm tay, mỗi bước cách nhau vài giây). Bước 05 xoá queue tạm.",
+      "item": [
+        {
+          "name": "01 Chuẩn bị — tạo queue tạm qa008-orderplaced",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rabbitmqUrl}}/api/queues/%2F/qa008-orderplaced",
+              "host": [
+                "{{rabbitmqUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "qa008-orderplaced"
+              ]
+            },
+            "description": "Tạo queue tạm (không bền) trên RabbitMQ để hứng bản sao của mọi OrderPlacedV1. Cần RabbitMQ management (cổng 15672) đang chạy, tài khoản guest/guest theo biến môi trường rabbitmqUser/rabbitmqPassword.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitmqUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitmqPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"durable\": false,\n  \"auto_delete\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tạo queue tạm thành công (201, hoặc 204 nếu đã có)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Chuẩn bị — nối queue vào exchange OrderPlacedV1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rabbitmqUrl}}/api/bindings/%2F/e/EventContracts:OrderPlacedV1/q/qa008-orderplaced",
+              "host": [
+                "{{rabbitmqUrl}}"
+              ],
+              "path": [
+                "api",
+                "bindings",
+                "%2F",
+                "e",
+                "EventContracts:OrderPlacedV1",
+                "q",
+                "qa008-orderplaced"
+              ]
+            },
+            "description": "Nối queue tạm vào exchange EventContracts:OrderPlacedV1. Exchange này chỉ tồn tại khi orders-api đã từng kết nối RabbitMQ: nếu trả 404 nghĩa là công tắc ORDERS_RABBITMQ_CONNECTION đang TẮT từ đầu và RabbitMQ chưa từng thấy orders-api.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitmqUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitmqPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"routing_key\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('nối queue vào exchange OrderPlacedV1 thành công (201) — 404 = orders-api chưa từng kết nối RabbitMQ', function () {",
+                  "    pm.expect(pm.response.code).to.equal(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Đặt 1 đơn hàng trực tiếp ở orders (kích hoạt OrderPlaced)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Giống Order → Đặt hàng trực tiếp: 2 Notebook (12.50) + 1 Apron (34.25) = 59.25. Lưu mã đơn và X-Correlation-Id vào biến collection để bước 04 đối chiếu. Script chờ 3 giây cho outbox delivery service (mặc định quét mỗi 1 giây) giao message.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"unitPrice\": 12.5\n    },\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000003\",\n      \"quantity\": 1,\n      \"unitPrice\": 34.25\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('trả về 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.collectionVariables.set('event008OrderId', pm.response.json().id);",
+                  "pm.collectionVariables.set('event008CorrelationId', pm.request.headers.get('X-Correlation-Id'));",
+                  "// Chờ outbox giao message trước khi request kế tiếp chạy (Runner).",
+                  "setTimeout(function () {}, 3000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Đọc message OrderPlaced và đối chiếu với schema v1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rabbitmqUrl}}/api/queues/%2F/qa008-orderplaced/get",
+              "host": [
+                "{{rabbitmqUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "qa008-orderplaced",
+                "get"
+              ]
+            },
+            "description": "Lấy message khỏi queue tạm rồi kiểm từng ràng buộc của OrderPlaced.v1.schema.json (đủ 7 trường bắt buộc, không thừa trường, kiểu và định dạng từng trường, lines ≥ 1). Mã đơn và correlation id lấy từ bước 03. Chạy sau bước 03 khoảng 3 giây.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitmqUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitmqPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": 20,\n  \"ackmode\": \"ack_requeue_false\",\n  \"encoding\": \"auto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Kiểm tra payload theo shared/EventContracts/schemas/OrderPlaced.v1.schema.json (JSON Schema 2020-12, viết tay thành từng phép kiểm).",
+                  "const orderId = pm.collectionVariables.get('event008OrderId');",
+                  "const correlationId = pm.collectionVariables.get('event008CorrelationId');",
+                  "const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;",
+                  "const REQUIRED = ['eventId', 'occurredAtUtc', 'orderId', 'tenantId', 'correlationId', 'total', 'lines'];",
+                  "",
+                  "const messages = pm.response.json();",
+                  "let envelope = null, msg = null;",
+                  "messages.forEach(function (m) {",
+                  "    const e = JSON.parse(m.payload);",
+                  "    if (e.message && e.message.orderId === orderId) { envelope = e; msg = e.message; }",
+                  "});",
+                  "",
+                  "pm.test('orders-api đã giao message OrderPlaced của đơn vừa đặt vào queue (0 message: công tắc ORDERS_RABBITMQ_CONNECTION đang TẮT, hoặc chưa đợi ~3 giây)', function () {",
+                  "    pm.expect(msg, 'không thấy message cho orderId ' + orderId + ' — số message trong queue: ' + messages.length).to.not.equal(null);",
+                  "});",
+                  "if (msg === null) { return; }",
+                  "",
+                  "pm.test('phong bì MassTransit khai đúng loại message urn:message:EventContracts:OrderPlacedV1', function () {",
+                  "    pm.expect(envelope.messageType.join(',')).to.include('urn:message:EventContracts:OrderPlacedV1');",
+                  "});",
+                  "pm.test('đủ đúng 7 trường bắt buộc, không thừa trường nào (additionalProperties = false)', function () {",
+                  "    pm.expect(Object.keys(msg).sort()).to.eql(REQUIRED.slice().sort());",
+                  "});",
+                  "pm.test('eventId và orderId là UUID; eventId khác orderId', function () {",
+                  "    pm.expect(msg.eventId).to.match(UUID);",
+                  "    pm.expect(msg.orderId).to.match(UUID);",
+                  "    pm.expect(msg.eventId).to.not.equal(msg.orderId);",
+                  "});",
+                  "pm.test('occurredAtUtc là date-time hợp lệ, kết thúc bằng Z (UTC)', function () {",
+                  "    pm.expect(Number.isNaN(Date.parse(msg.occurredAtUtc))).to.equal(false);",
+                  "    pm.expect(msg.occurredAtUtc).to.match(/Z$/);",
+                  "});",
+                  "pm.test('tenantId đúng tenant đã gửi; correlationId khác rỗng và đúng X-Correlation-Id của request đặt đơn', function () {",
+                  "    pm.expect(msg.tenantId).to.equal(pm.variables.get('tenantId'));",
+                  "    pm.expect(msg.correlationId).to.not.equal('');",
+                  "    pm.expect(msg.correlationId).to.equal(correlationId);",
+                  "});",
+                  "pm.test('total kiểu JSON number (không phải chuỗi), >= 0 và bằng 59.25 (2 x 12.50 + 1 x 34.25 do server tính)', function () {",
+                  "    pm.expect(typeof msg.total).to.equal('number');",
+                  "    pm.expect(msg.total).to.be.at.least(0);",
+                  "    pm.expect(msg.total).to.equal(59.25);",
+                  "});",
+                  "pm.test('lines >= 1 dòng; mỗi dòng có productId (UUID), quantity (số nguyên >= 1), unitPrice kiểu JSON number (không phải chuỗi) >= 0', function () {",
+                  "    pm.expect(Array.isArray(msg.lines)).to.equal(true);",
+                  "    pm.expect(msg.lines.length).to.be.at.least(1);",
+                  "    msg.lines.forEach(function (l) {",
+                  "        pm.expect(l.productId).to.match(UUID);",
+                  "        pm.expect(Number.isInteger(l.quantity) && l.quantity >= 1).to.equal(true);",
+                  "        pm.expect(typeof l.unitPrice === 'number' && l.unitPrice >= 0).to.equal(true);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Dọn dẹp — xoá queue tạm",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{rabbitmqUrl}}/api/queues/%2F/qa008-orderplaced",
+              "host": [
+                "{{rabbitmqUrl}}"
+              ],
+              "path": [
+                "api",
+                "queues",
+                "%2F",
+                "qa008-orderplaced"
+              ]
+            },
+            "description": "Xoá queue tạm qa008-orderplaced.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{rabbitmqUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{rabbitmqPassword}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('xoá queue tạm thành công (204)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([204, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [

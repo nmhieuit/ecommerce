@@ -407,6 +407,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__OrdersDb: Server=orders-db;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
+      # 024/008: công tắc kết nối RabbitMQ của outbox. Mặc định TRỐNG = hành vi cũ (không cấu hình → rơi về localhost,
+      # outbox không giao được). Đặt ORDERS_RABBITMQ_CONNECTION=amqp://guest:guest@rabbitmq:5672 trong .env để BẬT.
+      ConnectionStrings__RabbitMq: ${ORDERS_RABBITMQ_CONNECTION:-}
       Identity__Authority: http://identity-api:8080
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
