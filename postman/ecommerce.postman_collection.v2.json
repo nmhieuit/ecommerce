@@ -4659,6 +4659,370 @@
           ]
         }
       ]
+    },
+    {
+      "name": "13 - Chặn merge vào master (GitHub)",
+      "description": "Kiểm chứng spec 013 (cổng chất lượng làm rào chặn merge) bằng API công khai của GitHub — không cần token, trừ bước 06. Bước 01–02 xanh; bước 03, 04, 06 (và phần 'PR đã merge không có check' ở doc QA) ĐỎ tại thời điểm QA 2026-09-26 vì cơ chế chặn merge không còn hoạt động (xem QA_Debt mục 013). Biến githubApi/githubRepo nằm trong environment; githubToken để trống trong file checked-in (dán PAT khi cần bước 06).",
+      "item": [
+        {
+          "name": "01 Repo công khai, nhánh mặc định master",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "postman-qa"
+              }
+            ],
+            "url": {
+              "raw": "{{githubApi}}/repos/{{githubRepo}}",
+              "host": [
+                "{{githubApi}}"
+              ],
+              "path": [
+                "repos",
+                "{{githubRepo}}"
+              ]
+            },
+            "description": "API công khai của GitHub — không cần token.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, repo public, nhánh mặc định master\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.private).to.equal(false);",
+                  "    pm.expect(r.default_branch).to.equal('master');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Master được đánh dấu 'protected'",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "postman-qa"
+              }
+            ],
+            "url": {
+              "raw": "{{githubApi}}/repos/{{githubRepo}}/branches/master",
+              "host": [
+                "{{githubApi}}"
+              ],
+              "path": [
+                "repos",
+                "{{githubRepo}}",
+                "branches",
+                "master"
+              ]
+            },
+            "description": "Cờ `protected` chỉ cho biết có rule/protection gắn với nhánh — KHÔNG cho biết rule có đang chặn gì hay không (bước 03–04 mới kiểm điều đó).",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"protected = true\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().protected).to.equal(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Rule đang áp dụng cho master có 7 required status check (SC-002)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "postman-qa"
+              }
+            ],
+            "url": {
+              "raw": "{{githubApi}}/repos/{{githubRepo}}/rules/branches/master",
+              "host": [
+                "{{githubApi}}"
+              ],
+              "path": [
+                "repos",
+                "{{githubRepo}}",
+                "rules",
+                "branches",
+                "master"
+              ]
+            },
+            "description": "Mong đợi: mảng khác rỗng, có rule `required_status_checks` với đúng 7 context: ci/build, ci/unit-tests, ci/integration-tests, ci/contract-tests, ci/sonarqube-quality-gate, ci/secret-scan, ci/image-secret-scan. Hiện ĐỎ: mảng rỗng nghĩa là không rule nào đang chặn merge vào master.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"có rule required_status_checks với đủ 7 context\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const rules = pm.response.json();",
+                  "    const rsc = rules.filter(function (r) { return r.type === 'required_status_checks'; })[0];",
+                  "    pm.expect(rsc, 'không có rule required_status_checks — số rule đang áp dụng: ' + rules.length).to.not.equal(undefined);",
+                  "    const ctx = rsc.parameters.required_status_checks.map(function (c) { return c.context; }).sort();",
+                  "    pm.expect(ctx).to.eql([\"ci/build\", \"ci/contract-tests\", \"ci/image-secret-scan\", \"ci/integration-tests\", \"ci/secret-scan\", \"ci/sonarqube-quality-gate\", \"ci/unit-tests\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Commit master mới nhất có 7 check CI (SC-001)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "postman-qa"
+              }
+            ],
+            "url": {
+              "raw": "{{githubApi}}/repos/{{githubRepo}}/commits/master/status",
+              "host": [
+                "{{githubApi}}"
+              ],
+              "path": [
+                "repos",
+                "{{githubRepo}}",
+                "commits",
+                "master",
+                "status"
+              ]
+            },
+            "description": "Mong đợi: `total_count = 7`, đủ 7 context ở trên (5 chặng gốc của 013 + `ci/secret-scan`, `ci/image-secret-scan` thêm ở spec 018 — theo `scripts/ci/setup-branch-protection.sh`). Hiện ĐỎ: `total_count = 0` (CI không còn đăng check).",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"total_count = 7 và đúng 7 context\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const s = pm.response.json();",
+                  "    pm.expect(s.total_count, 'commit master mới nhất không có check nào').to.equal(7);",
+                  "    pm.expect(s.statuses.map(function (x) { return x.context; }).sort()).to.eql([\"ci/build\", \"ci/contract-tests\", \"ci/image-secret-scan\", \"ci/integration-tests\", \"ci/secret-scan\", \"ci/sonarqube-quality-gate\", \"ci/unit-tests\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Lấy 5 PR đã đóng gần nhất",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "postman-qa"
+              }
+            ],
+            "url": {
+              "raw": "{{githubApi}}/repos/{{githubRepo}}/pulls?state=closed&per_page=5&sort=updated&direction=desc",
+              "host": [
+                "{{githubApi}}"
+              ],
+              "path": [
+                "repos",
+                "{{githubRepo}}",
+                "pulls"
+              ],
+              "query": [
+                {
+                  "key": "state",
+                  "value": "closed"
+                },
+                {
+                  "key": "per_page",
+                  "value": "5"
+                },
+                {
+                  "key": "sort",
+                  "value": "updated"
+                },
+                {
+                  "key": "direction",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "Lưu commit merge của PR mới nhất vào biến event013MergeSha để bước 06 kiểm check của nó.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"5 PR gần nhất đã đóng, tất cả đã merge\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const p = pm.response.json();",
+                  "    pm.expect(p.length).to.equal(5);",
+                  "    pm.collectionVariables.set('event013MergeSha', p.filter(function (x) { return x.merged_at; })[0].merge_commit_sha);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 PR mới nhất vừa merge có check CI nào không (SC-001/SC-002)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "postman-qa"
+              }
+            ],
+            "url": {
+              "raw": "{{githubApi}}/repos/{{githubRepo}}/commits/{{event013MergeSha}}/status",
+              "host": [
+                "{{githubApi}}"
+              ],
+              "path": [
+                "repos",
+                "{{githubRepo}}",
+                "commits",
+                "{{event013MergeSha}}",
+                "status"
+              ]
+            },
+            "description": "Mong đợi: ít nhất 1 check (lý tưởng 7) trên commit merge của PR mới nhất. Hiện ĐỎ: 0 check — PR vẫn merge được.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"commit merge có ít nhất 1 check CI\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().total_count, 'PR đã merge mà không có check CI nào').to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Cấu hình protection đọc bằng token CI (cần token còn hạn)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/vnd.github+json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "postman-qa"
+              }
+            ],
+            "url": {
+              "raw": "{{githubApi}}/repos/{{githubRepo}}/branches/master/protection",
+              "host": [
+                "{{githubApi}}"
+              ],
+              "path": [
+                "repos",
+                "{{githubRepo}}",
+                "branches",
+                "master",
+                "protection"
+              ]
+            },
+            "description": "Cần biến githubToken (PAT trong .ci-secrets/github-pat, gitignored). Hiện ĐỎ: token đã hết hạn (401) nên không đọc được protection thật.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{githubToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và enforce_admins = true\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().enforce_admins.enabled).to.equal(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
