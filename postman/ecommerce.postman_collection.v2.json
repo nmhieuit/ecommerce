@@ -5345,6 +5345,443 @@
           ]
         }
       ]
+    },
+    {
+      "name": "15 - Phân quyền từ chối theo mặc định",
+      "description": "Kiểm chứng spec 015 (deny-by-default) trên hệ thống chạy thật. Bước 01–10: với 5 service (products, baskets, orders, parties, bff) gọi THẲNG cổng của service — health probe không cần token (200), route nghiệp vụ không token bị chặn (401). Bước 11: gateway với token hợp lệ (cần đã lấy token ở folder '00 - Xác thực & phân quyền' bước 01).\n\n**Công tắc** trong .env (xem .env.example) rồi tạo lại 6 service: `FEATURE_IDENTITY_SERVER_AUTH_CUTOVER` (chỉ gateway) và `FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE`. Chỉ ghép cutover=false với scope=true để CỐ Ý thấy 403 forbidden_scope ở bước 11; đặt scope=false để về 200.",
+      "item": [
+        {
+          "name": "01 products — health probe không cần token (AllowAnonymous)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{productsUrl}}/health/live",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Route `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 products — route nghiệp vụ không token bị chặn (deny-by-default)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{productsUrl}}/products",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "Mọi route nghiệp vụ tự khai `.RequireAuthorization(ApiScope)`; không token nên `401`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401 và có thông điệp unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().error).to.equal('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 baskets — health probe không cần token (AllowAnonymous)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{basketsUrl}}/health/live",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Route `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 baskets — route nghiệp vụ không token bị chặn (deny-by-default)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current"
+              ]
+            },
+            "description": "Mọi route nghiệp vụ tự khai `.RequireAuthorization(ApiScope)`; không token nên `401`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401 và có thông điệp unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().error).to.equal('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 orders — health probe không cần token (AllowAnonymous)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{ordersUrl}}/health/live",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Route `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 orders — route nghiệp vụ không token bị chặn (deny-by-default)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "Mọi route nghiệp vụ tự khai `.RequireAuthorization(ApiScope)`; không token nên `401`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401 và có thông điệp unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().error).to.equal('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 parties — health probe không cần token (AllowAnonymous)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{partiesUrl}}/health/live",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Route `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 parties — route nghiệp vụ không token bị chặn (deny-by-default)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{partiesUrl}}/parties/{{unknownGuid}}",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "parties",
+                "{{unknownGuid}}"
+              ]
+            },
+            "description": "Mọi route nghiệp vụ tự khai `.RequireAuthorization(ApiScope)`; không token nên `401`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401 và có thông điệp unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().error).to.equal('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 bff — health probe không cần token (AllowAnonymous)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{bffUrl}}/health/live",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "Route `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 bff — route nghiệp vụ không token bị chặn (deny-by-default)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{bffUrl}}/bff/products",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Mọi route nghiệp vụ tự khai `.RequireAuthorization(ApiScope)`; không token nên `401`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401 và có thông điệp unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().error).to.equal('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 gateway — token hợp lệ: 200, hoặc 403 forbidden_scope khi stub + scope bật",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Trạng thái MẶC ĐỊNH (cutover=true, scope=true): `200`. Với `FEATURE_IDENTITY_SERVER_AUTH_CUTOVER=false` + `FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE=true` (stub Phase 1 không phát claim scope): `403` thân `{error: forbidden_scope, message: …scope…}` — đây là cách duy nhất thấy 403 forbidden_scope trên hệ thống thật. Đặt scope=false thì trở lại `200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, hoặc 403 kèm error = forbidden_scope\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "    if (pm.response.code === 403) { const b = pm.response.json(); pm.expect(b.error).to.equal('forbidden_scope'); pm.expect(b.message).to.include('scope'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [

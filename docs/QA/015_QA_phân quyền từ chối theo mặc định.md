@@ -19,6 +19,35 @@ là nguyên nhân gốc của các phát hiện ở 011 và 014 — QA lần nà
 
 ## Hướng dẫn kiểm thử happy-case (thủ công + tự động)
 
+### Thủ công — đổi công tắc `.env` rồi bấm Postman
+
+Dựng stack: `docker compose -f docker-compose.local.yml up -d --wait gateway-api bff-api products-api baskets-api orders-api parties-api` (kéo theo identity-api và DB).
+Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) và
+[`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn environment **Ecommerce - Local**; chạy `00 - Xác thực & phân quyền → 01 Lấy access token`, rồi folder
+**`15 - Phân quyền từ chối theo mặc định`** (bước 01 → 11).
+
+**Công tắc** ([`.env.example`](../../.env.example), mặc định cả hai `true`): thêm 2 dòng vào `.env`, tạo lại 6 service, gọi thử vài lần (lần đầu sau khi tạo lại thường chậm/`504`):
+
+```
+FEATURE_IDENTITY_SERVER_AUTH_CUTOVER=false      # chỉ gateway (014)
+FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE=true    # gateway, bff, products, baskets, orders, parties (015)
+```
+
+```bash
+docker compose -f docker-compose.local.yml up -d --force-recreate gateway-api bff-api products-api baskets-api orders-api parties-api
+```
+
+| Bước | Cấu hình cần chỉnh (cutover / scope) | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-26)** |
+|---|---|---|---|---|
+| US1 — health probe không cần token; route nghiệp vụ không token bị chặn | Mặc định (true / true) | `15` bước 01 → 10 (5 service gọi thẳng) | Health `200`; route nghiệp vụ `401 unauthorized` | Đúng cả 5 service; toàn folder **13/13 xanh** |
+| FR-003 — token hợp lệ đi qua gateway | Mặc định | `15` bước 11 | `200` | `200` |
+| **Bật** `ApiScope` với stub (thấy `403 forbidden_scope`) | `false` / `true` | `15` bước 11 (+ thử không token) | `403 forbidden_scope` | `403 {"error":"forbidden_scope","message":"Authentication succeeded, but the token does not carry the required scope."}` cho token hợp lệ **và cả không token** (stub không phát claim scope) — đúng cảnh báo trong `.env.example` |
+| **Tắt** `ApiScope` — rollback về "chỉ cần xác thực" | `false` / `false` | `15` bước 11 | `200` với token | Token hợp lệ `200`, không token `401` (BFF/service tự xác thực); lần đo đầu sau khi tạo lại có `504` nguội |
+| Chỉ tắt `ApiScope` | `true` / `false` | `15` bước 11 | `200` | `200`; không token `401` |
+| Token thiếu scope thật bị `403` | Mọi trạng thái | `00` bước 03 → 04 | `403 forbidden_scope` | **`401`**, không phải `403`: token `scope=openid profile` không có `aud = ecommerce-api` nên bị từ chối ở bước xác thực (xem QA_Debt mục 014, 015) |
+| Scenario 3 — thợ xây quên dán biển *(ngoại lệ: sửa mã)* | Thêm route `/qa-probe-015-temp-route` vào `CatalogEndpoints.cs` không kèm `.RequireAuthorization()`/`.AllowAnonymous()`, dựng lại `products-api`; xong `git checkout --` | (không có) — chạy `EveryMappedRoute_DeclaresAnAuthorizationDecision`, gọi route thử | Scanner đỏ nêu route/file; runtime vẫn được bảo vệ | Đỏ đúng (nêu `products … .MapGet("/qa-probe-015-temp-route", …) … declares neither RequireAuthorization…`); runtime: không token `401`, có token `200`; khôi phục → xanh, `git status` sạch |
+| Dọn dẹp | Xoá 2 dòng trong `.env`, tạo lại 6 service; xoá image thử | (không có) | Về mặc định | Đã khôi phục `.env`, 6 service và `products-api` từ mã sạch |
+
 ### Tự động — chạy thẳng bộ test đã có
 
 | Cần xác nhận (FR) | Test case (bấm để mở) | Lệnh chạy riêng test đó |
@@ -34,19 +63,10 @@ là nguyên nhân gốc của các phát hiện ở 011 và 014 — QA lần nà
 | FR-003 — thiếu scope bị `403` (products) | [`AuthorizationPolicyTests.cs:20`](../../services/products/tests/Products.Api.IntegrationTests/AuthorizationPolicyTests.cs#L20) · [`:43`](../../services/products/tests/Products.Api.IntegrationTests/AuthorizationPolicyTests.cs#L43) | `dotnet test services/products/tests/Products.Api.IntegrationTests --filter FullyQualifiedName~AuthorizationPolicyTests` |
 | US3/FR-006/FR-007 — server tự chặn dữ liệu SPA đã kiểm ở client | đã rà soát ở QA 004/006 — `CheckoutTests.Checkout_ReturnsConflict_WhenTheBasketIsEmpty`, `CurrentBasketTests.AddItem_Rejects_AQuantityBelowOne` | (xem [004_QA](004_QA_SPA%20mua%20sắm%20tối%20thiểu.md)/[006_QA](006_QA_demo%20đặt%20hàng%20end-to-end.md)) |
 
-**Kết quả lượt QA này (2026-09-23)**: 10 `AuthorizationPolicyTests` (5 service) **10/10 PASS**; `AuthorizationPolicyDeclaredScannerTests` **2/4** (2 test liên quan
-consumer đỏ); toàn suite `Bff.Api.IntegrationTests` 49/50 (1 đỏ không thuộc 015 — xem QA_Debt).
-
-### Thủ công — đã tự làm sống
-
-| Bước (quickstart) | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát** |
-|---|---|---|---|
-| Scenario 3 — thợ xây quên dán biển | Thêm tạm route `/qa-probe-015-temp-route` vào `CatalogEndpoints.cs` không kèm `.RequireAuthorization()`/`.AllowAnonymous()`, chạy `EveryMappedRoute_DeclaresAnAuthorizationDecision` | Đỏ, nêu đích danh route/file | Đỏ đúng; `git checkout --` → xanh, `git status` sạch |
-| Scenario 5 — rollback qua toggle | Đọc `appsettings.json` (`false`) và `appsettings.Development.json` (`true`) của `bff`/`baskets` | Khớp mô tả | Khớp; cơ chế `IOptionsMonitor` giống `IdentityServerAuthCutover` (đã xác nhận runtime ở QA 014) |
+**Kết quả lượt QA này (2026-09-26)**: 10 `AuthorizationPolicyTests` (5 service, mỗi service 2 test) **10/10 PASS**; `AuthorizationPolicyDeclaredScannerTests` **2/4** (2 test liên quan consumer đỏ, không đổi so với lượt trước).
 
 ## Kết luận
 
-**PASS kèm ghi chú.** 4 nguồn nhất quán, cấu hình tĩnh (`appsettings*.json`, `service-manifest.yaml`) khớp mô tả, không hồi quy. 12/14 test liên quan
-xanh — US1 (mọi route có khai báo), `403 forbidden_scope` phân biệt rõ với `401`/`200`, và cơ chế chặn build (đã tái hiện sống) đúng như tài liệu. Ghi chú:
-(1) 2/4 test scanner ở phía `IConsumer<T>` đang đỏ vì consumer đầu tiên trong repo (test helper của spec 024) chưa mang nhãn `Trusted source:` — đúng kịch bản
-contract tự dự đoán, còn câu hỏi phạm vi (test helper có thuộc yêu cầu hay không). Chi tiết: [QA_Debt.md](QA_Debt.md) mục 015.
+**PASS kèm ghi chú.** 4 nguồn nhất quán; trên hệ thống thật ở trạng thái mặc định 13/13 assertion Postman xanh (health probe ẩn danh, route nghiệp vụ `401` không token, route quên khai báo vẫn bị chặn) và 12/14 test liên quan xanh. Toggle hoạt động đúng như tài liệu:
+bật `ApiScope` với stub → `403 forbidden_scope`, tắt thì `200`. Ghi chú: (1) 2/4 test scanner phía `IConsumer<T>` đỏ vì consumer test helper của spec 024 chưa mang nhãn `Trusted source:` (câu hỏi phạm vi: test helper có thuộc yêu cầu không);
+(2) `403 forbidden_scope` không đạt được bằng token thật từ `identity` (thiếu scope → thiếu `aud` → `401`), nên request Postman `00 → 04` đỏ và nhánh 403 chỉ lộ ra với stub/token dựng tay; (3) lần đầu sau khi tạo lại container chậm/`504`. Chi tiết: [QA_Debt.md](QA_Debt.md) mục 015.
