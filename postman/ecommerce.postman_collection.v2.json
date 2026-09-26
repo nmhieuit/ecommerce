@@ -3523,6 +3523,316 @@
           ]
         }
       ]
+    },
+    {
+      "name": "10 - Ràng buộc CSDL thật (SQL Server)",
+      "description": "Kiểm chứng spec 010 (hạ tầng test bằng container thật) trên hệ thống chạy thật: các ràng buộc cột (độ dài tối đa) của SQL Server trong stack docker-compose được thực thi bởi CSDL thật, không phải chỉ bởi mã ứng dụng. Không có công tắc cấu hình — chỉ cần stack chạy (orders-api, baskets-api, identity-api và DB của chúng) và đã lấy token ở folder '00 - Xác thực & phân quyền'.\n\nHiện API chưa kiểm tra độ dài header nên vi phạm ràng buộc lộ ra dưới dạng 500 (xem QA_Debt mục 010). Bước 01 và 03 tạo dữ liệu (1 đơn với tenant 128 ký tự; 1 giỏ với subject 200 ký tự) — bước 05 dọn giỏ, đơn cần xoá bằng SQL.",
+      "item": [
+        {
+          "name": "01 Orders — X-Tenant-Id dài đúng 128 ký tự (biên hợp lệ)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Cột Orders.TenantId là nvarchar(128) trên SQL Server thật. Header X-Tenant-Id được sinh bằng script (128 ký tự 'a'): đơn vẫn được ghi. Bước này tạo 1 đơn thật mỗi lần chạy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 1,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: \"X-Tenant-Id\", value: \"a\".repeat(128) });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 201 và tenantId đúng 128 ký tự\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().tenantId.length).to.equal(128);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Orders — X-Tenant-Id dài 129 ký tự bị SQL Server thật từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{ordersUrl}}/orders",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "129 ký tự vượt cột nvarchar(128): SQL Server thật ném 'String or binary data would be truncated', đơn KHÔNG được ghi. Dùng provider giả (in-memory) sẽ không bắt được lỗi này — đây là lý do spec 010 dựng SQL Server thật cho test. Hiện API trả 500 (chưa có kiểm tra đầu vào ở tầng HTTP — xem QA_Debt).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 1,\n      \"unitPrice\": 12.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: \"X-Tenant-Id\", value: \"a\".repeat(129) });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"không tạo được đơn: trả về 500 (lỗi CSDL), không phải 201\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(500);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Baskets — X-Subject-Id dài đúng 200 ký tự (biên hợp lệ)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/items",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "items"
+              ]
+            },
+            "description": "Cột Baskets.CustomerRef là nvarchar(200) (và có chỉ mục duy nhất). Header X-Subject-Id sinh bằng script 200 ký tự: giỏ được tạo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1,\n  \"unitPrice\": 12.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: \"X-Subject-Id\", value: \"s\".repeat(200) });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 200 và customerRef đúng 200 ký tự\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().customerRef.length).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Baskets — X-Subject-Id dài 201 ký tự bị SQL Server thật từ chối",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/items",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "items"
+              ]
+            },
+            "description": "201 ký tự vượt cột nvarchar(200): SQL Server thật từ chối, giỏ không được tạo. API trả 500 (chưa có kiểm tra đầu vào — xem QA_Debt).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1,\n  \"unitPrice\": 12.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: \"X-Subject-Id\", value: \"s\".repeat(201) });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"trả về 500 (lỗi CSDL), không phải 200\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(500);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Dọn dẹp — dọn giỏ của người mua 200 ký tự",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Xoá dòng hàng của giỏ tạo ở bước 03 (giỏ rỗng vẫn còn 1 hàng Baskets, không có API xoá hẳn)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: \"X-Subject-Id\", value: \"s\".repeat(200) });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"dọn giỏ thành công (204) hoặc vốn đã rỗng (409)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
