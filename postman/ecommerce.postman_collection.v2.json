@@ -4271,6 +4271,394 @@
           ]
         }
       ]
+    },
+    {
+      "name": "12 - Cổng chất lượng SonarQube",
+      "description": "Kiểm chứng spec 012 (cổng chất lượng SonarQube) trên SonarQube cục bộ: bật bằng `docker compose -f docker-compose.ci.yml up -d sonarqube` (dữ liệu cũ nằm trong volume ecomerce-ci_sonarqube-data), điền biến môi trường `sonarToken` bằng nội dung file `.ci-secrets/sonarqube-analysis-token` (không commit token). Chỉ đọc — không sửa gì trong SonarQube.\n\nTẮT SonarQube (`docker compose -f docker-compose.ci.yml stop sonarqube`) để xem bước 01 thất bại: pipeline coi việc không kết nối được là bị chặn (FR-008).",
+      "item": [
+        {
+          "name": "01 SonarQube đang chạy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{sonarToken}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{sonarUrl}}/api/system/status",
+              "host": [
+                "{{sonarUrl}}"
+              ],
+              "path": [
+                "api",
+                "system",
+                "status"
+              ]
+            },
+            "description": "Máy chủ SonarQube cục bộ (docker-compose.ci.yml, cổng 9000) phải ở trạng thái UP. Nếu không kết nối được nghĩa là dịch vụ đang tắt: pipeline `sonar-begin.sh` sẽ thất bại (FR-008: không kết nối được = bị chặn, không phải bỏ qua)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status là UP\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.equal('UP');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Token phân tích còn hợp lệ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{sonarToken}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{sonarUrl}}/api/authentication/validate",
+              "host": [
+                "{{sonarUrl}}"
+              ],
+              "path": [
+                "api",
+                "authentication",
+                "validate"
+              ]
+            },
+            "description": "Token trong biến sonarToken (lấy từ .ci-secrets/sonarqube-analysis-token) phải hợp lệ."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"valid = true\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().valid).to.equal(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Quality gate hiện hành (FR-003, FR-009)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{sonarToken}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{sonarUrl}}/api/qualitygates/show?name=Sonar%20way",
+              "host": [
+                "{{sonarUrl}}"
+              ],
+              "path": [
+                "api",
+                "qualitygates",
+                "show"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Sonar%20way"
+                }
+              ]
+            },
+            "description": "Cổng chất lượng duy nhất do SonarQube quản lý tập trung (không cấu hình theo repo/PR): 'Sonar way' với 4 điều kiện trên PHẦN MÃ MỚI."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"có đúng 4 điều kiện: new_violations > 0, new_coverage < 80, new_duplicated_lines_density > 3, new_security_hotspots_reviewed < 100\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const c = pm.response.json().conditions.map(function (x) { return x.metric + ' ' + x.op + ' ' + x.error; }).sort();",
+                  "    pm.expect(c).to.eql(['new_coverage LT 80', 'new_duplicated_lines_density GT 3', 'new_security_hotspots_reviewed LT 100', 'new_violations GT 0']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Trạng thái cổng của nhánh master (FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{sonarToken}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{sonarUrl}}/api/qualitygates/project_status?projectKey=ecommerce",
+              "host": [
+                "{{sonarUrl}}"
+              ],
+              "path": [
+                "api",
+                "qualitygates",
+                "project_status"
+              ],
+              "query": [
+                {
+                  "key": "projectKey",
+                  "value": "ecommerce"
+                }
+              ]
+            },
+            "description": "Kết quả cổng đạt/không đạt cho project `ecommerce` (nhánh chính). "
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"cổng trả về một trạng thái duy nhất OK hoặc ERROR\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().projectStatus.status).to.be.oneOf(['OK', 'ERROR']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Số đo chất lượng của project (FR-006)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{sonarToken}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{sonarUrl}}/api/measures/component?component=ecommerce&metricKeys=coverage,duplicated_lines_density,code_smells,bugs,vulnerabilities,ncloc",
+              "host": [
+                "{{sonarUrl}}"
+              ],
+              "path": [
+                "api",
+                "measures",
+                "component"
+              ],
+              "query": [
+                {
+                  "key": "component",
+                  "value": "ecommerce"
+                },
+                {
+                  "key": "metricKeys",
+                  "value": "coverage,duplicated_lines_density,code_smells,bugs,vulnerabilities,ncloc"
+                }
+              ]
+            },
+            "description": "Độ bao phủ, mức trùng lặp mã, số code smell — số liệu mà SonarQube hiển thị/đăng lên PR."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"có coverage, duplicated_lines_density, code_smells là số\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const m = {}; pm.response.json().component.measures.forEach(function (x) { m[x.metric] = Number(x.value); });",
+                  "    pm.expect(m.coverage).to.be.a('number');",
+                  "    pm.expect(m.duplicated_lines_density).to.be.a('number');",
+                  "    pm.expect(m.code_smells).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Các PR đã được phân tích và trạng thái cổng (US1/US2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{sonarToken}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{sonarUrl}}/api/project_pull_requests/list?project=ecommerce",
+              "host": [
+                "{{sonarUrl}}"
+              ],
+              "path": [
+                "api",
+                "project_pull_requests",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "project",
+                  "value": "ecommerce"
+                }
+              ]
+            },
+            "description": "Danh sách PR SonarQube từng phân tích, mỗi PR có trạng thái cổng — bằng chứng cho việc PR được gắn kết quả cổng."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"có ít nhất 1 PR và mỗi PR có qualityGateStatus OK/ERROR\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const p = pm.response.json().pullRequests;",
+                  "    pm.expect(p.length).to.be.at.least(1);",
+                  "    p.forEach(function (x) { pm.expect(x.status.qualityGateStatus).to.be.oneOf(['OK', 'ERROR']); });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Nhánh chính và các nhánh đã phân tích",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{sonarToken}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{sonarUrl}}/api/project_branches/list?project=ecommerce",
+              "host": [
+                "{{sonarUrl}}"
+              ],
+              "path": [
+                "api",
+                "project_branches",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "project",
+                  "value": "ecommerce"
+                }
+              ]
+            },
+            "description": "Nhánh chính là `master`; các nhánh khác chỉ được giữ tạm."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"master là nhánh chính\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const main = pm.response.json().branches.filter(function (b) { return b.isMain; });",
+                  "    pm.expect(main.length).to.equal(1);",
+                  "    pm.expect(main[0].name).to.equal('master');",
+                  "});",
+                  "pm.test(\"lượt phân tích của master không cũ quá 7 ngày (ĐỎ nghĩa là CI đã ngừng đẩy phân tích mới — xem QA_Debt)\", function () {",
+                  "    const m = pm.response.json().branches.filter(function (b) { return b.isMain; })[0];",
+                  "    pm.expect(Date.now() - Date.parse(m.analysisDate)).to.be.below(7 * 24 * 3600 * 1000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
