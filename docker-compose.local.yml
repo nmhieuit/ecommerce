@@ -368,6 +368,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__ProductsDb: Server=products-db;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
       Identity__Authority: http://identity-api:8080
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5088:8080"
@@ -387,6 +388,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__BasketsDb: Server=baskets-db;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
       Identity__Authority: http://identity-api:8080
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5188:8080"
@@ -406,6 +408,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__OrdersDb: Server=orders-db;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
       Identity__Authority: http://identity-api:8080
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5041:8080"
@@ -425,6 +428,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__PartiesDb: Server=parties-db;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0
       Identity__Authority: http://identity-api:8080
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5204:8080"
@@ -471,6 +475,7 @@ services:
       Services__OrdersApi__BaseUrl: http://orders-api:8080
       Services__PartiesApi__BaseUrl: http://parties-api:8080
       Identity__Authority: http://identity-api:8080
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5301:8080"
@@ -501,12 +506,16 @@ services:
       Cors__AllowedOrigins__0: http://localhost:4173
       Cors__AllowedOrigins__1: http://localhost:5173
       # appsettings.Development.json's Identity:Authority also names localhost:5205 for the same
-      # reason as the ReverseProxy address above — restored to the compose hostname. Deliberately
-      # NOT overriding FeatureToggles:IdentityServerAuthCutover here: it stays sourced from
-      # appsettings.Development.json specifically so quickstart.md Scenario 7 can flip it live
-      # (docker exec + edit the file in place) without restarting the container — an environment
-      # variable would be fixed for the container's lifetime and could not demonstrate that.
+      # reason as the ReverseProxy address above — restored to the compose hostname.
       Identity__Authority: http://identity-api:8080
+      # Both toggles come from .env or the shell (see .env.example), on by default, then
+      # `docker compose -f docker-compose.local.yml up -d` recreates what changed. An environment
+      # variable outranks appsettings.Development.json, so editing that file live inside the
+      # container (014 quickstart.md Scenario 7) no longer flips them — set the variable instead.
+      # Never cutover=false with scope=true: the Phase 1 stub principal carries no scope claim, so
+      # the gateway would answer 403 to every request.
+      FeatureToggles__IdentityServerAuthCutover: ${FEATURE_IDENTITY_SERVER_AUTH_CUTOVER:-true}
+      FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5300:8080"
