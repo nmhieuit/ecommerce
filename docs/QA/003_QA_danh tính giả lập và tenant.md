@@ -29,7 +29,7 @@ cp .env.example .env   # chỉ cần 1 lần
 docker compose -f docker-compose.local.yml up -d --wait gateway-api products-api baskets-api orders-api parties-api
 ```
 
-Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) + [`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn **Ecommerce - Local**, chạy `00 - Xác thực & phân quyền (Get Token) → 01` để có token, rồi các folder bên dưới.
+Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) + [`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn **Ecommerce - Local**, chạy `00 - Xác thực & phân quyền (Get Token) → 01` để có token, rồi các folder bên dưới (hoặc gọn hơn: folder đánh số **`03 - Danh tính giả lập và tenant`**, 6 request gom đúng bảng dưới).
 Từ spec 014/015, mọi service trả `401` trước khi tới cổng tenant nếu không có token, nên "công tắc" của spec này là **có/không token** và **có/không header `X-Tenant-Id`** (gọi thẳng service), thay cho việc đổi cấu hình.
 
 | Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |

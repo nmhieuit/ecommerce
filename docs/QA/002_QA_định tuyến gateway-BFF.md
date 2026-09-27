@@ -43,7 +43,7 @@ docker compose -f docker-compose.local.yml up -d --wait gateway-api
 ```
 
 Lệnh trên tự kéo theo `bff-api`, cả 4 domain service, `identity-api` và DB riêng từng service — `--wait` chặn tới khi mọi container `healthy`.
-Postman: chạy `00 - Xác thực & phân quyền (Get Token) → 01 Lấy access token` trước (từ spec 014 mọi route qua gateway cần token), rồi folder `Gateway` và `Common`.
+Postman: chạy `00 - Xác thực & phân quyền (Get Token) → 01 Lấy access token` trước (từ spec 014 mọi route qua gateway cần token), rồi folder `Gateway` và `Common`, hoặc gọn hơn là folder đánh số **`02 - Định tuyến gateway-BFF`** (4 request, cùng assertion, gom đúng những gì bảng dưới cần).
 
 **Công tắc** (hạ tầng, không sửa mã): `docker compose -f docker-compose.local.yml stop products-api` / `start products-api`; `stop bff-api` / `start bff-api`.
 
