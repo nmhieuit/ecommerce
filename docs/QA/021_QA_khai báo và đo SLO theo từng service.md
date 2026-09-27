@@ -15,6 +15,29 @@ Việc thật là (a) thêm test canh giữ khai báo, (b) chính thức hoá da
 
 ## Hướng dẫn kiểm thử happy-case (thủ công + tự động)
 
+### Thủ công — tắt/bật service phía sau rồi bấm Postman
+
+Dựng stack: `docker compose -f docker-compose.local.yml up -d --wait gateway-api bff-api products-api baskets-api orders-api elasticsearch kibana otel-collector` (kéo theo identity-api và DB).
+Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) và
+[`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn environment **Ecommerce - Local**; chạy `00 - Xác thực & phân quyền (Get Token) → 01`, rồi folder
+**`21 - Đo SLO trên Elasticsearch (dashboard SLO)`** bằng **Runner**: bước 01 → 03 khi `baskets-api` BẬT; **TẮT** `baskets-api` rồi chạy 04 → 07; **BẬT** lại rồi chạy 08.
+Các bước ES dùng đúng phép tính của dashboard (error-rate, p95, p99 từ `traces-generic.otel-default*`) nhưng chỉ đếm span `kind: Server` từ mốc thời gian của bước 02, nên không lẫn dữ liệu cũ.
+
+**Công tắc** (hạ tầng, không sửa mã): `docker compose -f docker-compose.local.yml stop baskets-api` / `start baskets-api`.
+
+| Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
+|---|---|---|---|---|
+| Điều kiện — dashboard có trong Kibana *(ngoại lệ: import bằng `curl`, Postman không đính kèm file gọn)* | `curl -X POST "localhost:5601/api/saved_objects/_import?overwrite=true" -H "kbn-xsrf: true" --form file=@docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson` | `21` bước 01 | Dashboard `SLO vận hành hằng ngày — 7 service` tồn tại | Import `successCount: 3`; bước 01 `200`, đúng tên |
+| US3-KB1/bất biến 1, 2 — số đo thật khi khoẻ | **BẬT** `baskets-api` (mặc định) | `21` bước 02, 03 | Có request thật, 0 lỗi 5xx, p95 ≤ 300 ms, p99 ≤ 800 ms (ngưỡng manifest `bff`) | `n=1`, `5xx=0`, **p95 = p99 = 15–19 ms** |
+| US3-KB2/bất biến 4/FR-007 — suy giảm hiện ngay | **TẮT** `baskets-api` | `21` bước 04, 05 | 5xx > 0 và p95 vượt ngưỡng, không thu thập lại thủ công | `GET /bff/basket` `504` sau 3 giây; đo lại cùng truy vấn: `n=2`, **`5xx=1`, p95 = 2858 ms, p99 = 2978 ms** (vượt 300/800 ms) |
+| Bất biến 3/FR-006 — service không có traffic | (không có) — Orders.Api không được gọi | `21` bước 06 | "Không có dữ liệu" | **Khác kỳ vọng**: `5` span Server nhưng **0** ngoài `/health/*` — dashboard sẽ tính "0 % lỗi, ~1 ms" từ span probe (xem QA_Debt) |
+| Bất biến 3 — khoảng thời gian trước khi hệ thống tồn tại | (không có) — cả năm 2020 | `21` bước 07 | 0 span | `0` — đúng |
+| **BẬT** lại — phục hồi | `start baskets-api` | `21` bước 08 | `200` | Lần đầu `200` sau ~3 giây (kết nối lạnh) rồi `200` nhanh (~20–140 ms). Chạy cả folder khi TẮT: chỉ bước 08 đỏ; khi BẬT: chỉ 3 assertion của bước 04/05 đỏ (đúng, vì cần baskets TẮT) |
+| Bước 2 quickstart — cơ chế bảo vệ khai báo có chặn thật *(ngoại lệ: sửa file manifest, không có công tắc chạy)* | Đổi `p95: 150ms → 50ms` ở dòng 37 của `services/orders/src/Orders.Api/service-manifest.yaml`, không kèm justification; `dotnet test tests/ServiceManifestSloConventionTests`; `git checkout --` file đó | (không có) | Đỏ đúng service `orders` | Đúng 1 đỏ (`SloDefaultComplianceTests … "orders"`, thông báo nêu `internal-service-api`, `p95=150ms` và thiếu `slos.justification`), 28 test còn lại xanh; revert → 29/29 xanh, `git status` sạch |
+| Dọn dẹp | `start baskets-api` | (không có) | Không dữ liệu dư | Đã bật lại; dashboard nằm trong Kibana cục bộ, không ảnh hưởng repo |
+
+Để tự xem dashboard: mở `http://localhost:5601/app/dashboards#/view/e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`, time range **Last 24 hours**.
+
 ### Tự động
 
 | Cần xác nhận (FR) | Test case (bấm để mở) | Lệnh chạy riêng test đó |
@@ -25,23 +48,10 @@ Việc thật là (a) thêm test canh giữ khai báo, (b) chính thức hoá da
 | SC-001 bất biến 6 — tên khai báo khớp thư mục | [`:107`](../../tests/ServiceManifestSloConventionTests/SloDeclarationTests.cs#L107) — `EveryService_DeclaredNameMatchesItsDirectory` (7 ca) | (lệnh như trên) |
 | FR-002/FR-003/US2 — khớp mặc định hoặc có justification | [`SloDefaultComplianceTests.cs:29`](../../tests/ServiceManifestSloConventionTests/SloDefaultComplianceTests.cs#L29) — `EveryService_MatchesPlatformDefault_OrDocumentsAJustifiedAlternative` (7 ca) | `dotnet test tests/ServiceManifestSloConventionTests --filter FullyQualifiedName~SloDefaultComplianceTests` |
 
-**Kết quả lượt QA này (2026-09-24)**: `ServiceManifestSloConventionTests` **29/29 PASS** (1 discovery + 7×4 ca), trước và sau khi dịch comment.
-
-### Thủ công
-
-| Bước (quickstart) | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát** |
-|---|---|---|---|
-| Bước 2 — cơ chế bảo vệ có chặn thật | Đổi `p95: 150ms → 50ms` trong `services/orders/src/Orders.Api/service-manifest.yaml`, không kèm justification; chạy test; `git checkout --` | Đỏ đúng service `orders` | Đúng 1 đỏ (`SloDefaultComplianceTests … "orders"`), 28 test còn lại xanh; revert → 29/29 xanh, `git status` sạch |
-| Import dashboard vào Kibana 9.4.4 | `POST /api/saved_objects/_import` file `.ndjson` | Import thành công | `successCount: 3` (2 data view + dashboard `e2e06ff5-…`); công thức thật: `count(kql='…status_code >= 500') / count()`, `percentile(duration, 95\|99) / 1000000` |
-| Bước 3–4 — dashboard đối chiếu thực tế/ngưỡng | Trình duyệt tích hợp bị từ chối `localhost:5601` nên không render được; thay bằng truy vấn Elasticsearch đúng các phép tính đó | Số đo phản ánh suy giảm thật | Bucket 20 phút `Bff.Api` lúc ngắt `baskets-api`: `n=167, err=91.6 %, p95=3270 ms`, ngay sau đó `err=0.8 %` — đo nhạy đúng (bất biến 4 / US3-KB2 / FR-007) |
-| Bước 5 — không có dữ liệu | Khoảng thời gian 2020 (trước khi hệ thống tồn tại) | "Không có dữ liệu" | 0 hit, "No results found" — đúng; nhưng service **idle thật** cho kết quả KHÁC kỳ vọng (xem QA_Debt) |
-
-Để tự render dashboard: mở `http://localhost:5601/app/dashboards#/view/e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`, time range **Last 24 hours**.
+**Kết quả lượt QA này (2026-09-27)**: `ServiceManifestSloConventionTests` **29/29 PASS** (1 discovery + 7×4 ca), trước và sau khi dịch comment.
 
 ## Kết luận
 
-**PASS kèm ghi chú nghiêm trọng.** 4 nguồn nhất quán với nhau và với mã/manifest thật; 29/29 test xanh; cơ chế bảo vệ manifest chặn đúng (mutate → đỏ đúng service → revert); hằng số mặc định
-khớp hiến chương. Nửa "khai báo" (US1/US2) đạt đầy đủ. Nửa "đo liên tục" (US3) nhạy với suy giảm thật nhưng có ghi chú: (1) span health-probe khiến service idle hiện "0 % lỗi / ~1 ms"
-thay vì "không có dữ liệu" (vi phạm FR-006/SC-005 ở trường hợp thật); (2) công thức đếm mọi loại span thay vì chỉ `kind: Server`, lệch rõ ở Gateway/BFF (19.19 % vs 11.02 %);
-(3) ngưỡng dashboard là chữ cứng trong tên cột, không test nào giữ khớp với manifest. Chi tiết và hướng vá: [QA_Debt.md](QA_Debt.md) mục 021.
-Lưu ý môi trường: đã import dashboard vào Kibana cục bộ của stack QA (không ảnh hưởng repo).
+**PASS kèm ghi chú nghiêm trọng.** 4 nguồn nhất quán với nhau và với mã/manifest thật; 29/29 test xanh; cơ chế bảo vệ manifest chặn đúng (mutate → đỏ đúng service → revert); hằng số mặc định khớp hiến chương. Nửa "khai báo" (US1/US2) đạt đầy đủ.
+Nửa "đo liên tục" (US3) nhạy với suy giảm thật — Postman + Elasticsearch đo được `5xx`, p95 từ 15 ms lên 2858 ms ngay khi `baskets-api` tắt — nhưng có ghi chú: (1) span health-probe khiến service idle hiện "0 % lỗi / ~1 ms" thay vì "không có dữ liệu" (vi phạm FR-006/SC-005 ở trường hợp thật, bước 06);
+(2) công thức đếm mọi loại span thay vì chỉ `kind: Server`, lệch rõ ở Gateway/BFF; (3) ngưỡng dashboard là chữ cứng trong tên cột, không test nào giữ khớp với manifest. Chi tiết và hướng vá: [QA_Debt.md](QA_Debt.md) mục 021.

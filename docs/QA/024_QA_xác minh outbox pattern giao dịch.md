@@ -13,6 +13,29 @@
 
 ## Hướng dẫn kiểm thử happy-case (thủ công + tự động)
 
+### Thủ công — bật/tắt broker RabbitMQ rồi bấm Postman
+
+Công tắc cấu hình: biến `ORDERS_RABBITMQ_CONNECTION` trong `.env` (xem `.env.example`), rồi `docker compose -f docker-compose.local.yml up -d --force-recreate --no-deps orders-api`:
+BẬT = `amqp://guest:guest@rabbitmq:5672` (mặc định của `docker-compose.yml`); TẮT = để trống (mặc định của `docker-compose.local.yml` khi không khai báo).
+Dựng stack: `docker compose -f docker-compose.local.yml up -d --wait gateway-api bff-api orders-api rabbitmq` (kéo theo identity-api và DB), với công tắc **BẬT**.
+Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) và
+[`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn environment **Ecommerce - Local**; chạy `00 - Xác thực & phân quyền (Get Token) → 01`, rồi lần lượt 3 folder con của
+**`24 - Outbox giao dịch (broker sập / kill orders-api)`** trong Runner: `24a` → `docker compose -f docker-compose.local.yml stop rabbitmq` → `24b` → `docker compose -f docker-compose.local.yml start rabbitmq` → `24c`.
+
+**Công tắc** (hạ tầng, không sửa mã): `stop rabbitmq` / `start rabbitmq`; `docker kill ecomerce-local-orders-api-1` + `start orders-api`; `ORDERS_RABBITMQ_CONNECTION` (`.env`).
+
+| Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
+|---|---|---|---|---|
+| Chuẩn bị — queue bền hứng bản sao `OrderPlacedV1`, đặt 1 đơn làm ấm | Công tắc BẬT, broker chạy | `24a` bước 01 → 04 | Queue + binding tạo được; đơn làm ấm được giao ngay | `24a` 4/4 xanh (`201`, `201`, đơn `201` ~25–90 ms, đọc queue ≥ 1 message) |
+| FR-007/US1 — đặt đơn khi broker không tới được | `stop rabbitmq` | `24b` bước 01 (`POST /orders` trực tiếp) | `201` nhanh, không phụ thuộc broker | `201` trong **68–84 ms**; bảng outbox `OutboxMessage` có **1** dòng chờ (`select count(*)` qua `sqlcmd`) |
+| FR-003/FR-004/US2-KB1 — broker sống lại, message tự được giao | `start rabbitmq` | `24c` bước 01, 02 (chờ ~30 giây rồi đọc queue) | Message đã commit tự được gửi, đúng 1 lần | Đúng **1** message cho `orderId` đó (không mất, không trùng); `correlationId` khớp `X-Correlation-Id`; tổng `59.25`, 2 dòng — **5/5 assertion xanh** |
+| Kịch bản 1 quickstart — sập giữa commit và gửi | `stop rabbitmq` → `24b` → `docker kill ecomerce-local-orders-api-1` → `start orders-api` và `start rabbitmq` | `24c` | Message đã commit vẫn được giao sau khi tiến trình chết | Hàng outbox còn nguyên sau kill (`pending = 1`); sau khi khởi động lại `24c` **5/5 xanh** — đúng 1 message, đúng `orderId` |
+| Công tắc TẮT — outbox tích luỹ, không giao *(ngoại lệ: sửa `.env` rồi tạo lại service)* | `ORDERS_RABBITMQ_CONNECTION=` (rỗng) trong `.env` rồi `up -d --force-recreate --no-deps orders-api`; 2 lần `POST /orders` | (bước 24b tương đương) | `201` bình thường, message chưa giao | 2 `POST` đều `201` (1.19 s lần đầu, 48 ms lần sau); sau 8 giây bảng outbox còn **2** dòng, log `orders-api` đầy thông báo `Connection Failed` (60 dòng) — không lỗi nào ra tới client |
+| Công tắc BẬT lại — bản ghi kẹt được giao | Khôi phục `.env`, tạo lại `orders-api` | (không có) | Outbox về 0 | Bảng outbox về **0** ngay chu kỳ quét đầu; exchange `EventContracts:OrderPlacedV1` `publish_in` tăng tương ứng |
+| US1-KB3 — nhiều đơn đồng thời *(ngoại lệ: tải song song)* | Queue bền `24a`; `seq 1 20 \| xargs -P 20 -I{} curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:5041/orders -H "Authorization: Bearer <token>" -H "X-Tenant-Id: contoso" -H "X-Subject-Id: phase1-stub-user" -H "X-Correlation-Id: qa024-burst-{}" -H "content-type: application/json" -d '{"items":[{"productId":"9f8d6b1e-0001-4000-8000-000000000001","quantity":1,"unitPrice":12.5}]}'` | (không có) | Mỗi đơn đúng 1 outbox, không thiếu/trùng | 20 × `201`; sau ~6 giây outbox `0`; đọc queue: **20 message, 20 `messageId` khác nhau, 20 `orderId` khác nhau**, `correlationId` `qa024-burst-N` khớp 20/20 |
+| Mutation trên mã (thêm `SaveChangesAsync()` sau `Orders.Add`; comment `UseBusOutbox()`) *(ngoại lệ: sửa mã production)* | — | — | Test đỏ | **Không chạy lại ở lượt này** (sửa mã production bị chặn bởi quyền của phiên). Kết quả lượt trước còn nguyên (xem QA_Debt): mutation tách transaction → 4/4 vẫn xanh; comment `UseBusOutbox()` → chỉ 2 đỏ |
+| Dọn dẹp | Xoá queue `qa024-orderplaced` (bước `24c/03`); xoá đơn thử; khôi phục `.env` | (không có) | Không dữ liệu dư | `Orders` về 1 dòng gốc, outbox `0`, `orders-api` chạy đúng cấu hình `.env` ban đầu |
+
 ### Tự động
 
 | Cần xác nhận (FR) | Test case (bấm để mở) | Lệnh chạy riêng test đó |
@@ -22,25 +45,10 @@
 | FR-003/FR-004/US2-KB1 — commit rồi sập, khởi động lại tự gửi | [`OrderPlacedOutboxCrashRecoveryTests.cs:43`](../../services/orders/tests/Orders.Api.IntegrationTests/OrderPlacedOutboxCrashRecoveryTests.cs#L43) — `OutboxMessage_CommittedButUnsentWhenTheProcessStops_StillGetsPublished_AfterRestart` | `dotnet test services/orders/tests/Orders.Api.IntegrationTests --filter FullyQualifiedName~OrderPlacedOutboxCrashRecoveryTests` |
 | FR-005/US3-KB1 — consumer nhận trùng chỉ xử lý 1 lần | [`OrderPlacedIdempotentConsumerTests.cs:42`](../../services/orders/tests/Orders.Api.IntegrationTests/OrderPlacedIdempotentConsumerTests.cs#L42) — `Consumer_ProcessesTheSameRedeliveredMessage_ExactlyOnce` | `dotnet test services/orders/tests/Orders.Api.IntegrationTests --filter FullyQualifiedName~OrderPlacedIdempotentConsumerTests` |
 
-**Kết quả lượt QA này (2026-09-24)**: 4/4 test outbox xanh (~2.6 phút, dựng SQL Server + RabbitMQ Testcontainers); toàn `Orders.Api.IntegrationTests` **29/29** (khớp tài liệu); `dotnet build Ecommerce.slnx` 0 lỗi — không đổi sau khi dịch comment. US1-KB3, US2-KB2/KB3, US3-KB2/KB3 không có test tự động (xem QA_Debt).
-
-### Thủ công — trên stack Docker `docker-compose.local.yml`
-
-| Bước | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát** |
-|---|---|---|---|
-| Đặt đơn khi broker không tới được | `POST :5041/orders` (token thật + `X-Tenant-Id` + `X-Subject-Id`) | `201` nhanh, không phụ thuộc broker (FR-007) | `201` trong 0.33 s; outbox tích luỹ, không giao được vì `orders-api` của compose local **thiếu cấu hình RabbitMQ** (411 log `Connection Failed`, xem QA_Debt) |
-| Thêm `ConnectionStrings__RabbitMq` (file override tạm) rồi tạo lại `orders-api` | `docker compose -f docker-compose.local.yml -f <override> up -d --no-deps --force-recreate orders-api` | Bản ghi kẹt tự được giao | Cả 2 message kẹt (trong đó 1 cái kẹt 7+ giờ) được giao ngay: exchange `EventContracts:OrderPlacedV1` `publish_in: 2`, bảng outbox về 0 |
-| Kịch bản 1 quickstart — sập giữa commit và gửi | Dừng RabbitMQ → `POST /orders` → `docker kill orders-api` → bật lại RabbitMQ + `orders-api` | Message đã commit tự được gửi, không cần thao tác khác | `POST` `201` trong 0.91 s; hàng outbox còn nguyên sau kill; sau khởi động lại `publish_in: 1`, bảng outbox về 0 |
-| US1-KB3 — nhiều đơn đồng thời | 20 `POST` song song, mỗi cái 1 `X-Correlation-Id`; đọc message từ queue tạm bind vào exchange | Mỗi đơn đúng 1 outbox, không thiếu/trùng | 20 `201`; `Orders` 3 → 23; outbox về 0 sau ~4 s; 20 message với 20 `messageId`/`orderId`/`eventId` khác nhau; `correlationId` trong payload khớp `X-Correlation-Id` 20/20 |
-| Mutation: thêm `SaveChangesAsync()` sau `Orders.Add` (order commit riêng) | Sửa `OrderEndpoints.cs`, chạy 4 test, `git checkout --` | Test đỏ | **4/4 vẫn xanh** — xem QA_Debt |
-| Mutation: comment `UseBusOutbox()` | Sửa `Program.cs`, chạy 4 test, hoàn tác | Cả 4 đỏ | 2 đỏ (atomicity, crash-recovery); **rollback và idempotency vẫn xanh** |
-| Mutation: bỏ Host B / gán cứng `QueryDelay = 1s` (crash test) | Sửa test / `Program.cs`, hoàn tác | Test đỏ | Bỏ Host B → đỏ sau ~48 s; gán cứng `QueryDelay` → **vẫn xanh** |
-| Mutation: bỏ `UseEntityFrameworkOutbox` khỏi consumer host | Sửa file Support, hoàn tác | Idempotency đỏ | Đỏ: `Expected: 1, Actual: 2` |
-
-Đã dọn dữ liệu QA (22 đơn thêm, queue tạm `qa024`) và tạo lại `orders-api` đúng theo `docker-compose.local.yml` của repo (không override).
+**Kết quả lượt QA này (2026-09-27)**: 4/4 test outbox xanh (~30 giây, dựng SQL Server + RabbitMQ Testcontainers). US1-KB3, US2-KB2/KB3, US3-KB2/KB3 không có test tự động (xem QA_Debt).
 
 ## Kết luận
 
-**PASS kèm ghi chú nghiêm trọng.** Hành vi outbox đúng như thiết kế và đã được chứng minh sống: ghi đơn + outbox, sống sót qua `docker kill` + broker sập, 20 đơn đồng thời không thiếu/trùng message, correlation ID đi hết vào payload. Ghi chú: (1) test không phát hiện việc `POST /orders` tách order và outbox ra 2 transaction (mutation → 4/4 vẫn xanh), và test rollback rỗng nghĩa nếu bus outbox bị tắt;
-(2) test crash-recovery không giữ cấu hình chu kỳ quét và không khẳng định "chưa gửi" trước khi khởi động lại; 5 kịch bản chấp nhận (US1-KB3, US2-KB2/KB3, US3-KB2/KB3) chưa có test tự động; (3) `orders-api` của `docker-compose.local.yml` và manifest K8s không có cấu hình RabbitMQ nên outbox không bao giờ giao được (im lặng — chỉ có log);
-(4) `data-model.md`/`quickstart.md` mô tả sai cột outbox (`SentTime` không phải cờ "đã gửi") và 3 kịch bản thủ công không tái hiện nguyên văn được. Chi tiết và hướng vá: [QA_Debt.md](QA_Debt.md) mục 024.
+**PASS kèm ghi chú nghiêm trọng.** Hành vi outbox đúng như thiết kế và được chứng minh sống bằng công tắc broker: đặt đơn khi broker sập vẫn `201` trong ~80 ms, message nằm lại trong outbox rồi tự được giao khi broker sống lại (kể cả sau `docker kill orders-api`), 20 đơn đồng thời không thiếu/trùng message, correlation ID đi hết vào payload. 4/4 test tự động xanh.
+Ghi chú: (1) test không phát hiện việc `POST /orders` tách order và outbox ra 2 transaction, và test rollback rỗng nghĩa nếu bus outbox bị tắt (lượt trước, chưa chạy lại); (2) test crash-recovery không giữ cấu hình chu kỳ quét; 5 kịch bản chấp nhận (US1-KB3, US2-KB2/KB3, US3-KB2/KB3) chưa có test tự động;
+(3) khi công tắc TẮT (mặc định của `docker-compose.local.yml`) hoặc manifest K8s không có cấu hình RabbitMQ, outbox không bao giờ giao được và chỉ có log báo (im lặng với client); (4) `total` trong payload là chuỗi (xem QA 008); (5) `data-model.md`/`quickstart.md` mô tả sai cột outbox. Chi tiết và hướng vá: [QA_Debt.md](QA_Debt.md) mục 024.

@@ -31,30 +31,32 @@ Scenario 4 ("the whole purchase") — trỏ sang đó thay vì chép lại.
 > Nếu `localhost` không gọi được dù container `healthy`: khởi động lại hẳn Docker Desktop (lỗi forwarding
 > IPv6 loopback `::1` của WSL2), không phải lỗi ứng dụng.
 
-### Thủ công — dựng stack và đi hết luồng
+### Thủ công — chạy luồng bằng Postman, rồi đi lại bằng trình duyệt; tắt/bật service để thấy trạng thái lỗi
 
 `.env` phải có `MSSQL_SA_PASSWORD` và `TestUserPassword` (`cp .env.example .env` là đủ).
 
 ```bash
-docker compose -f docker-compose.local.yml up -d --build --wait gateway-api storefront
+docker compose -f docker-compose.local.yml up -d --wait gateway-api storefront
 ```
 
-`--build` để có image storefront/identity mới (storefront đóng cứng `IDENTITY_ORIGIN`, identity đặt
-`IssuerUri`); lần đầu mất vài phút. Mở `http://localhost:4173`, đăng nhập bằng `postman-test@local.test`
-và mật khẩu là giá trị `TestUserPassword` trong `.env`.
+Lệnh trên kéo theo `bff-api`, cả 4 domain service, `identity-api` và DB; `storefront` chạy ở `http://localhost:4173` (`--build` nếu cần image storefront/identity mới).
+Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) + [`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn **Ecommerce - Local**, chạy `00 - Xác thực & phân quyền (Get Token) → 01`, rồi folder **`00 - Smoke Flow`** (đúng luồng SPA gọi: xem sản phẩm → thêm giỏ ×3 → xem giỏ → đặt hàng → đọc đơn → giỏ rỗng → đặt lần hai bị từ chối).
 
-| Bước (quickstart) | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát (lượt kiểm tra lại)** |
-|---|---|---|---|
-| Đăng nhập (FR-026) | Mở `/`; nhập sai mật khẩu; rồi nhập đúng | Tới `/login`; sai → "Incorrect username or password."; đúng → vào catalog | Đúng cả 3. `POST localhost:5205/connect/token` → 200; token nằm ở `sessionStorage` (`storefront.session`), `localStorage` trống |
-| Scenario 1 — duyệt (US1) | Sau đăng nhập, xem danh sách + tab Network + Console | 3 sản phẩm: Notebook $12.50, Pour-Over $48.00, Apron $34.25 | Đúng 3 sản phẩm, đúng giá. Request tới gateway (`5300`) và 1 lần tới identity (`5205`, xem ghi chú FR-014). **Lần tải đầu trên stack mới bị `504` (4.4 s) rồi tự thử lại thành `200`** |
-| Scenario 2 — thêm vào giỏ (US2) | Thêm Notebook 2 lần, Apron 1 lần, mở giỏ | 1 dòng Notebook số lượng 2 ($25.00) + Apron → tổng $59.25 | Đúng **sau khi stack ấm**: Notebook × 2 = $25.00, Apron $34.25, tổng $59.25. Lượt đầu 2 lần thêm Notebook bị `504` (1.4 s, 1.0 s) nên giỏ chỉ có Apron — đúng US2-KB5 (giỏ không hiện món chưa thêm được); thêm lại thì đúng |
-| Scenario 3 — giỏ bền qua tải lại | F5 ở trang giỏ | Giỏ giữ nguyên | Đúng (vẫn đăng nhập, giỏ y nguyên $59.25). **Đóng-mở lại trình duyệt chưa thử**: token ở `sessionStorage` nên sẽ phải đăng nhập lại (giỏ vẫn là giỏ của server) |
-| Scenario 4 — giỏ rỗng chặn thanh toán | Giỏ rỗng, thử thanh toán | Nút bị vô hiệu, không có request | Được bao phủ bởi e2e (PASS) và `EmptyBasketBlocks.test.tsx` |
-| Scenario 5 — thanh toán (US3) | Bấm "Check out" | Xác nhận đúng mã đơn + $59.25, giỏ rỗng | Lần bấm đầu (double-click) → `POST /bff/checkout` `504` (1.1 s) — hiện "We could not place your order. Your basket is unchanged", **chỉ 1 request được gửi**, giỏ nguyên vẹn (US3-KB4). Bấm lại → xác nhận mã `c4b82094-…`, tổng $59.25. Đọc lại `GET /bff/orders/<mã>` → 200, total 59.25 (SC-005); `GET /bff/basket` → items rỗng (FR-010); bảng Orders có đúng **1** dòng — lần 504 không sinh đơn ma |
-| Scenario 6 — double-click | Bấm nhanh 2 lần | Đúng 1 đơn | Đúng (chỉ 1 request đi ra; e2e PASS) |
-| Scenario 7, 8 | Tắt `products-api`; chỉ dùng bàn phím | Lỗi rõ ràng < 5 s; focus luôn nhìn thấy | Scenario 8 được e2e bao phủ (PASS); Scenario 7 chưa chạy thủ công lại |
-| Đăng xuất | Bấm "Sign out" | Về `/login` | Đúng; `sessionStorage` không còn `storefront.session` |
-| Dọn dẹp | `docker compose -f docker-compose.local.yml down -v` | | |
+**Công tắc** (hạ tầng, không sửa mã): `docker compose -f docker-compose.local.yml stop products-api` / `start products-api` (trạng thái lỗi của catalog); đăng nhập bằng `postman-test@local.test` + `TestUserPassword` trong `.env`.
+
+| Bước (quickstart) | Cấu hình cần chỉnh | Request Postman / thao tác trình duyệt | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
+|---|---|---|---|---|
+| Scenario 1 + 2 + 5 — duyệt, thêm giỏ, thanh toán ở tầng API (US1–US3) | Mặc định | `00 - Smoke Flow` bước 00 → 09 | Xanh: 3 sản phẩm, dòng gộp, đặt hàng `201`, đọc lại đơn, giỏ rỗng, lần hai bị từ chối | **19/19 assertion xanh** (`00` `409` dọn giỏ rỗng, `01` `200`, `02–04` `200`, `05` `200`, `06` `201`, `07` `200`, `08` `200`, `09` `409`) |
+| Đăng nhập (FR-026) *(ngoại lệ: thao tác trình duyệt)* | Mở `http://localhost:4173`; nhập sai mật khẩu; rồi nhập đúng | Form đăng nhập | Tới `/login`; sai → "Incorrect username or password."; đúng → vào catalog | Đúng cả 2: sai → thông báo đúng nguyên văn; đúng → trang `Products`; `sessionStorage` có `storefront.session`, `localStorage` trống |
+| Scenario 1 — duyệt (US1) | Mặc định | Trang catalog | 3 sản phẩm: Notebook $12.50, Pour-Over $48.00, Apron $34.25 | Đúng 3 sản phẩm, đúng giá (thứ tự Pour-Over, Notebook, Apron) |
+| Scenario 2 — thêm vào giỏ (US2) | Mặc định | Bấm "Add Field Notes Notebook…" ×2, "Add Linen Apron…" ×1, mở giỏ | 1 dòng Notebook số lượng 2 ($25.00) + Apron → tổng $59.25 | Đúng: Notebook × 2 $25.00, Apron × 1 $34.25, tổng **$59.25** |
+| Scenario 3 — giỏ bền qua tải lại | Mặc định | F5 ở trang giỏ | Giỏ giữ nguyên | Đúng: vẫn đăng nhập, giỏ y nguyên $59.25 (đóng-mở lại trình duyệt chưa thử: token ở `sessionStorage`) |
+| Scenario 4 — giỏ rỗng chặn thanh toán | Giỏ rỗng | Mở `/basket` | Nút bị vô hiệu, không có request | "Your basket is empty."; nút "Check out" **disabled** |
+| Scenario 5 + 6 — thanh toán, bấm đúp (US3) | Giỏ có hàng | Bấm "Check out" 2 lần liên tiếp | Đúng 1 đơn, xác nhận mã + $59.25, giỏ rỗng | **1** request `POST /bff/checkout` (đếm bằng `performance.getEntriesByType`); màn hình "Thank you — your order is placed", mã `c543af6a-…`, tổng $59.25; `GET /bff/orders/<mã>` `200` total 59.25 (SC-005); `GET /bff/basket` → `items: []`; `orders-db` có đúng **1** dòng cho mã đó |
+| Scenario 7 — catalog lỗi khi `products-api` chết *(ngoại lệ: trình duyệt tích hợp)* | `stop products-api`, mở lại `/` | Lỗi rõ ràng, có thể thử lại, không treo | **Không quan sát được**: sau 60+ giây trang vẫn "Loading products…" vì trình duyệt tích hợp ở trạng thái ẩn nên React Query tạm dừng lượt thử lại (`retry: 1`, 500 ms — `src/app/queryClient.ts`); yêu cầu `GET /bff/products` đầu tiên trả `504` sau 3.1 s. Hành vi lỗi/thử lại được `ProductList.test.tsx` bao phủ (xanh) |
+| Đăng xuất | Bấm "Sign out" | Về `/login` | Đúng | Về `/login`; `sessionStorage` rỗng |
+| Khôi phục | `start products-api` | Tải lại `/` | Catalog trở lại | Lần gọi đầu `504` (3.1 s), lần sau `200` (1.0 s → 94 ms); catalog hiện đủ 3 sản phẩm |
+| Dọn dẹp | Xoá đơn thử; `start` service đã tắt | (không có) | Không dữ liệu dư | Đơn thử sẽ được dọn cuối đợt làm lại 001–007; giỏ rỗng |
 
 **Ghi chú về "chạy lần đầu"**: `--wait` chỉ đảm bảo container `healthy` (liveness), không làm ấm đường
 đi thật; vài request đầu tiên tới mỗi service có thể vượt hạn mức 1 s/lần thử của BFF và trả `504`
@@ -85,22 +87,12 @@ Mỗi link mở thẳng đúng dòng khai báo hàm/`it()` test (comment mỗi h
 | FR-026 — đăng nhập SPA: điều hướng vào form, token Bearer, sai mật khẩu/sự cố, đăng xuất, 401 thì về đăng nhập | [`signIn.test.tsx:53`](../../frontend/apps/web/tests/auth/signIn.test.tsx#L53) · [`:74`](../../frontend/apps/web/tests/auth/signIn.test.tsx#L74) · [`:108`](../../frontend/apps/web/tests/auth/signIn.test.tsx#L108) · [`:136`](../../frontend/apps/web/tests/auth/signIn.test.tsx#L136) · [`:156`](../../frontend/apps/web/tests/auth/signIn.test.tsx#L156) · [`:179`](../../frontend/apps/web/tests/auth/signIn.test.tsx#L179) · [`fetcher.test.ts:28`](../../frontend/apps/web/tests/shared/fetcher.test.ts#L28) · [`:55`](../../frontend/apps/web/tests/shared/fetcher.test.ts#L55) · [`:79`](../../frontend/apps/web/tests/shared/fetcher.test.ts#L79) · [`:101`](../../frontend/apps/web/tests/shared/fetcher.test.ts#L101) · [`:124`](../../frontend/apps/web/tests/shared/fetcher.test.ts#L124) | `cd frontend && corepack pnpm --filter @ecommerce/web test` (cùng lệnh) |
 | SC-002/005/008/009/010 — walkthrough trình duyệt thật (Playwright): cả luồng, giỏ rỗng chặn, double checkout, chỉ bàn phím | [`walkthrough.spec.ts:78`](../../frontend/apps/web/e2e/walkthrough.spec.ts#L78) · [`:153`](../../frontend/apps/web/e2e/walkthrough.spec.ts#L153) · [`:182`](../../frontend/apps/web/e2e/walkthrough.spec.ts#L182) · [`:217`](../../frontend/apps/web/e2e/walkthrough.spec.ts#L217) | `E2E_USERNAME=postman-test@local.test E2E_PASSWORD=<TestUserPassword> corepack pnpm --filter @ecommerce/web e2e` (stack đang chạy; cần shim `pnpm`) |
 
-**Kết quả lượt QA này** (lượt 1 trừ khi ghi khác): `CatalogSeedTests` 3/3 · `BasketLineMergeTests`+`BasketTotalTests` 14/14 ·
-`CurrentBasketTests`+`ClearBasketTests` 13/13 · `OrderTotalTests` 8/8 · `PlaceOrderTests` lần đầu 7/8 (test đỏ khi máy đang
-chạy cả stack, chưa ghi tên), chạy lại 8/8 · BFF `BasketFlowTests`+`CheckoutTests`+`SubjectPropagationTests` 15/15 ·
-`CallerContext*` 14/14 · `SubjectHeaderPropagationMiddlewareTests` 7/7 · **lượt 2**: frontend 13 file, **60/60** PASS, `lint` và
-`typecheck` sạch · Identity `Identity.Api.UnitTests` 5/5 và `Identity.Api.IntegrationTests` 2/2 PASS · e2e **3/4 PASS, 1 FAIL**
-(`walkthrough.spec.ts:112`, xem QA_Debt).
+**Kết quả lượt QA này (2026-09-27)**: `CatalogSeedTests` **3/3** · `BasketLineMergeTests` **8/8** + `BasketTotalTests` **6/6** · `CurrentBasketTests` **9/9** + `ClearBasketTests` **4/4** · `OrderTotalTests` **8/8** · `PlaceOrderTests` **8/8** · BFF `BasketFlowTests` **7/7** + `CheckoutTests` **6/6** + `SubjectPropagationTests` **2/2** ·
+`CallerContext*` **14/14** · `SubjectHeaderPropagationMiddlewareTests` **7/7** · frontend **13 file, 60/60** PASS, `lint` và `typecheck` sạch · e2e (`STOREFRONT_URL=http://localhost:4173`, dùng storefront của compose) **3/4 PASS, 1 FAIL** — vẫn `walkthrough.spec.ts:117` (`storedKeys` có `storefront.session`, xem QA_Debt).
 
-**Ngân sách dung lượng (FR-025/SC-011)** — không có file test riêng, chạy `cd frontend && corepack pnpm --filter @ecommerce/web build`
-rồi `... size`: **108.07 kB** gzip so với hạn mức 115 kB (cấu hình ở [`.size-limit.json`](../../frontend/apps/web/.size-limit.json)) — PASS.
+**Ngân sách dung lượng (FR-025/SC-011)** — không có file test riêng, chạy `cd frontend && corepack pnpm --filter @ecommerce/web build` rồi `... size`: **108.07 kB** gzip so với hạn mức 115 kB (cấu hình ở [`.size-limit.json`](../../frontend/apps/web/.size-limit.json)) — PASS.
 
 ## Kết luận
 
-**PASS kèm ghi chú** — luồng storefront đã chạy được đầu-cuối (đăng nhập → catalog → giỏ → thanh toán →
-xác nhận → đăng xuất; mã đơn khớp backend, giỏ rỗng sau khi mua, đúng 1 đơn dù double-click), 60/60 test
-frontend và các test backend liên quan PASS, bundle trong hạn mức. Ghi chú cần xử lý: (1) test e2e
-walkthrough chính của 004 đang **đỏ** vì assertion "không có gì trong browser storage" chưa cập nhật cho
-token đăng nhập (và có thể cả assertion SC-010 "chỉ gateway" — chưa xác nhận); (2) bốn tài liệu 004 chưa
-phản ánh đăng nhập (FR-026) và 2 FR đã bị amend; (3) `504` do cold start ở vài request đầu. Chi tiết:
-[QA_Debt.md](QA_Debt.md).
+**PASS kèm ghi chú** — luồng storefront chạy đầu-cuối (đăng nhập → catalog → giỏ → thanh toán → xác nhận → đăng xuất): Postman `Smoke Flow` 19/19 xanh và đi lại bằng trình duyệt cho kết quả khớp (mã đơn khớp backend, giỏ rỗng sau khi mua, đúng 1 request/1 đơn khi bấm đúp), 60/60 test frontend và các test backend liên quan PASS, bundle 108.07 kB trong hạn mức 115 kB.
+Ghi chú cần xử lý: (1) test e2e walkthrough chính vẫn **đỏ** ở `walkthrough.spec.ts:117` vì assertion "không có gì trong browser storage" chưa cập nhật cho token đăng nhập; (2) bốn tài liệu 004 chưa phản ánh đăng nhập (FR-026); (3) `504` do cold start ở vài request đầu; (4) Scenario 7 (catalog lỗi) không quan sát được bằng trình duyệt tích hợp ẩn. Chi tiết: [QA_Debt.md](QA_Debt.md).

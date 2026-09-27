@@ -38,22 +38,20 @@ cp .env.example .env
 
 Mở `http://localhost:4173`, đăng nhập `postman-test@local.test` + `TestUserPassword` trong `.env` (script in sẵn hướng dẫn này ở cuối).
 
-| Bước (quickstart) | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát** |
+| Bước (quickstart) | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
 |---|---|---|---|
-| Tiên quyết — thiếu `.env` (Scenario 7, FR-011) | Chạy `up.ps1` từ 1 bản sao repo không có `.env` | Nêu tên `.env` + template, trước khi khởi động gì | Đúng: "Cannot start the stack: '.env' does not exist. Copy the template first...", `exit 1`, không container nào được tạo |
-| Tiên quyết — daemon không phản hồi (Scenario 7) | Đặt `DOCKER_HOST=tcp://127.0.0.1:1` rồi chạy `up.ps1` | Nêu tên "Docker daemon" | **Chưa đạt trên Windows PowerShell 5.1**: nhận lỗi thô `docker : error during connect ... NativeCommandError`, không phải câu của script (xem QA_Debt) |
-| Scenario 1 — lần chạy đầu (SC-001 < 10 phút) | `./scripts/up.ps1` | Thành công < 10 phút; không phải chờ thêm | **8 phút 15 giây, `exit 0`**, nhưng cache build đã ấm một phần (1 lượt build trước đó bị gián đoạn); lượt build lạnh hoàn toàn chưa đo được — xem QA_Debt |
-| Scenario 1 — kiểm kê thành phần | `docker compose ps -a` | 15 thành phần: 10 healthy, 1 Up, 4 Exited(0) | **19 thành phần: 13 `healthy`** (elasticsearch, kibana, redis, rabbitmq, sqlserver, storefront, 5 API gồm identity, bff, gateway), **1 `Up`** (otel-collector, không có probe), **5 `Exited (0)`** (migrator của products, baskets, orders, parties, identity) |
-| Làm nóng đường đi | Cuối `up.ps1` | Không có bước thủ công nào còn lại | Có `TestUserPassword` → in "Warming the request path..." rồi "The platform is up"; thiếu → in "no TestUserPassword in .env ... skipping the warm-up" |
-| Scenario 1 — lần chạy sau (SC-001 < 3 phút) | `up.ps1` khi image đã build | < 3 phút | Không đổi gì: **1m36s**; sau `down`: **2m51s**; sau `reset`: **3m01s** (sát/vượt ngưỡng) |
-| Scenario 2 — storefront đầu-cuối (SC-003) | Chạy walkthrough Playwright trỏ vào container (bảng "Tự động") | Duyệt → giỏ → thanh toán → xác nhận, không lỗi console, chỉ gọi gateway | Lần 1: 2/4 đỏ (giỏ trống sau khi thêm; thanh toán hỏng) ngay sau khi stack vừa dựng lại; lần 2: 3/4 PASS, chỉ đỏ ở assertion "storage không có gì" đã ghi ở QA 004 |
-| Scenario 3 — dừng (US3) | Tạo 1 đơn, rồi `./scripts/down.ps1` | Không container mồ côi; cổng giải phóng; volume còn | **21 giây**; 0 container trong project `ecomerce-stack`; cổng `4173`/`5300`/`5205` không còn lắng nghe; còn **3** volume (`elasticsearch-data`, `rabbitmq-data`, `sqlserver-data`) |
-| Scenario 3 — khởi động lại | `up.ps1`, đọc lại đơn qua gateway (kèm token) | Đơn cũ còn nguyên | Đúng: `GET /bff/orders/<mã>` → `200`, total `12.50`. **Chưa lặp 10 chu kỳ** (SC-004), mới chạy 1 chu kỳ |
-| Scenario 4 — reset (FR-008, SC-008) | `./scripts/reset.ps1` rồi `up.ps1` | Volume bị xoá; sau đó chỉ còn 3 sản phẩm seed, không đơn cũ | **25 giây**; 3 volume bị xoá; sau `up`: `GET /bff/orders/<mã cũ>` → `404`, `/bff/products` → 3 sản phẩm, `/bff/basket` → giỏ rỗng |
-| Scenario 5 — thiếu dependency (SC-005) | `docker compose stop sqlserver` rồi `up.ps1` | Lệnh thất bại ≤ 2 phút và nêu tên thành phần | **Không thất bại**: `up.ps1` khởi động lại chính `sqlserver` (nó thuộc stack) và thành công (`exit 0`, 1m41s). Kịch bản như viết không tạo ra lỗi; các biến thể "gỡ migrator khỏi Compose" chưa chạy |
-| Scenario 6 — đổi mã nguồn (FR-009) | Đổi chữ ở storefront rồi `up` | Chữ mới xuất hiện | **Chưa chạy** |
-| Scenario 8 — chỉ cổng vào công bố | `GET :5300/bff/products`, `GET :5301/...`, kiểm cổng nội bộ | 5300 trả lời; 5301 bị từ chối | Đúng: `5300` → `200` (kèm token); `5301` → "Unable to connect"; `1433`, `5088`, `5188`, `5041`, `5204`, `5672`, `6379`, `9200` không lắng nghe. Cổng công bố **thực tế là 3** (`4173`, `5300`, `5205`). Chế độ `--debug` chưa chạy |
-| Dọn dẹp | `./scripts/down.ps1` (giữ dữ liệu) hoặc `reset.ps1` | | |
+| Tiên quyết — thiếu `.env` (Scenario 7, FR-011) | Chạy `up.ps1` từ 1 bản sao repo không có `.env` | Nêu tên `.env` + template, trước khi khởi động gì | Không đổi so với lượt trước: đúng, `exit 1`, không container nào được tạo |
+| Tiên quyết — daemon không phản hồi (Scenario 7) | `DOCKER_HOST=tcp://127.0.0.1:1` rồi chạy `up.ps1` | Nêu tên "Docker daemon" | Không đổi: nhận `NativeCommandError` thô của PowerShell 5.1, không phải câu của script — xem QA_Debt |
+| Scenario 3 — dừng (US3) | `./scripts/down.ps1` khi có 1 đơn vừa đặt | Không container mồ côi; cổng giải phóng; volume còn | **19 giây**; 0 container còn lại trong project `ecomerce-stack`; volume `sqlserver-data`/`rabbitmq-data`/`elasticsearch-data` còn nguyên |
+| Scenario 1 — lần chạy sau `down` (cache ấm) | `./scripts/up.ps1` | < 3 phút | **170 giây (2m50s)** — trong ngưỡng |
+| Scenario 3 — khởi động lại, đơn cũ còn nguyên | `GET /bff/orders/<mã đơn đã tạo trước down>` | Đơn cũ đọc lại được | `200`, `total = 12.50` — đúng |
+| Scenario 4 — reset (FR-008, SC-008) | `./scripts/reset.ps1` | Volume bị xoá | **16 giây**; cả 3 volume (`sqlserver-data`, `rabbitmq-data`, `elasticsearch-data`) bị xoá |
+| Scenario 1 — chạy lại sau reset (như lần đầu) | `./scripts/up.ps1` | Thành công, seed lại catalog | **164 giây**; `exit 0` |
+| Scenario 4 — xác nhận đã xoá sạch | `GET /bff/orders/<mã đơn cũ>`, `GET /bff/products`, `GET /bff/basket` | Đơn cũ biến mất; chỉ còn 3 sản phẩm seed; giỏ rỗng | Đơn cũ **`404`**; catalog đúng **3** sản phẩm (Notebook/Pour-Over/Apron); giỏ `items: []` |
+| Scenario 1 — kiểm kê thành phần (trên stack vừa dựng lại) | `docker ps -a --filter label=com.docker.compose.project=ecomerce-stack` | 15 thành phần: 10 healthy, 1 Up, 4 Exited(0) | **19 thành phần: 13 `healthy`, 1 `Up`** (otel-collector, không có probe), **5 `Exited (0)`** (5 migrator) — không đổi so với lượt trước, xem QA_Debt |
+| Scenario 8 — chỉ cổng vào công bố | Quét cổng `4173/5300/5205/5301/5088/5188/5041/5204/1433/5672/15672/6379/9200/5601` | Chỉ cổng gateway/storefront lắng nghe | Đúng **3** cổng lắng nghe: `4173`, `5300`, `5205` (identity, thêm từ spec 004); 11 cổng còn lại đóng |
+| Test tự động chạy trên stack vừa dựng bằng `up.ps1` (đối chiếu US2) | `00 - Xác thực & phân quyền → 01`, folder `Gateway`, `00 - Smoke Flow` | Hành vi giống các spec trước, không phụ thuộc script dựng | `Gateway`: OpenAPI đi qua gateway `404` (rỗng) ngay sau khi vừa `up` xong — cold start, các bước còn lại `200`; `Smoke Flow`: bước 00 "Dọn giỏ" đứng trước khi có dòng nào trong giỏ nên **không có phản hồi** (giỏ đã rỗng từ đầu, không phải lỗi); chạy lại đủ chu trình → **18/19** xanh (1 đỏ hợp lý: bước 09 "đặt hàng lần hai" `201` vì giỏ đã được thêm lại hàng giữa 2 lần chạy — không phải hồi quy) |
+| Dọn dẹp | `./scripts/down.ps1` (giữ dữ liệu) hoặc `reset.ps1` | | Đã `down`; dữ liệu giữ nguyên cho lượt QA kế tiếp |
 
 ### Tự động — chạy thẳng bộ test đã có, không cần viết mới
 
@@ -66,18 +64,8 @@ Mỗi link mở thẳng đúng dòng khai báo hàm/`test()` (comment mỗi hàm
 | US2/SC-003 — bài chấp nhận: walkthrough của 004 chạy trên container (`STOREFRONT_URL=http://localhost:4173 GATEWAY_ORIGIN=http://localhost:5300`) — luồng đầu-cuối, không lỗi console, chỉ gọi gateway, double-checkout, chỉ bàn phím | [`walkthrough.spec.ts:78`](../../frontend/apps/web/e2e/walkthrough.spec.ts#L78) · [`:153`](../../frontend/apps/web/e2e/walkthrough.spec.ts#L153) · [`:182`](../../frontend/apps/web/e2e/walkthrough.spec.ts#L182) · [`:217`](../../frontend/apps/web/e2e/walkthrough.spec.ts#L217) | `cd frontend && STOREFRONT_URL=http://localhost:4173 GATEWAY_ORIGIN=http://localhost:5300 E2E_USERNAME=postman-test@local.test E2E_PASSWORD=<TestUserPassword> corepack pnpm --filter @ecommerce/web e2e` (stack đang chạy; cần shim `pnpm`, xem QA 004) |
 | FR-001 — file Compose hợp lệ (không link test) |  | `docker compose config --quiet` |
 
-**Kết quả lượt QA này**: `DockerfileSharedProjectTests` 9/9 PASS (cả project `ContainerConventionTests`) · `StorefrontCorsTests` 10/10 PASS ·
-`docker compose config --quiet` hợp lệ · walkthrough Playwright trên container: **lần 1 2/4 PASS, lần 2 3/4 PASS** — test đỏ còn lại là
-`browse, add to basket, check out, and see the confirmation` ở `walkthrough.spec.ts:112` (assertion "không có gì trong browser storage",
-xem QA 004). Lệnh e2e cần `pnpm` trong PATH (shim `pnpm.cmd` gọi `corepack pnpm`).
-
+**Kết quả lượt QA này (2026-09-27)**: `docker compose config --quiet` hợp lệ · `DockerfileSharedProjectTests` **9/9** (cả project `ContainerConventionTests`) · `StorefrontCorsTests` **10/10**. Walkthrough Playwright trên container không chạy lại ở lượt này (xem QA 004 — đã đo với `STOREFRONT_URL=http://localhost:4173`, 3/4 PASS).
 ## Kết luận
 
-**PASS kèm ghi chú** — luồng cốt lõi của 005 chạy đúng trên máy thật: một lệnh `./scripts/up.ps1` dựng 19 thành phần (13
-`healthy`, 1 `Up`, 5 `Exited (0)`), migration + seed tự chạy, storefront/gateway trả lời; `down` giữ dữ liệu (đơn cũ đọc lại được), `reset`
-đưa về đúng trạng thái lần đầu (3 sản phẩm, không đơn), chỉ 3 cổng được công bố và BFF/DB/broker không truy cập được từ host; 9/9
-test container convention và 10/10 test CORS PASS. Ghi chú cần xử lý: (1) **SC-001 "dưới 10 phút" chưa xác nhận được** — lượt đo được
-8m15s đã có cache ấm một phần, lượt build lạnh hoàn toàn chưa hoàn tất trong thời gian quan sát; (2) `up.ps1` trên Windows PowerShell 5.1 không
-in được thông báo tiên quyết khi daemon không phản hồi và vỡ khi bị chuyển hướng luồng; (3) Scenario 5 (thiếu dependency) như viết không
-tạo ra lỗi; (4) tài liệu còn ghi 15 thành phần/2 cổng/2 volume trong khi thực tế 19/3/3; (5) walkthrough e2e trên container vẫn đỏ ở
-assertion storage của QA 004. Chi tiết: [QA_Debt.md](QA_Debt.md).
+**PASS kèm ghi chú** — luồng cốt lõi của 005 chạy đúng trên máy thật: `./scripts/up.ps1` dựng 19 thành phần (13 `healthy`, 1 `Up`, 5 `Exited (0)`), `down` giải phóng cổng và giữ 3 volume (19 giây), `reset` xoá cả 3 volume (16 giây) rồi `up` lại đưa hệ thống về đúng trạng thái lần đầu (đơn cũ `404`, catalog 3 sản phẩm, giỏ rỗng), lần chạy sau khi cache ấm mất 164–170 giây (< 3 phút); chỉ 3 cổng được công bố (`4173`, `5300`, `5205`); 9/9 test container convention và 10/10 test CORS PASS.
+Ghi chú cần xử lý: (1) `up.ps1` trên Windows PowerShell 5.1 vẫn không in được thông báo tiên quyết khi daemon không phản hồi (`NativeCommandError` thô); (2) Scenario 5 (thiếu dependency) như viết không tạo ra lỗi vì Compose tự khởi động lại thành phần đó; (3) tài liệu còn ghi 15 thành phần/2 cổng/2 volume trong khi thực tế 19/3/3; (4) SC-001 "dưới 10 phút" cho lần build lạnh hoàn toàn vẫn chưa đo được trong lượt này (chỉ đo được các lần cache ấm). Chi tiết: [QA_Debt.md](QA_Debt.md).

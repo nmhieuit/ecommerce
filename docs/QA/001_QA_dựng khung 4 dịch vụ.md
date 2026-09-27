@@ -34,48 +34,37 @@ bước bên dưới, không cần soạn lại.
    trong mỗi folder `Party`/`Product`/`Basket`/`Order` không cần token (health check là endpoint hạ
    tầng, tự nêu rõ trong mô tả từng request).
 
-### Thủ công — US1 (SC-001, SC-002)
+### Thủ công — tắt/bật database rồi bấm Postman (US1, SC-001, SC-002)
 
-Lặp lại cho **từng** service (`parties-api` cổng `5204`, `products-api` cổng `5088`,
-`baskets-api` cổng `5188`, `orders-api` cổng `5041`):
+Lặp lại cho **từng** service (folder Postman `Party` / `Product` / `Basket` / `Order`; cổng `5204` / `5088` / `5188` / `5041`). Dựng riêng từng service:
 
 ```bash
 cp .env.example .env   # chỉ cần 1 lần cho cả repo
 docker compose -f docker-compose.local.yml up -d --wait <service>-api
 ```
 
-**Lưu ý**: lệnh trên tự kéo theo `<service>-db`, `<service>-migrate`, và cả `identity-db`/
-`identity-migrate`/`identity-api` (mọi domain service đều cần xác thực JWT thật từ spec 014, ra đời
-sau 001) — đây là phụ thuộc hạ tầng xác thực, **không phải** phụ thuộc vào 1 trong 3 service nghiệp vụ
-còn lại, nên vẫn đúng tinh thần "độc lập" mà SC-002 yêu cầu. `--wait` tự chặn cho tới khi container
-khai báo `healthy`.
+**Công tắc** (hạ tầng, không sửa mã): `docker compose -f docker-compose.local.yml stop <service>-db` / `start <service>-db`.
 
-| Bước | Postman request (folder trùng tên service, vd. `Party`) | Kỳ vọng |
-|---|---|---|
-| Liveness | "Health live — tiến trình còn sống" → **Send** | `200 OK` — tab Tests đã có sẵn assertion, chạy Send là thấy PASS/FAIL ngay |
-| Readiness (DB khoẻ) | "Health ready — kết nối tới database riêng" → **Send** | `200 OK`; assertion sẵn chấp nhận cả 200 lẫn 503 nên PASS ở cả 2 bước dưới đây |
-| Readiness (DB chết) | `docker compose -f docker-compose.local.yml stop <service>-db`, Send lại "Health ready" | `503`; script test tự đọc body, khẳng định check `self-database` = `Unhealthy` — **nhưng** Send lại "Health live" vẫn `200` |
-| Khôi phục | `docker compose -f docker-compose.local.yml start <service>-db` | Send lại "Health ready" → `200` sau vài giây, không cần restart service |
-| Thời gian (SC-001) | Bấm giờ từ lúc chạy lệnh `docker compose up` tới khi "Health ready" trả `200` lần đầu | Dưới 5 phút |
-| Dọn dẹp | `docker compose -f docker-compose.local.yml down -v` | Xoá sạch container + volume, sẵn sàng cho lượt test tiếp theo/service tiếp theo |
+| Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
+|---|---|---|---|---|
+| Liveness + readiness khi DB khoẻ | Mặc định (DB và service đều bật) | "Health live — tiến trình còn sống", "Health ready — kết nối tới database riêng" | Cả hai `200` | `parties`, `products`, `baskets`, `orders`: live `200` (49–80 ms), ready `200` (7–20 ms) |
+| Readiness khi DB chết, liveness vẫn sống (US1 — bước quan trọng nhất) | `stop <service>-db`, chờ ~12 giây | như trên | Ready `503` (check `self-database` = `Unhealthy`), live vẫn `200` | Ready **`503`** cả 4 service (parties 8022 ms, products 7290 ms, baskets 6 ms, orders 8018 ms); live `200` (49–58 ms); `RestartCount` 0 → 0 cả 4; các request cần DB trong folder đỏ đúng như kỳ vọng (parties 2/6, products 3/7, baskets 7/13, orders 9/15 assertion) |
+| Khôi phục | `start <service>-db` | "Health ready" | `200` sau vài giây, không restart | `200` sau **22 s / 41 s / 31 s / 25 s** (parties / products / baskets / orders — thời gian SQL Server khởi động); folder xanh lại hoàn toàn (5/5, 6/6, 12/12, 14/14) |
+| SC-001 — dựng 1 service dưới 5 phút *(ngoại lệ: không dùng `down -v` để khỏi xoá cả stack)* | `docker compose -f docker-compose.local.yml rm -sf parties-api parties-db parties-migrate` rồi `up -d --wait parties-api` (bấm giờ) | "Health ready" | Dưới 5 phút | `parties-api` healthy sau **33 giây** (image đã dựng sẵn, volume DB còn); ready `200` |
+| SC-002 — độc lập | Chỉ dựng `parties-api`; `products`/`baskets`/`orders` còn chạy sẵn nhưng không được gọi | "Health ready" của `Party` | `200` không cần 3 service kia | Đúng — chỉ phụ thuộc `parties-db`, `parties-migrate` và cụm `identity-*` (xác thực JWT từ spec 014) |
+| Dọn dẹp | `start` mọi DB đã tắt | (không có) | Stack về mặc định | Đã bật lại 4 DB; `parties-*` dựng lại đúng cấu hình compose |
 
-Bước "readiness DB chết" là bước quan trọng nhất — đây chính là bằng chứng phân biệt "tiến trình sống"
-với "thật sự phục vụ được", đúng yêu cầu cốt lõi của US1. Tên service trong lệnh `stop`/`start` là tên
-khai trong `docker-compose.local.yml` (vd. `parties-db`), không phải tên container đầy đủ.
+Bước "readiness DB chết" là bước quan trọng nhất — đây chính là bằng chứng phân biệt "tiến trình sống" với "thật sự phục vụ được". Kịch bản y hệt cho cả 4 service cùng lúc đã được đo với số liệu cụ thể
+tại [`docs/local-testing.md`](../local-testing.md), Kịch bản 1.
 
-Kịch bản y hệt (dùng chung 1 stack đầy đủ khởi động bằng `./scripts/local-up.ps1` thay vì từng service
-riêng) đã được đo thật với số liệu cụ thể — 503 xuất hiện sau 4.10s, 3 service anh em vẫn `200` xuyên
-suốt — tại [`docs/local-testing.md`](../local-testing.md), Kịch bản 1. Dùng bản đó nếu muốn kiểm thử cả
-4 service cùng lúc thay vì từng service độc lập như bảng trên.
+> Nếu `localhost` không gọi được dù container đang `healthy` (request treo rồi timeout) trên Docker Desktop for Windows: khởi động lại hẳn Docker Desktop — lỗi forwarding IPv6 loopback (`::1`) của WSL2, không phải lỗi ứng dụng.
 
 ### Thủ công — US2 / US3 (SC-003, SC-004)
 
-- **SC-003**: đọc connection string của 1 service (`appsettings*.json` + biến môi trường thật lúc
-  chạy) — xác nhận chỉ trỏ đúng database của chính nó, không có credential/route nào tới database của
-  service khác.
-- **SC-004**: mở `services/<service>/src/<Service>.Api/Features/` — xác nhận handler, đăng ký route,
-  và mọi code liên quan tới health-check nằm chung 1 thư mục, không tách theo kiểu
-  `Controllers/`/`Services/`/`Repositories/`.
+| Bước | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
+|---|---|---|---|
+| SC-003 — mỗi service chỉ trỏ đúng DB của mình | `docker exec ecomerce-local-<service>-api-1 printenv \| grep ^ConnectionStrings__` (che `User Id`/`Password`) | Chỉ có `Server=<service>-db;Database=<service>` của chính nó | `parties`→`parties-db/parties`, `products`→`products-db/products`, `baskets`→`baskets-db/baskets`, `orders`→`orders-db/orders` (+ `RabbitMq`, không phải DB); `bff` và `gateway`: **0** chuỗi kết nối |
+| SC-004 — tổ chức theo tính năng | `ls services/<service>/src/<Service>.Api/` và `…/Features/` | Handler, route, health-check chung 1 thư mục tính năng; không có `Controllers/`/`Services/`/`Repositories/` | Mỗi service có `Features/` với `HealthCheck` + tính năng riêng (`Parties`; `Catalog`; `Baskets`, `Checkout`; `Orders`, `Chaos`); cấp trên chỉ có `Data`, `Features`, `Migrations`, `Properties` |
 
 ### Tự động — chạy thẳng bộ test đã có, không cần viết mới
 
@@ -102,10 +91,10 @@ không cần chạy riêng theo từng service — 2 hàm còn lại của mỗi
 `Scan_Flags...`, `Scan_Allows...`) là test tự bảo vệ cho scanner, không trực tiếp map vào 1 US/SC nào
 nhưng vẫn nên chạy cùng cả class.
 
+**Kết quả lượt QA này (2026-09-27)**: `HealthLive_ReturnsOk` (products) **1/1** khi có biến môi trường chứa `Password=`, **đỏ** `OptionsValidationException: Missing required secret(s): ConnectionStrings:ProductsDb` khi không có; `Products.Api.IntegrationTests` `ReadinessTests` **3/3** (Testcontainers);
+`CrossServiceIsolation.Tests` `ConnectionStringIsolationTests` **7/7** (toàn project 18/21 — 3 đỏ đã biết ở spec 003/015, xem QA_Debt); `StructureConventionTests` **9/9**.
+
 ## Kết luận
 
-**PASS** — cả 4 nguồn mô tả cùng 1 luồng happy-case, không mâu thuẫn nhau về nội dung nghiệp vụ.
-
-Có phát hiện đáng chú ý (1 chỗ tài liệu mô tả sai cơ chế kỹ thuật so với code hiện tại — không ảnh
-hưởng kết quả happy-case) và vài điểm nên bổ sung, không bắt buộc sửa ngay — xem
-[QA_Debt.md](QA_Debt.md).
+**PASS** — cả 4 nguồn mô tả cùng 1 luồng happy-case; cả 4 service đo sống bằng Postman + công tắc `stop`/`start` database: readiness `503` khi DB chết, liveness vẫn `200`, không restart, tự phục hồi sau 22–41 giây; SC-001 (33 giây), SC-003, SC-004 đều đạt; các test của spec xanh.
+Có phát hiện đáng chú ý (tài liệu kiến trúc mô tả sai cơ chế kiểm DB, test đơn vị cần biến môi trường chưa nêu, Postman folder `Product` từng lỗi thời sau spec 023 — đã sửa) — xem [QA_Debt.md](QA_Debt.md).
