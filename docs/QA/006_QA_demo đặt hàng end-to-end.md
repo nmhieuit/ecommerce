@@ -29,20 +29,20 @@ phần thủ công chạy chính script đó thay vì `docker-compose.local.yml`
 ./scripts/demo.ps1            # hoặc demo.sh — đưa stack vào demo mode, dọn giỏ, chạy walkthrough, xác minh, thu bằng chứng
 ```
 
-| Bước (quickstart) | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát** |
+| Bước (quickstart) | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
 |---|---|---|---|
-| Scenario 1 — demo một lệnh (US1, FR-001…004, SC-001/002) | `./scripts/demo.ps1` trên máy đã có `.env` đầy đủ, stack dựng sẵn được | `exit 0`, in mã đơn + $59.25 + tenant; 4 ảnh mới; 1 file `.webm` | **FAIL**: sau 3m41s dừng ở bước "Clearing the basket..." với "Cannot run the demo: the basket could not be cleared (HTTP 401), so the demo would not start from a known state." — `exit 1`. Thông báo đọc được, nhưng **demo không bao giờ chạy tới walkthrough** |
-| Nguyên nhân của Scenario 1 | `POST http://localhost:5188/baskets/current/clear` chỉ kèm `X-Tenant-Id`/`X-Subject-Id` (đúng như script) | Được chấp nhận (thời stub identity) | `401`: từ spec 014 mọi service đều đòi JWT (deny-by-default). `demo.ps1`, `demo.sh` và `frontend/apps/web/demo/order-demo.spec.ts` **không có mã lấy token/đăng nhập nào** (đã grep `token`, `Authorization`, `E2E_`); storefront cũng đứng sau form đăng nhập (spec 004 FR-026) |
-| Scenario 2 — đơn lưu khớp xác nhận (FR-003/004) | Không chạy được bằng demo; làm tay: lấy token, thêm giỏ, `POST /bff/checkout`, rồi `GET http://localhost:5041/orders/<mã>` (cổng 5041 do demo mode công bố) **kèm `Authorization` + `X-Tenant-Id: contoso`** | `200`, total khớp | Đúng: checkout `201` total `50.00` → Orders trả `200` cùng `id`, total `50.00`. Lệnh `curl` trong quickstart (chỉ có `X-Tenant-Id`) nay trả `401` |
-| Scenario 3 — quy thuộc tenant hiển thị (US2/FR-005a) | Cùng lệnh trên | `"tenantId": "contoso"` | Đúng: `{"id":"e74b5ed7-…","placedAtUtc":"…","total":50.00,"tenantId":"contoso"}`. Qua BFF (`GET /bff/orders/<mã>`) chỉ còn 3 trường `id/placedAtUtc/total` — đúng Decision 4 |
-| Scenario 4 — không tenant, không đơn (FR-006) | Có token nhưng bỏ `X-Tenant-Id`: `GET` rồi `POST http://localhost:5041/orders`; đếm dòng bảng `Orders` trước/sau | Thất bại, không dòng mới | Đúng: `GET` → `500`; `POST` → `500`; số đơn **1 → 1**. Không token → `401` trước khi chạm cổng tenant |
+| Scenario 1 — demo một lệnh (US1, FR-001…004, SC-001/002) | `./scripts/demo.ps1` trên máy đã có `.env` đầy đủ, stack dựng sẵn được | `exit 0`, in mã đơn + $59.25 + tenant; 4 ảnh mới; 1 file `.webm` | **Không đổi — vẫn FAIL**: dừng ở "Clearing the basket..." → "Cannot run the demo: the basket could not be cleared (HTTP 401)…", `exit 1` sau **152 giây** |
+| Nguyên nhân của Scenario 1 | `POST http://localhost:5188/baskets/current/clear` chỉ kèm `X-Tenant-Id`/`X-Subject-Id` (đúng như script) | Được chấp nhận (thời stub identity) | Vẫn `401` — script không có mã lấy token; đã grep lại `token`/`Authorization` trong `scripts/demo.ps1`, `demo.sh`, `order-demo.spec.ts`: không có |
+| Scenario 2 — đơn lưu khớp xác nhận (FR-003/004) | Không chạy được bằng demo; làm tay trên `docker-compose.local.yml`: lấy token, thêm giỏ, `POST /bff/checkout`, rồi `GET :5041/orders/<mã>` **kèm `Authorization` + `X-Tenant-Id: contoso`** | `200`, total khớp | Đúng: checkout `201` total `12.50` → gọi thẳng Orders `200` cùng `id`, total `12.50` |
+| Scenario 3 — quy thuộc tenant hiển thị (US2/FR-005a) | Cùng lệnh trên | `"tenantId": "contoso"` | Đúng: `{"id":"c0961142-…","placedAtUtc":"…","total":12.50,"tenantId":"contoso"}`. Qua BFF (`GET /bff/orders/<mã>`) chỉ còn 3 trường `id/placedAtUtc/total` — đúng Decision 4 |
+| Scenario 4 — không tenant, không đơn (FR-006) | Có token nhưng bỏ `X-Tenant-Id`: `GET` rồi `POST :5041/orders`; đếm dòng bảng `Orders` trước/sau | Thất bại, không dòng mới | Đúng: `GET` → `500`; `POST` → `500`; số đơn **14 → 14** không đổi |
 | Scenario 5 — lặp lại (FR-007) | `./scripts/demo.ps1 -SkipStart` | `exit 0`, mã đơn khác lần 1 | **Chưa chạy được** (Scenario 1 chưa qua) |
-| Scenario 6 — bằng chứng từng chặng (FR-011a) | `cat artifacts/demo/hops.txt` | 5 chặng, mỗi chặng ≥ 1 span | **Chưa chạy được**; `artifacts/demo/` chỉ còn file của các lần chạy trước đây trên máy |
-| Scenario 7 — bằng chứng đã commit (US3, FR-013a/14/15, SC-005/006) | `git status docs/`; mở bài tường thuật | `docs/demo-phase-1.md` + ảnh `docs/demo/` được track; không `.webm` dưới `docs/`; `artifacts/` bị ignore | **Thiếu bài tường thuật**: `docs/demo-phase-1.md` **không tồn tại** (đã bị xoá ở commit `8fcbbdf`, lẫn trong commit "Add specifications for cluster secret store…") nhưng `docs/local-development.md`, bản `.vi`, `architecture/006` và cả spec vẫn trỏ tới nó. Còn 4 ảnh (`01-catalog`, `02-basket`, `03-confirmation`, `04-basket-empty`); không `.webm` dưới `docs/`; `artifacts` bị ignore (`git check-ignore` đúng) |
-| Scenario 8 — cold start (FR-007a) | `reset.ps1` → `up.ps1` → `demo.ps1` | Tới màn xác nhận, không seed/sửa tay | **Chưa chạy** (demo bị chặn ở bước dọn giỏ). Phần dựng nguội `reset` + `up` đã đo ở QA 005 |
-| Scenario 9 — nhánh lỗi dễ hiểu (FR-016) | Giỏ rỗng; dừng `orders-api` rồi chạy demo | Thông báo dễ hiểu, không đơn dở | **Chưa chạy** phần dừng `orders-api`. Ghi nhận: chính lần thất bại 401 ở Scenario 1 cho thông báo nêu rõ bước và mã lỗi |
-| Ghi nhận thêm — cold start sau khi dựng | Thêm giỏ / thanh toán ngay sau `up` | Không lỗi | Lượt đầu `POST /bff/basket/items` → `504` rồi `POST /bff/checkout` → `504`, lần thử lại thành công: bước làm nóng của `up.ps1` chỉ đọc (`GET`), không làm nóng đường ghi |
-| Dọn dẹp | `docker compose -f docker-compose.yml -f docker-compose.demo.yml down` | | |
+| Scenario 6 — bằng chứng từng chặng (FR-011a) | `cat artifacts/demo/hops.txt` | 5 chặng, mỗi chặng ≥ 1 span | **Chưa chạy được**; `artifacts/demo/` chỉ còn file của các lần chạy trước đây |
+| Scenario 7 — bằng chứng đã commit (US3, FR-013a/14/15, SC-005/006) | `git status docs/`; mở bài tường thuật | `docs/demo-phase-1.md` + ảnh `docs/demo/` được track; không `.webm` dưới `docs/`; `artifacts/` bị ignore | **Vẫn thiếu bài tường thuật**: `docs/demo-phase-1.md` **không tồn tại** trên `master` (không đổi so với lượt trước). Còn đúng 4 ảnh (`01-catalog`, `02-basket`, `03-confirmation`, `04-basket-empty`); không `.webm` dưới `docs/`; `artifacts` bị ignore |
+| Scenario 8 — cold start (FR-007a) | `reset.ps1` → `up.ps1` → `demo.ps1` | Tới màn xác nhận, không seed/sửa tay | **Chưa chạy** (demo bị chặn ở bước dọn giỏ). Phần dựng nguội `reset`+`up` đã đo lại ở QA 005 (16 giây / 164 giây) |
+| Scenario 9 — nhánh lỗi dễ hiểu (FR-016) | Giỏ rỗng; dừng `orders-api` rồi chạy demo | Thông báo dễ hiểu, không đơn dở | **Chưa chạy** phần dừng `orders-api`. Ghi nhận: lần thất bại 401 ở Scenario 1 vẫn cho thông báo nêu rõ bước và mã lỗi |
+| Ghi nhận thêm — cold start sau khi dựng | Thêm giỏ / thanh toán ngay sau khi tạo lại `gateway-api`/`orders-api` | Không lỗi | Lần `POST /bff/checkout` đầu tiên → `504` (`downstream-timeout`, `OrdersApi` không kịp trong ngân sách); thử lại ngay → `201` |
+| Dọn dẹp | `docker compose -f docker-compose.yml -f docker-compose.demo.yml down` | | Đã `down`; dựng lại `docker-compose.local.yml` cho các bước làm tay ở trên |
 
 ### Tự động — chạy thẳng bộ test đã có, không cần viết mới
 
@@ -57,14 +57,9 @@ Mỗi link mở thẳng đúng dòng khai báo hàm/`test()` (comment mỗi hàm
 | T029 (research Decision 4) — BFF vẫn đọc được đơn từ Orders sau khi Orders thêm `tenantId` (hình dạng 3 trường kiểm thủ công, xem bên dưới) | [`OrdersRouteTests.cs:28`](../../services/bff/tests/Bff.Api.IntegrationTests/OrdersRouteTests.cs#L28) · [`:62`](../../services/bff/tests/Bff.Api.IntegrationTests/OrdersRouteTests.cs#L62) | `dotnet test services/bff/tests/Bff.Api.IntegrationTests --filter "FullyQualifiedName~OrdersRouteTests"` |
 | US1/US3 — **bài demo chính**: walkthrough Playwright trên container, ảnh từng bước vào `docs/demo/`, đọc lại đơn và so mã/tổng (chạy qua script, không chạy trực tiếp) | [`order-demo.spec.ts:65`](../../frontend/apps/web/demo/order-demo.spec.ts#L65) | `./scripts/demo.ps1` (hoặc `demo.sh`); lặp lại khi stack đã ở demo mode: `./scripts/demo.ps1 -SkipStart` |
 
-**Kết quả lượt QA này**: `OrderTenantTests`+`OrderTotalTests` **14/14 PASS** · Orders integration
-(`OrderEndpointsTests`+`PlaceOrderTests`+`TenantEnforcementTests`) **14/14 PASS** · BFF `OrdersRouteTests`: 2/2 PASS ·
-`./scripts/demo.ps1`: **FAIL** (`exit 1`, HTTP 401 ở bước dọn giỏ, 3m41s).
-
+**Kết quả lượt QA này (2026-09-27)**: `OrderTenantTests`+`OrderTotalTests` **14/14** · Orders integration (`OrderEndpointsTests`+`PlaceOrderTests`+`TenantEnforcementTests`) **14/14** (1 lần chạy trước đó đỏ 1/14 do Testcontainers tranh chấp tài nguyên khi 2 stack Docker cùng chạy — chạy lại riêng thì 14/14 xanh, không phải hồi quy) ·
+BFF `OrdersRouteTests` **2/2** · `./scripts/demo.ps1`: **FAIL** (`exit 1`, HTTP 401 ở bước dọn giỏ, **152 giây** — không đổi so với lượt trước).
 ## Kết luận
 
-**FAIL** đối với bài demo một lệnh — sản phẩm chính của spec 006: `./scripts/demo.ps1` không chạy được trên nền tảng hiện tại
-vì script và walkthrough không có xác thực (từ spec 014/FR-026 mọi lời gọi cần JWT), nên dừng ở bước dọn giỏ và không bao giờ đặt được đơn;
-bài tường thuật viết tay `docs/demo-phase-1.md` (US3, FR-014/015, SC-005/006) cũng **không còn trong repository**. Phần backend của 006 (lưu và trả
-`tenantId` trên đơn, từ chối khi không có tenant và không tạo đơn) thì **đạt**: test đơn vị/tích hợp PASS và đã kiểm chứng tay trên stack thật
-(`tenantId: "contoso"`, BFF chỉ trả 3 trường, không tenant → `500` và số đơn không đổi). Chi tiết: [QA_Debt.md](QA_Debt.md).
+**FAIL** đối với bài demo một lệnh — sản phẩm chính của spec 006: `./scripts/demo.ps1` vẫn không chạy được trên nền tảng hiện tại (401 ở bước dọn giỏ, không có mã lấy token), và bài tường thuật viết tay `docs/demo-phase-1.md` (US3, FR-014/015, SC-005/006) vẫn không có trong repository — cả hai không đổi so với lượt QA trước.
+Phần backend của 006 (lưu và trả `tenantId` trên đơn, từ chối khi không có tenant và không tạo đơn) **đạt**: 14+14+2 test PASS và đã kiểm chứng lại tay trên stack thật (`tenantId: "contoso"`, BFF chỉ trả 3 trường, không tenant → `500` và số đơn không đổi 14→14). Chi tiết: [QA_Debt.md](QA_Debt.md).

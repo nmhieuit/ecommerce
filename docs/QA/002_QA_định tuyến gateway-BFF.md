@@ -35,50 +35,30 @@ request bằng **Postman collection có sẵn của repo** (folder `Gateway` + p
 cho các bước dưới đây — mọi request health/route trong `Gateway`/`Common` dùng ở bảng này không cần
 token.
 
-### Thủ công — US1 / US2 (SC-001, SC-002)
+### Thủ công — tắt/bật service phía sau rồi bấm Postman (US1, US2, US3)
 
 ```bash
 cp .env.example .env   # chỉ cần 1 lần cho cả repo
 docker compose -f docker-compose.local.yml up -d --wait gateway-api
 ```
 
-Lệnh trên tự kéo theo `bff-api`, cả 4 domain service, `identity-api` và DB riêng từng service —
-`--wait` tự chặn tới khi mọi container khai báo `healthy`.
+Lệnh trên tự kéo theo `bff-api`, cả 4 domain service, `identity-api` và DB riêng từng service — `--wait` chặn tới khi mọi container `healthy`.
+Postman: chạy `00 - Xác thực & phân quyền (Get Token) → 01 Lấy access token` trước (từ spec 014 mọi route qua gateway cần token), rồi folder `Gateway` và `Common`.
 
-| Bước | Postman request | Kỳ vọng |
-|---|---|---|
-| Gateway sống | Folder `Gateway` → "Health live của chính gateway" → **Send** | `200 OK` |
-| OpenAPI đi qua gateway | Folder `Gateway` → "Tài liệu OpenAPI đi qua được gateway" → **Send** | `200 OK`; assertion sẵn xác nhận tài liệu trả về đúng là của BFF (có path `/bff/products`) |
-| Gateway chuyển tiếp xuống BFF | Folder `Gateway` → "Route phía client được chuyển tiếp xuống BFF" → **Send** | Không phải `404` — tức là request đã chạm được handler của BFF phía sau, không dừng lại ở gateway |
-| BFF proxy đúng route sản phẩm (SC-002) | Folder `Common` → "BFF: danh sách sản phẩm, gọi thẳng có header" → **Send** | `200 OK`; body là object bọc ngoài có `items` (mảng), không phải mảng trần — đúng shape đã định hình lại, không phải pass-through thô từ Products |
-| Đường dẫn không khớp route nào (FR-007) | Folder `Gateway` → "Đường dẫn không tồn tại" → **Send** | `404`; assertion sẵn xác nhận body không lộ `bff-cluster`, `bff-route`, `products-api` hay số cổng nội bộ, và trả lời không treo |
+**Công tắc** (hạ tầng, không sửa mã): `docker compose -f docker-compose.local.yml stop products-api` / `start products-api`; `stop bff-api` / `start bff-api`.
 
-**Xác nhận US2 bằng review cấu hình (không phải bằng Postman)**: mở
-[`docker-compose.yml`](../../docker-compose.yml) (file **mặc định**, không phải `.local.yml` dùng cho
-Postman ở trên) — xác nhận chỉ `gateway-api` (và `storefront`) có khai `ports:` publish ra host; 4
-domain service + `bff-api` không có `ports:` nào, chỉ reachable qua network nội bộ `backbone`. Đây
-chính là cách quickstart gốc của spec (Scenario 2/3) xác minh "single entry point" — dùng
-`docker-compose.local.yml` publish đủ cổng chỉ phục vụ mục đích gọi thẳng từng service khi QA cần cô
-lập lỗi, không phải để tái hiện topology thật.
-
-### Thủ công — US3 (SC-003)
-
-```bash
-docker compose -f docker-compose.local.yml stop products-api
-```
-
-| Bước | Postman request | Kỳ vọng |
-|---|---|---|
-| Downstream không sẵn sàng | Folder `Common` → "BFF: thiếu header thì downstream từ chối" → **Send** (hoặc gọi lại "BFF: danh sách sản phẩm, gọi thẳng có header" sau khi stop `products-api`) | `502` hoặc `504`, không bao giờ `200`; đo thời gian phản hồi bằng tab Postman — phải dưới 5 giây |
-| Khôi phục | `docker compose -f docker-compose.local.yml start products-api` | Gọi lại "BFF: danh sách sản phẩm, gọi thẳng có header" → `200` trở lại sau vài giây |
-| Dọn dẹp | `docker compose -f docker-compose.local.yml down -v` | Xoá sạch container + volume |
-
-### Thủ công — US1 (SC-004, không chứa nghiệp vụ)
-
-Mở [`services/bff/src/Bff.Api/Features/`](../../services/bff/src/Bff.Api/Features/) — xác nhận mỗi
-route handler (`Products`, `Baskets`, `Orders`, `Parties`, `Checkout`) chỉ gọi 1 typed downstream
-client rồi map/shape response, không có rule nghiệp vụ miền, không validate ngoài phạm vi hình dạng
-request, không tự lưu trữ dữ liệu.
+| Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
+|---|---|---|---|---|
+| Gateway sống, OpenAPI đi qua gateway (US1) | Mặc định | Folder `Gateway` → "Health live của chính gateway", "Tài liệu OpenAPI đi qua được gateway" | `200`; tài liệu là của BFF (có `/bff/products`) | `200` (160 ms); `200` (414 ms; lần đầu sau khi tạo lại container 4.8 s — nguội) |
+| Gateway chuyển tiếp xuống BFF (SC-002) | Mặc định, kèm token | `Gateway` → "Route phía client được chuyển tiếp xuống BFF"; `Common` → "BFF: danh sách sản phẩm, gọi thẳng có header" | Không phải `404`; body có `items` (phong bì, không phải mảng trần) | `200` (138 ms), body `{ items, page, pageSize, totalCount }`. Lần chạy đầu ngay sau khi tạo lại container: `504` sau 3.3 s (nguội) — vẫn không phải `404` |
+| Đường dẫn không khớp route (FR-007) | Mặc định | `Gateway` → "Đường dẫn không tồn tại" | `404`, không lộ `bff-cluster`/`products-api`/cổng, không treo | `404` (29–88 ms), assertion không lộ xanh |
+| Toàn bộ folder `Gateway` + `Common` | Mặc định | Cả 2 folder | Xanh | `Gateway` 11/11 assertion, `Common` 18/18 (kể cả `BFF: thiếu header thì downstream từ chối` → `502`) |
+| US3/SC-003 — downstream (products) chết | `stop products-api` | `Common` → "BFF: danh sách sản phẩm…" hoặc `GET gateway /bff/products` | `502`/`504` có cấu trúc, dưới 5 giây, không lộ topology | `504` `ProblemDetails` (`downstream-timeout`, kèm `correlationId`, `traceId`) sau **3.0 giây** ×3; gateway health live `200` |
+| Khôi phục | `start products-api` | như trên | `200` sau vài giây | Lần đầu `504` (3.0 s), lần sau `200` (230 ms → 24–60 ms) |
+| FR-006 — BFF chết, gateway phải trả lỗi có cấu trúc trong < 5 giây | `stop bff-api` | `GET gateway /bff/products` | `502`/`503`/`504` có cấu trúc, dưới 5 giây; gateway vẫn sống | **`502` thân RỖNG** (`Content-Length: 0`, chỉ có `X-Correlation-Id`) sau **8.0 giây** ×3 — vượt 5 giây (SC-003) và không có `ProblemDetails`; gateway health live `200`. Bật lại `bff-api` → `200` (~35 s sau, hết thời gian chờ health-check thụ động) — xem QA_Debt |
+| US2 — cổng công bố ra host *(ngoại lệ: review cấu hình, không có công tắc)* | Mở [`docker-compose.yml`](../../docker-compose.yml) (file mặc định) | (không có) | Chỉ `gateway-api` (và `storefront`) publish cổng | Có **3** dòng `ports:` — `gateway-api` `5300`, `storefront` `4173` **và `identity-api` `5205`** (thêm từ spec 004 để trình duyệt đăng nhập); 4 domain service + `bff-api` không publish — xem QA_Debt |
+| US1/SC-004 — BFF không chứa nghiệp vụ *(ngoại lệ: đọc mã)* | `ls services/bff/src/Bff.Api/Features/` | (không có) | Mỗi handler gọi 1 typed client rồi map | `Baskets`, `Checkout`, `HealthCheck`, `Orders`, `Parties`, `Products` — đúng 5 tính năng + health |
+| Dọn dẹp | `start` mọi service đã tắt; giỏ dọn bằng `Common` → "Dọn giỏ sau khi thử xong" | (không có) | Stack về mặc định | Đã bật lại; giỏ về rỗng (`204`) |
 
 ### Tự động — chạy thẳng bộ test đã có, không cần viết mới
 
@@ -98,10 +78,9 @@ Mỗi link mở thẳng đúng dòng khai báo hàm test (comment mỗi hàm đ�
 
 **Đã sửa 1 chỗ nhầm lẫn so với bảng cũ**: `services/bff/tests/Bff.Api.IntegrationTests/CorrelationPropagationTests.cs` **không** phải test của spec 002 — đã xác minh qua `git log` là file này được tạo ở commit của spec **016-correlation-id-propagation** (2026-09-06), muộn hơn hẳn spec 002 (2026-08-15). Bảng cũ liệt nó cùng dòng với `CorrelationIdPropagationTests.cs` (file thật của 002) khiến 2 spec bị lẫn vào nhau — xem [QA_Debt.md](QA_Debt.md).
 
+**Kết quả lượt QA này (2026-09-27)**: `ProductsRouteTests` **2/2**; `ResponseMappingTests` **9/9**; `RouteConfigurationTests` **5/5**; `RoutingTests` **4/4**; `UnmatchedRouteTests` **4/4**; `DownstreamUnavailableTests` (bff) **8/8**, (gateway) **3/3**; `ForwardingTimeoutBudgetTests` **2/2**; `CorrelationIdPropagationTests` **4/4**.
+
 ## Kết luận
 
-**PASS** — cả 4 nguồn mô tả cùng 1 luồng happy-case, không mâu thuẫn nhau về nội dung nghiệp vụ.
-
-Có 1 điểm tài liệu tham chiếu (`specs/002-gateway-bff-routing/quickstart.md`) ghi sai cổng
-baskets/orders so với thực tế — không ảnh hưởng nội dung 4 nguồn chính đang được đối chiếu ở đây, xem
-[QA_Debt.md](QA_Debt.md).
+**PASS kèm ghi chú.** Cả 4 nguồn nhất quán với nhau và với mã thật; gateway → BFF → 4 service chạy đúng bằng Postman; khi `products-api` chết BFF trả `504` có cấu trúc sau 3 giây, gateway vẫn sống. Ghi chú: (1) khi **BFF** chết, gateway trả `502` thân rỗng sau 8 giây — vượt SC-003 (< 5 giây) và không có `ProblemDetails`; (2) `docker-compose.yml` mặc định publish thêm cổng `identity-api` (`5205`) nên "chỉ gateway/storefront" không còn đúng;
+(3) `specs/002-gateway-bff-routing/quickstart.md` ghi sai cổng baskets/orders, 2 test gateway "xanh giả" không gắn token; (4) Postman folder `Common`/`Smoke Flow` từng dọn nhầm giỏ (subject giả thay vì `sub` của token) — đã sửa. Chi tiết: [QA_Debt.md](QA_Debt.md).

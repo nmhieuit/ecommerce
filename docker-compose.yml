@@ -282,7 +282,7 @@ services:
     # possession of another service's credential is the violation — not its use
     # (constitution Principle I; the rule `tests/CrossServiceIsolation.Tests` enforces on config).
     environment:
-      ConnectionStrings__ProductsDb: Server=sqlserver;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__ProductsDb: ${PRODUCTS_DB_CONNECTION:-Server=sqlserver;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       # 015-deny-by-default-authz toggle, set on every service whose appsettings carries it (gateway,
       # bff, and the four domain services) so the stack flips it in one place: .env or the shell
@@ -311,7 +311,7 @@ services:
       <<: *baskets-build
       target: final
     environment:
-      ConnectionStrings__BasketsDb: Server=sqlserver;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__BasketsDb: ${BASKETS_DB_CONNECTION:-Server=sqlserver;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     depends_on:
@@ -326,9 +326,11 @@ services:
       <<: *orders-build
       target: final
     environment:
-      ConnectionStrings__OrdersDb: Server=sqlserver;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__OrdersDb: ${ORDERS_DB_CONNECTION:-Server=sqlserver;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
+      # 025: công tắc tiêm độ trễ chaos (mặc định false = tắt; bật để diễn tập, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowLatencyInjection: ${CHAOS_ALLOW_LATENCY_INJECTION:-false}
       # 024-verify-transactional-outbox: first service to actually connect to the `rabbitmq`
       # container declared above (guest/guest, same local-dev posture as every other datastore in
       # this file) — publishes OrderPlacedV1 via the transactional outbox. Full connection string,
@@ -349,7 +351,7 @@ services:
       <<: *parties-build
       target: final
     environment:
-      ConnectionStrings__PartiesDb: Server=sqlserver;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__PartiesDb: ${PARTIES_DB_CONNECTION:-Server=sqlserver;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     depends_on:
@@ -363,7 +365,7 @@ services:
       <<: *identity-build
       target: final
     environment:
-      ConnectionStrings__IdentityDb: Server=sqlserver;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__IdentityDb: ${IDENTITY_DB_CONNECTION:-Server=sqlserver;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       # Pins `iss` to the name every other service validates against (Identity:Authority). Left
       # unset, the issuer follows the Host header, so a token the browser fetches through the

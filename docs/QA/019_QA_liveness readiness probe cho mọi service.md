@@ -13,6 +13,28 @@
 
 ## Hướng dẫn kiểm thử happy-case (thủ công + tự động)
 
+### Thủ công — bật/tắt phụ thuộc rồi bấm Postman; phần Kubernetes dùng cụm Docker Desktop
+
+Dựng stack: `docker compose -f docker-compose.local.yml up -d --wait gateway-api bff-api products-api baskets-api orders-api parties-api identity-api` (kéo theo DB).
+Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) và
+[`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn environment **Ecommerce - Local**, chạy folder
+**`19 - Liveness / Readiness của mọi service`** (14 request, không cần token: liveness + readiness của 5 service có DB và 2 service stateless).
+
+**Công tắc** (hạ tầng, không sửa mã): `docker compose -f docker-compose.local.yml stop orders-db` / `start orders-db` (DB của orders); `stop bff-api` / `start bff-api`.
+
+| Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-26)** |
+|---|---|---|---|---|
+| FR-001/FR-002 — mọi service có 2 probe, mặc định khoẻ | Mặc định (DB và service đều bật) | `19` bước 01 → 14 | Liveness `200`, readiness `200` (nhóm DB có check `self-database` Healthy) | **14/14 xanh** |
+| FR-003/US2 — DB tắt: liveness vẫn `200`, readiness `503` | `stop orders-db`, chờ ~12 giây | `19` bước 05 (orders readiness) và các bước còn lại | Chỉ readiness của orders lỗi; service khác không đổi; **không** restart | Readiness orders **`503`** (`self-database` Unhealthy, phản hồi mất ~5.3 giây), liveness `200`; 13/14 xanh (chỉ bước đó đỏ); `orders-api` `running`, `restarts=0` |
+| Phục hồi khi DB bật lại | `start orders-db` | `19` bước 05 | Tự trở lại `200`, không thao tác thủ công | `200` sau **28 giây** (thời gian SQL Server khởi động); folder 14/14 xanh lại |
+| Nhóm stateless — không phụ thuộc downstream | `stop bff-api` | (gọi `gateway` readiness) | Gateway readiness vẫn `200` | Gateway liveness `200`, readiness **`200`**; `bff-api` bật lại, ready sau 2 giây |
+| US2 — Kubernetes: pod bị loại khỏi Service khi DB tắt, không bị restart *(ngoại lệ: dùng `kubectl`; đã nạp image thật vào worker, Deployment `baskets` theo mẫu `deployment.yaml.j2` — probe `initialDelaySeconds: 10`, readiness `failureThreshold: 20`, `maxUnavailable: 0`)* | `docker compose … stop baskets-db` trong khi pod đang chạy | (không có) | Pod `0/1` (NotReady), không restart, Service không còn endpoint | Lần đầu Ready sau **14 giây**. Sau **70 giây** pod vẫn `1/1` và còn trong endpoints (chưa đủ 20 lần lỗi × 5 giây); sau **130 giây**: `0/1 Running`, **`Restarts 0`**, `ENDPOINTS` rỗng, sự kiện `Readiness probe failed: … 503` (×25), liveness của pod vẫn `{"status":"Healthy"}` |
+| K8s — phục hồi | `start baskets-db` | (không có) | Pod tự Ready lại | Ready lại sau **31 giây**, vẫn 0 restart |
+| K8s — US2 rolling restart không gián đoạn | `kubectl rollout restart deploy/baskets`, thăm dò `/health/ready` qua Service mỗi 0.2 giây | (không có) | `maxUnavailable: 0`: luôn còn pod Ready | Rollout xong sau **13 giây**; **148/148 thăm dò `OK`, 0 lỗi** |
+| Lớp kiểm tra 2 — `ansible-lint` *(ngoại lệ: công cụ chạy qua Docker, `MSYS_NO_PATHCONV=1`)* | (không có) — `ansible-lint roles/service_deployment deploy.yml` trong `deploy/ansible` | (không có) | 0 vi phạm | Còn vi phạm (`name[template]` ở `tasks/main.yml:34` và các `var-naming[no-role-prefix]`) — không đổi so với lượt trước, xem QA_Debt |
+| Lớp kiểm tra 2 — render/`kubeconform` *(ngoại lệ)* | (không có) | (không có) | Render 7 manifest rồi validate | Không đổi: `--limit` không khớp host (exit 0 "xanh giả"), `--check` không ghi file — xem QA_Debt |
+| Dọn dẹp | `start` DB/`bff-api`; xoá namespace `qa019`, image trong worker, ngắt worker khỏi mạng compose | (không có) | Không dữ liệu dư | Đã dọn (`kubectl get ns` không còn `qa019`); stack về mặc định |
+
 ### Tự động — lớp kiểm tra 1
 
 | Cần xác nhận (FR) | Test case (bấm để mở) | Lệnh chạy riêng test đó |
@@ -22,23 +44,10 @@
 | FR-006/007/US3 — liveness threshold/period dương, initial delay 1–15 s | [`LivenessRestartTests.cs:28`](../../tests/DeploymentManifestConventionTests/LivenessRestartTests.cs#L28) · [`:59`](../../tests/DeploymentManifestConventionTests/LivenessRestartTests.cs#L59) | `dotnet test tests/DeploymentManifestConventionTests --filter FullyQualifiedName~LivenessRestartTests` |
 | FR-009/US2 — `maxUnavailable: 0` | [`RolloutStrategyTests.cs:29`](../../tests/DeploymentManifestConventionTests/RolloutStrategyTests.cs#L29) | `dotnet test tests/DeploymentManifestConventionTests --filter FullyQualifiedName~RolloutStrategyTests` |
 
-**Kết quả lượt QA này (2026-09-24)**: `DeploymentManifestConventionTests` **58/58 PASS** (khớp "26 task, 58/58" của tài liệu) — không đổi sau khi dịch comment.
-
-### Thủ công — lớp kiểm tra 2 (lần đầu chạy thật, qua Docker)
-
-Máy QA không cài `ansible-lint`/`kubeconform` nên chạy qua Docker (`pipelinecomponents/ansible-lint`, `ghcr.io/yannh/kubeconform`; mount thư mục tại `/code`, `MSYS_NO_PATHCONV=1`).
-
-| Bước | Lệnh (trong `deploy/ansible`) | Kỳ vọng | **Đã quan sát** |
-|---|---|---|---|
-| `ansible-lint` | `ansible-lint roles/service_deployment deploy.yml` | 0 vi phạm | **7 vi phạm, exit 2** (6 `var-naming[no-role-prefix]`, 1 `name[template]`) — script CI dùng `set -eu` nên dừng ngay tại đây |
-| Render từng service | `ansible-playbook deploy.yml --check --diff --limit orders` | Render manifest `orders` | `skipping: no hosts matched`, **exit 0** (`--limit` lọc theo host, còn play chạy `hosts: localhost` + `loop:`) |
-| Render cả vòng lặp | `ansible-playbook deploy.yml --check --diff` (bỏ `--limit`) | Render 7 manifest | Render đúng `parties` (diff khớp `deployment.yaml.j2`) rồi **fail**: task `kubernetes.core.k8s` không tìm thấy `.rendered/parties.deployment.yaml` (`template` ở `--check` không ghi file) |
-| `kubeconform` trên file thiếu | `kubeconform -strict .rendered/orders.deployment.yaml` | Valid | `no such file or directory`, exit 1 (hệ quả của dòng `--limit`) |
-| US2/US3 động trên cluster `kind` (quickstart Bước 3–5) | (không dựng lại) | — | Dùng bằng chứng gốc ở `technical-debt.md` mục 019 (gateway ready ngay; orders ready fail `503` nhưng liveness không fail, 0 restart ~90 s; rolling restart giữ pod cũ `1/1`) |
+**Kết quả lượt QA này (2026-09-26)**: `DeploymentManifestConventionTests` **58/58 PASS** (khớp "26 task, 58/58" của tài liệu) — không đổi sau khi dịch comment.
 
 ## Kết luận
 
-**PASS kèm ghi chú nghiêm trọng.** 4 nguồn nhất quán với nhau và với mã; lớp kiểm tra 1 (58 test C#) xanh; cấu trúc probe (ngưỡng tái dùng số liệu vận hành, `maxUnavailable: 0`, liveness tách readiness)
-đúng tài liệu và đã có bằng chứng `kind` thật từ phiên gốc. Ghi chú — 3 vấn đề ở lớp kiểm tra 2, lần đầu chạy được thật: (1) `ansible-lint` báo 7 vi phạm nên CI stage
-sẽ đỏ ngay dòng đầu; (2) `--limit "$service"` trong script không khớp host nào, exit 0 "xanh giả" rồi `kubeconform` fail vì thiếu file (chẩn đoán sai hướng); (3) `--check` tự mâu thuẫn với chuỗi
-`template` → `k8s` của role. Không ảnh hưởng hành vi runtime. Chi tiết và hướng vá: [QA_Debt.md](QA_Debt.md) mục 019.
+**PASS kèm ghi chú nghiêm trọng.** 4 nguồn nhất quán với nhau và với mã; lớp kiểm tra 1 (58 test C#) xanh; trên hệ thống thật cấu trúc probe hoạt động đúng thiết kế: liveness tách khỏi DB (DB tắt vẫn `200`, 0 restart), readiness `503` rồi tự phục hồi, gateway/bff stateless không phụ thuộc downstream,
+và trên Kubernetes thật pod bị loại khỏi Service (không restart) khi DB tắt và rolling restart không mất request (148/148). Ghi chú: (1) ngưỡng readiness nhóm DB (20 lần × 5 giây) khiến pod chỉ bị loại khỏi Service sau ~100 giây — DB gián đoạn ngắn hơn vẫn nhận traffic và trả lỗi; (2) lớp kiểm tra 2 (`ansible-lint` còn vi phạm, `--limit` "xanh giả",
+`--check` mâu thuẫn) chưa đổi. Chi tiết: [QA_Debt.md](QA_Debt.md) mục 019.

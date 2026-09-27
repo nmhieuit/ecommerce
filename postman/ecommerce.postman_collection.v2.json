@@ -242,6 +242,17 @@
           },
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Giỏ của người dùng đăng nhập nằm theo `sub` của token (gateway chuyển tiếp); dọn đúng giỏ đó thay vì giỏ của subject giả.",
+                  "const p = (pm.variables.get('accessToken') || '').split('.')[1];",
+                  "if (p) { pm.variables.set('subjectId', JSON.parse(CryptoJS.enc.Base64.parse(p.replace(/-/g, '+').replace(/_/g, '/')).toString(CryptoJS.enc.Utf8)).sub); }"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -2102,7 +2113,7 @@
                   "});",
                   "",
                   "pm.test(\"có đủ ba sản phẩm seed, đúng mã và đúng giá\", function () {",
-                  "    const products = pm.response.json();",
+                  "    const products = pm.response.json().items;",
                   "    const expected = {};",
                   "    expected[pm.collectionVariables.get('notebookId')] = 12.5;",
                   "    expected[pm.collectionVariables.get('pourOverId')] = 48;",
@@ -2115,7 +2126,7 @@
                   "});",
                   "",
                   "pm.test(\"mọi sản phẩm đều có tên và giá lớn hơn 0\", function () {",
-                  "    pm.response.json().forEach(function (p) {",
+                  "    pm.response.json().items.forEach(function (p) {",
                   "        pm.expect(p.name).to.be.a('string').and.not.empty;",
                   "        pm.expect(Number(p.price)).to.be.above(0);",
                   "    });",
@@ -2626,6 +2637,17 @@
             "description": "Các request phía trên đã thêm hàng thật vào giỏ. Dọn lại để lần chạy sau bắt đầu từ trạng thái sạch — đây là nửa còn lại của việc giữ cho toàn bộ collection chạy lại được nhiều lần mà kết quả không đổi. Trả 204 hay 409 đều là thành công."
           },
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Giỏ của người dùng đăng nhập nằm theo `sub` của token (gateway chuyển tiếp); dọn đúng giỏ đó thay vì giỏ của subject giả.",
+                  "const p = (pm.variables.get('accessToken') || '').split('.')[1];",
+                  "if (p) { pm.variables.set('subjectId', JSON.parse(CryptoJS.enc.Base64.parse(p.replace(/-/g, '+').replace(/_/g, '/')).toString(CryptoJS.enc.Utf8)).sub); }"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -5775,6 +5797,4541 @@
                   "pm.test(\"200, hoặc 403 kèm error = forbidden_scope\", function () {",
                   "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
                   "    if (pm.response.code === 403) { const b = pm.response.json(); pm.expect(b.error).to.equal('forbidden_scope'); pm.expect(b.message).to.include('scope'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "16 - Lan truyền Correlation ID",
+      "description": "Kiểm chứng spec 016 trên hệ thống chạy thật: gateway tự sinh/giữ/loại bỏ correlation ID (bước 01–04), SPA đọc được header qua CORS (bước 05), ID lan truyền xuyên gateway → BFF → domain service và tra được bằng Elasticsearch (bước 06–10). Cần stack: identity, gateway, bff, products, baskets, orders (+ DB), elasticsearch và otel-collector; đã lấy token ở folder '00 - Xác thực & phân quyền'.\n\nBước 09 tạo 1 đơn thật. Nhánh bất đồng bộ (OrderPlacedV1.correlationId) kiểm ở folder 08 khi bật ORDERS_RABBITMQ_CONNECTION. Chạy bằng Runner để các bước chờ 20 giây (setTimeout) có tác dụng.",
+      "item": [
+        {
+          "name": "01 Gateway tự sinh correlation ID khi request không có (FR-001)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Request không mang X-Correlation-Id (script bỏ header ngẫu nhiên của collection). Phản hồi phải có header X-Correlation-Id = GUID dạng n (32 ký tự hex)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.remove('X-Correlation-Id');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"có X-Correlation-Id 32 ký tự hex\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 504]);",
+                  "    pm.expect(pm.response.headers.get('X-Correlation-Id')).to.match(/^[0-9a-f]{32}$/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Giá trị client gửi được giữ nguyên, kể cả không phải GUID (FR-002)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Gửi `caller-supplied-correlation-id`: phản hồi echo đúng chuỗi đó."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: 'caller-supplied-correlation-id' });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"echo đúng giá trị\", function () {",
+                  "    pm.expect(pm.response.headers.get('X-Correlation-Id')).to.equal('caller-supplied-correlation-id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Giá trị quá dài (129 ký tự) bị từ chối, gateway sinh giá trị mới (FR-009)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Độ dài tối đa 128 ký tự: giá trị 129 ký tự không được echo mà bị thay bằng GUID dạng n."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: 'x'.repeat(129) });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"không echo, thay bằng 32 hex\", function () {",
+                  "    const v = pm.response.headers.get('X-Correlation-Id');",
+                  "    pm.expect(v).to.match(/^[0-9a-f]{32}$/i);",
+                  "    pm.expect(v.length).to.equal(32);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Giá trị chứa ký tự điều khiển bị từ chối (FR-009)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Giá trị `abc<TAB>def` chứa ký tự điều khiển (TAB): bị thay bằng GUID mới. (CR/LF không gửi được bằng client HTTP nên dùng TAB.)"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: 'abc\\tdef' });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"không echo, thay bằng 32 hex\", function () {",
+                  "    pm.expect(pm.response.headers.get('X-Correlation-Id')).to.match(/^[0-9a-f]{32}$/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 CORS: SPA đọc được header X-Correlation-Id (FR-005)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{storefrontOrigin}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Request có `Origin: http://localhost:4173` (storefront): gateway phải công bố `Access-Control-Expose-Headers: X-Correlation-Id` để JavaScript của SPA đọc được."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Expose-Headers có X-Correlation-Id\", function () {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Expose-Headers')).to.include('X-Correlation-Id');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Lan truyền gateway → BFF → products: gửi request kèm ID (FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Gửi `qa016-<mã thời gian>` và lưu vào biến event016Cid. Script chờ ~20 giây cho telemetry tới Elasticsearch (OTLP → collector → ES) trước khi bước 07 chạy (Runner)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cid = 'qa016-' + Date.now();",
+                  "pm.collectionVariables.set('event016Cid', cid);",
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: cid });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('phản hồi echo đúng ID đã gửi', function () { pm.expect(pm.response.headers.get('X-Correlation-Id')).to.equal(pm.collectionVariables.get('event016Cid')); });",
+                  "setTimeout(function () {}, 20000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Elasticsearch: span của gateway, BFF và products cùng mang ID (FR-003, SC-001)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/traces-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "traces-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Truy vấn `traces-generic.otel-default*` theo `attributes.correlation.id` = ID ở bước 06. Cần Elasticsearch (cổng 9200) + otel-collector đang chạy. Trước khi sửa 016, products sẽ tự sinh 1 GUID khác vì BFF làm rơi header.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"query\": {\n    \"term\": {\n      \"attributes.correlation.id\": \"{{event016Cid}}\"\n    }\n  },\n  \"aggs\": {\n    \"svc\": {\n      \"terms\": {\n        \"field\": \"resource.attributes.service.name\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"span của ĐỦ các service Bff.Api, Gateway.Api, Products.Api mang cùng correlation ID\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const got = pm.response.json().aggregations.svc.buckets.map(function (b) { return b.key; }).sort();",
+                  "    pm.expect(got, 'service thấy được: ' + got.join(', ')).to.include.members([\"Bff.Api\", \"Gateway.Api\", \"Products.Api\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 Luồng đặt hàng: thêm hàng vào giỏ với ID mới",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Bước đầu của luồng đồng bộ checkout; dùng chung 1 ID `qa016-checkout-<mã thời gian>` cho bước 08 và 09.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cid = 'qa016-checkout-' + Date.now();",
+                  "pm.collectionVariables.set('event016CheckoutCid', cid);",
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: cid });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 Luồng đặt hàng: thanh toán với cùng ID",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/checkout",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "checkout"
+              ]
+            },
+            "description": "Tạo 1 đơn thật. Script chờ ~20 giây cho telemetry trước bước 10."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: pm.collectionVariables.get('event016CheckoutCid') });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', function () { pm.response.to.have.status(201); });",
+                  "setTimeout(function () {}, 20000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 Elasticsearch: gateway, BFF, baskets và orders cùng mang ID của luồng đặt hàng (SC-001)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/traces-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "traces-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Toàn bộ nhánh ĐỒNG BỘ của checkout tra được bằng 1 ID. Nhánh BẤT ĐỒNG BỘ (OrderPlaced qua RabbitMQ) kiểm ở folder '08 - Event schema OrderPlaced (RabbitMQ)' bước 04 (test 'correlationId đúng X-Correlation-Id') khi bật ORDERS_RABBITMQ_CONNECTION.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"query\": {\n    \"term\": {\n      \"attributes.correlation.id\": \"{{event016CheckoutCid}}\"\n    }\n  },\n  \"aggs\": {\n    \"svc\": {\n      \"terms\": {\n        \"field\": \"resource.attributes.service.name\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"span của ĐỦ các service Baskets.Api, Bff.Api, Gateway.Api, Orders.Api mang cùng correlation ID\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const got = pm.response.json().aggregations.svc.buckets.map(function (b) { return b.key; }).sort();",
+                  "    pm.expect(got, 'service thấy được: ' + got.join(', ')).to.include.members([\"Baskets.Api\", \"Bff.Api\", \"Gateway.Api\", \"Orders.Api\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "17 - Telemetry OTel tới Elasticsearch",
+      "description": "Kiểm chứng spec 017 trên hệ thống chạy thật: traces/metrics/logs của cả 7 service tới Elasticsearch qua otel-collector (bước 03–06) và histogram độ trễ (bước 07, hiện đỏ). Cần stack docker-compose.local.yml gồm 7 service, otel-collector, elasticsearch, kibana; đã lấy token ở folder '00 - Xác thực & phân quyền' (bước 05).\n\n**Công tắc**: `docker compose -f docker-compose.local.yml stop otel-collector` (TẮT telemetry — các service vẫn chạy bình thường) / `start otel-collector` (BẬT); sau khi tắt > 2 phút thì bước 03–04 đỏ. Bước 07 xanh khi thêm processor `cumulativetodelta` vào pipeline metrics của docker/otel-collector-config.yaml (hướng vá đề xuất). Lưu ý: chạy `dotnet test` trên máy đang bật stack sẽ đẩy telemetry của test vào cùng Elasticsearch (cổng 4317).",
+      "item": [
+        {
+          "name": "01 Elasticsearch sống",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/_cluster/health",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "_cluster",
+                "health"
+              ]
+            },
+            "description": "Elasticsearch của stack (cổng 9200, không xác thực — tư thế local-dev). Kỳ vọng `green` hoặc `yellow` (single-node)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status green hoặc yellow\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.be.oneOf(['green', 'yellow']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Kibana sống",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{kibanaUrl}}/api/status",
+              "host": [
+                "{{kibanaUrl}}"
+              ],
+              "path": [
+                "api",
+                "status"
+              ]
+            },
+            "description": "Kibana đọc dữ liệu OTel qua Observability. Kỳ vọng mức `available`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Kibana available\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status.overall.level).to.equal('available');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Traces: cả 7 service có span trong 2 phút gần nhất (FR-001)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/traces-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "traces-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Health probe của Docker tạo span đều đặn nên không cần thêm traffic. Nếu bước này đỏ: `otel-collector` đang tắt hoặc mất kết nối tới Elasticsearch (công tắc: `docker compose stop otel-collector` rồi chờ > 2 phút).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"query\": {\n    \"range\": {\n      \"@timestamp\": {\n        \"gte\": \"now-2m\"\n      }\n    }\n  },\n  \"aggs\": {\n    \"svc\": {\n      \"terms\": {\n        \"field\": \"resource.attributes.service.name\",\n        \"size\": 20\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"cả 7 service (traces) đều có dữ liệu trong 2 phút gần nhất\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const got = pm.response.json().aggregations.svc.buckets.map(function (b) { return b.key; }).sort();",
+                  "    pm.expect(got, 'service có dữ liệu: ' + got.join(', ')).to.include.members([\"Baskets.Api\", \"Bff.Api\", \"Gateway.Api\", \"Identity.Api\", \"Orders.Api\", \"Parties.Api\", \"Products.Api\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Metrics: cả 7 service có dữ liệu trong 2 phút gần nhất (FR-002)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/metrics-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "metrics-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Số đo runtime/HTTP của mọi service tới được `metrics-generic.otel-default*`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"query\": {\n    \"range\": {\n      \"@timestamp\": {\n        \"gte\": \"now-2m\"\n      }\n    }\n  },\n  \"aggs\": {\n    \"svc\": {\n      \"terms\": {\n        \"field\": \"resource.attributes.service.name\",\n        \"size\": 20\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"cả 7 service (metrics) đều có dữ liệu trong 2 phút gần nhất\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const got = pm.response.json().aggregations.svc.buckets.map(function (b) { return b.key; }).sort();",
+                  "    pm.expect(got, 'service có dữ liệu: ' + got.join(', ')).to.include.members([\"Baskets.Api\", \"Bff.Api\", \"Gateway.Api\", \"Identity.Api\", \"Orders.Api\", \"Parties.Api\", \"Products.Api\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Gửi 1 request qua gateway với ID riêng để tra log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Gửi `qa017-<mã thời gian>` (lưu biến event017Cid). Script chờ ~20 giây cho log tới Elasticsearch."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cid = 'qa017-' + Date.now();",
+                  "pm.collectionVariables.set('event017Cid', cid);",
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: cid });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', function () { pm.response.to.have.status(200); });",
+                  "setTimeout(function () {}, 20000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Logs: mỗi dòng log mang service.name, TenantId và CorrelationId (FR-003, SC-003)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/logs-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "logs-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Truy vấn log theo `attributes.CorrelationId` = ID ở bước 05: phải thấy log của ít nhất gateway và BFF, mỗi bản ghi có `resource.attributes.service.name`, `attributes.TenantId`, `attributes.CorrelationId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 50,\n  \"query\": {\n    \"term\": {\n      \"attributes.CorrelationId\": \"{{event017Cid}}\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"có log của ≥ 2 service, mỗi log đủ 3 định danh\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const hits = pm.response.json().hits.hits;",
+                  "    pm.expect(hits.length, 'không có log nào cho ID này').to.be.at.least(1);",
+                  "    const svcs = {}; hits.forEach(function (h) { const s = h._source; svcs[s.resource.attributes['service.name']] = true; pm.expect(s.attributes.CorrelationId).to.equal(pm.collectionVariables.get('event017Cid')); pm.expect(s.attributes.TenantId).to.be.a('string'); });",
+                  "    pm.expect(Object.keys(svcs).length, 'service có log: ' + Object.keys(svcs).join(', ')).to.be.at.least(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Histogram độ trễ HTTP có trong metrics (FR-009, SC-005)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/metrics-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "metrics-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Kỳ vọng ≥ 1 document có `metrics.http.server.request.duration` (histogram độ trễ dùng để đo SLO p95/p99). Hiện ĐỎ: collector bỏ mọi histogram cumulative (`dropping cumulative temporality histogram`) — xem QA_Debt mục 017; sửa bằng processor `cumulativetodelta` rồi bước này xanh.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"exists\": {\n      \"field\": \"metrics.http.server.request.duration\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"có document histogram http.server.request.duration\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().hits.total.value, 'histogram bị collector loại bỏ').to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "18 - Secrets bắt buộc (fail-fast khi thiếu)",
+      "description": "Kiểm chứng spec 018 trên hệ thống chạy thật: 5 service có DB phải từ chối khởi động khi thiếu credential trong connection string, thông báo nêu đích danh khoá thiếu (FR-007).\n\n**Công tắc** trong .env (xem .env.example), rồi `docker compose -f docker-compose.local.yml up -d --force-recreate <service>-api`:\n- `PRODUCTS_DB_CONNECTION` / `BASKETS_DB_CONNECTION` / `ORDERS_DB_CONNECTION` / `PARTIES_DB_CONNECTION` / `IDENTITY_DB_CONNECTION`.\n- BẬT (mặc định): không khai báo → chuỗi có `Password=${MSSQL_SA_PASSWORD}`.\n- TẮT: chuỗi chỉ có host/database, ví dụ `Server=orders-db;Database=orders;TrustServerCertificate=true` → service thoát ngay khi khởi động, `docker logs` có 'Missing required secret(s): ConnectionStrings:OrdersDb'; bước tương ứng ở folder này lỗi kết nối. Xoá dòng để khôi phục.\n\nKhông đổi MSSQL_SA_PASSWORD (đổi sẽ làm hỏng chính container SQL Server).",
+      "item": [
+        {
+          "name": "01 products — service đã khởi động và readiness 200 (secret ConnectionStrings:ProductsDb hợp lệ)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{productsUrl}}/health/ready",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Khi secret `ConnectionStrings:ProductsDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `PRODUCTS_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 — service đang chạy với secret hợp lệ\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 baskets — service đã khởi động và readiness 200 (secret ConnectionStrings:BasketsDb hợp lệ)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{basketsUrl}}/health/ready",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Khi secret `ConnectionStrings:BasketsDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `BASKETS_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 — service đang chạy với secret hợp lệ\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 orders — service đã khởi động và readiness 200 (secret ConnectionStrings:OrdersDb hợp lệ)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{ordersUrl}}/health/ready",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Khi secret `ConnectionStrings:OrdersDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `ORDERS_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 — service đang chạy với secret hợp lệ\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 parties — service đã khởi động và readiness 200 (secret ConnectionStrings:PartiesDb hợp lệ)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{partiesUrl}}/health/ready",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Khi secret `ConnectionStrings:PartiesDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `PARTIES_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 — service đang chạy với secret hợp lệ\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 identity — service đã khởi động và readiness 200 (secret ConnectionStrings:IdentityDb hợp lệ)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{identityUrl}}/health/ready",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Khi secret `ConnectionStrings:IdentityDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `IDENTITY_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 — service đang chạy với secret hợp lệ\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "19 - Liveness / Readiness của mọi service",
+      "description": "Kiểm chứng spec 019 (probe) trên hệ thống chạy thật ở mức endpoint mà kubelet/Docker gọi: 5 service có DB (products, baskets, orders, parties, identity) và 2 service stateless (gateway, bff). Mặc định: live `200`, ready `200`.\n\n**Công tắc phụ thuộc** (hạ tầng, không sửa mã): `docker compose -f docker-compose.local.yml stop orders-db` (TẮT DB của orders) → bước readiness của orders đỏ (`503`, self-database Unhealthy) nhưng liveness vẫn `200` và các service khác không đổi; `start orders-db` để khôi phục. `stop bff-api` → gateway readiness vẫn `200` (stateless). Kết quả thật ở từng trạng thái xem doc QA 019.",
+      "item": [
+        {
+          "name": "01 products — liveness: tiến trình còn sống (FR-002/FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{productsUrl}}/health/live",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 products — readiness: kết nối được database riêng (FR-001/FR-005)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{productsUrl}}/health/ready",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Nhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và self-database Healthy\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const c = pm.response.json().checks.filter(function (x) { return x.name === 'self-database'; })[0];",
+                  "    pm.expect(c.status).to.equal('Healthy');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 baskets — liveness: tiến trình còn sống (FR-002/FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{basketsUrl}}/health/live",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 baskets — readiness: kết nối được database riêng (FR-001/FR-005)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{basketsUrl}}/health/ready",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Nhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và self-database Healthy\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const c = pm.response.json().checks.filter(function (x) { return x.name === 'self-database'; })[0];",
+                  "    pm.expect(c.status).to.equal('Healthy');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 orders — liveness: tiến trình còn sống (FR-002/FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{ordersUrl}}/health/live",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 orders — readiness: kết nối được database riêng (FR-001/FR-005)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{ordersUrl}}/health/ready",
+              "host": [
+                "{{ordersUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Nhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và self-database Healthy\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const c = pm.response.json().checks.filter(function (x) { return x.name === 'self-database'; })[0];",
+                  "    pm.expect(c.status).to.equal('Healthy');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 parties — liveness: tiến trình còn sống (FR-002/FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{partiesUrl}}/health/live",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 parties — readiness: kết nối được database riêng (FR-001/FR-005)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{partiesUrl}}/health/ready",
+              "host": [
+                "{{partiesUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Nhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và self-database Healthy\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const c = pm.response.json().checks.filter(function (x) { return x.name === 'self-database'; })[0];",
+                  "    pm.expect(c.status).to.equal('Healthy');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 identity — liveness: tiến trình còn sống (FR-002/FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{identityUrl}}/health/live",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 identity — readiness: kết nối được database riêng (FR-001/FR-005)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{identityUrl}}/health/ready",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Nhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và self-database Healthy\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const c = pm.response.json().checks.filter(function (x) { return x.name === 'self-database'; })[0];",
+                  "    pm.expect(c.status).to.equal('Healthy');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 gateway — liveness: tiến trình còn sống (FR-002/FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/health/live",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 gateway — readiness: chỉ xét chính nó (không có database)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/health/ready",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Nhóm stateless (gateway, bff): readiness không kiểm database/downstream, `200` ngay cả khi service phía sau đang tắt."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và không có check self-database\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const b = pm.response.json(); pm.expect(JSON.stringify(b)).to.not.include('self-database');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 bff — liveness: tiến trình còn sống (FR-002/FR-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{bffUrl}}/health/live",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
+            },
+            "description": "`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 bff — readiness: chỉ xét chính nó (không có database)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{bffUrl}}/health/ready",
+              "host": [
+                "{{bffUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
+            },
+            "description": "Nhóm stateless (gateway, bff): readiness không kiểm database/downstream, `200` ngay cả khi service phía sau đang tắt."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và không có check self-database\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const b = pm.response.json(); pm.expect(JSON.stringify(b)).to.not.include('self-database');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "20 - Timeout / Retry / Circuit breaker",
+      "description": "Kiểm chứng spec 020 trên hệ thống chạy thật với công tắc hạ tầng: `docker compose -f docker-compose.local.yml stop baskets-api` (TẮT) rồi chạy bước 01 → 06 bằng Runner; `start baskets-api` rồi chạy bước 07. Cần Elasticsearch + otel-collector (đếm sự kiện Polly theo correlation ID) và đã lấy token ở folder '00 - Xác thực & phân quyền'.\n\nGhi chú: circuit breaker BFF→service cần ≥100 mẫu lỗi trong 10 giây (`MinimumThroughput` mặc định của Polly) nên KHÔNG thể mở bằng Postman/Runner tuần tự (mỗi request lỗi chờ ~3 giây); phần đó làm bằng tải song song (xem doc QA 020).",
+      "item": [
+        {
+          "name": "01 [baskets TẮT] GET giỏ hàng: bị chặn ở TotalRequestTimeout 3 giây (FR-001, SC-002)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Chạy khi `baskets-api` đang TẮT (`docker compose -f docker-compose.local.yml stop baskets-api`). Phản hồi phải là 504 (hoặc 502) trong chưa tới ~4,5 giây — không treo. Script chờ ~20 giây cho log Polly tới Elasticsearch."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cid = \"qa020-get-\" + Date.now();",
+                  "pm.collectionVariables.set('event020GetCid', cid);",
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: cid });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('504/502 và không quá 4500 ms', function () { pm.expect(pm.response.code).to.be.oneOf([502, 504]); pm.expect(pm.response.responseTime).to.be.below(4500); });",
+                  "setTimeout(function () {}, 20000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 [baskets TẮT] GET được retry đúng 2 lần (FR-005, US3-KB1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/logs-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "logs-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Elasticsearch `logs-generic.otel-default*`: sự kiện `OnRetry` của `BasketsApi-standard` cho ID ở bước 01. `MaxRetryAttempts = 2`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"attributes.CorrelationId\": \"{{event020GetCid}}\"\n          }\n        },\n        {\n          \"match_phrase\": {\n            \"body.text\": \"EventName: 'OnRetry'\"\n          }\n        },\n        {\n          \"match_phrase\": {\n            \"body.text\": \"Source: 'BasketsApi-standard\"\n          }\n        }\n      ]\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"đúng 2 sự kiện Polly OnRetry của pipeline BasketsApi cho ID này\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().hits.total.value).to.equal(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 [baskets TẮT] GET có 3 lần hết thời gian (1 lần đầu + 2 retry)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/logs-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "logs-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Mỗi lần thử bị cắt ở `AttemptTimeout = 1 giây`: 3 lần thử → 3 sự kiện `OnTimeout`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"attributes.CorrelationId\": \"{{event020GetCid}}\"\n          }\n        },\n        {\n          \"match_phrase\": {\n            \"body.text\": \"EventName: 'OnTimeout'\"\n          }\n        },\n        {\n          \"match_phrase\": {\n            \"body.text\": \"Source: 'BasketsApi-standard\"\n          }\n        }\n      ]\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"đúng 3 sự kiện Polly OnTimeout của pipeline BasketsApi cho ID này\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().hits.total.value).to.equal(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 [baskets TẮT] POST thêm hàng: cũng bị chặn, không treo (FR-001)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "POST giữ timeout + breaker nhưng KHÔNG retry (FR-006, Decision 5). Bước này gọi products trước (còn sống) rồi mới tới baskets (tắt).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cid = \"qa020-post-\" + Date.now();",
+                  "pm.collectionVariables.set('event020PostCid', cid);",
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: cid });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('504/502 và không quá 4500 ms', function () { pm.expect(pm.response.code).to.be.oneOf([502, 504]); pm.expect(pm.response.responseTime).to.be.below(4500); });",
+                  "setTimeout(function () {}, 20000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 [baskets TẮT] POST không bao giờ được retry (FR-006, US3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/logs-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "logs-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Không có sự kiện `OnRetry` nào của pipeline `BasketsApi` cho ID của POST (có thể có `OnRetry` của pipeline `ProductsApi` — bước gọi products — nên lọc theo nguồn `BasketsApi-standard`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"attributes.CorrelationId\": \"{{event020PostCid}}\"\n          }\n        },\n        {\n          \"match_phrase\": {\n            \"body.text\": \"EventName: 'OnRetry'\"\n          }\n        },\n        {\n          \"match_phrase\": {\n            \"body.text\": \"Source: 'BasketsApi-standard\"\n          }\n        }\n      ]\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"đúng 0 sự kiện Polly OnRetry của pipeline BasketsApi cho ID này\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().hits.total.value).to.equal(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 [baskets TẮT] Route không liên quan vẫn chạy bình thường (cô lập lỗi)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Sự cố của baskets không lan sang catalog (products): vẫn `200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 [baskets BẬT lại] GET giỏ hàng phục hồi (US2-KB3)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Chạy SAU khi `start baskets-api`. Nếu mạch đã mở thì vài lần đầu có thể `502` rồi `200`. Kỳ vọng `200`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "21 - Đo SLO trên Elasticsearch (dashboard SLO)",
+      "description": "Kiểm chứng spec 021 phần 'đo liên tục': cùng phép tính của dashboard `SLO vận hành hằng ngày — 7 service` (error-rate, p95, p99 từ `traces-generic.otel-default*`) nhưng chạy bằng request ES để có số chính xác. Chạy bước 01 → 03 khi `baskets-api` BẬT, TẮT `baskets-api` (`docker compose -f docker-compose.local.yml stop baskets-api`) rồi chạy 04 → 07, BẬT lại rồi chạy 08. Cần Elasticsearch + otel-collector + Kibana và token từ folder '00 - Xác thực & phân quyền'. Bước 06 chứng minh phát hiện QA_Debt: service idle vẫn có span probe nên dashboard hiện 0% lỗi thay vì 'không có dữ liệu'.",
+      "item": [
+        {
+          "name": "01 Dashboard SLO đã có trong Kibana (điều kiện tiên quyết)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "kbn-xsrf",
+                "value": "1"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{kibanaUrl}}/api/saved_objects/dashboard/e2e06ff5-9cdf-4bea-acc8-5fd60ce26170",
+              "host": [
+                "{{kibanaUrl}}"
+              ],
+              "path": [
+                "api",
+                "saved_objects",
+                "dashboard",
+                "e2e06ff5-9cdf-4bea-acc8-5fd60ce26170"
+              ]
+            },
+            "description": "Dashboard `SLO vận hành hằng ngày — 7 service` phải đã được import từ `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`. Nếu 404: xem lệnh import trong doc QA 021."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và đúng tên dashboard\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().attributes.title).to.include('SLO vận hành hằng ngày');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 [baskets BẬT] Tạo traffic khoẻ và đặt mốc thời gian đo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Đặt mốc `slo021StartMs` rồi gọi 1 request thật `GET /bff/products` (200). Script chờ ~20 giây cho span tới Elasticsearch. Mọi bước ES sau chỉ đo từ mốc này nên không lẫn dữ liệu cũ."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('slo021StartMs', String(Date.now()));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "setTimeout(function () {}, 20000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Đo Bff.Api khi khoẻ: 0 lỗi 5xx, p95 trong ngưỡng (bất biến 1, 2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/traces-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "traces-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Đúng công thức dashboard nhưng chỉ tính span `kind: Server` và bỏ `/health/*`: số request, số 5xx, p95/p99 (ms) của `Bff.Api` từ mốc. SLO BFF (`client-facing-bff`): p95 ≤ 300 ms, p99 ≤ 800 ms.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Bff.Api\"\n          }\n        },\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"{{slo021StartMs}}\",\n              \"format\": \"epoch_millis\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"kind\": \"Server\"\n          }\n        }\n      ],\n      \"must_not\": [\n        {\n          \"prefix\": {\n            \"attributes.http.route\": \"/health\"\n          }\n        }\n      ]\n    }\n  },\n  \"aggs\": {\n    \"err\": {\n      \"filter\": {\n        \"range\": {\n          \"attributes.http.response.status_code\": {\n            \"gte\": 500\n          }\n        }\n      }\n    },\n    \"lat\": {\n      \"percentiles\": {\n        \"field\": \"duration\",\n        \"percents\": [\n          95,\n          99\n        ]\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "const n = j.hits.total.value;",
+                  "const err = j.aggregations.err.doc_count;",
+                  "const p95 = j.aggregations.lat.values['95.0'] / 1e6;",
+                  "const p99 = j.aggregations.lat.values['99.0'] / 1e6;",
+                  "console.log('Bff.Api khi khoẻ: n=' + n + ' 5xx=' + err + ' p95=' + p95.toFixed(0) + 'ms p99=' + p99.toFixed(0) + 'ms');",
+                  "pm.test('có request thật và 0 lỗi 5xx', function () { pm.expect(n).to.be.above(0); pm.expect(err).to.equal(0); });",
+                  "pm.test('p95 ≤ 300 ms và p99 ≤ 800 ms (khớp manifest bff)', function () { pm.expect(p95).to.be.at.most(300); pm.expect(p99).to.be.at.most(800); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 [baskets TẮT] Gây suy giảm: GET giỏ hàng chờ 3 giây rồi lỗi (bất biến 4)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Chạy khi `baskets-api` đang TẮT (`docker compose -f docker-compose.local.yml stop baskets-api`). BFF trả 504/502 sau ~3 giây (spec 020). Script chờ ~20 giây cho span tới Elasticsearch."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"504/502\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([502, 504]);",
+                  "});",
+                  "setTimeout(function () {}, 20000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Đo lại Bff.Api: lỗi 5xx và p95 vượt ngưỡng hiện ngay (FR-007)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/traces-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "traces-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Cùng truy vấn bước 03, không thu thập lại thủ công: số đo phải phản ánh suy giảm ở bước 04 (5xx > 0, p95 > 800 ms) — chính là cái dashboard phải hiện đỏ.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Bff.Api\"\n          }\n        },\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"{{slo021StartMs}}\",\n              \"format\": \"epoch_millis\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"kind\": \"Server\"\n          }\n        }\n      ],\n      \"must_not\": [\n        {\n          \"prefix\": {\n            \"attributes.http.route\": \"/health\"\n          }\n        }\n      ]\n    }\n  },\n  \"aggs\": {\n    \"err\": {\n      \"filter\": {\n        \"range\": {\n          \"attributes.http.response.status_code\": {\n            \"gte\": 500\n          }\n        }\n      }\n    },\n    \"lat\": {\n      \"percentiles\": {\n        \"field\": \"duration\",\n        \"percents\": [\n          95,\n          99\n        ]\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "const n = j.hits.total.value;",
+                  "const err = j.aggregations.err.doc_count;",
+                  "const p95 = j.aggregations.lat.values['95.0'] / 1e6;",
+                  "const p99 = j.aggregations.lat.values['99.0'] / 1e6;",
+                  "console.log('Bff.Api khi baskets tắt: n=' + n + ' 5xx=' + err + ' p95=' + p95.toFixed(0) + 'ms p99=' + p99.toFixed(0) + 'ms');",
+                  "pm.test('có ít nhất 1 lỗi 5xx', function () { pm.expect(err).to.be.at.least(1); });",
+                  "pm.test('p95 vượt ngưỡng 300 ms (suy giảm nhìn thấy được)', function () { pm.expect(p95).to.be.above(300); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Idle: Orders.Api không có request người dùng — span probe vẫn có (phát hiện QA_Debt, FR-006)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/traces-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "traces-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Orders.Api không được gọi ở bước nào của folder này. Truy vấn 1 (mọi span Server, giống công thức dashboard): có span. Truy vấn 2 (bỏ `/health/*`): 0. Nghĩa là dashboard hiện số đo của service idle chỉ từ span probe (0% lỗi, ~1 ms) thay vì 'không có dữ liệu'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Orders.Api\"\n          }\n        },\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"{{slo021StartMs}}\",\n              \"format\": \"epoch_millis\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"kind\": \"Server\"\n          }\n        }\n      ]\n    }\n  },\n  \"aggs\": {\n    \"all\": {\n      \"filter\": {\n        \"match_all\": {}\n      }\n    },\n    \"real\": {\n      \"filter\": {\n        \"bool\": {\n          \"must_not\": [\n            {\n              \"prefix\": {\n                \"attributes.http.route\": \"/health\"\n              }\n            }\n          ]\n        }\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const a = pm.response.json().aggregations;",
+                  "console.log('Orders.Api idle: mọi span Server=' + a.all.doc_count + ', ngoài /health=' + a.real.doc_count);",
+                  "pm.test('CÓ span Server từ probe (dashboard sẽ tính 0% lỗi cho service idle)', function () { pm.expect(a.all.doc_count).to.be.above(0); });",
+                  "pm.test('KHÔNG có request người dùng thật (đúng ra dashboard phải là không có dữ liệu)', function () { pm.expect(a.real.doc_count).to.equal(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Khoảng thời gian trước khi hệ thống tồn tại → không có dữ liệu (bất biến 3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/traces-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "traces-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Cùng truy vấn nhưng trong cả năm 2020 (`1577836800000` → `1609459200000`): 0 span → dashboard hiển thị 'No results found'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Bff.Api\"\n          }\n        },\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"1577836800000\",\n              \"lt\": \"1609459200000\",\n              \"format\": \"epoch_millis\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"kind\": \"Server\"\n          }\n        }\n      ],\n      \"must_not\": [\n        {\n          \"prefix\": {\n            \"attributes.http.route\": \"/health\"\n          }\n        }\n      ]\n    }\n  },\n  \"aggs\": {\n    \"err\": {\n      \"filter\": {\n        \"range\": {\n          \"attributes.http.response.status_code\": {\n            \"gte\": 500\n          }\n        }\n      }\n    },\n    \"lat\": {\n      \"percentiles\": {\n        \"field\": \"duration\",\n        \"percents\": [\n          95,\n          99\n        ]\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "pm.test('0 span trong năm 2020', function () { pm.expect(pm.response.json().hits.total.value).to.equal(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 [baskets BẬT lại] GET giỏ hàng phục hồi",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Chạy SAU `docker compose -f docker-compose.local.yml start baskets-api`. Vài lần đầu có thể 502 (mạch breaker còn mở, spec 020) rồi 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "23 - Phân trang và chống N+1 (/bff/products)",
+      "description": "Kiểm chứng spec 023 trên hệ thống chạy thật, đi qua gateway. Điều kiện: đã gieo 500 sản phẩm tag `QA023-*` vào `products-db` (lệnh trong doc QA 023) — bước 01–07 và 17 phụ thuộc tổng số sản phẩm. Bước 09–13 kiểm render giỏ 2 dòng chỉ gọi Products đúng 1 lần và lọc theo ids (đọc span từ Elasticsearch theo correlation ID). Bước 14–17 ghi nhận hành vi hiện tại của đầu vào bất thường (phát hiện QA_Debt, không phải hành vi mong muốn). Cần token từ folder '00 - Xác thực & phân quyền'.",
+      "item": [
+        {
+          "name": "01 Không tham số: trang mặc định 20 dòng (FR-001, US1, SC-001)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Cần đã gieo ≥ 500 sản phẩm (xem doc QA 023). Không truyền `page`/`pageSize` → 20 dòng, không phải cả catalog."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "pm.test(\"20 dòng, page 1, totalCount ≥ 500\", function () {",
+                  "    pm.expect(j.items.length).to.equal(20);",
+                  "    pm.expect(j.pageSize).to.equal(20);",
+                  "    pm.expect(j.page).to.equal(1);",
+                  "    pm.expect(j.totalCount).to.be.at.least(500);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 pageSize=1000000 bị ép trần 100 (FR-004, US3, SC-003)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?pageSize=1000000",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "1000000"
+                }
+              ]
+            },
+            "description": "Server ép về `MaxPageSize = 100`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "pm.test(\"100 dòng\", function () {",
+                  "    pm.expect(j.items.length).to.equal(100);",
+                  "    pm.expect(j.pageSize).to.equal(100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 pageSize=0 → mặc định 20 (US3-KB3)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?pageSize=0",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Giá trị không hợp lệ quay về mặc định."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "pm.test(\"20 dòng\", function () {",
+                  "    pm.expect(j.items.length).to.equal(20);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 pageSize=-5 → mặc định 20 (US3-KB3)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?pageSize=-5",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "-5"
+                }
+              ]
+            },
+            "description": "Giá trị âm quay về mặc định."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "pm.test(\"20 dòng\", function () {",
+                  "    pm.expect(j.items.length).to.equal(20);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Trang cuối: page=6&pageSize=100",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?page=6&pageSize=100",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "6"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Với 503 sản phẩm: trang 6 có 3 dòng còn lại (kiểm bằng totalCount − 500, tối đa 100)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "pm.test(\"số dòng = totalCount − 500\", function () {",
+                  "    const expected = Math.max(0, Math.min(100, j.totalCount - 500));",
+                  "    pm.expect(j.items.length).to.equal(expected);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 page=999 → rỗng",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?page=999",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "999"
+                }
+              ]
+            },
+            "description": "Vượt tổng số trang: mảng rỗng, không lỗi."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "pm.test(\"0 dòng\", function () {",
+                  "    pm.expect(j.items.length).to.equal(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 page=0 → chuẩn hoá về trang 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?page=0",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "`page` < 1 quay về 1."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "pm.test(\"page 1, 20 dòng\", function () {",
+                  "    pm.expect(j.page).to.equal(1);",
+                  "    pm.expect(j.items.length).to.equal(20);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 Bộ lọc ids gọi thẳng Products: đúng 3 sản phẩm được hỏi (US2, Decision 4)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{productsUrl}}/products?ids=9f8d6b1e-0001-4000-8000-000000000001,9f8d6b1e-0001-4000-8000-000000000002,9f8d6b1e-0001-4000-8000-000000000003",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "9f8d6b1e-0001-4000-8000-000000000001,9f8d6b1e-0001-4000-8000-000000000002,9f8d6b1e-0001-4000-8000-000000000003"
+                }
+              ]
+            },
+            "description": "`GET /products?ids=…` (gọi thẳng products-api, vì route công khai `/bff/products` không chuyển tiếp `ids`) chỉ trả những id được hỏi, không phải cả catalog."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"đúng 3 dòng\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().items.length).to.equal(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "09 Dọn giỏ trước khi thử render",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{n1Sub}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Gọi thẳng baskets-api với `X-Subject-Id` = `sub` của token (giỏ của người dùng Postman). `204` khi đã dọn, `409` nếu giỏ đã rỗng."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = pm.variables.get('accessToken').split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "pm.collectionVariables.set('n1Sub', JSON.parse(CryptoJS.enc.Base64.parse(payload).toString(CryptoJS.enc.Utf8)).sub);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204 hoặc 409 (đã rỗng)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10a Thêm sổ tay vào giỏ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Dòng 1 của giỏ.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10b Thêm tạp dề vào giỏ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Dòng 2 của giỏ (sản phẩm khác).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000003\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200/201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 Render giỏ 2 dòng qua BFF (US2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket"
+              ]
+            },
+            "description": "Render giỏ 2 dòng: BFF phải gọi Products đúng 1 lần cho cả giỏ. Script chờ ~20 giây cho span tới Elasticsearch."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cid = 'qa023-' + Date.now();",
+                  "pm.collectionVariables.set('n1Cid', cid);",
+                  "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: cid });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, 2 dòng đều có tên sản phẩm\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j.items.length).to.equal(2);",
+                  "    j.items.forEach(function (l) { pm.expect(l.name).to.be.a('string').and.not.empty; });",
+                  "});",
+                  "setTimeout(function () {}, 20000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "12 Elasticsearch: đúng 1 span GET /products, lọc theo ids (không over-fetch)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/traces-generic.otel-default*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "traces-generic.otel-default*",
+                "_search"
+              ]
+            },
+            "description": "Span Server của Products.Api cho correlation ID của bước 11: đúng 1 span và `url.query` bắt đầu bằng `?ids=` (đã lọc theo id của giỏ, không kéo cả trang catalog). Bắt được cả lỗi over-fetch mà unit test không thấy (xem QA_Debt).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 5,\n  \"track_total_hits\": true,\n  \"_source\": [\n    \"attributes.url.query\"\n  ],\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"attributes.correlation.id\": \"{{n1Cid}}\"\n          }\n        },\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Products.Api\"\n          }\n        },\n        {\n          \"term\": {\n            \"name\": \"GET /products\"\n          }\n        }\n      ]\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const j = pm.response.json();",
+                  "pm.test('đúng 1 span GET /products cho giỏ', function () { pm.expect(j.hits.total.value).to.equal(1); });",
+                  "pm.test('truy vấn lọc theo ids, không lấy cả trang catalog', function () { pm.expect(j.hits.hits[0]._source.attributes['url.query']).to.match(/^\\?ids=/); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "13 Dọn giỏ sau khi thử",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              },
+              {
+                "key": "X-Subject-Id",
+                "value": "{{n1Sub}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{basketsUrl}}/baskets/current/clear",
+              "host": [
+                "{{basketsUrl}}"
+              ],
+              "path": [
+                "baskets",
+                "current",
+                "clear"
+              ]
+            },
+            "description": "Trả giỏ về rỗng (giỏ đang có 2 dòng nên phải `204`)."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const payload = pm.variables.get('accessToken').split('.')[1].replace(/-/g, '+').replace(/_/g, '/');",
+                  "pm.collectionVariables.set('n1Sub', JSON.parse(CryptoJS.enc.Base64.parse(payload).toString(CryptoJS.enc.Utf8)).sub);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "14 [phát hiện QA_Debt] pageSize=abc → hiện 500, đáng ra 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?pageSize=abc",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "abc"
+                }
+              ]
+            },
+            "description": "Đầu vào không phải số: `BadHttpRequestException` bị exception handler biến thành 500. Ghi nhận hành vi hiện tại."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"hiện trả 500 (đang ghi nhận, không phải hành vi mong muốn)\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(500);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "15 [phát hiện QA_Debt] pageSize=99999999999 → hiện 500, đáng ra 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?pageSize=99999999999",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "99999999999"
+                }
+              ]
+            },
+            "description": "Số vượt `int`: cùng lỗi bind → 500."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"hiện trả 500 (đang ghi nhận, không phải hành vi mong muốn)\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(500);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "16 [phát hiện QA_Debt] page=2147483647 → hiện 502 (OFFSET âm ở Products)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?page=2147483647&pageSize=100",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2147483647"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "`(page − 1) * pageSize` tràn `int` → `OFFSET` âm → Products 500 → BFF retry GET 2 lần (spec 020) → 502."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"hiện trả 502 (đang ghi nhận, không phải hành vi mong muốn)\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(502);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17a Thu 100 id của trang 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?page=1&pageSize=100",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Chuẩn bị cho bước 17c."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"100 dòng\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().items.length).to.equal(100);",
+                  "    pm.collectionVariables.set('n1Ids1', pm.response.json().items.map(function (i) { return i.id; }).join(','));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17b Thu 100 id của trang 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products?page=2&pageSize=100",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Chuẩn bị cho bước 17c."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"100 dòng\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().items.length).to.equal(100);",
+                  "    pm.collectionVariables.set('n1Ids2', pm.response.json().items.map(function (i) { return i.id; }).join(','));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "17c [phát hiện QA_Debt] ids 200 giá trị → trả đủ 200, không bị ép trần 100",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Tenant-Id",
+                "value": "{{tenantId}}"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{productsUrl}}/products?ids={{n1Ids1}},{{n1Ids2}}",
+              "host": [
+                "{{productsUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "ids",
+                  "value": "{{n1Ids1}},{{n1Ids2}}"
+                }
+              ]
+            },
+            "description": "Nhánh `ids` không áp `MaxPageSize`: hỏi 200 id trả 200 dòng (nhánh `ids` chỉ do BFF nội bộ gọi, nhưng Products có thể bị gọi thẳng)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"hiện trả đủ 200 dòng (vượt trần 100)\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().items.length).to.equal(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "24 - Outbox giao dịch (broker sập / kill orders-api)",
+      "description": "Kiểm chứng spec 024 (transactional outbox) trên hệ thống chạy thật, bằng công tắc hạ tầng — không sửa mã. Cần RabbitMQ management (`rabbitmqUrl`) và công tắc `ORDERS_RABBITMQ_CONNECTION` BẬT (`amqp://guest:guest@rabbitmq:5672` trong .env, rồi `docker compose -f docker-compose.local.yml up -d --force-recreate orders-api`). Chạy lần lượt 3 folder con: 24a (broker BẬT) → `docker compose -f docker-compose.local.yml stop rabbitmq` → 24b → (tuỳ chọn: `docker kill ecomerce-local-orders-api-1`) → `docker compose -f docker-compose.local.yml start rabbitmq orders-api` → 24c. Cần token ở folder '00 - Xác thực & phân quyền'.",
+      "item": [
+        {
+          "name": "24a - Chuẩn bị (RabbitMQ BẬT)",
+          "description": "Chạy khi RabbitMQ và orders-api đang chạy (công tắc `ORDERS_RABBITMQ_CONNECTION` BẬT). Tạo queue BỀN để hứng bản sao mọi `OrderPlacedV1` — queue bền + binding còn nguyên sau khi broker dừng/khởi động lại.",
+          "item": [
+            {
+              "name": "01 Tạo queue bền qa024-orderplaced",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitmqUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitmqPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{rabbitmqUrl}}/api/queues/%2F/qa024-orderplaced",
+                  "host": [
+                    "{{rabbitmqUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queues",
+                    "%2F",
+                    "qa024-orderplaced"
+                  ]
+                },
+                "description": "Queue bền, không tự xoá.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"durable\": true,\n  \"auto_delete\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"201/204\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([201, 204]);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Nối queue vào exchange OrderPlacedV1",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitmqUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitmqPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{rabbitmqUrl}}/api/bindings/%2F/e/EventContracts:OrderPlacedV1/q/qa024-orderplaced",
+                  "host": [
+                    "{{rabbitmqUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "bindings",
+                    "%2F",
+                    "e",
+                    "EventContracts:OrderPlacedV1",
+                    "q",
+                    "qa024-orderplaced"
+                  ]
+                },
+                "description": "Exchange này chỉ tồn tại khi orders-api đã từng kết nối RabbitMQ; 404 nghĩa là công tắc đang TẮT.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"routing_key\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 Làm ấm orders-api: đặt 1 đơn khi broker BẬT",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/orders",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "orders"
+                  ]
+                },
+                "description": "Đơn đầu tiên sau khi khởi động luôn chậm (nối DB/EF lạnh); đặt 1 đơn ở đây để bước đo FR-007 ở 24b không dính độ trễ khởi động. Script chờ ~4 giây cho outbox giao message.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"unitPrice\": 12.5\n    },\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000003\",\n      \"quantity\": 1,\n      \"unitPrice\": 34.25\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"201\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "setTimeout(function () {}, 4000);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "04 Làm sạch queue (rút hết message của đơn làm ấm)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitmqUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitmqPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{rabbitmqUrl}}/api/queues/%2F/qa024-orderplaced/get",
+                  "host": [
+                    "{{rabbitmqUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queues",
+                    "%2F",
+                    "qa024-orderplaced",
+                    "get"
+                  ]
+                },
+                "description": "Đảm bảo queue trống trước khi thử.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"count\": 500,\n  \"ackmode\": \"ack_requeue_false\",\n  \"encoding\": \"auto\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 và có message của đơn làm ấm (broker BẬT nên đã được giao)\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.json().length).to.be.at.least(1);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "24b - Đặt đơn (RabbitMQ TẮT)",
+          "description": "Chạy SAU `docker compose -f docker-compose.local.yml stop rabbitmq`. Đơn phải được nhận nhanh dù broker không tới được (FR-007) — message nằm lại trong bảng outbox.",
+          "item": [
+            {
+              "name": "01 [broker TẮT] POST /orders vẫn 201 và nhanh (FR-007)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/orders",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "orders"
+                  ]
+                },
+                "description": "Đặt đơn trực tiếp ở orders (2 Notebook + 1 Apron = 59.25). Không phụ thuộc broker nên phải `201` trong < 1500 ms.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"unitPrice\": 12.5\n    },\n    {\n      \"productId\": \"9f8d6b1e-0001-4000-8000-000000000003\",\n      \"quantity\": 1,\n      \"unitPrice\": 34.25\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.request.headers.upsert({ key: 'X-Correlation-Id', value: 'qa024-' + Date.now() });"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"201 và dưới 1500 ms\", function () {",
+                      "    pm.response.to.have.status(201);",
+                      "    pm.expect(pm.response.responseTime).to.be.below(1500);",
+                      "});",
+                      "pm.environment.set('event024OrderId', pm.response.json().id);",
+                      "pm.environment.set('event024CorrelationId', pm.request.headers.get('X-Correlation-Id'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "24c - Kiểm kết quả (RabbitMQ BẬT lại)",
+          "description": "Chạy SAU khi RabbitMQ (và, nếu thử kịch bản sập, orders-api) đã chạy lại. Bước 01 chờ ~30 giây cho outbox delivery service kết nối lại và giao bản ghi kẹt.",
+          "item": [
+            {
+              "name": "01 Chờ broker sẵn sàng và outbox giao",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitmqUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitmqPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{rabbitmqUrl}}/api/overview",
+                  "host": [
+                    "{{rabbitmqUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "overview"
+                  ]
+                },
+                "description": "Chờ ~30 giây (MassTransit kết nối lại + chu kỳ quét outbox)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "setTimeout(function () {}, 30000);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Message OrderPlaced của đơn đã đặt lúc broker TẮT được giao đúng 1 lần",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitmqUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitmqPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{rabbitmqUrl}}/api/queues/%2F/qa024-orderplaced/get",
+                  "host": [
+                    "{{rabbitmqUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queues",
+                    "%2F",
+                    "qa024-orderplaced",
+                    "get"
+                  ]
+                },
+                "description": "Rút message khỏi queue bền, tìm theo `orderId` của bước 24b/01.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"count\": 100,\n  \"ackmode\": \"ack_requeue_false\",\n  \"encoding\": \"auto\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.response.to.have.status(200);",
+                      "const orderId = pm.environment.get('event024OrderId');",
+                      "const cid = pm.environment.get('event024CorrelationId');",
+                      "const found = pm.response.json().map(function (m) { return JSON.parse(m.payload); }).filter(function (e) { return e.message && e.message.orderId === orderId; });",
+                      "pm.test('đúng 1 message cho đơn đã đặt lúc broker TẮT (không mất, không trùng)', function () { pm.expect(found.length).to.equal(1); });",
+                      "pm.test('correlationId trong payload đúng X-Correlation-Id của request đặt đơn', function () { pm.expect(found[0].message.correlationId).to.equal(cid); });",
+                      "pm.test('tổng 59.25 (payload để dạng chuỗi — phát hiện QA_Debt 008) và lines đủ 2 dòng', function () { pm.expect(Number(found[0].message.total)).to.equal(59.25); pm.expect(found[0].message.lines.length).to.equal(2); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 Dọn dẹp — xoá queue qa024-orderplaced",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "auth": {
+                  "type": "basic",
+                  "basic": [
+                    {
+                      "key": "username",
+                      "value": "{{rabbitmqUser}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{rabbitmqPassword}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{rabbitmqUrl}}/api/queues/%2F/qa024-orderplaced",
+                  "host": [
+                    "{{rabbitmqUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queues",
+                    "%2F",
+                    "qa024-orderplaced"
+                  ]
+                },
+                "description": "Xoá queue tạm."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"204\", function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([204, 404]);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "25 - Diễn tập chaos: tiêm độ trễ orders-api",
+      "description": "Kiểm chứng spec 025 (phần tiêm độ trễ, US2) trên hệ thống chạy thật bằng công tắc `CHAOS_ALLOW_LATENCY_INJECTION` (.env): chạy `25a` khi cờ TẮT (mặc định), đổi cờ thành `true` + tạo lại `orders-api`, rồi chạy `25b`. Cần Elasticsearch + otel-collector cho bước 10 và token ở folder '00 - Xác thực & phân quyền'. Phần kill-pod (US1) chạy trên Kubernetes bằng `kubectl` — xem doc QA 025.",
+      "item": [
+        {
+          "name": "25a - Cờ TẮT (mặc định)",
+          "description": "Chạy khi `CHAOS_ALLOW_LATENCY_INJECTION` không khai báo hoặc `false` (mặc định). Header `X-Chaos-Latency-Ms` phải bị bỏ qua hoàn toàn (bất biến 1).",
+          "item": [
+            {
+              "name": "01 [cờ TẮT] Header 2000 bị bỏ qua — phản hồi nhanh (bất biến 1)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "2000"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "`GET orders /health/live` với `X-Chaos-Latency-Ms: 2000` khi cờ tắt: không trễ."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "25b - Cờ BẬT",
+          "description": "Chạy SAU khi đặt `CHAOS_ALLOW_LATENCY_INJECTION=true` trong `.env` rồi `docker compose -f docker-compose.local.yml up -d --force-recreate --no-deps orders-api` và chờ healthy. Bước 06 mất ~30 giây (trần an toàn). Bước 10 chờ ~20 giây cho span tới Elasticsearch.",
+          "item": [
+            {
+              "name": "01 [cờ BẬT] Header 2000 → trễ đúng ~2 giây (FR-002, US2)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "2000"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Trễ khoảng 2000 ms rồi trả 200 như thường."
+              },
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('slo025StartMs', String(Date.now()));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 sau 1,9–4 giây\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.responseTime).to.be.within(1900, 4000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 [cờ BẬT] Header không phải số (abc) → coi như vắng (bất biến 3)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "abc"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Không trễ."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 [cờ BẬT] Header 0 → coi như vắng",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "0"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Giá trị ≤ 0 coi như vắng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "04 [cờ BẬT] Header -5 → coi như vắng",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "-5"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Giá trị âm coi như vắng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "05 [cờ BẬT] Header 1.5 → coi như vắng",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "1.5"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Không phải số nguyên coi như vắng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "06 [cờ BẬT] Header 40000 → kẹp trần 30 giây (bất biến 4)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "40000"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Kẹp về 30 000 ms: trễ ~30 giây, không phải 40."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 sau 29–33 giây\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.responseTime).to.be.within(29000, 33000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "07 [cờ BẬT] Không token vẫn trễ TRƯỚC xác thực rồi 401 (bất biến 5, 6)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "2000"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/orders/11111111-2222-3333-4444-555555555555",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "11111111-2222-3333-4444-555555555555"
+                  ]
+                },
+                "description": "`GET /orders/{id}` không token: middleware chạy trước xác thực nên vẫn trễ ~2 giây, rồi phản hồi đúng như cũ (`401`)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"401 sau 1,9–4 giây\", function () {",
+                      "    pm.response.to.have.status(401);",
+                      "    pm.expect(pm.response.responseTime).to.be.within(1900, 4000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "08 [cờ BẬT] Qua gateway/BFF: header KHÔNG được chuyển tiếp nên không trễ (phát hiện QA_Debt)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "2000"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/orders/11111111-2222-3333-4444-555555555555",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "orders",
+                    "11111111-2222-3333-4444-555555555555"
+                  ]
+                },
+                "description": "`GET gateway /bff/orders/{id}` + `X-Chaos-Latency-Ms: 2000`: header không tới orders-api nên phản hồi vẫn nhanh (`404` đơn không tồn tại). Vì vậy không thể làm BFF timeout/mở breaker bằng công cụ này."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"404 và dưới 1000 ms (header không được chuyển tiếp)\", function () {",
+                      "    pm.response.to.have.status(404);",
+                      "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "09 [cờ BẬT] Header 2500 (tạo thêm span chậm cho SLO)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "2500"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Thêm 1 span > 2 giây."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 sau 2,4–4,5 giây\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "    pm.expect(pm.response.responseTime).to.be.within(2400, 4500);",
+                      "});",
+                      "setTimeout(function () {}, 20000);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10 Elasticsearch: các span chậm hiện ở Orders.Api ngay sau đó (Bước 3 quickstart)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/traces-generic.otel-default*/_search",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "traces-generic.otel-default*",
+                    "_search"
+                  ]
+                },
+                "description": "Đếm span Server của `Orders.Api` từ mốc bước 01 có `duration ≥ 2 giây`: gồm bước 01, 06, 07, 09 (≥ 4). Cùng dữ liệu dashboard SLO (021) đọc.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Orders.Api\"\n          }\n        },\n        {\n          \"term\": {\n            \"kind\": \"Server\"\n          }\n        },\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"{{slo025StartMs}}\",\n              \"format\": \"epoch_millis\"\n            }\n          }\n        },\n        {\n          \"range\": {\n            \"duration\": {\n              \"gte\": 2000000000\n            }\n          }\n        }\n      ]\n    }\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.response.to.have.status(200);",
+                      "const n = pm.response.json().hits.total.value;",
+                      "console.log('span Orders.Api >= 2 giây từ mốc: ' + n);",
+                      "pm.test('có ít nhất 4 span chậm ≥ 2 giây', function () { pm.expect(n).to.be.at.least(4); });",
+                      "setTimeout(function () {}, 1000);"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "26 - Ngân sách hiệu năng luồng trọng yếu (browse → giỏ → checkout → đơn)",
+      "description": "Kiểm chứng spec 026 (SCRUM-32) bằng Runner: chạy folder này với **30 vòng lặp** (Iterations = 30, vòng đầu là làm ấm) — mỗi request có assertion `responseTime` < 300 ms (ngân sách p95 của `client-facing-bff`, manifest bff). Đỏ ở bước nào thì bước đó vượt ngân sách. Công tắc suy giảm hạ tầng (không sửa mã): `docker update --cpus 0.1 ecomerce-local-baskets-api-1` (giảm CPU của baskets) và `docker update --cpus 0 ...` (bỏ giới hạn). Mỗi vòng tạo 1 đơn hàng — dọn bằng `DELETE FROM Orders WHERE PlacedAtUtc >= ...` trong orders-db (xem doc QA 026). Cần token ở folder '00 - Xác thực & phân quyền'.",
+      "item": [
+        {
+          "name": "00 Dọn giỏ (không tính vào ngân sách)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/checkout",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "checkout"
+              ]
+            },
+            "description": "Giống NBomber: mỗi vòng bắt đầu bằng 1 lần `POST /bff/checkout` để dọn giỏ còn sót; mã trạng thái không quan trọng (409 khi giỏ rỗng)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"phản hồi có mã trạng thái\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01 Duyệt sản phẩm — GET /bff/products (ngân sách p95 ≤ 300 ms)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/products",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "products"
+              ]
+            },
+            "description": "Bước 1 của luồng trọng yếu. Ngân sách `client-facing-bff`: p95 ≤ 300 ms, p99 ≤ 800 ms (manifest bff)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và dưới 300 ms\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.responseTime).to.be.below(300);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Thêm vào giỏ — POST /bff/basket/items (p95 ≤ 300 ms)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/basket/items",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "basket",
+                "items"
+              ]
+            },
+            "description": "Bước 2: thêm 1 sổ tay vào giỏ.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200/201 và dưới 300 ms\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "    pm.expect(pm.response.responseTime).to.be.below(300);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 Thanh toán — POST /bff/checkout (p95 ≤ 300 ms)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/checkout",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "checkout"
+              ]
+            },
+            "description": "Bước 3: tạo đơn từ giỏ. Lưu mã đơn cho bước 04."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 và dưới 300 ms\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "    pm.expect(pm.response.responseTime).to.be.below(300);",
+                  "});",
+                  "pm.collectionVariables.set('load026OrderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Xem đơn — GET /bff/orders/{id} (p95 ≤ 300 ms)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/orders/{{load026OrderId}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "orders",
+                "{{load026OrderId}}"
+              ]
+            },
+            "description": "Bước 4: đọc lại đơn vừa tạo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 và dưới 300 ms\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.responseTime).to.be.below(300);",
                   "});"
                 ]
               }
