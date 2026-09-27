@@ -40,7 +40,7 @@ docker compose -f docker-compose.local.yml up -d --wait gateway-api storefront
 ```
 
 Lệnh trên kéo theo `bff-api`, cả 4 domain service, `identity-api` và DB; `storefront` chạy ở `http://localhost:4173` (`--build` nếu cần image storefront/identity mới).
-Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) + [`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn **Ecommerce - Local**, chạy `00 - Xác thực & phân quyền (Get Token) → 01`, rồi folder **`00 - Smoke Flow`** (đúng luồng SPA gọi: xem sản phẩm → thêm giỏ ×3 → xem giỏ → đặt hàng → đọc đơn → giỏ rỗng → đặt lần hai bị từ chối).
+Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) + [`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), chọn **Ecommerce - Local**, chạy `00 - Xác thực & phân quyền (Get Token) → 01`, rồi folder **`00 - Smoke Flow`** (đúng luồng SPA gọi: xem sản phẩm → thêm giỏ ×3 → xem giỏ → đặt hàng → đọc đơn → giỏ rỗng → đặt lần hai bị từ chối) — cũng có thể chạy bản sao đánh số **`04 - SPA mua sắm tối thiểu (luồng backend của walkthrough)`**. Phần đăng nhập/giao diện chỉ kiểm được bằng trình duyệt thật, không có trong Postman.
 
 **Công tắc** (hạ tầng, không sửa mã): `docker compose -f docker-compose.local.yml stop products-api` / `start products-api` (trạng thái lỗi của catalog); đăng nhập bằng `postman-test@local.test` + `TestUserPassword` trong `.env`.
 

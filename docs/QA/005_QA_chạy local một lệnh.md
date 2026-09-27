@@ -27,6 +27,8 @@ cho từng service riêng lẻ ở các spec trước). Kịch bản thủ công
 
 ### Thủ công — chạy đúng như spec mô tả
 
+Sau khi `up.ps1` xong, folder Postman đánh số **`05 - Chạy local một lệnh (smoke sau khi up.ps1)`** (2 request: gateway + BFF health live) cho một smoke check nhanh trước khi đi tiếp các bước đo bằng tay dưới đây — bản thân script `up/down/reset` không đo được qua Postman.
+
 Điều kiện: Docker Desktop cấp ≥ 6 GB (máy QA: 15.5 GB) và `.env` tạo bằng `cp .env.example .env`. Lưu ý: `.env`
 cũ (tạo trước spec 014) có thể chỉ có `MSSQL_SA_PASSWORD`; khi đó thiếu `ClientSecret`/`TestUserPassword` nên
 không có mật khẩu để đăng nhập storefront và bước làm nóng bị bỏ qua (xem [QA_Debt.md](QA_Debt.md)).

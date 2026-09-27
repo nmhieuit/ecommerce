@@ -36,7 +36,7 @@ bước bên dưới, không cần soạn lại.
 
 ### Thủ công — tắt/bật database rồi bấm Postman (US1, SC-001, SC-002)
 
-Lặp lại cho **từng** service (folder Postman `Party` / `Product` / `Basket` / `Order`; cổng `5204` / `5088` / `5188` / `5041`). Dựng riêng từng service:
+Lặp lại cho **từng** service (folder Postman `Party` / `Product` / `Basket` / `Order`; cổng `5204` / `5088` / `5188` / `5041`), hoặc chạy gọn cả 8 request bằng folder đánh số **`01 - Dựng khung 4 dịch vụ`** (bản sao đúng 2 request Health live/ready của mỗi service, không cần token). Dựng riêng từng service:
 
 ```bash
 cp .env.example .env   # chỉ cần 1 lần cho cả repo

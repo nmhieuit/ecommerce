@@ -29,6 +29,8 @@ phần thủ công chạy chính script đó thay vì `docker-compose.local.yml`
 ./scripts/demo.ps1            # hoặc demo.sh — đưa stack vào demo mode, dọn giỏ, chạy walkthrough, xác minh, thu bằng chứng
 ```
 
+Vì `demo.ps1` hiện FAIL trước khi đặt được đơn nào (401, xem bảng dưới), phần US2 (quy thuộc tenant) được kiểm thay bằng folder Postman đánh số **`06 - Demo đặt hàng end-to-end (phần backend: tenant trên đơn)`** (3 request, cần token).
+
 | Bước (quickstart) | Cách làm | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
 |---|---|---|---|
 | Scenario 1 — demo một lệnh (US1, FR-001…004, SC-001/002) | `./scripts/demo.ps1` trên máy đã có `.env` đầy đủ, stack dựng sẵn được | `exit 0`, in mã đơn + $59.25 + tenant; 4 ảnh mới; 1 file `.webm` | **Không đổi — vẫn FAIL**: dừng ở "Clearing the basket..." → "Cannot run the demo: the basket could not be cleared (HTTP 401)…", `exit 1` sau **152 giây** |
