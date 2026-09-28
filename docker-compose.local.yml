@@ -38,14 +38,14 @@
 #   orders-api          5041 → 8080      http://localhost:5041/health/ready
 #   parties-api         5204 → 8080      http://localhost:5204/health/ready
 #   identity-api        5205 → 8080      http://localhost:5205/health/ready
-#   parties-db         14330 → 1433      sa / $MSSQL_SA_PASSWORD
-#   products-db        14331 → 1433      sa / $MSSQL_SA_PASSWORD
-#   baskets-db         14332 → 1433      sa / $MSSQL_SA_PASSWORD
-#   orders-db          14333 → 1433      sa / $MSSQL_SA_PASSWORD
-#   identity-db        14334 → 1433      sa / $MSSQL_SA_PASSWORD
+#   parties-db         14330 → 1433      $SQLSERVER_USER / $MSSQL_SA_PASSWORD
+#   products-db        14331 → 1433      $SQLSERVER_USER / $MSSQL_SA_PASSWORD
+#   baskets-db         14332 → 1433      $SQLSERVER_USER / $MSSQL_SA_PASSWORD
+#   orders-db          14333 → 1433      $SQLSERVER_USER / $MSSQL_SA_PASSWORD
+#   identity-db        14334 → 1433      $SQLSERVER_USER / $MSSQL_SA_PASSWORD
 #   redis               6379 → 6379
 #   rabbitmq            5672 → 5672      broker
-#   rabbitmq           15672 → 15672     management UI, guest/guest
+#   rabbitmq           15672 → 15672     management UI, $RABBITMQ_USER / $RABBITMQ_PASSWORD
 #   otel-collector      4317 → 4317      OTLP gRPC
 #   otel-collector      4318 → 4318      OTLP HTTP
 #   elasticsearch       9200 → 9200      http://localhost:9200 (017-otel-servicedefaults-elastic)
@@ -170,6 +170,11 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
+    environment:
+      # Tài khoản broker và management UI lấy từ .env (Vùng 1 user / Vùng 2 password) thay vì ngầm
+      # dùng guest/guest mặc định của image. Chỉ có tác dụng khi volume còn trống (lần khởi tạo đầu).
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?copy .env.example to .env before starting}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -182,8 +187,9 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
-    # Also unused by any service. The management UI on 15672 takes the image defaults, guest/guest,
-    # which is why docker-compose.yml keeps it behind an override — and why this file is for local
+    # orders-api connects only when ORDERS_RABBITMQ_CONNECTION is set (see orders-api below). The
+    # management UI on 15672 signs in with $RABBITMQ_USER / $RABBITMQ_PASSWORD, which is why
+    # docker-compose.yml keeps it behind an override — and why this file is for local
     # experimentation only.
 
   # Backend for the collector below (017-otel-servicedefaults-elastic). Single-node, security
@@ -196,7 +202,7 @@ services:
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ES_JAVA_OPTS: ${ELASTICSEARCH_JAVA_OPTS:--Xms512m -Xmx512m}
     ports:
       - "9200:9200"
     volumes:
@@ -212,7 +218,7 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:9.4.4
     environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
     ports:
       - "5601:5601"
     networks: [backbone]
@@ -257,6 +263,10 @@ services:
   # database exists by opening a connection, and that can fail transiently while SQL Server
   # finishes recovery, after which EF tries to CREATE a database that is already there (error
   # 1801). Applying migrations is idempotent, so re-running is the correct response.
+  #
+  # Mọi thành phần của connection string đến từ .env: *_DB_HOST/*_DB_NAME/SQLSERVER_USER/
+  # SQLSERVER_CONNECTION_OPTIONS (Vùng 1) và MSSQL_SA_PASSWORD (Vùng 2). *_DB_HOST chỉ file này
+  # dùng (1 server/service); docker-compose.yml dùng SQLSERVER_HOST (1 server chung).
   products-migrate:
     restart: on-failure:3
     build: &products-build
@@ -264,7 +274,7 @@ services:
       dockerfile: services/products/src/Products.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__ProductsDb: Server=products-db;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__ProductsDb: Server=${PRODUCTS_DB_HOST:-products-db};Database=${PRODUCTS_DB_NAME:-products};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
     networks: [backbone]
     depends_on:
       products-db:
@@ -277,7 +287,7 @@ services:
       dockerfile: services/baskets/src/Baskets.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__BasketsDb: Server=baskets-db;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__BasketsDb: Server=${BASKETS_DB_HOST:-baskets-db};Database=${BASKETS_DB_NAME:-baskets};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
     networks: [backbone]
     depends_on:
       baskets-db:
@@ -290,7 +300,7 @@ services:
       dockerfile: services/orders/src/Orders.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__OrdersDb: Server=orders-db;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__OrdersDb: Server=${ORDERS_DB_HOST:-orders-db};Database=${ORDERS_DB_NAME:-orders};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
     networks: [backbone]
     depends_on:
       orders-db:
@@ -303,7 +313,7 @@ services:
       dockerfile: services/parties/src/Parties.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__PartiesDb: Server=parties-db;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__PartiesDb: Server=${PARTIES_DB_HOST:-parties-db};Database=${PARTIES_DB_NAME:-parties};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
     networks: [backbone]
     depends_on:
       parties-db:
@@ -327,13 +337,14 @@ services:
       dockerfile: services/identity/src/Identity.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__IdentityDb: Server=identity-db;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__IdentityDb: Server=${IDENTITY_DB_HOST:-identity-db};Database=${IDENTITY_DB_NAME:-identity};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
       ClientSecret: ${ClientSecret:-}
       TestUserPassword: ${TestUserPassword:-}
       # Registers the storefront's password sign-in client (Config.SpaPasswordClient) — the only
       # way the SPA's login form can get a token until an interactive login page exists. Local
-      # stack only: docker-compose.yml and every real deployment leave this unset.
-      SpaPasswordClient__Enabled: "true"
+      # and one-command stacks only (IDENTITY_SPA_PASSWORD_CLIENT_ENABLED); every real deployment
+      # leaves this unset.
+      SpaPasswordClient__Enabled: ${IDENTITY_SPA_PASSWORD_CLIENT_ENABLED:-true}
     networks: [backbone]
     depends_on:
       identity-db:
@@ -365,11 +376,11 @@ services:
     # credential is itself the violation, whether or not it is used (constitution Principle I —
     # the rule tests/CrossServiceIsolation.Tests enforces against configuration).
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__ProductsDb: ${PRODUCTS_DB_CONNECTION:-Server=products-db;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0}
-      Identity__Authority: http://identity-api:8080
+      ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__ProductsDb: ${PRODUCTS_DB_CONNECTION:-Server=${PRODUCTS_DB_HOST:-products-db};Database=${PRODUCTS_DB_NAME:-products};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
+      Identity__Authority: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
     ports:
       - "5088:8080"
     networks: [backbone]
@@ -385,11 +396,11 @@ services:
       <<: *baskets-build
       target: final
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__BasketsDb: ${BASKETS_DB_CONNECTION:-Server=baskets-db;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0}
-      Identity__Authority: http://identity-api:8080
+      ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__BasketsDb: ${BASKETS_DB_CONNECTION:-Server=${BASKETS_DB_HOST:-baskets-db};Database=${BASKETS_DB_NAME:-baskets};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
+      Identity__Authority: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
     ports:
       - "5188:8080"
     networks: [backbone]
@@ -405,16 +416,16 @@ services:
       <<: *orders-build
       target: final
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__OrdersDb: ${ORDERS_DB_CONNECTION:-Server=orders-db;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0}
+      ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__OrdersDb: ${ORDERS_DB_CONNECTION:-Server=${ORDERS_DB_HOST:-orders-db};Database=${ORDERS_DB_NAME:-orders};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
       # 024/008: công tắc kết nối RabbitMQ của outbox. Mặc định TRỐNG = hành vi cũ (không cấu hình → rơi về localhost,
-      # outbox không giao được). Đặt ORDERS_RABBITMQ_CONNECTION=amqp://guest:guest@rabbitmq:5672 trong .env để BẬT.
+      # outbox không giao được). Bỏ comment dòng ORDERS_RABBITMQ_CONNECTION trong .env để BẬT (xem .env.example).
       ConnectionStrings__RabbitMq: ${ORDERS_RABBITMQ_CONNECTION:-}
-      Identity__Authority: http://identity-api:8080
+      Identity__Authority: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       # 025: công tắc tiêm độ trễ chaos (mặc định false = tắt; bật để diễn tập, KHÔNG dùng ở môi trường thật).
       Chaos__AllowLatencyInjection: ${CHAOS_ALLOW_LATENCY_INJECTION:-false}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
     ports:
       - "5041:8080"
     networks: [backbone]
@@ -430,11 +441,11 @@ services:
       <<: *parties-build
       target: final
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__PartiesDb: ${PARTIES_DB_CONNECTION:-Server=parties-db;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0}
-      Identity__Authority: http://identity-api:8080
+      ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__PartiesDb: ${PARTIES_DB_CONNECTION:-Server=${PARTIES_DB_HOST:-parties-db};Database=${PARTIES_DB_NAME:-parties};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
+      Identity__Authority: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
     ports:
       - "5204:8080"
     networks: [backbone]
@@ -450,13 +461,13 @@ services:
       <<: *identity-build
       target: final
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__IdentityDb: ${IDENTITY_DB_CONNECTION:-Server=identity-db;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true;Connect Timeout=3;ConnectRetryCount=0}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__IdentityDb: ${IDENTITY_DB_CONNECTION:-Server=${IDENTITY_DB_HOST:-identity-db};Database=${IDENTITY_DB_NAME:-identity};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       # Pins `iss` to the name every other service validates against (Identity:Authority), so a
       # token the browser fetches through the published port 5205 is accepted. Without it the
       # issuer follows the Host header and would be http://localhost:5205.
-      IssuerUri: http://identity-api:8080
+      IssuerUri: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
     ports:
       - "5205:8080"
     networks: [backbone]
@@ -474,14 +485,14 @@ services:
       # Development is what publishes /openapi/v1.json — the document the frontend's API client is
       # generated from. It is also what points the four clients at localhost, so all four are
       # restored to compose hostnames here.
-      ASPNETCORE_ENVIRONMENT: Development
-      Services__ProductsApi__BaseUrl: http://products-api:8080
-      Services__BasketsApi__BaseUrl: http://baskets-api:8080
-      Services__OrdersApi__BaseUrl: http://orders-api:8080
-      Services__PartiesApi__BaseUrl: http://parties-api:8080
-      Identity__Authority: http://identity-api:8080
+      ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
+      Services__ProductsApi__BaseUrl: ${PRODUCTS_API_URL:-http://products-api:8080}
+      Services__BasketsApi__BaseUrl: ${BASKETS_API_URL:-http://baskets-api:8080}
+      Services__OrdersApi__BaseUrl: ${ORDERS_API_URL:-http://orders-api:8080}
+      Services__PartiesApi__BaseUrl: ${PARTIES_API_URL:-http://parties-api:8080}
+      Identity__Authority: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
     ports:
       - "5301:8080"
     networks: [backbone]
@@ -500,19 +511,19 @@ services:
       context: .
       dockerfile: services/gateway/src/Gateway.Api/Dockerfile
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
       # appsettings.Development.json repoints the YARP cluster at http://localhost:5301, which
       # inside this container is the gateway itself — every forwarded request would come back to
       # the sender. Restored to the compose hostname.
-      ReverseProxy__Clusters__bff-cluster__Destinations__bff__Address: http://bff-api:8080
+      ReverseProxy__Clusters__bff-cluster__Destinations__bff__Address: ${BFF_API_URL:-http://bff-api:8080}
       # The storefront's published origin must be admitted or the browser blocks every call before
       # it leaves. Index 0 is the container storefront this stack serves; index 1 keeps the Vite
       # dev server admitted too, so `pnpm dev` can be pointed at this backend.
-      Cors__AllowedOrigins__0: http://localhost:4173
-      Cors__AllowedOrigins__1: http://localhost:5173
+      Cors__AllowedOrigins__0: ${CORS_ORIGIN_STOREFRONT:-http://localhost:4173}
+      Cors__AllowedOrigins__1: ${CORS_ORIGIN_VITE_DEV:-http://localhost:5173}
       # appsettings.Development.json's Identity:Authority also names localhost:5205 for the same
       # reason as the ReverseProxy address above — restored to the compose hostname.
-      Identity__Authority: http://identity-api:8080
+      Identity__Authority: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
       # Both toggles come from .env or the shell (see .env.example), on by default, then
       # `docker compose -f docker-compose.local.yml up -d` recreates what changed. An environment
       # variable outranks appsettings.Development.json, so editing that file live inside the
@@ -521,7 +532,7 @@ services:
       # the gateway would answer 403 to every request.
       FeatureToggles__IdentityServerAuthCutover: ${FEATURE_IDENTITY_SERVER_AUTH_CUTOVER:-true}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
     ports:
       - "5300:8080"
     networks: [backbone]
@@ -551,9 +562,9 @@ services:
         # The address the BROWSER must reach, and the browser runs on the host — so the gateway's
         # published host address, never `gateway-api:8080`, which resolves only inside this
         # network. Vite inlines this at build time, so it is fixed in the image.
-        GATEWAY_ORIGIN: http://localhost:5300
+        GATEWAY_ORIGIN: ${STOREFRONT_GATEWAY_ORIGIN:-http://localhost:5300}
         # Where the browser signs in — the identity server's published host port.
-        IDENTITY_ORIGIN: http://localhost:5205
+        IDENTITY_ORIGIN: ${STOREFRONT_IDENTITY_ORIGIN:-http://localhost:5205}
     ports:
       - "4173:80"
     networks: [backbone]
