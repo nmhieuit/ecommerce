@@ -79,6 +79,11 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
+    environment:
+      # Tài khoản broker lấy từ .env (Vùng 1 user / Vùng 2 password) thay vì ngầm dùng guest/guest
+      # mặc định của image. Chỉ có tác dụng khi volume rabbitmq-data còn trống (lần khởi tạo đầu).
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?copy .env.example to .env before starting}
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     networks: [backbone]
@@ -88,8 +93,8 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
-    # Also unused by any service — see the note on redis above. Its management interface is
-    # published only under the `debug` profile.
+    # orders-api publishes to it (024 outbox). Its management interface is published only under
+    # the `debug` override.
 
   # Backend for the collector below (017-otel-servicedefaults-elastic). Single-node, security
   # disabled — the same local-dev posture every other datastore in this file already has (SQL
@@ -104,7 +109,7 @@ services:
       # Bounded so a JVM heap doesn't compete with SQL Server/other containers on a dev machine —
       # not a production sizing decision (constitution Principle VIII's "explicit budget" spirit,
       # applied here to a local resource floor rather than a request-path SLO).
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ES_JAVA_OPTS: ${ELASTICSEARCH_JAVA_OPTS:--Xms512m -Xmx512m}
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     networks: [backbone]
@@ -118,7 +123,7 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:9.4.4
     environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
     networks: [backbone]
     depends_on:
       elasticsearch:
@@ -170,6 +175,10 @@ services:
   # Each migrator is given ONLY its own database's connection string. No service's configuration
   # names another service's database (spec FR-018, constitution Principle I).
   #
+  # Mọi thành phần của connection string đến từ .env: SQLSERVER_HOST/SQLSERVER_USER/*_DB_NAME/
+  # SQLSERVER_CONNECTION_OPTIONS (Vùng 1) và MSSQL_SA_PASSWORD (Vùng 2). SQLSERVER_USER phải là
+  # `sa` chừng nào MSSQL_SA_PASSWORD còn là mật khẩu duy nhất được cấp cho server.
+  #
   # `restart: on-failure` is load-bearing, not belt-and-braces. Even with the health gate waiting for
   # every database to report ONLINE, a migrator can still lose a race on restart: EF decides whether
   # a database exists by opening a connection to it, and that can fail transiently while SQL Server
@@ -186,7 +195,7 @@ services:
       dockerfile: services/products/src/Products.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__ProductsDb: Server=sqlserver;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__ProductsDb: Server=${SQLSERVER_HOST:-sqlserver};Database=${PRODUCTS_DB_NAME:-products};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
     networks: [backbone]
     depends_on:
       sqlserver:
@@ -199,7 +208,7 @@ services:
       dockerfile: services/baskets/src/Baskets.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__BasketsDb: Server=sqlserver;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__BasketsDb: Server=${SQLSERVER_HOST:-sqlserver};Database=${BASKETS_DB_NAME:-baskets};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
     networks: [backbone]
     depends_on:
       sqlserver:
@@ -212,7 +221,7 @@ services:
       dockerfile: services/orders/src/Orders.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__OrdersDb: Server=sqlserver;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__OrdersDb: Server=${SQLSERVER_HOST:-sqlserver};Database=${ORDERS_DB_NAME:-orders};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
     networks: [backbone]
     depends_on:
       sqlserver:
@@ -225,7 +234,7 @@ services:
       dockerfile: services/parties/src/Parties.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__PartiesDb: Server=sqlserver;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__PartiesDb: Server=${SQLSERVER_HOST:-sqlserver};Database=${PARTIES_DB_NAME:-parties};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
     networks: [backbone]
     depends_on:
       sqlserver:
@@ -249,13 +258,13 @@ services:
       dockerfile: services/identity/src/Identity.Api/Dockerfile
       target: migrator
     environment:
-      ConnectionStrings__IdentityDb: Server=sqlserver;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true
+      ConnectionStrings__IdentityDb: Server=${SQLSERVER_HOST:-sqlserver};Database=${IDENTITY_DB_NAME:-identity};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}
       ClientSecret: ${ClientSecret:-}
       TestUserPassword: ${TestUserPassword:-}
       # Registers the storefront's password sign-in client (Config.SpaPasswordClient): the storefront
       # sits behind sign-in, and until the identity server has a login page a form is the only way
       # for it to obtain a token. Dev/one-command stack only — never set for a real deployment.
-      SpaPasswordClient__Enabled: "true"
+      SpaPasswordClient__Enabled: ${IDENTITY_SPA_PASSWORD_CLIENT_ENABLED:-true}
     networks: [backbone]
     depends_on:
       sqlserver:
@@ -282,8 +291,8 @@ services:
     # possession of another service's credential is the violation — not its use
     # (constitution Principle I; the rule `tests/CrossServiceIsolation.Tests` enforces on config).
     environment:
-      ConnectionStrings__ProductsDb: ${PRODUCTS_DB_CONNECTION:-Server=sqlserver;Database=products;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ConnectionStrings__ProductsDb: ${PRODUCTS_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${PRODUCTS_DB_NAME:-products};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       # 015-deny-by-default-authz toggle, set on every service whose appsettings carries it (gateway,
       # bff, and the four domain services) so the stack flips it in one place: .env or the shell
       # (FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE=false), then `docker compose up -d`. Defaults to on,
@@ -311,8 +320,8 @@ services:
       <<: *baskets-build
       target: final
     environment:
-      ConnectionStrings__BasketsDb: ${BASKETS_DB_CONNECTION:-Server=sqlserver;Database=baskets;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ConnectionStrings__BasketsDb: ${BASKETS_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${BASKETS_DB_NAME:-baskets};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     depends_on:
       baskets-migrate:
@@ -326,17 +335,17 @@ services:
       <<: *orders-build
       target: final
     environment:
-      ConnectionStrings__OrdersDb: ${ORDERS_DB_CONNECTION:-Server=sqlserver;Database=orders;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ConnectionStrings__OrdersDb: ${ORDERS_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${ORDERS_DB_NAME:-orders};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
       # 025: công tắc tiêm độ trễ chaos (mặc định false = tắt; bật để diễn tập, KHÔNG dùng ở môi trường thật).
       Chaos__AllowLatencyInjection: ${CHAOS_ALLOW_LATENCY_INJECTION:-false}
       # 024-verify-transactional-outbox: first service to actually connect to the `rabbitmq`
-      # container declared above (guest/guest, same local-dev posture as every other datastore in
-      # this file) — publishes OrderPlacedV1 via the transactional outbox. Full connection string,
-      # same convention as every ConnectionStrings__* above.
+      # container declared above ($RABBITMQ_USER/$RABBITMQ_PASSWORD from .env) — publishes
+      # OrderPlacedV1 via the transactional outbox. Full connection string, assembled from .env
+      # the same way as every ConnectionStrings__* above.
       # Công tắc: ORDERS_RABBITMQ_CONNECTION= (đặt rỗng trong .env) để TẮT kết nối broker; để trống/không khai báo = BẬT như cũ.
-      ConnectionStrings__RabbitMq: ${ORDERS_RABBITMQ_CONNECTION-amqp://guest:guest@rabbitmq:5672}
+      ConnectionStrings__RabbitMq: ${ORDERS_RABBITMQ_CONNECTION-amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST:-rabbitmq}:${RABBITMQ_PORT:-5672}}
     depends_on:
       orders-migrate:
         condition: service_completed_successfully
@@ -351,8 +360,8 @@ services:
       <<: *parties-build
       target: final
     environment:
-      ConnectionStrings__PartiesDb: ${PARTIES_DB_CONNECTION:-Server=sqlserver;Database=parties;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ConnectionStrings__PartiesDb: ${PARTIES_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${PARTIES_DB_NAME:-parties};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     depends_on:
       parties-migrate:
@@ -365,12 +374,12 @@ services:
       <<: *identity-build
       target: final
     environment:
-      ConnectionStrings__IdentityDb: ${IDENTITY_DB_CONNECTION:-Server=sqlserver;Database=identity;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ConnectionStrings__IdentityDb: ${IDENTITY_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${IDENTITY_DB_NAME:-identity};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       # Pins `iss` to the name every other service validates against (Identity:Authority). Left
       # unset, the issuer follows the Host header, so a token the browser fetches through the
       # published port below would carry http://localhost:5205 and be refused with 401 everywhere.
-      IssuerUri: http://identity-api:8080
+      IssuerUri: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
     networks: [backbone]
     ports:
       # The third published port, and the only one added since 005 was written. A browser cannot
@@ -389,7 +398,7 @@ services:
       context: .
       dockerfile: services/bff/src/Bff.Api/Dockerfile
     environment:
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     networks: [backbone]
     # The BFF owns no database, so it holds no connection string. It waits for all four services it
@@ -407,14 +416,14 @@ services:
       context: .
       dockerfile: services/gateway/src/Gateway.Api/Dockerfile
     environment:
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       # The storefront's published origin must be admitted or the browser blocks every call before
       # it leaves — the defect 004 shipped and only its end-to-end walkthrough caught.
       #
       # Set here rather than inherited from appsettings.Development.json, because these containers
       # run as Production and never read that file. Configuration a stack depends on has to be in
       # the stack.
-      Cors__AllowedOrigins__0: http://localhost:4173
+      Cors__AllowedOrigins__0: ${CORS_ORIGIN_STOREFRONT:-http://localhost:4173}
       # Every service behind the gateway validates a JWT (spec 014), so a gateway left on the Phase 1
       # stub forwards requests the BFF then refuses with 401 — the stack reports healthy while the
       # storefront can load nothing. Cut over, so the gateway checks the caller's token and passes it
@@ -455,10 +464,10 @@ services:
         # The address the BROWSER must reach, and the browser runs on the host — so the gateway's
         # published host address, never `gateway-api:8080`, which resolves only inside this network.
         # Vite inlines this at build time, so it is fixed in the image (research.md Decision 6).
-        GATEWAY_ORIGIN: http://localhost:5300
+        GATEWAY_ORIGIN: ${STOREFRONT_GATEWAY_ORIGIN:-http://localhost:5300}
         # Where the browser signs in: the identity server's published host port, for the same reason
         # as above. Inlined at build time.
-        IDENTITY_ORIGIN: http://localhost:5205
+        IDENTITY_ORIGIN: ${STOREFRONT_IDENTITY_ORIGIN:-http://localhost:5205}
     networks: [backbone]
     ports:
       - "4173:80"

@@ -31,11 +31,11 @@ services:
       # container" once inside the network. So the compose hostnames have to be restored explicitly,
       # or the BFF starts, serves its document, and fails every actual call.
       ASPNETCORE_ENVIRONMENT: Development
-      Services__ProductsApi__BaseUrl: http://products-api:8080
-      Services__BasketsApi__BaseUrl: http://baskets-api:8080
-      Services__OrdersApi__BaseUrl: http://orders-api:8080
-      Services__PartiesApi__BaseUrl: http://parties-api:8080
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      Services__ProductsApi__BaseUrl: ${PRODUCTS_API_URL:-http://products-api:8080}
+      Services__BasketsApi__BaseUrl: ${BASKETS_API_URL:-http://baskets-api:8080}
+      Services__OrdersApi__BaseUrl: ${ORDERS_API_URL:-http://orders-api:8080}
+      Services__PartiesApi__BaseUrl: ${PARTIES_API_URL:-http://parties-api:8080}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
 
   products-api:
     ports:
