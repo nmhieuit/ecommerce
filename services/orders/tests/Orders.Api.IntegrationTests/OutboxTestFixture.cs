@@ -8,8 +8,8 @@ namespace Orders.Api.IntegrationTests;
 /// Testcontainers, never an in-memory provider, a fake bus, or a mocked broker.
 /// </summary>
 /// <remarks>
-/// Composed from the existing <see cref="SqlServerFixture"/> (this project) and
-/// <see cref="RabbitMqFixture"/> (<c>shared/IntegrationTestSupport</c>, 010-testcontainers-integration-tests)
+/// Composed from the existing <see cref="SqlServerFixture"/> and <see cref="RabbitMqFixture"/>
+/// (both <c>shared/IntegrationTestSupport</c>, 010-testcontainers-integration-tests)
 /// rather than a new pair of containers, so the outbox suite pays the two Testcontainers start-up
 /// costs once for the whole collection instead of once per test class.
 /// </remarks>

@@ -16,6 +16,9 @@
          no service's runtime code references either package. -->
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="RabbitMQ.Client" />
+    <!-- SqlServerFixtureTests' client: Microsoft.Data.SqlClient arrives through this package, whose
+         version Directory.Packages.props already pins for every service — no new version to own. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
   </ItemGroup>
 
   <ItemGroup>

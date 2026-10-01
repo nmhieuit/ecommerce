@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Identity.Api.Data;
 using Identity.Api.HostedIdentity;
+using IntegrationTestSupport;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;

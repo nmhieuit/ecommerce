@@ -9,8 +9,9 @@
   <ItemGroup>
     <!-- Reusable Testcontainers fixtures (010-testcontainers-integration-tests) — any service's
          integration test project can reference this once it adopts Redis caching or RabbitMQ
-         messaging, mirroring the existing per-service SqlServerFixture shape without duplicating
-         it (research.md Decision 3). -->
+         messaging, without duplicating them (research.md Decision 3). SqlServerFixture joined them
+         here later, replacing the per-service copies that decision left as a follow-up. -->
+    <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="Testcontainers.Redis" />
     <PackageReference Include="Testcontainers.RabbitMq" />
     <!-- Xunit.IAsyncLifetime is the fixture contract every consumer's test collection expects,
@@ -19,14 +20,14 @@
     <PackageReference Include="xunit" />
     <!-- TestJwtBearer (014-identity-server-auth): every service's integration tests now run behind
          AddIdentityValidation()'s FallbackPolicy, so a shared symmetric-key token issuer + JwtBearer
-         bypass belongs here rather than duplicated per service (mirrors the SqlServerFixture
-         precedent above). -->
+         bypass belongs here rather than duplicated per service (mirrors the shared fixtures
+         above). -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <!-- QueryCountInterceptor (023-audit-n1-unbounded-pagination): DbCommandInterceptor/
          CommandEventData live in the Relational package's Diagnostics namespace (ADO.NET
          DbCommand is a relational concept) — any service's integration test project can attach
          the interceptor to prove a query path stays at a fixed statement count as related-row
-         counts grow, mirroring the SqlServerFixture/TestJwtBearer precedent above. -->
+         counts grow, mirroring the shared fixture/TestJwtBearer precedent above. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 

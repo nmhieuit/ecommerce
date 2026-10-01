@@ -6,7 +6,7 @@ namespace IntegrationTestSupport;
 /// <summary>
 /// One real Redis instance for the test collection that references it — constitution Principle
 /// III: real dependencies via Testcontainers, never an in-memory provider or a hand-rolled fake.
-/// Matches the shape of the existing per-service <c>SqlServerFixture</c>, but lives here so any
+/// Same shape as <see cref="SqlServerFixture"/>, and lives here so any
 /// future service's integration test project can reference it without duplicating it
 /// (010-testcontainers-integration-tests research.md Decision 3).
 /// </summary>
