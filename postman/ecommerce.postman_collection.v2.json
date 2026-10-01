@@ -7273,7 +7273,7 @@
     },
     {
       "name": "16 - Lan truyền Correlation ID",
-      "description": "Kiểm chứng spec 016 trên hệ thống chạy thật: gateway tự sinh/giữ/loại bỏ correlation ID (bước 01–04), SPA đọc được header qua CORS (bước 05), ID lan truyền xuyên gateway → BFF → domain service và tra được bằng Elasticsearch (bước 06–10). Cần stack: identity, gateway, bff, products, baskets, orders (+ DB), elasticsearch và otel-collector; đã lấy token ở folder '00 - Xác thực & phân quyền'.\n\nBước 09 tạo 1 đơn thật. Nhánh bất đồng bộ (OrderPlacedV1.correlationId) kiểm ở folder 08 khi bật ORDERS_RABBITMQ_CONNECTION. Chạy bằng Runner để các bước chờ 20 giây (setTimeout) có tác dụng.",
+      "description": "## Bức tranh tổng thể\n\nKhi một request đi từ trình duyệt qua gateway → BFF → products/baskets/orders, mỗi service ghi log riêng của nó. Nếu một khách hàng báo \"tôi bấm đặt hàng bị lỗi\", phải tìm đúng request đó trong log của cả 4 service — không có cách nào nối chúng lại nếu không có một \"mã vé\" chung.\n\nCorrelation ID là mã vé đó: một chuỗi gắn vào header `X-Correlation-Id`, sinh ra một lần ở gateway (cửa vào hệ thống), rồi được chuyển tiếp y nguyên qua mọi lời gọi tiếp theo. Mọi service khi ghi log đều ghi kèm mã này, nên SRE chỉ cần 1 mã, tra Elasticsearch, là thấy toàn bộ hành trình (SC-001).\n\nGateway đóng 3 vai trò: (1) SINH mã mới nếu request chưa có; (2) GIỮ NGUYÊN mã nếu client đã gửi một mã hợp lệ (để hệ thống bên ngoài tự theo dõi được); (3) LỌC BỎ mã nếu sai định dạng — một mã quá dài hoặc chứa ký tự điều khiển có thể làm hỏng log hoặc là dấu hiệu log injection, nên bộ test không chỉ kiểm happy path mà còn kiểm 2 trường hợp đầu vào xấu (bước 03, 04).\n\nFolder chia 2 nhóm: **Nhóm A (01–05)** — gateway tự xử lý mã, chỉ cần gọi gateway và đọc thẳng header trong response, không cần Elasticsearch/OTel đang sống. **Nhóm B (06–10)** — mã thật đi xuyên toàn hệ thống, cần Elasticsearch + otel-collector đang thu log thật, chứng minh mã không chỉ \"đúng ở gateway\" mà còn sống sót qua từng chặng tới tận service cuối cùng.\n\nPhạm vi đã kiểm và chưa kiểm ở folder này: FR-004 (mã đính vào message RabbitMQ bất đồng bộ) kiểm ở folder '08 - Event schema OrderPlaced (RabbitMQ)' khi bật `ORDERS_RABBITMQ_CONNECTION`, không phải ở đây. FR-007 (mỗi request nhận 1 mã riêng, không trùng khi chạy đồng thời) và FR-008 (mã giữ nguyên khi message bị retry/redelivery) không có bước nào trong folder này kiểm — đây là khoảng trống, không phải bị bỏ sót khi viết tài liệu.\n\n---\n\nKiểm chứng spec 016 trên hệ thống chạy thật: gateway tự sinh/giữ/loại bỏ correlation ID (bước 01–04), SPA đọc được header qua CORS (bước 05), ID lan truyền xuyên gateway → BFF → domain service và tra được bằng Elasticsearch (bước 06–10). Cần stack: identity, gateway, bff, products, baskets, orders (+ DB), elasticsearch và otel-collector; đã lấy token ở folder '00 - Xác thực & phân quyền'.\n\nBước 09 tạo 1 đơn thật. Nhánh bất đồng bộ (OrderPlacedV1.correlationId) kiểm ở folder 08 khi bật ORDERS_RABBITMQ_CONNECTION. Chạy bằng Runner để các bước chờ 20 giây (setTimeout) có tác dụng.",
       "item": [
         {
           "name": "01 Gateway tự sinh correlation ID khi request không có (FR-001)",
@@ -7300,7 +7300,7 @@
                 "products"
               ]
             },
-            "description": "Request không mang X-Correlation-Id (script bỏ header ngẫu nhiên của collection). Phản hồi phải có header X-Correlation-Id = GUID dạng n (32 ký tự hex)."
+            "description": "**Mục đích**: khi client (trình duyệt, Postman, service khác) không tự gửi mã, gateway vẫn phải gắn một mã — không được để request \"trần trụi\" không có mã nào.\n\n**Input**: `GET /bff/products` qua gateway, header `X-Correlation-Id` bị xoá cố ý trước khi gửi.\n\n**Output kỳ vọng**: response có header `X-Correlation-Id` dạng 32 ký tự hex (GUID viết liền không gạch ngang).\n\n**Vì sao chứng minh FR-001**: nếu gateway không tự sinh, header này sẽ trống hoặc không tồn tại.\n\n---\n\nRequest không mang X-Correlation-Id (script bỏ header ngẫu nhiên của collection). Phản hồi phải có header X-Correlation-Id = GUID dạng n (32 ký tự hex)."
           },
           "event": [
             {
@@ -7351,7 +7351,7 @@
                 "products"
               ]
             },
-            "description": "Gửi `caller-supplied-correlation-id`: phản hồi echo đúng chuỗi đó."
+            "description": "**Mục đích**: nếu một hệ thống khác (mobile app, hệ thống đối tác) đã có sẵn mã theo dõi riêng, gateway không được tự ý đổi mã đó — phải tôn trọng để họ tự liên kết log hai bên.\n\n**Input**: gửi `X-Correlation-Id: caller-supplied-correlation-id` — cố tình dùng chuỗi KHÔNG PHẢI GUID để chứng minh gateway chỉ cần \"hợp lệ\" (không quá dài, không ký tự điều khiển), không đòi đúng định dạng GUID.\n\n**Output kỳ vọng**: response echo lại đúng y nguyên chuỗi đó.\n\n**Vì sao chứng minh FR-002**: nếu gateway ghi đè, response sẽ trả về một GUID khác, không phải chuỗi đã gửi.\n\n---\n\nGửi `caller-supplied-correlation-id`: phản hồi echo đúng chuỗi đó."
           },
           "event": [
             {
@@ -7401,7 +7401,7 @@
                 "products"
               ]
             },
-            "description": "Độ dài tối đa 128 ký tự: giá trị 129 ký tự không được echo mà bị thay bằng GUID dạng n."
+            "description": "**Mục đích**: chặn request cố tình nhồi một chuỗi khổng lồ vào header này (có thể để tấn công hoặc làm hỏng log).\n\n**Input**: `X-Correlation-Id` là 129 ký tự `x` liên tiếp.\n\n**Output kỳ vọng**: KHÔNG echo lại chuỗi đó — gateway tự sinh một mã mới (32 ký tự hex), coi như request không có mã hợp lệ.\n\n**Vì sao chứng minh FR-009**: nếu gateway chấp nhận vô điều kiện, response sẽ echo lại 129 ký tự x.\n\n**Liên hệ**: cùng cặp với bước 04 — cùng kiểm FR-009 nhưng hai kiểu đầu vào xấu khác nhau (quá dài / sai ký tự), để chắc gateway chặn đúng theo quy tắc chung, không chỉ 1 trường hợp cụ thể.\n\n---\n\nĐộ dài tối đa 128 ký tự: giá trị 129 ký tự không được echo mà bị thay bằng GUID dạng n."
           },
           "event": [
             {
@@ -7453,7 +7453,7 @@
                 "products"
               ]
             },
-            "description": "Giá trị `abc<TAB>def` chứa ký tự điều khiển (TAB): bị thay bằng GUID mới. (CR/LF không gửi được bằng client HTTP nên dùng TAB.)"
+            "description": "**Mục đích**: tương tự bước 03, nhưng kiểm kiểu tấn công khác — chèn ký tự không in được (TAB) vào log, có thể dùng để giả mạo dòng log hoặc phá cấu trúc file log.\n\n**Input**: `X-Correlation-Id: \"abc\\tdef\"`.\n\n**Output kỳ vọng**: bị từ chối, gateway sinh mã mới 32 hex.\n\n**Vì sao chứng minh FR-009**: như bước 03, chứng minh gateway lọc theo quy tắc ký tự hợp lệ, không chỉ theo độ dài.\n\n---\n\nGiá trị `abc<TAB>def` chứa ký tự điều khiển (TAB): bị thay bằng GUID mới. (CR/LF không gửi được bằng client HTTP nên dùng TAB.)"
           },
           "event": [
             {
@@ -7508,7 +7508,7 @@
                 "products"
               ]
             },
-            "description": "Request có `Origin: http://localhost:4173` (storefront): gateway phải công bố `Access-Control-Expose-Headers: X-Correlation-Id` để JavaScript của SPA đọc được."
+            "description": "**Mục đích**: mã này không chỉ cần tồn tại ở server — trình duyệt (JavaScript của SPA) phải đọc được nó, để khi người dùng báo lỗi, đội dev lấy mã trực tiếp từ trình duyệt mà không cần vào log server (FR-006/SC-004).\n\n**Input**: request kèm header `Origin: {{storefrontOrigin}}` — giả lập đúng cách trình duyệt gửi request cross-origin.\n\n**Output kỳ vọng**: response có header `Access-Control-Expose-Headers` chứa `X-Correlation-Id`.\n\n**Vì sao chứng minh đúng yêu cầu**: mặc định trình duyệt chặn JavaScript đọc hầu hết header của response cross-origin trừ khi server khai rõ qua `Access-Control-Expose-Headers`. Thiếu khai báo này thì mã vẫn có trong response nhưng code JS của SPA không `fetch(...).headers.get('X-Correlation-Id')` được — đây là lý do chỉ kiểm \"response có header\" (như bước 01) là chưa đủ.\n\n---\n\nRequest có `Origin: http://localhost:4173` (storefront): gateway phải công bố `Access-Control-Expose-Headers: X-Correlation-Id` để JavaScript của SPA đọc được."
           },
           "event": [
             {
@@ -7549,7 +7549,7 @@
                 "products"
               ]
             },
-            "description": "Gửi `qa016-<mã thời gian>` và lưu vào biến event016Cid. Script chờ ~20 giây cho telemetry tới Elasticsearch (OTLP → collector → ES) trước khi bước 07 chạy (Runner)."
+            "description": "**Mục đích**: chuẩn bị dữ liệu thật cho bước 07 — đặt một request có mã tự đặt tay, dễ nhận diện, rồi để nó chạy xuyên 3 service.\n\n**Input**: `GET /bff/products` với `X-Correlation-Id: qa016-<thời gian>` (lưu vào biến `event016Cid` để bước 07 dùng lại).\n\n**Output kỳ vọng**: `200`, response echo đúng mã đã gửi. Script chờ 20 giây vì log phải qua otel-collector rồi mới tới Elasticsearch, không phải tức thì.\n\n**Liên hệ**: bước 06 không tự nó chứng minh nhiều — giá trị thật nằm ở bước 07 dùng lại đúng mã này để tra log thật.\n\n---\n\nGửi `qa016-<mã thời gian>` và lưu vào biến event016Cid. Script chờ ~20 giây cho telemetry tới Elasticsearch (OTLP → collector → ES) trước khi bước 07 chạy (Runner)."
           },
           "event": [
             {
@@ -7599,7 +7599,7 @@
                 "_search"
               ]
             },
-            "description": "Truy vấn `traces-generic.otel-default*` theo `attributes.correlation.id` = ID ở bước 06. Cần Elasticsearch (cổng 9200) + otel-collector đang chạy. Trước khi sửa 016, products sẽ tự sinh 1 GUID khác vì BFF làm rơi header.",
+            "description": "**Mục đích**: đây là bước thật sự chứng minh mã đã \"sống sót\" qua từng chặng — không chỉ gateway echo lại, mà cả 3 service đều ghi log/span mang đúng mã đó.\n\n**Input**: query Elasticsearch tìm mọi span có `attributes.correlation.id` bằng đúng mã ở bước 06, gom theo tên service.\n\n**Output kỳ vọng**: danh sách service tìm được bao gồm cả `Bff.Api`, `Gateway.Api`, `Products.Api`.\n\n**Vì sao chứng minh FR-003/SC-001**: nếu một service nào đó \"làm rớt\" mã giữa đường (quên đọc header khi gọi downstream), nó sẽ không ghi span có mã này, và bước này sẽ đỏ vì thiếu tên service đó. Đây là bằng chứng mạnh hơn bước 01–06: chỉ Elasticsearch mới cho thấy bằng chứng độc lập từ chính log thật của products, chứ không chỉ 1 response HTTP.\n\n---\n\nTruy vấn `traces-generic.otel-default*` theo `attributes.correlation.id` = ID ở bước 06. Cần Elasticsearch (cổng 9200) + otel-collector đang chạy. Trước khi sửa 016, products sẽ tự sinh 1 GUID khác vì BFF làm rơi header.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"size\": 0,\n  \"query\": {\n    \"term\": {\n      \"attributes.correlation.id\": \"{{event016Cid}}\"\n    }\n  },\n  \"aggs\": {\n    \"svc\": {\n      \"terms\": {\n        \"field\": \"resource.attributes.service.name\"\n      }\n    }\n  }\n}",
@@ -7657,7 +7657,7 @@
                 "items"
               ]
             },
-            "description": "Bước đầu của luồng đồng bộ checkout; dùng chung 1 ID `qa016-checkout-<mã thời gian>` cho bước 08 và 09.",
+            "description": "**Mục đích**: bắt đầu một luồng nghiệp vụ thật (nhiều bước: thêm giỏ → thanh toán), để kiểm mã có xuyên suốt được một giao dịch nhiều request hay không, chứ không chỉ 1 request đơn lẻ như bước 06.\n\n**Input**: `POST /bff/basket/items` thêm 1 sản phẩm, mã mới `qa016-checkout-<thời gian>` (lưu vào `event016CheckoutCid`).\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: bước 1 của cặp 3 bước (08-09-10), giống 06-07 nhưng phức tạp hơn — một luồng nghiệp vụ thật thay vì 1 lệnh đọc đơn giản.\n\n---\n\nBước đầu của luồng đồng bộ checkout; dùng chung 1 ID `qa016-checkout-<mã thời gian>` cho bước 08 và 09.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1\n}",
@@ -7718,7 +7718,7 @@
                 "checkout"
               ]
             },
-            "description": "Tạo 1 đơn thật. Script chờ ~20 giây cho telemetry trước bước 10."
+            "description": "**Mục đích**: chứng minh khi một luồng nghiệp vụ có nhiều HTTP request khác nhau (thêm giỏ, rồi thanh toán), tất cả phải mang cùng 1 mã nếu đó là cùng một hành động của người dùng — mã không được sinh lại mỗi request.\n\n**Input**: `POST /bff/checkout`, cố tình gắn lại đúng mã đã lưu từ bước 08 — mô phỏng cách một SPA thật giữ cùng 1 mã cho toàn bộ phiên thao tác của người dùng.\n\n**Output kỳ vọng**: `201` (đơn được tạo), rồi chờ 20 giây cho log tới Elasticsearch.\n\n**Lưu ý**: bước này tạo một đơn hàng thật trong database.\n\n---\n\nTạo 1 đơn thật. Script chờ ~20 giây cho telemetry trước bước 10."
           },
           "event": [
             {
@@ -7765,7 +7765,7 @@
                 "_search"
               ]
             },
-            "description": "Toàn bộ nhánh ĐỒNG BỘ của checkout tra được bằng 1 ID. Nhánh BẤT ĐỒNG BỘ (OrderPlaced qua RabbitMQ) kiểm ở folder '08 - Event schema OrderPlaced (RabbitMQ)' bước 04 (test 'correlationId đúng X-Correlation-Id') khi bật ORDERS_RABBITMQ_CONNECTION.",
+            "description": "**Mục đích**: giống bước 07 nhưng cho luồng đặt hàng — chứng minh mã sống sót qua 4 service (nhiều hơn bước 07 vì luồng đặt hàng còn đụng tới baskets và orders, không chỉ products), đúng kịch bản SC-001 (\"với một đơn hàng bất kỳ... tra cứu toàn bộ hành trình\").\n\n**Input**: query Elasticsearch với mã của bước 08/09.\n\n**Output kỳ vọng**: danh sách service tìm được gồm đủ `Baskets.Api`, `Bff.Api`, `Gateway.Api`, `Orders.Api`.\n\n**Vì sao đây là bước chốt của cả folder**: đây là bài test gần nhất với tình huống thật SC-001 mô tả — một SRE thật sự tra một đơn hàng cụ thể, không phải một request GET đơn lẻ.\n\n---\n\nToàn bộ nhánh ĐỒNG BỘ của checkout tra được bằng 1 ID. Nhánh BẤT ĐỒNG BỘ (OrderPlaced qua RabbitMQ) kiểm ở folder '08 - Event schema OrderPlaced (RabbitMQ)' bước 04 (test 'correlationId đúng X-Correlation-Id') khi bật ORDERS_RABBITMQ_CONNECTION.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"size\": 0,\n  \"query\": {\n    \"term\": {\n      \"attributes.correlation.id\": \"{{event016CheckoutCid}}\"\n    }\n  },\n  \"aggs\": {\n    \"svc\": {\n      \"terms\": {\n        \"field\": \"resource.attributes.service.name\"\n      }\n    }\n  }\n}",
