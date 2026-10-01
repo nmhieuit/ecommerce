@@ -124,6 +124,9 @@ services:
     image: docker.elastic.co/kibana/kibana:9.4.4
     environment:
       ELASTICSEARCH_HOSTS: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
+      # 027-error-budget-alerting: Kibana Alerting refuses to create or run rules without a saved-objects
+      # encryption key. Supplied from .env (Vùng 2) like MSSQL_SA_PASSWORD, never written here (Principle VI).
+      XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: ${KIBANA_ENCRYPTION_KEY:?copy .env.example to .env before starting}
     networks: [backbone]
     depends_on:
       elasticsearch:
@@ -291,6 +294,8 @@ services:
     # possession of another service's credential is the violation — not its use
     # (constitution Principle I; the rule `tests/CrossServiceIsolation.Tests` enforces on config).
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ConnectionStrings__ProductsDb: ${PRODUCTS_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${PRODUCTS_DB_NAME:-products};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       # 015-deny-by-default-authz toggle, set on every service whose appsettings carries it (gateway,
@@ -320,6 +325,8 @@ services:
       <<: *baskets-build
       target: final
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ConnectionStrings__BasketsDb: ${BASKETS_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${BASKETS_DB_NAME:-baskets};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
@@ -335,6 +342,8 @@ services:
       <<: *orders-build
       target: final
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ConnectionStrings__OrdersDb: ${ORDERS_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${ORDERS_DB_NAME:-orders};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
@@ -360,6 +369,8 @@ services:
       <<: *parties-build
       target: final
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ConnectionStrings__PartiesDb: ${PARTIES_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${PARTIES_DB_NAME:-parties};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
@@ -374,6 +385,8 @@ services:
       <<: *identity-build
       target: final
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ConnectionStrings__IdentityDb: ${IDENTITY_DB_CONNECTION:-Server=${SQLSERVER_HOST:-sqlserver};Database=${IDENTITY_DB_NAME:-identity};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true}}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       # Pins `iss` to the name every other service validates against (Identity:Authority). Left
@@ -398,6 +411,8 @@ services:
       context: .
       dockerfile: services/bff/src/Bff.Api/Dockerfile
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       FeatureToggles__AuthorizationRequireApiScope: ${FEATURE_AUTHORIZATION_REQUIRE_API_SCOPE:-true}
     networks: [backbone]
@@ -416,6 +431,8 @@ services:
       context: .
       dockerfile: services/gateway/src/Gateway.Api/Dockerfile
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
       # The storefront's published origin must be admitted or the browser blocks every call before
       # it leaves — the defect 004 shipped and only its end-to-end walkthrough caught.

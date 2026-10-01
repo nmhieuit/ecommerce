@@ -70,6 +70,11 @@ public static class ServiceDefaultsExtensions
         // specially — registering it in the container as well breaks DI validation, since
         // RequestDelegate isn't (and shouldn't be) a resolvable service.
 
+        // 027-error-budget-alerting: off by default (Chaos:AllowFaultInjection unset = false), bound
+        // here so ChaosFaultInjectionMiddleware sees whatever the environment sets — every service gets
+        // the same switch without touching its own Program.cs.
+        builder.Services.Configure<ChaosFaultOptions>(builder.Configuration.GetSection(ChaosFaultOptions.SectionName));
+
         return builder;
     }
 
@@ -82,6 +87,11 @@ public static class ServiceDefaultsExtensions
     public static WebApplication UseServiceDefaults(this WebApplication app)
     {
         app.UseMiddleware<CorrelationIdMiddleware>();
+
+        // 027-error-budget-alerting: right after the correlation ID exists, so an injected 500 still
+        // carries one in its trace, and ahead of auth so the exercise needs no token — the response
+        // can only ever fail, never grant access (plan.md Constitution Check VI).
+        app.UseMiddleware<ChaosFaultInjectionMiddleware>();
         return app;
     }
 

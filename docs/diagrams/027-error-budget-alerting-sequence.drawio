@@ -1,0 +1,85 @@
+<mxfile host="65bd71144e">
+    <diagram id="error-budget-alerting-sequence" name="Trình tự thật — tiêm 5xx vào Orders.Api, cảnh báo bật đúng mốc, service vào trạng thái cạn">
+        <mxGraphModel dx="1232" dy="460" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Trình tự thật (T034, T041 — 2026-10-01) — làm cạn ngân sách 5xx của Orders.Api bằng tiêm lỗi có kiểm soát" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1380" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="c1" value="Người vận hành" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="c2" value="orders-api&#xa;(ChaosFaultInjectionMiddleware)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="270" y="60" width="220" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="c3" value="OTel Collector → Elasticsearch&#xa;(traces-generic.otel-default*)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="60" width="250" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="c4" value="Kibana rule&#xa;error-budget-50/75/100" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="60" width="220" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="c5" value="slo-error-budget-events&#xa;+ rule error-budget-frozen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1130" y="60" width="240" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r1" value="1. Đặt CHAOS_ALLOW_FAULT_INJECTION=true trong .env,&#xa;tạo lại riêng orders-api (container in true)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="140" width="460" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r2" value="2. 06:50:40 — GET /health/live + X-Chaos-Fault: 5xx → 500&#xa;(không header → 200; giá trị &quot;500&quot; → 200)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="270" y="210" width="460" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r3" value="3. Span server status_code = 500 có trong Elasticsearch&#xa;→ 1 lỗi / 1 244 span = 80,39% ngân sách 5xx tháng (lưu lượng thấp)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="280" width="470" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r4" value="4. Rule chạy mỗi 5 phút, tính % tiêu hao từ 00:00 ngày 1 (UTC+7):&#xa;06:55:00 mốc 75 bật (4 phút 20 giây) · 06:55:39 mốc 50 bật&#xa;cho Orders.Api,availability và Orders.Api,error-rate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="350" width="500" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="r5" value="5. 06:55:44 — gửi lỗi thứ hai → 2 / 1 253 = 159,62%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="270" y="440" width="460" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="r6" value="6. 07:00:00 mốc 100 bật (4 phút 16 giây); alert 75 vẫn active,&#xa;@timestamp cập nhật 07:00 — giữ liên tục, không tạo lại" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="500" width="500" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r7" value="7. Action Index (alert mốc 100 chuyển active) ghi {service, budget, event: exhausted};&#xa;07:09:01 rule error-budget-frozen bật alert cho Orders.Api (+ 5 service cạn vì độ trễ/5xx thật)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="570" width="550" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r8" value="8. Dashboard SLO hằng ngày: bảng mức tiêu hao 28 hàng, bảng alert active có 6 alert 5xx&#xa;của Orders.Api (3 mốc × 2 ngân sách), bảng &quot;Cạn — ưu tiên độ tin cậy&quot; có Orders.Api" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="660" width="700" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="r9" value="9. Hoàn tác: bỏ dòng khỏi .env, tạo lại orders-api → header 5xx trả 200" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="730" width="460" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Giới hạn đã gặp: lưu lượng thấp làm 1 lỗi vượt cả mốc 50 và 75 cùng lúc; Kibana quá tải có lúc mất trạng thái alert (task 409) để lại alert &quot;mồ côi&quot; — bảng dashboard chỉ lấy alert cập nhật trong 15 phút. Chi tiết: docs/QA/QA_Debt.md mục 027." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="790" width="1100" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="c1" target="r1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r1" target="r2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r2" target="r3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r3" target="r4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r4" target="r5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r5" target="r6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r6" target="r7" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r7" target="r8" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="r8" target="r9" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
