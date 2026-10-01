@@ -4,11 +4,12 @@
 sao để bảo trì hoặc mở rộng.*
 
 **Nguồn gốc**: Jira SCRUM-32 ("[RESILIENCE-4] Load/performance test against constitution budgets"),
-đặc tả tại [`specs/025-load-performance-test-budgets/`](../../specs/025-load-performance-test-budgets/)
-— **lưu ý đánh số**: thư mục spec này tên là `025-...` (trùng số với `025-chaos-pod-kill-latency`/
+đặc tả tại [`specs/026-load-performance-test-budgets/`](../../specs/026-load-performance-test-budgets/)
+— **lưu ý đánh số**: thư mục spec này ban đầu tên là `025-...` (trùng số với `025-chaos-pod-kill-latency`/
 SCRUM-34, vì cả hai đều được tạo cùng đợt trước khi merge); tài liệu hoá dùng số **026** cho SCRUM-32
-vì SCRUM-34 merge vào `master` trước (PR #36 so với PR #38). 6 quyết định kiến trúc ở
-[`research.md`](../../specs/025-load-performance-test-budgets/research.md).
+vì SCRUM-34 merge vào `master` trước (PR #36 so với PR #38), và thư mục spec đã được đổi tên thành
+`026-...` cho khớp. 6 quyết định kiến trúc ở
+[`research.md`](../../specs/026-load-performance-test-budgets/research.md).
 
 **Trạng thái xác minh**: 18/18 task hoàn thành `[X]`. Đã chạy thật trên stack đầy đủ
 (`docker-compose.yml` + `docker-compose.demo.yml`, 14 image build thành công) — cơ chế đo lường/ghi

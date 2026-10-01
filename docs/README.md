@@ -20,10 +20,12 @@ riêng lẻ.
 **Bạn là software architect / kỹ sư đã quen hệ thống, cần tra cứu sâu đúng 1 tính năng cụ thể?**
 → [`docs/architecture/`](architecture/) — 1 file `0NN_Architect_*.md` cho mỗi spec (001-026, trừ 012
 đổi số thành 013; không có 022 — đánh số nhảy từ 021 sang 023), viết xúc tích, thuần góc nhìn kiến trúc
-(kiến trúc tổng thể, quyết định kỹ thuật, sơ đồ). **Lưu ý đánh số 025/026**: thư mục `specs/` có 2 spec
-cùng tên `025-...` (`025-chaos-pod-kill-latency`/SCRUM-34 và `025-load-performance-test-budgets`/
-SCRUM-32, tạo song song trước khi merge) — tài liệu hoá dùng 025 cho spec merge trước (chaos, PR #36)
-và 026 cho spec merge sau (load-test, PR #38), không phải theo số thứ tự Jira. Mọi blocker giữa chừng,
+(kiến trúc tổng thể, quyết định kỹ thuật, sơ đồ). **Lưu ý đánh số 025/026**: 2 spec SCRUM-34 (chaos) và
+SCRUM-32 (load-test) được tạo song song trước khi merge nên ban đầu cùng mang số `025-...` trong
+`specs/` — tài liệu hoá dùng 025 cho spec merge trước (chaos, PR #36) và 026 cho spec merge sau
+(load-test, PR #38), không phải theo số thứ tự Jira. Thư mục spec của load-test sau đó đã được đổi tên
+thành `026-load-performance-test-budgets` cho khớp, nên nay số thư mục `specs/` (`025-chaos-pod-kill-latency`,
+`026-load-performance-test-budgets`) trùng với số tài liệu hoá. Mọi blocker giữa chừng,
 bug thật phát hiện khi triển khai/xác thực, giới hạn phạm vi đã biết, và amendment đính chính đã gom
 về 1 file riêng: [`docs/architecture/technical-debt.md`](architecture/technical-debt.md) — mỗi file
 `0NN` đều dẫn link sang đúng mục của mình ở đó, không suy đoán.

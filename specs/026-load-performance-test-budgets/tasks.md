@@ -5,7 +5,7 @@ description: "Task list template for feature implementation"
 
 # Tasks: Kiểm thử tải/hiệu năng luồng nghiệp vụ trọng yếu đối chiếu ngân sách hiệu năng của hiến chương
 
-**Input**: Design documents from `specs/025-load-performance-test-budgets/`
+**Input**: Design documents from `specs/026-load-performance-test-budgets/`
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
 
@@ -218,7 +218,7 @@ hưởng cổng chặn PR hiện có.
       `docker compose build`, đã vá tối thiểu + tạo task đưa lên nhánh sạch), và dấu hiệu
       race/deadlock khi `identity-api` tự sinh signing key lần đầu (đã tạo task điều tra riêng). Xem
       chi tiết đầy đủ ở plan.md "Cập nhật sau khi triển khai".
-- [X] T018 [P] Rà lại `specs/025-load-performance-test-budgets/checklists/requirements.md` sau khi
+- [X] T018 [P] Rà lại `specs/026-load-performance-test-budgets/checklists/requirements.md` sau khi
       triển khai xong — xác nhận không mục nào cần cập nhật; nếu quá trình triển khai phát hiện thêm
       khoảng trống thật (giống T006 đã làm), bổ sung ghi chú vào phần Notes. **Kết quả**: không mục
       nào cần sửa; đã ghi chú 3 khoảng trống thật phát hiện lúc triển khai (manifest, script CI, giấy

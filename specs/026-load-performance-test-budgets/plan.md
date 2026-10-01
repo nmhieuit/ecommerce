@@ -2,7 +2,7 @@
 
 **Branch**: `code/Load-performance-test-against-constitution-budgets` | **Date**: 2026-09-12 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `specs/025-load-performance-test-budgets/spec.md`
+**Input**: Feature specification from `specs/026-load-performance-test-budgets/spec.md`
 
 **Note**: This template is filled in by the `/speckit-plan` command; its definition describes the execution workflow.
 
@@ -165,7 +165,7 @@ Constitution Check giữ nguyên, không mục nào đổi trạng thái.
 ### Documentation (this feature)
 
 ```text
-specs/025-load-performance-test-budgets/
+specs/026-load-performance-test-budgets/
 ├── plan.md              # This file (/speckit-plan command output)
 ├── research.md          # Phase 0 output (/speckit-plan command)
 ├── data-model.md         # Phase 1 output (/speckit-plan command)

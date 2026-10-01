@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
 # Brings up the demo (production-like) stack and runs the "performance" tier — the load test on the
-# critical browse->basket->checkout->order path, spec 025-load-performance-test-budgets.
+# critical browse->basket->checkout->order path, spec 026-load-performance-test-budgets.
 #
 # Deliberately NOT called from Jenkinsfile (the PR gate) or from scripts/ci/run-dotnet-tests.sh's
 # other tiers: this is the scheduled, non-PR-blocking pipeline described in
-# specs/025-load-performance-test-budgets/contracts/performance-pipeline-stage-contract.md — see
+# specs/026-load-performance-test-budgets/contracts/performance-pipeline-stage-contract.md — see
 # Jenkinsfile.performance.
 set -eu
 
