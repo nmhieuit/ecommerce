@@ -152,7 +152,9 @@ có của thuật toán percentile (t-digest); không phải lỗi formula.
 
 - Availability đo xấp xỉ (`100% − Error-rate`), không phải uptime thật — service sập hẳn (0 traces)
   sẽ biến mất khỏi bảng thay vì hiện cảnh báo (xem `SCRUM-29`/`SCRUM-30`).
-- Không có alert rule tự động đi kèm dashboard này (thuộc `SCRUM-35`, giai đoạn sau).
+- ~~Không có alert rule tự động đi kèm dashboard này (thuộc `SCRUM-35`, giai đoạn sau).~~ Đã có từ
+  SCRUM-35 / spec 027: 4 rule ngân sách lỗi và 3 panel "Ngân sách lỗi tháng này" đặt trên cùng dashboard
+  này — xem [`07-canh-bao-ngan-sach-loi.md`](07-canh-bao-ngan-sach-loi.md).
 - Collapsible section ở Tầng 2 lưu đúng trạng thái collapsed/expanded nhưng **không thực sự ẩn nội
   dung panel trong chế độ View** trên Kibana 9.4.4 (xem chi tiết ở mục "Đã xác nhận thật lúc build" —
   không dùng section này như cơ chế ẩn/hiện nội dung khi trình bày cho người khác).

@@ -219,6 +219,9 @@ services:
     image: docker.elastic.co/kibana/kibana:9.4.4
     environment:
       ELASTICSEARCH_HOSTS: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
+      # 027-error-budget-alerting: Kibana Alerting refuses to create or run rules without a saved-objects
+      # encryption key. Supplied from .env (Vùng 2) like MSSQL_SA_PASSWORD, never written here (Principle VI).
+      XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: ${KIBANA_ENCRYPTION_KEY:?copy .env.example to .env before starting}
     ports:
       - "5601:5601"
     networks: [backbone]
@@ -376,6 +379,8 @@ services:
     # credential is itself the violation, whether or not it is used (constitution Principle I —
     # the rule tests/CrossServiceIsolation.Tests enforces against configuration).
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__ProductsDb: ${PRODUCTS_DB_CONNECTION:-Server=${PRODUCTS_DB_HOST:-products-db};Database=${PRODUCTS_DB_NAME:-products};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
       Identity__Authority: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
@@ -396,6 +401,8 @@ services:
       <<: *baskets-build
       target: final
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__BasketsDb: ${BASKETS_DB_CONNECTION:-Server=${BASKETS_DB_HOST:-baskets-db};Database=${BASKETS_DB_NAME:-baskets};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
       Identity__Authority: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
@@ -416,6 +423,8 @@ services:
       <<: *orders-build
       target: final
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__OrdersDb: ${ORDERS_DB_CONNECTION:-Server=${ORDERS_DB_HOST:-orders-db};Database=${ORDERS_DB_NAME:-orders};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
       # 024/008: công tắc kết nối RabbitMQ của outbox. Mặc định TRỐNG = hành vi cũ (không cấu hình → rơi về localhost,
@@ -441,6 +450,8 @@ services:
       <<: *parties-build
       target: final
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__PartiesDb: ${PARTIES_DB_CONNECTION:-Server=${PARTIES_DB_HOST:-parties-db};Database=${PARTIES_DB_NAME:-parties};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
       Identity__Authority: ${IDENTITY_AUTHORITY:-http://identity-api:8080}
@@ -461,6 +472,8 @@ services:
       <<: *identity-build
       target: final
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__IdentityDb: ${IDENTITY_DB_CONNECTION:-Server=${IDENTITY_DB_HOST:-identity-db};Database=${IDENTITY_DB_NAME:-identity};User Id=${SQLSERVER_USER:-sa};Password=${MSSQL_SA_PASSWORD};${SQLSERVER_CONNECTION_OPTIONS:-TrustServerCertificate=true};${SQLSERVER_FAIL_FAST_OPTIONS:-Connect Timeout=3;ConnectRetryCount=0}}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_COLLECTOR_ENDPOINT:-http://otel-collector:4317}
@@ -482,6 +495,8 @@ services:
       context: .
       dockerfile: services/bff/src/Bff.Api/Dockerfile
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       # Development is what publishes /openapi/v1.json — the document the frontend's API client is
       # generated from. It is also what points the four clients at localhost, so all four are
       # restored to compose hostnames here.
@@ -511,6 +526,8 @@ services:
       context: .
       dockerfile: services/gateway/src/Gateway.Api/Dockerfile
     environment:
+      # 027: công tắc tiêm lỗi 5xx của ServiceDefaults (mặc định false = tắt; bật để diễn tập làm cạn ngân sách lỗi, KHÔNG dùng ở môi trường thật).
+      Chaos__AllowFaultInjection: ${CHAOS_ALLOW_FAULT_INJECTION:-false}
       ASPNETCORE_ENVIRONMENT: ${LOCAL_ASPNETCORE_ENVIRONMENT:-Development}
       # appsettings.Development.json repoints the YARP cluster at http://localhost:5301, which
       # inside this container is the gateway itself — every forwarded request would come back to

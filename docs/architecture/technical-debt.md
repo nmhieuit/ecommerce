@@ -1,4 +1,4 @@
-# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-026
+# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-027
 
 *Đối tượng đọc: kỹ sư phần mềm / software architect. File này gom lại mọi "lưu ý hay khám phá" (blocker
 giữa chừng, bug thật tìm được khi triển khai/xác thực, giới hạn phạm vi đã biết, amendment đính chính)
@@ -221,6 +221,16 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   nào — cùng vấn đề mà 025 cũng độc lập phát hiện); và dấu hiệu race/deadlock khi `identity-api` tự
   sinh signing key lần đầu dưới tải đồng thời (đã tạo task điều tra riêng, chưa kết luận nguyên nhân
   gốc).
+- **[027](027_Architect_chính%20sách%20ngân%20sách%20lỗi%20và%20ngưỡng%20cảnh%20báo.md)** — Ba ràng buộc của Kibana 9.4.4 không có trong tài liệu, chỉ lộ ra khi
+  chạy thật, quyết định hình dạng truy vấn ES|QL của rule: rule "Elasticsearch query" tự lọc
+  `@timestamp` theo cửa sổ của nó (phải đặt 31/62 ngày); mã alert ghép từ giá trị MỌI cột kết quả (giữ
+  cột `consumed_pct` là alert bị tạo lại mỗi 5 phút); mã alert chỉ lấy cột của lệnh `STATS` cuối (lần
+  dựng đầu, `budget` sinh bởi `MV_EXPAND` bị bỏ, 2 ngân sách của cùng service gộp thành 1 alert — sửa bằng
+  `STATS … BY service, budget` trước `KEEP`). Spec SC-003 và contract bất biến 8 sửa theo: alert chỉ mang
+  service + ngân sách, % tiêu hao ở bảng bên cạnh (người dùng chốt). Kibana chưa từng có
+  `xpack.encryptedSavedObjects.encryptionKey` nên Alerting chưa bao giờ dùng được trong repo — thêm
+  `KIBANA_ENCRYPTION_KEY` (Vùng 2 `.env.example`). Panel dashboard dựng bằng Discover session ES|QL qua
+  API thay vì Lens tô màu vì thao tác UI qua trình duyệt tự động hoá không ổn định.
 
 ## 3. Giới hạn phạm vi đã biết
 
@@ -356,7 +366,8 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   quyết triệt để nếu 1 client tự ý gửi lại `POST` thủ công.
 - **[021](021_Architect_khai%20báo%20và%20đo%20SLO%20theo%20từng%20service.md)** — Không có alert rule
   tự động — dashboard chỉ hỗ trợ "tra cứu được", không tự động cảnh báo khi vượt ngân sách; thuộc
-  SCRUM-35 (`docs/superpowers/specs/2026-09-08-dashboard-slo-van-hanh-design.md`), ngoài phạm vi. Không
+  SCRUM-35 (`docs/superpowers/specs/2026-09-08-dashboard-slo-van-hanh-design.md`), ngoài phạm vi.
+  **Đã giải quyết bởi [027](027_Architect_chính%20sách%20ngân%20sách%20lỗi%20và%20ngưỡng%20cảnh%20báo.md)** (4 rule ES|QL + 3 panel trên chính dashboard này). Không
   có test CI gọi Elasticsearch thật để assert dashboard luôn đúng — cân nhắc rồi loại, cùng lý do 019
   loại phương án chạy cluster K8s thật trong mọi CI. `slos.justification` chưa có instance thật nào —
   cơ chế sẵn sàng trong schema nhưng chưa thực chiến. p99 của `Orders.Api` đo được (393,4ms) gần ngưỡng
@@ -392,6 +403,18 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   cùng cơ chế `InboxState`. Xác thực thủ công không gọi `POST /orders` qua curl với bearer token thật
   (cần dựng Identity Server, ngoài phạm vi) — luồng đó đã được xác thực đầy đủ qua test tích hợp dùng
   `UseTestJwtBearer()` thay thế.
+- **[027](027_Architect_chính%20sách%20ngân%20sách%20lỗi%20và%20ngưỡng%20cảnh%20báo.md)** — Kibana mất trạng thái alert khi máy quá tải (event loop bị chặn 25–37 s, task
+  rule `409`) để lại alert "mồ côi" ở `active`; bảng dashboard chỉ lấy alert cập nhật trong 15 phút để
+  che, đổi lại bảng trống nếu Kibana ngừng chạy rule quá 15 phút. Sửa rule `error-budget-100` làm Kibana
+  đặt lại trạng thái alert và ghi lại sự kiện "cạn" cho mọi service đang 100%, dời mốc hồi phục. Lưu
+  lượng local thấp làm 1 lỗi 5xx đã vượt cả mốc 50 và 75, và vài request khởi động lạnh đã làm cạn ngân
+  sách độ trễ — trên local gần như mọi service sẽ "cạn" sau mỗi lần dựng lại stack. Ngày không traffic
+  tính là đạt (người dùng chốt) nên service ngừng nhận traffic 3 ngày tự hồi phục. Hồi phục thật sau 3
+  ngày và giữ đóng băng qua ranh giới tháng mới kiểm bằng sự kiện thử, chưa quan sát trên dữ liệu chạy
+  liên tục. Việc "dừng merge tính năng mới" là cam kết quy trình, không có cơ chế kỹ thuật chặn merge.
+  Import lại rule từ `alerts/error-budget-rules.ndjson`: 2/4 rule kẹt `pending` sau khi Enable (task tự
+  tắt vì chạy đúng lúc rule bị tắt giữa chừng import) — gỡ bằng Disable rồi Enable lại; việc này có thể
+  ghi thêm sự kiện "cạn" cho alert vừa chuyển active (đã gặp: 13 → 18 sự kiện).
 
 ## 4. Amendment — đính chính khi thực tế lệch spec gốc
 

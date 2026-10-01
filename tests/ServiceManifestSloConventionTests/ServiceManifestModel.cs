@@ -16,6 +16,13 @@ public sealed class ServiceManifestDocument
 
     [YamlMember(Alias = "slos")]
     public SlosSection? Slos { get; set; }
+
+    /// <summary>
+    /// SCRUM-35 error-budget policy (specs/027-error-budget-alerting
+    /// contracts/error-budget-policy-manifest-shape.md).
+    /// </summary>
+    [YamlMember(Alias = "error-budget-policy")]
+    public ErrorBudgetPolicySection? ErrorBudgetPolicy { get; set; }
 }
 
 public sealed class ServiceSection
@@ -59,4 +66,73 @@ public sealed class LatencySection
 
     [YamlMember(Alias = "p99")]
     public string? P99 { get; set; }
+}
+
+/// <summary>
+/// The <c>error-budget-policy</c> block (specs/027-error-budget-alerting
+/// contracts/error-budget-policy-manifest-shape.md). Every value is read as written — strings stay
+/// strings (<c>0.1%</c>, <c>UTC+07:00</c>) so the tests compare against the contract verbatim instead
+/// of against a number YamlDotNet happened to parse.
+/// </summary>
+public sealed class ErrorBudgetPolicySection
+{
+    [YamlMember(Alias = "window")]
+    public string? Window { get; set; }
+
+    [YamlMember(Alias = "timezone")]
+    public string? Timezone { get; set; }
+
+    /// <summary>Keyed by budget name, so an extra or missing budget is visible to the tests.</summary>
+    [YamlMember(Alias = "budgets")]
+    public Dictionary<string, ErrorBudgetSection>? Budgets { get; set; }
+
+    [YamlMember(Alias = "alert-thresholds")]
+    public List<string>? AlertThresholds { get; set; }
+
+    [YamlMember(Alias = "exhausted-when")]
+    public string? ExhaustedWhen { get; set; }
+
+    [YamlMember(Alias = "on-exhausted")]
+    public OnExhaustedSection? OnExhausted { get; set; }
+
+    [YamlMember(Alias = "recovery")]
+    public RecoverySection? Recovery { get; set; }
+}
+
+/// <summary>
+/// One budget. Deliberately has no latency-threshold field: thresholds come only from
+/// <see cref="SlosSection.Latency"/> (contract bất biến 7), and IgnoreUnmatchedProperties would hide
+/// one — <see cref="ErrorBudgetPolicyTests"/> checks the raw keys instead.
+/// </summary>
+public sealed class ErrorBudgetSection
+{
+    [YamlMember(Alias = "bad-request")]
+    public string? BadRequest { get; set; }
+
+    [YamlMember(Alias = "allowed-bad-ratio")]
+    public string? AllowedBadRatio { get; set; }
+}
+
+public sealed class OnExhaustedSection
+{
+    [YamlMember(Alias = "who")]
+    public string? Who { get; set; }
+
+    [YamlMember(Alias = "stops")]
+    public string? Stops { get; set; }
+
+    [YamlMember(Alias = "does")]
+    public string? Does { get; set; }
+}
+
+public sealed class RecoverySection
+{
+    [YamlMember(Alias = "consecutive-days-meeting-slo")]
+    public string? ConsecutiveDaysMeetingSlo { get; set; }
+
+    [YamlMember(Alias = "no-traffic-day-counts-as-met")]
+    public string? NoTrafficDayCountsAsMet { get; set; }
+
+    [YamlMember(Alias = "budget-reset-clears-freeze")]
+    public string? BudgetResetClearsFreeze { get; set; }
 }

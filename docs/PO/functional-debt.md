@@ -1,4 +1,4 @@
-# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 24 tính năng
+# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 25 tính năng
 
 *Viết cho: người quản lý sản phẩm, stakeholder không trực tiếp code. Không yêu cầu đọc code hay biết
 tên bất kỳ công cụ kỹ thuật nào.*
@@ -117,6 +117,14 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   thành việc cần làm riêng. Nhân tiện phát hiện và vá tạm 2 vấn đề khác không liên quan: 1 lỗi khiến
   việc build lại hệ thống từ đầu bị chặn hoàn toàn, và 1 dấu hiệu treo/xung đột khi dịch vụ định danh
   khởi động lần đầu dưới tải.
+- **[027](027_PO_chính%20sách%20ngân%20sách%20lỗi%20và%20ngưỡng%20cảnh%20báo.md)** —
+  Đội đã chủ động gây lỗi có kiểm soát cho bộ phận xử lý đơn hàng để "đốt" ngân sách lỗi của nó: cảnh
+  báo hiện đúng mốc trên màn hình hằng ngày sau khoảng 4–5 phút (mốc 75% sau 4 phút 20 giây, mốc 100%
+  sau 4 phút 16 giây), giữ nguyên chừng nào còn vượt mốc, và bộ phận đó tự vào danh sách "cạn ngân sách
+  — ưu tiên độ tin cậy". Cách đếm 3 ngày hồi phục đã được thử bằng dữ liệu giả lập ở cả 3 tình huống
+  (không có lượt dùng, có 1 ngày xấu giữa chừng, mới cạn hôm qua) — đều ra đúng. Lúc dựng còn phát hiện 3
+  điểm "ngầm" của công cụ giám sát (không có trong tài liệu của nhà cung cấp), đã điều chỉnh để cảnh báo
+  không bị tạo lại liên tục hay gộp nhầm 2 ngân sách thành 1.
 
 ## 2. Giới hạn hiện tại
 
@@ -214,7 +222,8 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   giám sát vận hành chưa được xác nhận hoạt động thật trong phiên hoàn thành tính năng — mới xác nhận ở
   mức cấu hình.
 - **[021](021_PO_biết%20ngay%20service%20nào%20đang%20lố%20ngân%20sách%20hiệu%20năng%20đã%20cam%20kết.md)** —
-  Chưa có cảnh báo tự động — hệ thống hiện chỉ hỗ trợ "tra cứu khi cần". Chưa có cơ chế kiểm tra tự động
+  Chưa có cảnh báo tự động — hệ thống hiện chỉ hỗ trợ "tra cứu khi cần" (**đã có từ tính năng
+  [027](027_PO_chính%20sách%20ngân%20sách%20lỗi%20và%20ngưỡng%20cảnh%20báo.md)**: cảnh báo theo mốc hiện ngay trên chính nơi tra cứu này). Chưa có cơ chế kiểm tra tự động
   chạy liên tục để đảm bảo nơi tra cứu luôn khớp đúng dữ liệu gốc — việc đối chiếu hiện làm định kỳ/thủ
   công. 1 chỉ tiêu (độ trễ ở mức hiếm gặp nhất, p99) của bộ phận xử lý đơn hàng hiện đo được khá gần
   với ngưỡng đã cam kết — đáng theo dõi tiếp, chưa phải vấn đề cần xử lý gấp.
@@ -238,3 +247,11 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   giỏ hàng sau khi đặt đơn (vẫn làm theo đúng cách cũ, đồng bộ ngay trong lúc đặt hàng). Đây là quyết
   định phạm vi có chủ đích, không phải bị bỏ sót — mở rộng việc dọn giỏ hàng sẽ cần thay đổi lớn hơn tới
   cách xác nhận đơn hàng hiển thị cho khách, chưa ai yêu cầu ở bước này.
+- **[027](027_PO_chính%20sách%20ngân%20sách%20lỗi%20và%20ngưỡng%20cảnh%20báo.md)** —
+  Việc "dừng đưa tính năng mới vào bộ phận đã cạn" hiện là **cam kết quy trình** của đội, chưa có cơ chế
+  tự động chặn. Phần "tự hồi phục sau 3 ngày" và "sang tháng mới vẫn giữ trạng thái cạn" mới kiểm bằng
+  dữ liệu giả lập, chưa quan sát qua nhiều ngày chạy thật. Trên môi trường thử nghiệm, lượng người dùng
+  rất thấp nên chỉ 1–2 lỗi đã vượt mốc — gần như mọi bộ phận "cạn" sau mỗi lần dựng lại môi trường. Khi
+  máy chủ giám sát quá tải, đôi lúc 1 cảnh báo cũ bị "bỏ quên" — màn hình chỉ hiện cảnh báo được cập
+  nhật trong 15 phút gần nhất để tránh hiển thị sai; đổi lại, nếu công cụ giám sát ngừng chạy quá 15 phút
+  thì bảng cảnh báo sẽ trống. Theo lựa chọn đã thống nhất, ngày không có lượt dùng nào được tính là đạt.

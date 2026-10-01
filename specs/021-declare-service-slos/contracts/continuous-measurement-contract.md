@@ -23,7 +23,9 @@ lại nhật ký xây dựng chi tiết — chỉ nêu bất biến để `quick
 ## Ngoài phạm vi hợp đồng này
 
 - Cảnh báo chủ động (alert rule) khi vượt ngân sách — thuộc SCRUM-35, không phải bất biến của
-  dashboard này.
+  dashboard này. Đã hiện thực ở [`specs/027-error-budget-alerting/`](../../027-error-budget-alerting/spec.md),
+  hợp đồng riêng tại [`error-budget-alert-rules-contract.md`](../../027-error-budget-alerting/contracts/error-budget-alert-rules-contract.md)
+  (bất biến 10 của hợp đồng đó yêu cầu 5 bất biến ở trên vẫn đúng).
 - Đo Availability bằng synthetic uptime check thật — chưa có hạ tầng, ngoài phạm vi spec.md.
 
 ## Người tiêu thụ hợp đồng này

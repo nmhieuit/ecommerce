@@ -11805,6 +11805,390 @@
           ]
         }
       ]
+    },
+    {
+      "name": "27 - Ngân sách lỗi: tiêm 5xx và cảnh báo (error budget)",
+      "description": "Kiểm chứng spec 027 (SCRUM-35) trên hệ thống chạy thật bằng công tắc `CHAOS_ALLOW_FAULT_INJECTION` (.env): chạy `27a` khi cờ TẮT (mặc định), đặt `true` + tạo lại `orders-api`, chạy `27b` (gửi lặp bước 01 tới khi mức tiêu hao ở `27c` bước 02 vượt mốc), chờ tối đa 5 phút rồi chạy `27c`. Cần Elasticsearch + Kibana (KIBANA_ENCRYPTION_KEY trong .env) và 4 rule tag `slo-error-budget` đã import + enable (docs/kibana-quan-sat-he-thong/alerts/README.md). Không cần token: middleware tiêm lỗi chạy trước xác thực.",
+      "item": [
+        {
+          "name": "27a - Cờ TẮT (mặc định)",
+          "description": "Chạy khi `CHAOS_ALLOW_FAULT_INJECTION` không khai báo hoặc `false`. Header `X-Chaos-Fault` phải bị bỏ qua (contract tiêm lỗi, bất biến 2).",
+          "item": [
+            {
+              "name": "01 [cờ TẮT] Header 5xx bị bỏ qua → 200 (bất biến 2)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "`GET orders /health/live` với `X-Chaos-Fault: 5xx` khi cờ tắt."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — không tiêm lỗi khi cờ tắt\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "27b - Cờ BẬT",
+          "description": "Chạy SAU khi đặt `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` rồi `docker compose -f docker-compose.local.yml up -d --force-recreate --no-deps orders-api` và chờ healthy. Diễn tập xong: bỏ dòng đó khỏi `.env` và tạo lại `orders-api`.",
+          "item": [
+            {
+              "name": "01 [cờ BẬT] Header 5xx → 500, không chạy tiếp pipeline (bất biến 3)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Mỗi lần gửi đốt thêm ngân sách 5xx của Orders.Api. Ngân sách 0.1% số span tháng này — xem 27c bước 02 để biết cần gửi bao nhiêu lần."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 [cờ BẬT] Không header → 200 (bất biến 4)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Tải nền và health probe không bị ảnh hưởng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — request không có header đi tiếp nguyên vẹn\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 [cờ BẬT] Giá trị khác `5xx` (\"500\") → 200 (bất biến 4)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "500"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "Header gõ sai không âm thầm thành lỗi thật."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — chỉ đúng giá trị 5xx mới có hiệu lực\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "04 Span 500 đã tới Elasticsearch qua OTel (bất biến 5)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE resource.attributes.service.name == \\\"Orders.Api\\\" AND attributes.http.response.status_code >= 500 AND @timestamp >= NOW() - 10 minutes\\n| STATS n = COUNT(*)\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "Chờ ~20 giây sau bước 01 cho span tới Elasticsearch."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"có ít nhất 1 span 5xx của Orders.Api trong 10 phút\", function () {",
+                      "    pm.expect(pm.response.json().values[0][0]).to.be.above(0);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "27c - Cảnh báo và trạng thái cạn (Kibana)",
+          "description": "Chạy sau 27b, chờ tối đa 5 phút (chu kỳ rule). Cùng dữ liệu mà 3 panel 'Ngân sách lỗi tháng này' trên dashboard SLO hằng ngày hiển thị.",
+          "item": [
+            {
+              "name": "01 Kibana Alerting có khoá mã hoá (FR-008)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{kibanaUrl}}/api/alerting/_health",
+                  "host": [
+                    "{{kibanaUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "alerting",
+                    "_health"
+                  ]
+                },
+                "description": "Thiếu KIBANA_ENCRYPTION_KEY thì không rule nào chạy."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"has_permanent_encryption_key = true\", function () {",
+                      "    pm.expect(pm.response.json().has_permanent_encryption_key).to.eql(true);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Mức tiêu hao ngân sách 5xx tháng này của Orders.Api (FR-005)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= DATE_TRUNC(1 month, NOW() + 7 hours) - 7 hours AND resource.attributes.service.name == \\\"Orders.Api\\\"\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad_5xx) / total / 0.001 * 100.0, 2)\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "`consumed_pct` ≥ 50 / 75 / 100 thì alert mốc tương ứng phải bật trong ≤ 5 phút."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 Alert 5xx đang hoạt động của Orders.Api (FR-006, FR-007)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM .alerts-stack.alerts-default\\n| WHERE kibana.alert.rule.tags == \\\"slo-error-budget\\\" AND kibana.alert.status == \\\"active\\\" AND @timestamp >= NOW() - 15 minutes\\n| EVAL service = kibana.alert.grouping.service, budget = kibana.alert.grouping.budget\\n| WHERE service == \\\"Orders.Api\\\" AND budget IN (\\\"availability\\\", \\\"error-rate\\\")\\n| KEEP kibana.alert.rule.name, service, budget, kibana.alert.start\\n| SORT budget, kibana.alert.rule.name\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "Mỗi mốc đã vượt có đúng 1 hàng cho mỗi ngân sách (availability, error-rate)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "04 Service đang 'cạn — ưu tiên độ tin cậy' (FR-010, FR-011)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM .alerts-stack.alerts-default\\n| WHERE kibana.alert.rule.name == \\\"error-budget-frozen\\\" AND kibana.alert.status == \\\"active\\\" AND @timestamp >= NOW() - 15 minutes\\n| EVAL service = kibana.alert.grouping.service\\n| KEEP service, kibana.alert.start\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "Sau khi alert 100 bật, Orders.Api xuất hiện ở đây trong lượt rule error-budget-frozen kế tiếp."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [

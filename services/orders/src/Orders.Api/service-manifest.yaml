@@ -37,6 +37,39 @@ slos:
     p95: 150ms
     p99: 500ms
 
+error-budget-policy:
+  # SCRUM-35 / constitution Principle VIII: "Sustained SLO breach consumes the error budget: when a
+  # service's error budget is exhausted, reliability work takes priority over new feature work in
+  # that service until it recovers." This block gives that sentence its numbers
+  # (specs/027-error-budget-alerting/contracts/error-budget-policy-manifest-shape.md). Measured and
+  # alerted on by the Kibana rules tagged slo-error-budget
+  # (docs/kibana-quan-sat-he-thong/07-canh-bao-ngan-sach-loi.md).
+  window: calendar-month
+  timezone: UTC+07:00
+  budgets:
+    availability:
+      bad-request: http-5xx
+      allowed-bad-ratio: 0.1%
+    error-rate:
+      bad-request: http-5xx
+      allowed-bad-ratio: 0.1%
+    latency-p95:
+      bad-request: slower-than-slo-p95   # threshold is slos.latency.p95 above — never restated here
+      allowed-bad-ratio: 5%
+    latency-p99:
+      bad-request: slower-than-slo-p99   # threshold is slos.latency.p99 above — never restated here
+      allowed-bad-ratio: 1%
+  alert-thresholds: [50%, 75%, 100%]
+  exhausted-when: any-budget-at-100%
+  on-exhausted:
+    who: Người vận hành (vai SRE/Dev) của service này
+    stops: Merge tính năng mới vào service này
+    does: Chỉ làm công việc nâng độ tin cậy cho service này
+  recovery:
+    consecutive-days-meeting-slo: 3
+    no-traffic-day-counts-as-met: true
+    budget-reset-clears-freeze: false
+
 endpoints:
   - route: GET /orders/{orderId}
     purpose: >-

@@ -1,0 +1,70 @@
+<mxfile host="65bd71144e">
+    <diagram id="error-budget-alerting-flow" name="Luồng nghiệp vụ — lố ngân sách lỗi thì có hệ quả thật, có điều kiện thoát rõ ràng">
+        <mxGraphModel dx="1499" dy="527" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Lố ngân sách lỗi thì có hệ quả thật — không còn là &quot;dashboard đỏ không ai hành động&quot;" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1200" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="s1" value="Mỗi bộ phận có 1 &quot;ngân sách lỗi&quot; theo tháng&#xa;(tháng lịch, giờ Việt Nam): được phép bao nhiêu&#xa;yêu cầu lỗi / chậm trước khi coi là vi phạm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="70" width="360" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="s2" value="Mỗi yêu cầu lỗi hoặc quá chậm&#xa;&quot;tiêu&quot; một phần ngân sách tháng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="70" width="340" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3" value="Tiêu tới 50% → 75% → 100%:&#xa;mỗi mốc tự hiện cảnh báo trên màn hình&#xa;người vận hành mở mỗi ngày — không cần ai&#xa;tự đi soi số liệu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="70" width="380" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="s4" value="&quot;CẠN&quot;: bất kỳ 1 ngân sách nào chạm 100%&#xa;→ dừng đưa tính năng mới vào bộ phận đó,&#xa;chỉ làm việc nâng độ tin cậy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="220" width="380" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="s5" value="Đếm số ngày trọn vẹn đạt cam kết&#xa;(ngày không có lượt dùng nào cũng tính là đạt;&#xa;1 ngày có lượt dùng mà không đạt → đếm lại từ đầu)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="220" width="340" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="s6" value="Đủ 3 ngày liên tiếp đạt cam kết&#xa;→ HỒI PHỤC: được đưa tính năng mới trở lại&#xa;(kể cả khi tháng chưa kết thúc)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="220" width="360" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="s7" value="Sang tháng mới: ngân sách đặt lại đầy đủ&#xa;nhưng KHÔNG tự gỡ trạng thái &quot;cạn&quot; —&#xa;vẫn phải đủ 3 ngày đạt cam kết mới hồi phục" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="370" width="380" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="s8" value="Chính sách (con số, hệ quả, điều kiện hồi phục) được viết sẵn&#xa;cho từng bộ phận — ai đọc cũng trả lời được &quot;ai dừng, dừng cái gì,&#xa;khi nào được tiếp tục&quot; mà không cần hỏi lại" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="370" width="420" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s1" target="s2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s2" target="s3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="mốc 100%" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s3" target="s4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s4" target="s5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="đủ 3 ngày" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="s5" target="s6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="đổi tháng" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="s4" target="s7" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" value="vẫn cạn" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="s7" target="s5" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="620" y="410"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="s8" target="s1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="15" y="410"/>
+                            <mxPoint x="15" y="110"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
