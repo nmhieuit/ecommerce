@@ -6,7 +6,7 @@
 # day one rather than bolted on after the first regression.
 #
 # Scope note: every /bff/* route this service exposes declares its own budget below. (Corrected
-# 025-load-performance-test-budgets: this note previously said only health endpoints existed and the
+# 026-load-performance-test-budgets: this note previously said only health endpoints existed and the
 # rest would arrive "as T022-T025 add them" — that was stale even before this feature, since
 # POST /bff/basket/items and POST /bff/checkout already existed in code with no matching entry here.)
 
@@ -79,7 +79,7 @@ endpoints:
   - route: POST /bff/basket/items
     purpose: >-
       Adds a product to the caller's current basket, merging onto an existing line for the same
-      product rather than creating a second line (spec 002 FR-005). (025-load-performance-test-budgets:
+      product rather than creating a second line (spec 002 FR-005). (026-load-performance-test-budgets:
       this entry was missing even though the route has existed since 002-gateway-bff-routing — added
       while wiring the critical-path load test's budget lookups.)
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
@@ -92,7 +92,7 @@ endpoints:
     purpose: >-
       Reads the caller's basket, places an order for its lines, then clears the basket
       (Features/Checkout/CheckoutEndpoints.cs). The one route that spans a workflow rather than a
-      single downstream read. (025-load-performance-test-budgets: this entry was missing even though
+      single downstream read. (026-load-performance-test-budgets: this entry was missing even though
       the route has existed since 004-minimal-shopping-spa — added while wiring the critical-path
       load test's budget lookups.)
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)

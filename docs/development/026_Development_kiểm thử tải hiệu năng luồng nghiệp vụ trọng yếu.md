@@ -2,9 +2,9 @@
 
 ## Phạm vi
 
-Tài liệu này mô tả phần code được tạo bởi bước 026 (SCRUM-32, thư mục spec thật là
-`specs/025-load-performance-test-budgets/` — đánh số tài liệu 026 vì trùng số thư mục với
-025-chaos-pod-kill-latency/SCRUM-34, xem ghi chú đánh số ở
+Tài liệu này mô tả phần code được tạo bởi bước 026 (SCRUM-32, thư mục spec
+`specs/026-load-performance-test-budgets/` — ban đầu tên `025-...`, trùng số thư mục với
+025-chaos-pod-kill-latency/SCRUM-34, đã đổi thành 026 cho khớp số tài liệu; xem ghi chú đánh số ở
 [026_Architect_*.md](../architecture/026_Architect_kiểm%20thử%20tải%20hiệu%20năng%20luồng%20nghiệp%20vụ%20trọng%20yếu.md))
 so với trạng thái code sau bước 025.
 

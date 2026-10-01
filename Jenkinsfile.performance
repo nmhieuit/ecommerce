@@ -1,10 +1,10 @@
 #!/usr/bin/env groovy
 
 // Scheduled performance gate for the critical browse->basket->checkout->order path
-// (specs/025-load-performance-test-budgets). Deliberately a SEPARATE pipeline from Jenkinsfile (the
+// (specs/026-load-performance-test-budgets). Deliberately a SEPARATE pipeline from Jenkinsfile (the
 // PR gate): the constitution's "Performance gate" runs on a scheduled pipeline against a
 // production-like environment, not on every PR — see
-// specs/025-load-performance-test-budgets/contracts/performance-pipeline-stage-contract.md. This
+// specs/026-load-performance-test-budgets/contracts/performance-pipeline-stage-contract.md. This
 // file must never add a stage to Jenkinsfile, and must never touch the 5 required check names
 // specs/013-sonarqube-merge-blocker/contracts/pipeline-stage-contract.md documents.
 //

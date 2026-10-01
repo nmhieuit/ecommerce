@@ -126,7 +126,7 @@
          this platform's safety net (ADR-0005), so no service ever takes a dependency on it. -->
     <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
 
-    <!-- Load testing (025-load-performance-test-budgets research.md Quyết định 1; constitution
+    <!-- Load testing (026-load-performance-test-budgets research.md Quyết định 1; constitution
          Principle VIII: "Critical user paths MUST have automated performance tests"). PINNED TO
          4.1.2 DELIBERATELY, NOT THE LATEST 5.x/6.x LINE: since v5, NBomber ships under the
          "NBomber Business License" — its own licensing page states the FREE version is "only for

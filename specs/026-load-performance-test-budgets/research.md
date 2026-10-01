@@ -156,7 +156,7 @@ Lấy token thật qua `/connect/token` (client `integration-test-ropc`) cũng k
 user đã tồn tại, mà `SeedData.cs` "không giữ sẵn thông tin đăng nhập nào theo thiết kế" (comment gốc
 trong file) — không có tài khoản demo, không có UI đăng nhập, không có endpoint tự đăng ký. Đây là
 một khoảng trống thật của TOÀN NỀN TẢNG (không riêng gì tính năng này) — **đã tạo task riêng để theo
-dõi** (xem ghi chú cuối file này), không sửa trong phạm vi tính năng 025.
+dõi** (xem ghi chú cuối file này), không sửa trong phạm vi tính năng 026.
 
 **Phát hiện phụ, cũng từ lần chạy thật này**: `identity-api` trên một stack mới dựng có dấu hiệu
 race/deadlock khi Duende IdentityServer tự sinh signing key lần đầu (`KeyManager.CreateAndStoreNewKeyAsync`)
@@ -165,9 +165,9 @@ treo/timeout với lỗi "Operation cancelled by user" trong log container. Có 
 với khoảng trống ở trên — cũng đã đưa vào task riêng để điều tra tiếp, không thuộc phạm vi tính năng
 này.
 
-**Quyết định thực tế cho tính năng 025 (giữ nguyên hiện trạng, không tự chế cơ chế xác thực mới)**:
+**Quyết định thực tế cho tính năng 026 (giữ nguyên hiện trạng, không tự chế cơ chế xác thực mới)**:
 `GatewayClient` VẪN không tự đính token (mã nguồn không đổi) — vì không có cách nào an toàn, đúng thiết
-kế hiện có để lấy một token thật từ một client HTTP bên ngoài. Tính năng 025 không có thẩm quyền quyết
+kế hiện có để lấy một token thật từ một client HTTP bên ngoài. Tính năng 026 không có thẩm quyền quyết
 định thêm một cơ chế seed-user-demo hay tương tự vào `identity-api` (đó là thay đổi kiến trúc bảo mật,
 ngoài phạm vi một bài kiểm thử tải). Hệ quả: bài kiểm thử tải này **chạy đúng cơ chế đã thiết kế (bất
 biến 1–6 của contracts/load-test-run-contract.md đều đúng), nhưng sẽ FAIL do 401 cho đến khi nền tảng

@@ -13,7 +13,7 @@
 #                                                        The glob also catches
 #                                                        shared/IntegrationTestSupport.Tests, which
 #                                                        starts real Redis/RabbitMQ containers.)
-#   performance  — CriticalPathLoadTests.csproj         (NBomber load test, spec 025; needs the full
+#   performance  — CriticalPathLoadTests.csproj         (NBomber load test, spec 026; needs the full
 #                                                        stack running — see
 #                                                        scripts/ci/run-performance-tests.sh. NEVER
 #                                                        runs on a PR — see "unit" below.)
@@ -24,7 +24,7 @@
 # "unit" runs on every PR without Docker or a live stack (Jenkinsfile "unit tests" stage) — a project
 # that needs either MUST be excluded here explicitly, the same way "contract"/"integration" already
 # are, or it silently joins "unit" and breaks the PR gate the moment it exists on disk
-# (specs/025-load-performance-test-budgets/contracts/performance-pipeline-stage-contract.md §1).
+# (specs/026-load-performance-test-budgets/contracts/performance-pipeline-stage-contract.md §1).
 set -eu
 
 TIER="${1:?usage: run-dotnet-tests.sh <unit|integration|contract|performance> [dotnet test args]}"

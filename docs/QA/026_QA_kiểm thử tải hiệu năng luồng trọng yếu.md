@@ -3,7 +3,7 @@
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 
-*Ghi chú đánh số: tài liệu 026 (SCRUM-32) tương ứng thư mục spec `specs/025-load-performance-test-budgets/` (trùng số với spec chaos).*
+*Ghi chú đánh số: tài liệu 026 (SCRUM-32) tương ứng thư mục spec `specs/026-load-performance-test-budgets/` (ban đầu tên `025-...`, trùng số với spec chaos; đã đổi thành 026 cho khớp).*
 
 ## Luồng happy-case đã rà soát
 
