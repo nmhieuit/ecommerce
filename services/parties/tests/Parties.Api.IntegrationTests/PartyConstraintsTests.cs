@@ -1,3 +1,4 @@
+using IntegrationTestSupport;
 using Microsoft.EntityFrameworkCore;
 using Parties.Api.Data;
 

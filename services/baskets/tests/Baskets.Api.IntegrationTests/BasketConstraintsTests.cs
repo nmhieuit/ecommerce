@@ -1,4 +1,5 @@
 using Baskets.Api.Data;
+using IntegrationTestSupport;
 using Microsoft.EntityFrameworkCore;
 
 namespace Baskets.Api.IntegrationTests;

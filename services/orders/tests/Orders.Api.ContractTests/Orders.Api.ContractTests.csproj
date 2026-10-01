@@ -9,16 +9,15 @@
 
   <!-- The provider side: this service's own build verifies its real responses against the
        consumer's committed pact (011-consumer-contract-tests FR-001..FR-006).
-       Testcontainers.MsSql is here for the same reason the integration suite has it - this
-       service's DbContext is registered against SQL Server and gated on a resolved tenant, so
-       there is no in-memory substitute that would still be exercising real behaviour
-       (constitution Principle III). -->
+       A real SQL Server (IntegrationTestSupport.SqlServerFixture) for the same reason the
+       integration suite uses one - this service's DbContext is registered against SQL
+       Server and gated on a resolved tenant, so there is no in-memory substitute that would still be
+       exercising real behaviour (constitution Principle III). -->
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="PactNet" />
-    <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
