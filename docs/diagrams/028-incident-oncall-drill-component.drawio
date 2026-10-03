@@ -1,0 +1,79 @@
+<mxfile host="65bd71144e">
+    <diagram id="incident-oncall-drill-component" name="Kiến trúc thành phần — script diễn tập, tải nền, rule phát hiện nhanh, quy trình phản ứng">
+        <mxGraphModel dx="976" dy="333" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="640" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Kiến trúc thành phần — tiêm sự cố mù chỉ bằng cấu hình, phát hiện bằng rule 5 phút, phản ứng theo quy trình + Kibana Case" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1420" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="script" value="scripts/incident-drill.ps1 -Start / -Reveal&#xa;chỉ chạy khi .env có CHAOS_ALLOW_FAULT_INJECTION=true&#xa;bốc thăm: service (1/7) → loại A / B (chỉ gateway) / C → thời điểm 0–30 phút&#xa;niêm phong: in runId + SHA-256, KHÔNG in lựa chọn&#xa;tiến trình nền ẩn: chờ → tạo lại cả 7 container (mỗi service 1 lệnh up --no-deps)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="470" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="sealed" value=".incident-drill/&lt;runId&gt;/  (gitignore)&#xa;sealed.json · hash.txt · injected-at.txt · injector.log&#xa;docker-compose.incident.yml — chỉ environment của service đích&#xa;(mật khẩu = ${MSSQL_SA_PASSWORD}, Compose tự nội suy từ .env)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="200" width="470" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="load" value="scripts/incident-drill.ps1 -Load&#xa;newman 6.2.2 (npx.cmd): folder Postman 00 (token) → 26 + 28&#xa;nghỉ 1000 ms · token lại khi hết 30 phút / gặp 401 / identity-api đổi Id" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="320" width="470" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="stack" value="Docker Compose local (docker-compose.local.yml) — 7 service&#xa;A: DB → incident-missing-db · BFF downstream / gateway cluster → incident-missing-host&#xa;B: gateway ReverseProxy…MaxConnectionsPerServer=1&#xa;C: request X-Chaos-Fault: 5xx vào cổng đích (middleware 027), tỷ lệ 5–50%" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="60" width="400" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="otel" value="OTel Collector → Elasticsearch&#xa;traces-generic.otel-default*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="220" width="400" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="verify" value="docs/kibana-quan-sat-he-thong/08-phat-hien-nhanh-va-xu-ly-su-co.md&#xa;truy vấn theo phút: 15 phút liên tục có traffic, đạt SLO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="320" width="400" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="runbook" value="docs/dien-tap-chaos-engineering/&#xa;README.md — quy trình triage (≥ 2 lần chạy rule = sự cố), khôi phục, xác nhận 15 phút&#xa;mau-ban-ghi-su-co.md → ket-qua/&lt;ngày&gt;-su-co-&lt;runId&gt;.md (14 trường, mốc tách bạch)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="430" width="400" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="rule" value="Kibana rule incident-fast-detection (ES|QL, license Basic)&#xa;chu kỳ 5 phút · cửa sổ 5 phút · groupBy row · tag incident-fast-detection&#xa;alert theo service: 5xx ≥ 0.1% HOẶC p95/p99 &gt; slos.latency&#xa;(Gateway.Api chỉ xét 5xx) · không action&#xa;export: alerts/incident-fast-detection-rule.ndjson" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="60" width="440" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="alerts" value="alerts-as-data .alerts-stack.alerts-default" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="220" width="440" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="dash" value="Dashboard &quot;SLO vận hành hằng ngày — 7 service&quot;&#xa;bảng mới: &quot;Phát hiện nhanh — vượt SLO trong 5 phút gần nhất&quot;&#xa;(Discover session incident-fast-detection-active-alerts, lọc 15 phút)&#xa;+ các panel 021/027 giữ nguyên" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="300" width="440" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="case" value="Kibana Cases (tạo tay, license Basic)&#xa;tiêu đề [SEVn] · mô tả = mã băm · severity SEV1→critical, SEV2→high, SEV3→medium&#xa;comment tại mỗi mốc + mỗi 30 phút · baseline alert→merge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1010" y="430" width="440" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Không file nào dưới services/ hay shared/ bị sửa. Không có test tự động (sai lệch Nguyên tắc III, hạn tới SCRUM-37). Postmortem: SCRUM-37." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="560" width="1400" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="ghi" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="script" target="sealed" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="tạo lại 7 container" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="script" target="stack" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="traffic" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="load" target="stack" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="span" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="stack" target="otel" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="5 phút" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="otel" target="rule" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="rule" target="alerts" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="alerts" target="dash" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" value="người vận hành mở Case" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="dash" target="case" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" value="bản ghi" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="case" target="runbook" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="otel" target="verify" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

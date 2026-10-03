@@ -59,3 +59,38 @@ Invoke-WebRequest -Uri "$KibanaBase/api/saved_objects/_export" -Method Post `
   -Headers @{ "kbn-xsrf" = "true" } -ContentType "application/json" -Body $body `
   -OutFile "docs/kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson"
 ```
+
+## Rule phát hiện nhanh `incident-fast-detection` (spec 028, SCRUM-36)
+
+`incident-fast-detection-rule.ndjson` là bản export thật của rule phát hiện nhanh: vượt SLO trong 5
+phút gần nhất, tag `incident-fast-detection`. Rule này dùng để diễn tập sự cố on-call. Đặc tả tại
+[`specs/028-incident-oncall-drill/`](../../../specs/028-incident-oncall-drill/spec.md), cách dựng và lý
+do thiết kế ở [`../08-phat-hien-nhanh-va-xu-ly-su-co.md`](../08-phat-hien-nhanh-va-xu-ly-su-co.md).
+
+Rule nằm ở **file riêng**, không gộp vào `error-budget-rules.ndjson`: `ErrorBudgetRuleDefinitionTests`
+của 027 đếm đúng 4 rule trong file đó. Không có test nào canh ngưỡng của rule này (sai lệch Nguyên tắc
+III của spec 028), nên sửa `slos` trong manifest thì phải sửa rule bằng tay rồi export lại.
+
+Import (cùng điều kiện trước và cùng lý do dùng `curl.exe` như phần trên):
+
+```powershell
+curl.exe -X POST "http://localhost:5601/api/saved_objects/_import?overwrite=true" `
+  -H "kbn-xsrf: true" `
+  --form "file=@docs/kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson"
+```
+
+**Bắt buộc sau import**: rule được nhập ở trạng thái **disabled**. Vào ☰ → **Stack Management** →
+**Rules**, lọc tag `incident-fast-detection` → **Enable**.
+
+Export lại sau khi sửa trên UI:
+
+```powershell
+$KibanaBase = "http://localhost:5601"
+$body = @{
+  objects = @(@{ type = "alert"; id = "9b0e2c36-678b-4cd7-9de0-7468d623f82d" })
+  includeReferencesDeep = $true
+} | ConvertTo-Json -Depth 5
+Invoke-WebRequest -Uri "$KibanaBase/api/saved_objects/_export" -Method Post `
+  -Headers @{ "kbn-xsrf" = "true" } -ContentType "application/json" -Body $body `
+  -OutFile "docs/kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson"
+```

@@ -1,0 +1,100 @@
+<mxfile host="65bd71144e">
+    <diagram id="incident-oncall-drill-flow-nghiep-vu" name="Luồng nghiệp vụ — diễn tập sự cố mà người vận hành không biết trước chỗ hỏng">
+        <mxGraphModel dx="976" dy="333" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1350" pageHeight="480" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Luồng nghiệp vụ — từ sự cố bí mật tới khi được xác nhận đã xong bằng số đo" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="10" width="1200" height="26" as="geometry"/>
+                </mxCell>
+                <mxCell id="f1" value="1. Bật công tắc diễn tập,&#xa;khởi động: nhận mã niêm phong" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="60" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="f2" value="2. Trong 0–30 phút: một bộ phận&#xa;hỏng bí mật (mọi bộ phận cùng&#xa;khởi động lại để không lộ)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="60" width="240" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="f3" value="3. Cảnh báo hiện trên màn hình&#xa;hằng ngày (nhìn 5 phút gần nhất)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="570" y="60" width="240" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="d1" value="Cảnh báo còn qua&#xa;≥ 2 lần kiểm tra?" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="60" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="noise" value="Nhiễu khởi động lại —&#xa;ghi vào dòng thời gian,&#xa;tiếp tục theo dõi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="850" y="160" width="200" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="f4" value="4. Mở phiếu sự cố, chấm&#xa;mức độ SEV1 / SEV2 / SEV3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1090" y="60" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="f5" value="5. Báo tình hình trên phiếu:&#xa;tại mỗi mốc + mỗi 30 phút" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1090" y="160" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="f6" value="6. Tìm nguyên nhân&#xa;từ số liệu và nhật ký" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="1090" y="260" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="f7" value="7. Giảm thiểu: đưa vào một thay đổi&#xa;phòng ngừa, tắt công tắc,&#xa;khởi động lại cấu hình đúng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="820" y="260" width="240" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="d2" value="15 phút liên tục&#xa;đạt cam kết và hết cảnh báo?" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="260" width="220" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="wait" value="Chưa xong — &quot;trông có vẻ ổn&quot;&#xa;không đủ; tiếp tục theo dõi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="370" width="220" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="f8" value="8. Đóng phiếu, rồi mới mở niêm phong&#xa;để đối chiếu nguyên nhân" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="260" width="230" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="f9" value="9. Lưu bản ghi sự cố: lúc hỏng / cảnh báo /&#xa;phát hiện / mức độ / nguyên nhân /&#xa;giảm thiểu / xong — tách bạch, có giờ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="260" width="230" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="next" value="→ Rút kinh nghiệm không đổ lỗi&#xa;(bước sau, SCRUM-37)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="380" width="230" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="f1" target="f2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="f2" target="f3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="f3" target="d1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="không" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="d1" target="noise" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="noise" target="d1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="có" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="d1" target="f4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="f4" target="f5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="f5" target="f6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="f6" target="f7" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="f7" target="d2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e11" value="chưa" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="d2" target="wait" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="wait" target="d2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e13" value="rồi" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="d2" target="f8" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="f8" target="f9" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="f9" target="next" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

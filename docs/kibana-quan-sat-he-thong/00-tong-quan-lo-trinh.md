@@ -31,6 +31,9 @@ Bạn chưa có kinh nghiệm với Kibana, đã dùng Postman gọi API và hi�
 7. **[07-canh-bao-ngan-sach-loi.md](07-canh-bao-ngan-sach-loi.md)** — ngân sách lỗi theo tháng, 4 rule
    cảnh báo ES|QL (mốc 50/75/100 và trạng thái "cạn — ưu tiên độ tin cậy") hiện ngay trên dashboard của
    file 06. Cần file 06.
+8. **[08-phat-hien-nhanh-va-xu-ly-su-co.md](08-phat-hien-nhanh-va-xu-ly-su-co.md)** — rule ES|QL
+   `incident-fast-detection` báo service vượt SLO trong 5 phút gần nhất (bảng trên dashboard của file
+   06), và truy vấn xác nhận khôi phục 15 phút cho buổi diễn tập sự cố on-call (SCRUM-36). Cần file 07.
 
 ## Chuẩn bị chung cho cả 6 file
 

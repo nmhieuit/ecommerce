@@ -12189,6 +12189,88 @@
           ]
         }
       ]
+    },
+    {
+      "name": "28 - Diễn tập sự cố: tải nền bổ sung (parties, identity)",
+      "description": "Spec 028 (SCRUM-36). Luồng 4 bước của folder 26 chỉ chạm gateway, BFF, products, baskets, orders — không chạm parties và chỉ chạm identity lúc lấy token. Script `scripts/incident-drill.ps1` bốc ngẫu nhiên 1 trong 7 service, nên cả 7 phải có traffic thì rule `incident-fast-detection` mới có dữ liệu để bắn. Chạy liên tục cùng folder 00 và 26 bằng newman (lệnh đầy đủ ở `docs/dien-tap-chaos-engineering/README.md`, mục \"Diễn tập sự cố on-call\"). Không đổi cấu hình nào — chỉ tạo traffic.",
+      "item": [
+        {
+          "name": "01 Parties qua BFF — GET /bff/parties/{guid ngẫu nhiên} → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/bff/parties/{{$guid}}",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "bff",
+                "parties",
+                "{{$guid}}"
+              ]
+            },
+            "description": "Guid ngẫu nhiên vì environment không có party mẫu (research.md Quyết định 5, đã duyệt). 404 vẫn đi qua gateway → BFF → parties, tạo span server thật cho parties, và không tính là request xấu (chỉ 5xx và độ trễ mới xấu)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 — party không tồn tại, nhưng request đã tới parties\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Identity discovery — GET /.well-known/openid-configuration → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{identityUrl}}/.well-known/openid-configuration",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                ".well-known",
+                "openid-configuration"
+              ]
+            },
+            "description": "Traffic đều cho identity ngoài lúc lấy token. Không cần token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 — tài liệu discovery\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [
