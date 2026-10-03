@@ -1,4 +1,4 @@
-# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-027
+# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-028
 
 *Đối tượng đọc: kỹ sư phần mềm / software architect. File này gom lại mọi "lưu ý hay khám phá" (blocker
 giữa chừng, bug thật tìm được khi triển khai/xác thực, giới hạn phạm vi đã biết, amendment đính chính)
@@ -20,6 +20,13 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
 - **[019](019_Architect_liveness%20readiness%20probe%20cho%20mọi%20service.md)** — Thiết kế ban đầu
   định gọi `ansible-playbook --check` cục bộ ngay trong bộ test C#. Đã đổi hướng khi implement: tự render
   Jinja2 hoàn toàn bằng C#, vì Ansible không chạy native được trên máy phát triển Windows của phiên đó.
+
+- **[028](028_Architect_diễn%20tập%20sự%20cố%20thật%20và%20phản%20ứng%20on-call.md)** — Phạm vi đổi nhiều lần trong lúc triển khai, mỗi lần do người dùng chốt sau khi có số đo thật:
+  - **Không sửa code service**: chỉ dùng cấu hình/tham số sai. Kéo theo việc bỏ loại "bug thật trong code", rồi bỏ cả loại thay thế (bỏ `TrustServerCertificate`).
+  - **Loại "cạn pool" chỉ còn ở gateway**: `Max Pool Size=1` ở orders không gây lỗi dưới tải nền (0 lỗi, p95 25 ms).
+  - **Rule phát hiện nhanh xét gateway chỉ theo 5xx**: ngưỡng gateway 150/500 ms chặt hơn BFF 300/800 ms mà nó chuyển tiếp tới.
+  - **Tải nền**: bài NBomber của 026 luôn `401`, nên dùng newman chạy folder Postman 26 + 28. Token lấy mỗi 30 phút (lấy mỗi vòng làm identity vượt SLO), nghỉ 1000 ms (nghỉ 200 ms làm mức nền vượt SLO).
+  - **Sai lệch Nguyên tắc III**: không viết test ("đây là diễn tập, không có code mới"), hạn tới khi SCRUM-37 xong. Xem `specs/028-incident-oncall-drill/plan.md` Complexity Tracking.
 
 ## 2. Bug thật phát hiện khi triển khai/xác thực
 
@@ -232,6 +239,13 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   `KIBANA_ENCRYPTION_KEY` (Vùng 2 `.env.example`). Panel dashboard dựng bằng Discover session ES|QL qua
   API thay vì Lens tô màu vì thao tác UI qua trình duyệt tự động hoá không ổn định.
 
+- **[028](028_Architect_diễn%20tập%20sự%20cố%20thật%20và%20phản%20ứng%20on-call.md)** — Bug thật của chính công cụ diễn tập, bắt được khi chạy trên stack thật và đã sửa:
+  - (1) Một lệnh `docker compose up --no-deps` gộp 7 service làm BFF/gateway kẹt `Created` (vẫn chờ service đích healthy theo `depends_on`), và Compose in đích danh service hỏng. Sửa: mỗi service một lệnh riêng.
+  - (2) Mức sàn 1 request/giây cho loại 5xx làm tỷ lệ lỗi thật lệch xa tỷ lệ niêm phong (75.7% thay vì 40%). Sửa: bỏ mức sàn.
+  - (3) Tạo lại `identity-api` làm token của tải nền hỏng. Token vẫn qua gateway (gateway còn giữ khoá cũ) nhưng bị service hạ lưu vừa tạo lại từ chối, nên BFF trả `502`/`504`, không phải `401`. Sửa: `-Load` lấy token lại khi Id container identity đổi.
+  - (4) Loại 5xx không có override, nên chạy lại compose không tạo lại đích và việc gửi header không dừng. Sửa quy trình: khôi phục = bỏ cờ khỏi `.env` rồi chạy lại compose.
+  - (5) Windows PowerShell 5.1 coi stderr của `docker`/`taskkill` là lỗi chặn khi `ErrorActionPreference = Stop`; `-Load` thoát giữa buổi. `npx` gọi từ PowerShell báo "could not determine executable to run". Sửa: bọc `Continue`, dùng `npx.cmd --yes newman@6.2.2`.
+
 ## 3. Giới hạn phạm vi đã biết
 
 - **[001](001_Architect_dựng%20khung%204%20dịch%20vụ.md)** — Tenant-keyed schema/connection resolution
@@ -415,6 +429,15 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   Import lại rule từ `alerts/error-budget-rules.ndjson`: 2/4 rule kẹt `pending` sau khi Enable (task tự
   tắt vì chạy đúng lúc rule bị tắt giữa chừng import) — gỡ bằng Disable rồi Enable lại; việc này có thể
   ghi thêm sự kiện "cạn" cho alert vừa chuyển active (đã gặp: 13 → 18 sự kiện).
+
+- **[028](028_Architect_diễn%20tập%20sự%20cố%20thật%20và%20phản%20ứng%20on-call.md)** — Giới hạn còn lại, không sửa trong phạm vi 028:
+  - **Nhiễu khởi động nguội**: tạo lại 7 container (để che service đích) làm mọi service chậm 5–7 phút. Tiêu chí người dùng chốt "alert qua ≥ 2 lần chạy rule là sự cố", nên nhiễu đôi khi bị tính là sự cố.
+  - **Môi trường local chậm từng đợt, chưa rõ nguyên nhân**: parties/products/baskets/identity có lúc p95 320–560 ms mà không bị tiêm, rule bắn lại sau hơn 15 phút. Khôi phục orders mất ~48 phút mới có 15 phút liên tục đạt SLO.
+  - **Lỗi lan theo chuỗi phụ thuộc**: hỏng orders thì BFF và gateway cũng có alert; người vận hành tự lần ra gốc.
+  - **Diễn tập tiêu hao ngân sách tháng như thật** (người dùng chốt): sau các lần thử, cả 7 service ở trạng thái "cạn ngân sách" của 027.
+  - **Ngưỡng của rule `incident-fast-detection` chép tay**, không test nào canh khớp manifest.
+  - **Niêm phong dựa vào kỷ luật**: file băm, không mã hoá.
+  - **Buổi diễn tập mù đầu tiên chưa chạy** (T031, người dùng tự làm).
 
 ## 4. Amendment — đính chính khi thực tế lệch spec gốc
 

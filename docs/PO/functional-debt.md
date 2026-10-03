@@ -1,4 +1,4 @@
-# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 25 tính năng
+# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 26 tính năng
 
 *Viết cho: người quản lý sản phẩm, stakeholder không trực tiếp code. Không yêu cầu đọc code hay biết
 tên bất kỳ công cụ kỹ thuật nào.*
@@ -125,6 +125,13 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   (không có lượt dùng, có 1 ngày xấu giữa chừng, mới cạn hôm qua) — đều ra đúng. Lúc dựng còn phát hiện 3
   điểm "ngầm" của công cụ giám sát (không có trong tài liệu của nhà cung cấp), đã điều chỉnh để cảnh báo
   không bị tạo lại liên tục hay gộp nhầm 2 ngân sách thành 1.
+- **[028](028_PO_diễn%20tập%20sự%20cố%20thật%20và%20phản%20ứng%20trực%20sự%20cố.md)** —
+  Đội đã thử từng kiểu hỏng hóc (trỏ nhầm địa chỉ, giới hạn kết nối quá nhỏ, cố ý tạo lỗi theo tỷ lệ) trên
+  hệ thống chạy thật: cảnh báo nhanh hiện trên màn hình hằng ngày khoảng 1,5 phút sau khi bộ phận bắt
+  đầu hỏng, phiếu sự cố mở được theo đúng hướng dẫn, và mốc "đã xong" chỉ được ghi khi số đo cho thấy 15
+  phút liên tục đạt cam kết (lần thử: khôi phục lúc 11:27, nhưng tới 12:15 mới đủ 15 phút liên tục). Lúc
+  thử còn bắt được 5 lỗi của chính công cụ diễn tập và đã sửa, ví dụ khởi động lại hệ thống làm phiên
+  đăng nhập của khách mô phỏng hỏng âm thầm, khiến lỗi bị đổ nhầm sang bộ phận khác.
 
 ## 2. Giới hạn hiện tại
 
@@ -255,3 +262,13 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   máy chủ giám sát quá tải, đôi lúc 1 cảnh báo cũ bị "bỏ quên" — màn hình chỉ hiện cảnh báo được cập
   nhật trong 15 phút gần nhất để tránh hiển thị sai; đổi lại, nếu công cụ giám sát ngừng chạy quá 15 phút
   thì bảng cảnh báo sẽ trống. Theo lựa chọn đã thống nhất, ngày không có lượt dùng nào được tính là đạt.
+- **[028](028_PO_diễn%20tập%20sự%20cố%20thật%20và%20phản%20ứng%20trực%20sự%20cố.md)** —
+  Buổi diễn tập "bí mật" đầu tiên (người vận hành không biết trước chỗ hỏng) **chưa chạy** — đội sẽ tự
+  làm sau; mọi lần thử hiện tại đều biết trước chỗ hỏng. Môi trường thử nghiệm chậm theo từng đợt chưa
+  rõ nguyên nhân, nên cảnh báo đôi khi bật cho cả bộ phận không hỏng, và vài phút ngay sau khi khởi động
+  lại hệ thống luôn có cảnh báo "nhiễu" — theo tiêu chí đã thống nhất, nhiễu kéo dài đôi khi bị tính là
+  sự cố. Hỏng một bộ phận còn kéo cảnh báo sang các bộ phận phụ thuộc, người vận hành phải tự lần ra gốc.
+  Lỗi do diễn tập được tính vào ngân sách lỗi tháng như thật (theo lựa chọn đã thống nhất), nên sau các
+  lần thử, cả 7 bộ phận đang ở trạng thái "cạn ngân sách" trên môi trường thử nghiệm. Kiểu hỏng "giới hạn
+  kết nối quá nhỏ" chỉ gây lỗi ở cổng vào hệ thống, nên chỉ được dùng cho bộ phận đó. Công cụ chưa có
+  kiểm thử tự động (đã thống nhất, sẽ bổ sung trước khi xong phần rút kinh nghiệm sau sự cố).

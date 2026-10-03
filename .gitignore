@@ -77,3 +77,6 @@ artifacts/
 # worse, duplicated file content.
 /.worktrees/
 /.claude/worktrees/
+
+# File niêm phong và compose override tạm của diễn tập sự cố — spec 028 (scripts/incident-drill.ps1), không commit.
+/.incident-drill/
