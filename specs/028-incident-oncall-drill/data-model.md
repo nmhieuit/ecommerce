@@ -36,7 +36,7 @@ Vòng đời: `sealed` (sau `-Start`) → `injected` (tiến trình nền đã t
 | Loại | `.es-query`, ES|QL, `groupBy: row` |
 | Chu kỳ / cửa sổ | 5 phút / 5 phút |
 | Mỗi alert là | một service |
-| Active khi | trong 5 phút gần nhất: `err_pct ≥ 0.1` hoặc `p95 >` ngưỡng p95 của service hoặc `p99 >` ngưỡng p99 của service |
+| Active khi | trong 5 phút gần nhất: `err_pct ≥ 1` hoặc `p95 >` ngưỡng p95 của service hoặc `p99 >` ngưỡng p99 của service |
 | Tag | `incident-fast-detection` |
 | Action | không có |
 

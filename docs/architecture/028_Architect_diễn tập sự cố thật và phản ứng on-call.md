@@ -42,14 +42,14 @@ file này: giá trị là biểu thức nội suy (`${MSSQL_SA_PASSWORD}`), Comp
 không lộ đích. Ban đầu dùng một lệnh gộp, nhưng BFF và gateway kẹt ở `Created` vì chờ service đích
 healthy theo `depends_on`, và Compose in đích danh service hỏng.
 
-## 3. Phát hiện nhanh, khác ngân sách tháng của 027
+## 3. Phát hiện nhanh, khác ngân sách tuần của 027
 
-Rule của 027 đo tiêu hao **cả tháng**, nên một sự cố đơn lẻ cần hàng giờ mới qua mốc 50%. Rule
+Rule của 027 đo tiêu hao **cả tuần**, nên một sự cố đơn lẻ cần hàng giờ mới qua mốc 50%. Rule
 `incident-fast-detection` chỉ nhìn **5 phút**:
 - chu kỳ 5 phút, `groupBy: row`;
-- `STATS ... BY service | KEEP service` để mã alert ổn định (Hệ quả 2–3 của research 027).
+- `STATS ... BY service | KEEP service` để mã alert ổn định (Ràng buộc 2–3 của research 027).
 
-Một service có alert khi 5xx ≥ 0.1%, hoặc p95/p99 vượt `slos.latency`. **Riêng gateway chỉ xét 5xx**:
+Một service có alert khi 5xx ≥ 1%, hoặc p95/p99 vượt `slos.latency`. **Riêng gateway chỉ xét 5xx**:
 ngưỡng 150/500 ms của gateway chặt hơn ngưỡng 300/800 ms của BFF mà nó chuyển tiếp tới, nên gateway vượt
 độ trễ ngay ở mức nền. Rule ở file export riêng, để `ErrorBudgetRuleDefinitionTests` của 027 (đếm đúng
 4 rule) không bị ảnh hưởng. Không có test nào canh ngưỡng của rule này.
@@ -89,7 +89,7 @@ Vì thế `-Load` lấy token lại không chỉ sau 30 phút, mà cả khi runn
   320–560 ms mà không bị tiêm, và rule lại bắn cho chúng sau hơn 15 phút.
 - **Lỗi lan theo chuỗi phụ thuộc**: hỏng orders thì BFF (22.5%) và gateway (31.9%) cũng có alert. Đây là
   hành vi đúng, nhưng người vận hành phải tự lần ra gốc.
-- **Diễn tập tiêu hao ngân sách lỗi tháng như thật** (người dùng chốt). Sau các lần thử, cả 7 service đã ở
+- **Diễn tập tiêu hao ngân sách lỗi tuần như thật** (người dùng chốt). Sau các lần thử, cả 7 service đã ở
   trạng thái "cạn ngân sách" của 027.
 - Niêm phong dựa vào kỷ luật không mở `.incident-drill/` (người dùng chọn băm, không mã hoá).
 - Không có test tự động (sai lệch Nguyên tắc III), nên ngưỡng trong rule có thể lệch khỏi manifest mà

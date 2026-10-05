@@ -36,7 +36,7 @@ Là người đóng vai SRE, tôi muốn giá trị SLO mà mỗi service khai b
 
 **Acceptance Scenarios**:
 
-1. **Given** một service không ghi chú lý do ngoại lệ nào, **When** tôi so sánh bốn chỉ tiêu SLO đã khai báo của service đó với bộ giá trị mặc định của nền tảng theo đúng phân loại của service (BFF hướng client: độ trễ p95 ≤ 300ms, p99 ≤ 800ms; API nội bộ: độ trễ p95 ≤ 150ms, p99 ≤ 500ms; độ khả dụng 99.9% hàng tháng; tỷ lệ lỗi 5xx dưới 0.1%), **Then** bốn giá trị đó khớp đúng với bộ mặc định, không có sai lệch.
+1. **Given** một service không ghi chú lý do ngoại lệ nào, **When** tôi so sánh bốn chỉ tiêu SLO đã khai báo của service đó với bộ giá trị mặc định của nền tảng theo đúng phân loại của service (BFF hướng client: độ trễ p95 ≤ 300ms, p99 ≤ 800ms; API nội bộ: độ trễ p95 ≤ 150ms, p99 ≤ 500ms; độ khả dụng 99% theo tuần; tỷ lệ lỗi 5xx dưới 1%), **Then** bốn giá trị đó khớp đúng với bộ mặc định, không có sai lệch.
 2. **Given** một service khai báo ngân sách khác với mặc định (ví dụ một luồng đọc của BFF hợp lý cần độ trễ nới lỏng hơn do phải gọi tuần tự nhiều service phía sau), **When** tôi kiểm tra manifest của service đó, **Then** manifest ghi rõ, ngay tại chỗ khai báo, lý do vì sao cần mức ngân sách khác — không phải một sai khác âm thầm không giải thích.
 3. **Given** một service được phân loại sai (ví dụ một API nội bộ nhưng lại mang ngân sách của BFF hướng client mà không có lý do), **When** tôi rà soát toàn bộ manifest, **Then** trường hợp này được phát hiện là một sai lệch không có căn cứ, cần được sửa lại đúng theo mặc định hoặc bổ sung lý do.
 

@@ -132,6 +132,14 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   phút liên tục đạt cam kết (lần thử: khôi phục lúc 11:27, nhưng tới 12:15 mới đủ 15 phút liên tục). Lúc
   thử còn bắt được 5 lỗi của chính công cụ diễn tập và đã sửa, ví dụ khởi động lại hệ thống làm phiên
   đăng nhập của khách mô phỏng hỏng âm thầm, khiến lỗi bị đổ nhầm sang bộ phận khác.
+- **[029](029_PO_ngân%20sách%20lỗi%20theo%20tuần%20lịch.md)** —
+  Đội đã chủ động gây lỗi có kiểm soát cho **cả 7 bộ phận cùng lúc** để "đốt" ngân sách lỗi theo tuần:
+  cảnh báo mốc 50% hiện sau khoảng 4,5 phút, mốc 100% hiện chưa tới 2 phút sau đợt cuối, cả 7 bộ phận vào
+  danh sách "cạn ngân sách — ưu tiên độ tin cậy", và con số trên màn hình hằng ngày khớp đúng với cảnh báo.
+  Cảnh báo phát hiện sự cố nhanh đã được thử ở hai phía của ngưỡng mới 1%: 0,28% lỗi thì không bật, 2,73%
+  thì bật. Cách xác định "đầu tuần giờ Việt Nam" được thử ở 4 thời điểm quanh nửa đêm Chủ nhật — đều đúng.
+  Lúc chuyển còn phát hiện bảng lưu "sự kiện cạn" trên môi trường thử nghiệm bị tạo sai kiểu dữ liệu, đã
+  tạo lại đúng.
 
 ## 2. Giới hạn hiện tại
 
@@ -256,19 +264,28 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   cách xác nhận đơn hàng hiển thị cho khách, chưa ai yêu cầu ở bước này.
 - **[027](027_PO_chính%20sách%20ngân%20sách%20lỗi%20và%20ngưỡng%20cảnh%20báo.md)** —
   Việc "dừng đưa tính năng mới vào bộ phận đã cạn" hiện là **cam kết quy trình** của đội, chưa có cơ chế
-  tự động chặn. Phần "tự hồi phục sau 3 ngày" và "sang tháng mới vẫn giữ trạng thái cạn" mới kiểm bằng
+  tự động chặn. Phần "tự hồi phục sau 3 ngày" và "sang tuần mới vẫn giữ trạng thái cạn" mới kiểm bằng
   dữ liệu giả lập, chưa quan sát qua nhiều ngày chạy thật. Trên môi trường thử nghiệm, lượng người dùng
   rất thấp nên chỉ 1–2 lỗi đã vượt mốc — gần như mọi bộ phận "cạn" sau mỗi lần dựng lại môi trường. Khi
   máy chủ giám sát quá tải, đôi lúc 1 cảnh báo cũ bị "bỏ quên" — màn hình chỉ hiện cảnh báo được cập
   nhật trong 15 phút gần nhất để tránh hiển thị sai; đổi lại, nếu công cụ giám sát ngừng chạy quá 15 phút
-  thì bảng cảnh báo sẽ trống. Theo lựa chọn đã thống nhất, ngày không có lượt dùng nào được tính là đạt.
+  thì bảng cảnh báo sẽ trống. Theo lựa chọn đã thống nhất, ngày không có lượt dùng nào được tính là đạt. *Từ 029: ngân sách tính
+  theo tuần lịch (thứ Hai → Chủ nhật, giờ Việt Nam), mức cho phép nới lên 1% — vài lỗi vẫn đủ vượt mốc
+  trên môi trường thử nghiệm.*
 - **[028](028_PO_diễn%20tập%20sự%20cố%20thật%20và%20phản%20ứng%20trực%20sự%20cố.md)** —
   Buổi diễn tập "bí mật" đầu tiên (người vận hành không biết trước chỗ hỏng) **chưa chạy** — đội sẽ tự
   làm sau; mọi lần thử hiện tại đều biết trước chỗ hỏng. Môi trường thử nghiệm chậm theo từng đợt chưa
   rõ nguyên nhân, nên cảnh báo đôi khi bật cho cả bộ phận không hỏng, và vài phút ngay sau khi khởi động
   lại hệ thống luôn có cảnh báo "nhiễu" — theo tiêu chí đã thống nhất, nhiễu kéo dài đôi khi bị tính là
   sự cố. Hỏng một bộ phận còn kéo cảnh báo sang các bộ phận phụ thuộc, người vận hành phải tự lần ra gốc.
-  Lỗi do diễn tập được tính vào ngân sách lỗi tháng như thật (theo lựa chọn đã thống nhất), nên sau các
+  Lỗi do diễn tập được tính vào ngân sách lỗi tuần như thật (theo lựa chọn đã thống nhất), nên sau các
   lần thử, cả 7 bộ phận đang ở trạng thái "cạn ngân sách" trên môi trường thử nghiệm. Kiểu hỏng "giới hạn
   kết nối quá nhỏ" chỉ gây lỗi ở cổng vào hệ thống, nên chỉ được dùng cho bộ phận đó. Công cụ chưa có
   kiểm thử tự động (đã thống nhất, sẽ bổ sung trước khi xong phần rút kinh nghiệm sau sự cố).
+- **[029](029_PO_ngân%20sách%20lỗi%20theo%20tuần%20lịch.md)** —
+  Khoảnh khắc chuyển tuần thật (00:00 thứ Hai) và việc hồi phục sau 3 ngày chưa quan sát được — mới kiểm
+  bằng thời điểm giả định và dữ liệu thử. Lượng người dùng thử nghiệm thấp, nên với chu kỳ tuần vài lỗi đã
+  đủ vượt nhiều mốc cùng lúc (theo lựa chọn đã thống nhất: chỉ ghi lại, không xử lý thêm). Một bộ phận
+  "cạn" mà không ổn định lại quá 2 tuần có thể tự rời danh sách "cạn" (giới hạn của cách nhìn lại 14 ngày
+  đã chọn). Cảnh báo phát hiện nhanh vẫn chưa có kiểm thử tự động canh ngưỡng. Sau buổi diễn tập, cả 7 bộ
+  phận đang ở trạng thái "cạn" trên môi trường thử nghiệm.

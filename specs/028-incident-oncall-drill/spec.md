@@ -19,8 +19,10 @@
 - Q: Cảnh báo nào dùng để phát hiện sự cố? → A: Thêm một rule phát hiện nhanh mới; giữ nguyên 4 rule ngân sách lỗi của đặc tả 027.
 - Q: Loại "bug thật trong code" không sinh 5xx thì phát hiện thế nào? → A: Bug được chọn phải có biểu hiện là 5xx hoặc độ trễ vượt ngưỡng.
 - Q: Lỗi do diễn tập có được tính vào ngân sách lỗi tháng không? → A: Có, tính như sự cố thật; nếu cạn ngân sách thì áp dụng đúng chính sách của đặc tả 027 (kể cả đóng băng tính năng).
+  - *Thay bởi spec 029 (2026-10-05)*: ngân sách lỗi tính theo tuần lịch giờ Việt Nam; lỗi diễn tập vẫn tính như sự cố thật — xem [`specs/029-error-budget-weekly/spec.md`](../029-error-budget-weekly/spec.md).
 - Q: Phân loại mức độ nghiêm trọng thế nào? → A: Ba mức — SEV1: luồng đặt hàng hỏng hoàn toàn; SEV2: một chức năng giảm cấp rõ rệt; SEV3: ảnh hưởng nhỏ hoặc có cách vòng.
 - Q: Rule phát hiện nhanh bắn khi nào? → A: Khi tỷ lệ 5xx ≥ 0.1% hoặc p95/p99 vượt ngưỡng đã khai báo của service, đo trên cửa sổ 5 phút gần nhất.
+  - *Thay bởi spec 029 (2026-10-05)*: SLO 5xx đổi thành dưới 1% (hiến chương 2.0.0), rule bắn khi tỷ lệ 5xx ≥ 1%; ngưỡng độ trễ giữ nguyên.
 - Q: Bước thông báo trạng thái sự cố thực hiện ở đâu? → A: Kibana Cases — mở một Case cho sự cố, cập nhật trạng thái bằng comment.
 - Q: Dòng thời gian sự cố lưu ở đâu? → A: Dùng chung thư mục kết quả diễn tập chaos (`docs/dien-tap-chaos-engineering/ket-qua/`) với mẫu mở rộng.
 - Q: Tiêu chí xác nhận khôi phục bằng telemetry? → A: 5xx và độ trễ của service quay về trong ngưỡng SLO liên tục 15 phút, và rule phát hiện nhanh hết hoạt động.
@@ -85,13 +87,13 @@ Là người đóng vai SRE, tôi muốn khởi chạy một script tự chọn 
 
 Là người đóng vai SRE, tôi muốn một cảnh báo phát hiện nhanh bắn ngay khi service vượt SLO trong 5 phút gần nhất, và từ đó tôi đi theo một quy trình triage thật: phát hiện, đánh giá mức độ nghiêm trọng, thông báo trạng thái trên Kibana Case, và giảm thiểu bằng một PR được merge vào master.
 
-**Why this priority**: Đây chính là tiêu chí chấp nhận 1 của Jira. Bốn rule ngân sách lỗi của đặc tả 027 đo tiêu hao theo tháng nên không bắn kịp cho một sự cố đơn lẻ; cần một tín hiệu phát hiện nhanh để buổi diễn tập bắt đầu từ cảnh báo chứ không phải từ việc tự soi dashboard.
+**Why this priority**: Đây chính là tiêu chí chấp nhận 1 của Jira. Bốn rule ngân sách lỗi của đặc tả 027 đo tiêu hao theo tuần nên không bắn kịp cho một sự cố đơn lẻ; cần một tín hiệu phát hiện nhanh để buổi diễn tập bắt đầu từ cảnh báo chứ không phải từ việc tự soi dashboard.
 
 **Independent Test**: Tiêm một lỗi đã biết (ngoài buổi diễn tập mù) vào một service; xác nhận rule phát hiện nhanh bắn trong 5 phút, hiện trên panel mới của dashboard SLO hằng ngày; mở Kibana Case, ghi severity, các cập nhật trạng thái và hành động giảm thiểu.
 
 **Acceptance Scenarios**:
 
-1. **Given** sự cố đã được tiêm và tải nền đang chạy, **When** tỷ lệ 5xx của service ≥ 0.1% hoặc p95/p99 vượt ngưỡng đã khai báo của chính service đó trong cửa sổ 5 phút gần nhất, **Then** rule phát hiện nhanh bắn cho đúng service đó (riêng gateway chỉ xét tỷ lệ 5xx).
+1. **Given** sự cố đã được tiêm và tải nền đang chạy, **When** tỷ lệ 5xx của service ≥ 1% hoặc p95/p99 vượt ngưỡng đã khai báo của chính service đó trong cửa sổ 5 phút gần nhất, **Then** rule phát hiện nhanh bắn cho đúng service đó (riêng gateway chỉ xét tỷ lệ 5xx).
 2. **Given** rule phát hiện nhanh đang hoạt động, **When** tôi mở dashboard SLO hằng ngày, **Then** panel phát hiện nhanh cho biết service nào đang vượt SLO trong 5 phút gần nhất.
 3. **Given** cảnh báo đã bắn, **When** tôi bắt đầu triage, **Then** tôi mở một Kibana Case cho sự cố và ghi một comment tại mỗi mốc: phát hiện, xác định severity (SEV1/SEV2/SEV3 theo tiêu chí đã định nghĩa), xác định nguyên nhân, giảm thiểu, giải quyết; cộng thêm cập nhật định kỳ trong lúc sự cố còn mở.
 4. **Given** tôi đã tìm ra nguyên nhân, **When** tôi giảm thiểu, **Then** hành động giảm thiểu đầu tiên là merge vào master một PR phòng ngừa tái diễn, rồi pull master, build và chạy lại service bị ảnh hưởng với cấu hình tiêm lỗi đã gỡ.
@@ -139,7 +141,7 @@ Là người đóng vai SRE, tôi muốn chỉ đóng sự cố khi telemetry ch
 - "Cạn connection pool" chỉ áp dụng cho gateway; script chọn service khác thì chỉ bốc trong "đích kết nối sai" và "lỗi 5xx của 027".
 - Tạo lại cả 7 container ở thời điểm tiêm gây một khoảng gián đoạn ngắn trên mọi service; đây là nhiễu có chủ đích để che service đích, và cũng tiêu hao ngân sách lỗi của mọi service.
 - Hỏng hóc chỉ làm sai dữ liệu nghiệp vụ mà không sinh 5xx/trễ nằm ngoài phạm vi.
-- Sự cố diễn tập tiêu hao ngân sách lỗi tháng như sự cố thật; nếu một ngân sách đạt 100%, service vào trạng thái "cạn ngân sách — ưu tiên độ tin cậy" theo chính sách của đặc tả 027 và chỉ thoát khi đạt điều kiện hồi phục 3 ngày của đặc tả đó.
+- Sự cố diễn tập tiêu hao ngân sách lỗi tuần như sự cố thật; nếu một ngân sách đạt 100%, service vào trạng thái "cạn ngân sách — ưu tiên độ tin cậy" theo chính sách của đặc tả 027 và chỉ thoát khi đạt điều kiện hồi phục 3 ngày của đặc tả đó.
 - Cờ `Chaos:AllowFaultInjection` tắt: script không tiêm được gì; đây không phải một sự cố và không tạo bản ghi sự cố.
 - Rule phát hiện nhanh bắn đồng thời với các rule mốc ngân sách của đặc tả 027: chấp nhận được, hai loại cảnh báo phục vụ mục đích khác nhau.
 - Người vận hành bế tắc, không tìm ra nguyên nhân: lựa chọn niêm phong vẫn chỉ được mở sau khi đã giải quyết (theo câu trả lời đã chốt).
@@ -152,7 +154,7 @@ Là người đóng vai SRE, tôi muốn chỉ đóng sự cố khi telemetry ch
 - **FR-002**: Script PHẢI niêm phong lựa chọn (loại hỏng hóc, service, thời điểm tiêm thực tế, tỷ lệ 5xx nếu có) vào một file không được commit, chỉ in ra mã băm SHA-256 của nội dung đó; lựa chọn chỉ được mở (lệnh reveal) sau khi sự cố đã được giải quyết.
 - **FR-003**: Script PHẢI từ chối chạy khi cờ `Chaos:AllowFaultInjection` (biến `CHAOS_ALLOW_FAULT_INJECTION` trong `.env`) không bật; khi cờ tắt, KHÔNG có lỗi nào được tiêm. Lúc tiêm, script PHẢI tạo lại cả 7 container service, chỉ container đích nhận cấu hình sai.
 - **FR-004**: Diễn tập PHẢI chạy được trên Docker Compose local, với traffic nền chạy bằng folder Postman 26 qua newman, cộng thêm traffic tới parties và identity để cả 7 service đều có traffic; token chỉ được lấy lại mỗi 30 phút.
-- **FR-005**: PHẢI có một rule phát hiện nhanh trong Kibana, bắn cho từng service khi tỷ lệ 5xx ≥ 0.1% hoặc p95/p99 vượt ngưỡng đã khai báo của chính service đó (kể cả ngoại lệ có lý do), đo trên cửa sổ 5 phút gần nhất; riêng gateway chỉ xét tỷ lệ 5xx (người dùng chốt, vì ngưỡng độ trễ của gateway chặt hơn BFF mà nó chuyển tiếp tới); 4 rule ngân sách lỗi của đặc tả 027 giữ nguyên.
+- **FR-005**: PHẢI có một rule phát hiện nhanh trong Kibana, bắn cho từng service khi tỷ lệ 5xx ≥ 1% hoặc p95/p99 vượt ngưỡng đã khai báo của chính service đó (kể cả ngoại lệ có lý do), đo trên cửa sổ 5 phút gần nhất; riêng gateway chỉ xét tỷ lệ 5xx (người dùng chốt, vì ngưỡng độ trễ của gateway chặt hơn BFF mà nó chuyển tiếp tới); 4 rule ngân sách lỗi của đặc tả 027 giữ nguyên.
 - **FR-006**: Dashboard SLO hằng ngày PHẢI có panel thể hiện trạng thái rule phát hiện nhanh (service nào đang vượt SLO trong 5 phút gần nhất).
 - **FR-007**: PHẢI có quy trình triage được viết ra gồm các bước: phát hiện, đánh giá severity, thông báo trạng thái, giảm thiểu; với tiêu chí severity: SEV1 — luồng đặt hàng hỏng hoàn toàn; SEV2 — một chức năng giảm cấp rõ rệt; SEV3 — ảnh hưởng nhỏ hoặc có cách vòng.
 - **FR-008**: Thông báo trạng thái PHẢI được thực hiện trên một Kibana Case mở cho sự cố, với một comment tại mỗi mốc của dòng thời gian và các cập nhật định kỳ trong lúc sự cố còn mở.
@@ -161,7 +163,7 @@ Là người đóng vai SRE, tôi muốn chỉ đóng sự cố khi telemetry ch
 - **FR-011**: PHẢI có một mẫu bản ghi sự cố mở rộng từ mẫu kết quả diễn tập chaos của đặc tả 025, đặt trong cùng thư mục, bắt buộc đủ trường; bản ghi của mỗi lần diễn tập PHẢI được lưu trong thư mục kết quả đó và thêm vào lịch sử chạy.
 - **FR-012**: Bản ghi sự cố PHẢI chứa dòng thời gian những gì đã quan sát và đã làm, mỗi dòng có timestamp, và PHẢI có đủ các mốc riêng: tiêm lỗi, alert bắn, phát hiện, xác định severity, xác định nguyên nhân, giảm thiểu (merge PR vào master), giải quyết (đạt SLO liên tục 15 phút).
 - **FR-013**: Mốc giải quyết CHỈ được ghi khi telemetry cho thấy 5xx và độ trễ của service bị ảnh hưởng nằm trong ngưỡng SLO liên tục 15 phút và rule phát hiện nhanh không còn hoạt động; bản ghi PHẢI đính kèm bằng chứng telemetry.
-- **FR-014**: Lỗi do diễn tập gây ra PHẢI được tính vào ngân sách lỗi tháng như sự cố thật; KHÔNG được loại trừ khỏi phép tính ngân sách của đặc tả 027.
+- **FR-014**: Lỗi do diễn tập gây ra PHẢI được tính vào ngân sách lỗi tuần như sự cố thật; KHÔNG được loại trừ khỏi phép tính ngân sách của đặc tả 027.
 - **FR-015**: Khi cờ tiêm lỗi tắt, các thay đổi của tính năng này KHÔNG được thay đổi hành vi phản hồi hiện có của bất kỳ endpoint nào.
 
 ### Key Entities *(include if feature involves data)*

@@ -15,9 +15,9 @@ service:
   classification: internal-service-api   # hoặc client-facing-bff
 
 slos:
-  availability: 99.9%
+  availability: 99%
   error-rate:
-    max-5xx-ratio: 0.1%
+    max-5xx-ratio: 1%
   latency:
     p95: 150ms   # 300ms nếu classification: client-facing-bff
     p99: 500ms   # 800ms nếu classification: client-facing-bff
@@ -39,9 +39,9 @@ service:
   classification: internal-service-api
 
 slos:
-  availability: 99.9%
+  availability: 99%
   error-rate:
-    max-5xx-ratio: 0.1%
+    max-5xx-ratio: 1%
   latency:
     p95: 250ms   # khác mặc định 150ms của internal-service-api
     p99: 500ms

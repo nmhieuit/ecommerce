@@ -8,8 +8,8 @@ Việc thật là (a) thêm test canh giữ khai báo, (b) chính thức hoá da
 
 ## Luồng happy-case đã rà soát
 
-1. 7 manifest khai đủ `availability 99.9%`, `max-5xx-ratio 0.1%`, `p95/p99` — 6 service `internal-service-api` (150/500 ms), `bff` `client-facing-bff` (300/800 ms); không service nào cần `slos.justification`.
-2. `PlatformSloDefaults` trong test phản chiếu hiến chương Principle VIII — đã đối chiếu `.specify/memory/constitution.md` dòng 167–171: `300/800 ms`, `150/500 ms`, `99.9%`, `0.1%` — khớp.
+1. 7 manifest khai đủ `availability 99%`, `max-5xx-ratio 1%`, `p95/p99` — 6 service `internal-service-api` (150/500 ms), `bff` `client-facing-bff` (300/800 ms); không service nào cần `slos.justification`.
+2. `PlatformSloDefaults` trong test phản chiếu hiến chương Principle VIII — đã đối chiếu `.specify/memory/constitution.md` dòng 167–171: `300/800 ms`, `150/500 ms`, `99%`, `1%` — khớp.
 3. `identity` có `classification: internal-service-api` (dòng từng thiếu, test mới bắt được lúc viết spec) — còn nguyên.
 4. Dashboard `SLO vận hành hằng ngày — 7 service` (8 panel) đo error-rate/p95/p99 từ `traces-generic.otel-default*`, Availability suy ra `100% − error-rate`.
 

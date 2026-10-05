@@ -10,7 +10,7 @@ suy đoán):
 - Cả 7 `services/*/src/*/service-manifest.yaml` (parties, products, baskets, orders, identity,
   gateway, bff) đều đã có khối `slos:` với đủ 4 giá trị (`availability`, `error-rate.max-5xx-ratio`,
   `latency.p95`, `latency.p99`). 6/7 service mang `classification: internal-service-api` và khớp
-  đúng hồ sơ mặc định của chính phân loại đó (p95 150ms / p99 500ms / 99.9% / 0.1%); `bff` mang
+  đúng hồ sơ mặc định của chính phân loại đó (p95 150ms / p99 500ms / 99% / 1%); `bff` mang
   `classification: client-facing-bff` và khớp đúng hồ sơ mặc định của CHÍNH phân loại đó (p95 300ms /
   p99 800ms) — kèm một comment YAML giải thích vì sao phân loại "client-facing-bff" hợp lý cho service
   này (fan-out gọi nhiều service phía sau).

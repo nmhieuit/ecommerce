@@ -11808,7 +11808,7 @@
     },
     {
       "name": "27 - Ngân sách lỗi: tiêm 5xx và cảnh báo (error budget)",
-      "description": "## Bức tranh tổng thể\n\nSpec 027 (SCRUM-35) định nghĩa NGÂN SÁCH LỖI (error budget) cho mỗi service — 4 ngân sách riêng (độ khả dụng, tỷ lệ lỗi 5xx, độ trễ p95, độ trễ p99), tính theo CỬA SỔ THÁNG LỊCH, với cảnh báo tự động ở 3 mốc 50%/75%/100% quản lý trong Kibana. Folder này dùng công tắc `CHAOS_ALLOW_FAULT_INJECTION` để CHỦ ĐỘNG TIÊM lỗi 5xx vào orders-api (qua header `X-Chaos-Fault: 5xx`), đủ nhiều để LÀM CẠN NGÂN SÁCH THẬT trong tháng, rồi xác nhận cảnh báo kích hoạt đúng ở Kibana — một bài test \"chủ động phá hệ thống có kiểm soát\" để CHỨNG MINH cơ chế cảnh báo hoạt động, không chỉ tin vào cấu hình.\n\n3 subfolder theo đúng trình tự thời gian: **27a** (cờ TẮT, mặc định — xác nhận header vô hại); **27b** (cờ BẬT — gửi LẶP LẠI bước 01 nhiều lần tới khi `27c` bước 02 báo mức tiêu hao vượt mốc mong muốn, rồi chờ tối đa 5 phút cho chu kỳ rule Kibana chạy); **27c** (xác nhận cảnh báo và trạng thái \"cạn ngân sách\" đã kích hoạt đúng trên Kibana). Không cần token: middleware tiêm lỗi chạy TRƯỚC xác thực (giống nguyên tắc đã thấy ở spec 025 cho độ trễ) để đo được ảnh hưởng lên MỌI request.\n\n---\n\nKiểm chứng spec 027 (SCRUM-35) trên hệ thống chạy thật bằng công tắc `CHAOS_ALLOW_FAULT_INJECTION` (.env): chạy `27a` khi cờ TẮT (mặc định), đặt `true` + tạo lại `orders-api`, chạy `27b` (gửi lặp bước 01 tới khi mức tiêu hao ở `27c` bước 02 vượt mốc), chờ tối đa 5 phút rồi chạy `27c`. Cần Elasticsearch + Kibana (KIBANA_ENCRYPTION_KEY trong .env) và 4 rule tag `slo-error-budget` đã import + enable (docs/kibana-quan-sat-he-thong/alerts/README.md). Không cần token: middleware tiêm lỗi chạy trước xác thực.",
+      "description": "## Bức tranh tổng thể\n\nSpec 027 (SCRUM-35) định nghĩa NGÂN SÁCH LỖI (error budget) cho mỗi service — 4 ngân sách riêng (độ khả dụng, tỷ lệ lỗi 5xx, độ trễ p95, độ trễ p99), tính theo CỬA SỔ TUẦN LỊCH, với cảnh báo tự động ở 3 mốc 50%/75%/100% quản lý trong Kibana. Folder này dùng công tắc `CHAOS_ALLOW_FAULT_INJECTION` để CHỦ ĐỘNG TIÊM lỗi 5xx vào orders-api (qua header `X-Chaos-Fault: 5xx`), đủ nhiều để LÀM CẠN NGÂN SÁCH THẬT trong tuần, rồi xác nhận cảnh báo kích hoạt đúng ở Kibana — một bài test \"chủ động phá hệ thống có kiểm soát\" để CHỨNG MINH cơ chế cảnh báo hoạt động, không chỉ tin vào cấu hình.\n\n3 subfolder theo đúng trình tự thời gian: **27a** (cờ TẮT, mặc định — xác nhận header vô hại); **27b** (cờ BẬT — gửi LẶP LẠI bước 01 nhiều lần tới khi `27c` bước 02 báo mức tiêu hao vượt mốc mong muốn, rồi chờ tối đa 5 phút cho chu kỳ rule Kibana chạy); **27c** (xác nhận cảnh báo và trạng thái \"cạn ngân sách\" đã kích hoạt đúng trên Kibana). Không cần token: middleware tiêm lỗi chạy TRƯỚC xác thực (giống nguyên tắc đã thấy ở spec 025 cho độ trễ) để đo được ảnh hưởng lên MỌI request.\n\n---\n\nKiểm chứng spec 027 (SCRUM-35) trên hệ thống chạy thật bằng công tắc `CHAOS_ALLOW_FAULT_INJECTION` (.env): chạy `27a` khi cờ TẮT (mặc định), đặt `true` + tạo lại `orders-api`, chạy `27b` (gửi lặp bước 01 tới khi mức tiêu hao ở `27c` bước 02 vượt mốc), chờ tối đa 5 phút rồi chạy `27c`. Cần Elasticsearch + Kibana (KIBANA_ENCRYPTION_KEY trong .env) và 4 rule tag `slo-error-budget` đã import + enable (docs/kibana-quan-sat-he-thong/alerts/README.md). Không cần token: middleware tiêm lỗi chạy trước xác thực.",
       "item": [
         {
           "name": "27a - Cờ TẮT (mặc định)",
@@ -11882,7 +11882,7 @@
                     "live"
                   ]
                 },
-                "description": "**Mục đích**: xác nhận khi cờ BẬT, header `X-Chaos-Fault: 5xx` THỰC SỰ ép service trả lỗi `500` — đây là \"công cụ\" chính để tạo đủ lỗi tổng hợp làm cạn ngân sách tháng (FR-014), và lỗi được ném RA NGAY, không chạy tiếp các middleware/logic phía sau (để lỗi tiêm vào không vô tình kích hoạt tác dụng phụ khác).\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Fault: 5xx`.\n\n**Output kỳ vọng**: `500`.\n\n**Vì sao chứng minh đúng bất biến 3/FR-014**: đây là bằng chứng công tắc tiêm lỗi hoạt động đúng, là tiền đề để bước này (hoặc một request tương tự) được GỌI LẶP LẠI NHIỀU LẦN ở giai đoạn 27b nhằm tiêu hao đủ % ngân sách lỗi tháng của Orders.Api, kiểm chứng FR-014 (\"PHẢI có cách lặp lại được để tạo lỗi tổng hợp đủ làm cạn ngân sách\").\n\n---\n\nMỗi lần gửi đốt thêm ngân sách 5xx của Orders.Api. Ngân sách 0.1% số span tháng này — xem 27c bước 02 để biết cần gửi bao nhiêu lần."
+                "description": "**Mục đích**: xác nhận khi cờ BẬT, header `X-Chaos-Fault: 5xx` THỰC SỰ ép service trả lỗi `500` — đây là \"công cụ\" chính để tạo đủ lỗi tổng hợp làm cạn ngân sách tuần (FR-014), và lỗi được ném RA NGAY, không chạy tiếp các middleware/logic phía sau (để lỗi tiêm vào không vô tình kích hoạt tác dụng phụ khác).\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Fault: 5xx`.\n\n**Output kỳ vọng**: `500`.\n\n**Vì sao chứng minh đúng bất biến 3/FR-014**: đây là bằng chứng công tắc tiêm lỗi hoạt động đúng, là tiền đề để bước này (hoặc một request tương tự) được GỌI LẶP LẠI NHIỀU LẦN ở giai đoạn 27b nhằm tiêu hao đủ % ngân sách lỗi tuần của Orders.Api, kiểm chứng FR-014 (\"PHẢI có cách lặp lại được để tạo lỗi tổng hợp đủ làm cạn ngân sách\").\n\n---\n\nMỗi lần gửi đốt thêm ngân sách 5xx của Orders.Api. Ngân sách 1% số span tuần này — xem 27c bước 02 để biết cần gửi bao nhiêu lần."
               },
               "event": [
                 {
@@ -12020,7 +12020,7 @@
         },
         {
           "name": "27c - Cảnh báo và trạng thái cạn (Kibana)",
-          "description": "Chạy sau 27b, chờ tối đa 5 phút (chu kỳ rule). Cùng dữ liệu mà 3 panel 'Ngân sách lỗi tháng này' trên dashboard SLO hằng ngày hiển thị.",
+          "description": "Chạy sau 27b, chờ tối đa 5 phút (chu kỳ rule). Cùng dữ liệu mà 3 panel 'Ngân sách lỗi tuần này' trên dashboard SLO hằng ngày hiển thị.",
           "item": [
             {
               "name": "01 Kibana Alerting có khoá mã hoá (FR-008)",
@@ -12061,7 +12061,7 @@
               ]
             },
             {
-              "name": "02 Mức tiêu hao ngân sách 5xx tháng này của Orders.Api (FR-005)",
+              "name": "02 Mức tiêu hao ngân sách 5xx tuần này của Orders.Api (FR-005)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -12075,7 +12075,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= DATE_TRUNC(1 month, NOW() + 7 hours) - 7 hours AND resource.attributes.service.name == \\\"Orders.Api\\\"\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad_5xx) / total / 0.001 * 100.0, 2)\"\n}"
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours AND resource.attributes.service.name == \\\"Orders.Api\\\"\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad_5xx) / total / 0.01 * 100.0, 2)\"\n}"
                 },
                 "url": {
                   "raw": "{{elasticsearchUrl}}/_query",
@@ -12086,7 +12086,7 @@
                     "_query"
                   ]
                 },
-                "description": "**Mục đích**: đọc TRỰC TIẾP mức tiêu hao (%) ngân sách lỗi 5xx tháng hiện tại của Orders.Api — tính TỰ ĐỘNG từ telemetry thật (span lỗi đã xác nhận có ở bước 27b-04), không phải một con số nhập tay.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), tính theo cửa sổ THÁNG LỊCH (từ đầu tháng tới hiện tại, múi giờ Việt Nam UTC+7).\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng FR-003/FR-005**: cửa sổ thời gian dùng đúng mốc \"đầu tháng, giờ Việt Nam\" (không phải UTC trần hay 30 ngày trượt) — một chi tiết dễ làm sai lệch % tiêu hao nếu tính nhầm múi giờ hoặc nhầm kiểu cửa sổ (rolling window thay vì calendar month). Bước này thường được CHẠY LẶP LẠI nhiều lần trong lúc 27b đang tiêm lỗi, để theo dõi % tiêu hao tăng dần tới khi vượt mốc mong muốn (50/75/100%) trước khi chuyển sang bước 03.\n\n---\n\n`consumed_pct` ≥ 50 / 75 / 100 thì alert mốc tương ứng phải bật trong ≤ 5 phút."
+                "description": "**Mục đích**: đọc TRỰC TIẾP mức tiêu hao (%) ngân sách lỗi 5xx tuần hiện tại của Orders.Api — tính TỰ ĐỘNG từ telemetry thật (span lỗi đã xác nhận có ở bước 27b-04), không phải một con số nhập tay.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), tính theo cửa sổ TUẦN LỊCH (từ thứ Hai 00:00 tới hiện tại, múi giờ Việt Nam UTC+7).\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng FR-003/FR-005**: cửa sổ thời gian dùng đúng mốc \"đầu tuần (thứ Hai 00:00), giờ Việt Nam\" (không phải UTC trần hay 7 ngày trượt) — một chi tiết dễ làm sai lệch % tiêu hao nếu tính nhầm múi giờ hoặc nhầm kiểu cửa sổ (rolling window thay vì calendar week). Bước này thường được CHẠY LẶP LẠI nhiều lần trong lúc 27b đang tiêm lỗi, để theo dõi % tiêu hao tăng dần tới khi vượt mốc mong muốn (50/75/100%) trước khi chuyển sang bước 03.\n\n---\n\n`consumed_pct` ≥ 50 / 75 / 100 thì alert mốc tương ứng phải bật trong ≤ 5 phút."
               },
               "event": [
                 {
@@ -12267,6 +12267,423 @@
                   "});"
                 ]
               }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "29 - Ngân sách lỗi theo tuần: tiêm 5xx 7 service",
+      "description": "## Bức tranh tổng thể\n\nSpec 029 đổi chu kỳ ngân sách lỗi của spec 027 từ tháng lịch sang **TUẦN LỊCH giờ Việt Nam** (thứ Hai 00:00 → Chủ nhật 23:59, UTC+7) và nới SLO nền tảng thành khả dụng 99%/tuần, 5xx dưới 1% (hiến chương 2.0.0). Folder này đốt ngân sách 5xx tuần của CẢ 7 SERVICE bằng header `X-Chaos-Fault: 5xx` rồi đọc lại mức tiêu hao, alert và trạng thái cạn — chứng minh cảnh báo và dashboard cùng tính theo tuần.\n\n2 subfolder: **29a** (cờ BẬT — 7 request lỗi, CHẠY THEO VÒNG bằng newman/Runner, mỗi vòng đốt 1 lỗi/service); **29b** (CHẠY MỘT LẦN sau mỗi đợt 29a, không theo vòng — đọc mức tiêu hao tuần, alert đang hoạt động, service đang cạn). Không cần token.\n\n---\n\nChuẩn bị: `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env`, tạo lại 7 container API; rule và dashboard đã import (`docs/kibana-quan-sat-he-thong/alerts/README.md`). Ví dụ chạy 29a theo vòng: `npx.cmd --yes newman@6.2.2 run postman/ecommerce.postman_collection.v2.json -e postman/local.postman_environment.v2.json --folder \"29a - Tiêm 5xx 7 service (chạy theo vòng)\" -n <số vòng>`. Xong thì đặt lại cờ về `false` (xem folder 27a). Lưu ý: sau khi chạy, cả 7 service vào trạng thái cạn/đóng băng tới khi đạt SLO 3 ngày liên tục.",
+      "item": [
+        {
+          "name": "29a - Tiêm 5xx 7 service (chạy theo vòng)",
+          "description": "Cờ `CHAOS_ALLOW_FAULT_INJECTION` BẬT. Chạy nhiều vòng (`-n`); số vòng cần để cạn ngân sách 5xx ≈ tổng span tuần này của service / 99 (xem 29b bước 01).",
+          "item": [
+            {
+              "name": "01 Gateway.Api — X-Chaos-Fault: 5xx → 500 (FR-012)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/health/live",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Gateway.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Gateway.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{gatewayUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Bff.Api — X-Chaos-Fault: 5xx → 500 (FR-012)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{bffUrl}}/health/live",
+                  "host": [
+                    "{{bffUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Bff.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Bff.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{bffUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 Products.Api — X-Chaos-Fault: 5xx → 500 (FR-012)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{productsUrl}}/health/live",
+                  "host": [
+                    "{{productsUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Products.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Products.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{productsUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "04 Baskets.Api — X-Chaos-Fault: 5xx → 500 (FR-012)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{basketsUrl}}/health/live",
+                  "host": [
+                    "{{basketsUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Baskets.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Baskets.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{basketsUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "05 Orders.Api — X-Chaos-Fault: 5xx → 500 (FR-012)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Orders.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Orders.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{ordersUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "06 Parties.Api — X-Chaos-Fault: 5xx → 500 (FR-012)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{partiesUrl}}/health/live",
+                  "host": [
+                    "{{partiesUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Parties.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Parties.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{partiesUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "07 Identity.Api — X-Chaos-Fault: 5xx → 500 (FR-012)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{identityUrl}}/health/live",
+                  "host": [
+                    "{{identityUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Identity.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{identityUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "29b - Trạng thái ngân sách tuần (chạy một lần)",
+          "description": "Chạy sau mỗi đợt 29a, chờ tối đa 5 phút (chu kỳ rule). Cùng dữ liệu mà 3 panel 'Ngân sách lỗi tuần này' trên dashboard SLO hằng ngày hiển thị.",
+          "item": [
+            {
+              "name": "01 Mức tiêu hao ngân sách tuần này — 7 service × 4 ngân sách (FR-001, FR-003)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL service = resource.attributes.service.name\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 300000000, 150000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 800000000, 500000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service\\n| EVAL budget = [\\\"availability\\\", \\\"error-rate\\\", \\\"latency-p95\\\", \\\"latency-p99\\\"]\\n| MV_EXPAND budget\\n| EVAL bad = CASE(budget == \\\"latency-p95\\\", bad_p95, budget == \\\"latency-p99\\\", bad_p99, bad_5xx)\\n| EVAL allowed = CASE(budget == \\\"availability\\\", 0.01, budget == \\\"error-rate\\\", 0.01, budget == \\\"latency-p95\\\", 0.05, budget == \\\"latency-p99\\\", 0.01)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad) / total / allowed * 100.0, 2)\\n| EVAL moc = CASE(consumed_pct >= 100, \\\"100% - CẠN\\\", consumed_pct >= 75, \\\"75%\\\", consumed_pct >= 50, \\\"50%\\\", \\\"dưới 50%\\\")\\n| KEEP service, budget, consumed_pct, moc\\n| SORT consumed_pct DESC, service, budget\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: đọc mức tiêu hao (%) của cả 4 ngân sách × 7 service trong TUẦN LỊCH hiện tại — cùng truy vấn với panel \"Ngân sách lỗi tuần này — mức tiêu hao (%)\" trên dashboard SLO hằng ngày và với 3 rule mốc.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), cửa sổ từ thứ Hai 00:00 giờ Việt Nam (`DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours`), tỷ lệ cho phép khả dụng 1%, 5xx 1%, p95 5%, p99 1%.\n\n**Output kỳ vọng**: `200`, mỗi service có traffic 4 hàng; cột `moc` cho biết mốc đã vượt.\n\n**Vì sao chứng minh đúng FR-001/FR-003 (spec 029)**: mẫu số chỉ gồm request từ đầu tuần giờ Việt Nam (không phải 7 ngày trượt, không phải tháng), tỷ lệ là 1 − SLO mới 99%/1%.\n\n---\n\nChạy sau mỗi đợt `29a`; `consumed_pct` ≥ 50 / 75 / 100 thì alert mốc tương ứng phải bật trong ≤ 5 phút (bước 02)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Alert ngân sách đang hoạt động — 7 service (FR-007)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM .alerts-stack.alerts-default\\n| WHERE kibana.alert.rule.tags == \\\"slo-error-budget\\\" AND kibana.alert.status == \\\"active\\\" AND kibana.alert.rule.name != \\\"error-budget-frozen\\\" AND @timestamp >= NOW() - 15 minutes\\n| EVAL service = kibana.alert.grouping.service, budget = kibana.alert.grouping.budget, moc = REPLACE(kibana.alert.rule.name, \\\"error-budget-\\\", \\\"\\\")\\n| KEEP service, budget, moc, kibana.alert.start\\n| SORT service, budget, moc\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: liệt kê alert đang active của 3 rule `error-budget-50/75/100` cho mọi service — cùng truy vấn với panel \"Ngân sách lỗi tuần này — cảnh báo đang hoạt động\".\n\n**Input**: `POST {{elasticsearchUrl}}/_query` trên `.alerts-stack.alerts-default`, tag `slo-error-budget`, chỉ alert được rule cập nhật trong 15 phút gần nhất.\n\n**Output kỳ vọng**: `200`; mỗi cặp (service, ngân sách) đã vượt mốc ở bước 01 có một hàng cho mỗi mốc đã vượt.\n\n**Vì sao chứng minh đúng FR-007**: alert giữ active qua mỗi chu kỳ 5 phút chừng nào còn trên mốc — chạy lại sau 5 phút, `kibana.alert.start` không đổi."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 Service đang cạn — ưu tiên độ tin cậy (FR-005, FR-008)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM .alerts-stack.alerts-default\\n| WHERE kibana.alert.rule.name == \\\"error-budget-frozen\\\" AND kibana.alert.status == \\\"active\\\" AND @timestamp >= NOW() - 15 minutes\\n| EVAL service = kibana.alert.grouping.service\\n| KEEP service, kibana.alert.start\\n| SORT service\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: liệt kê service đang ở trạng thái \"cạn ngân sách — ưu tiên độ tin cậy\" (alert active của rule `error-budget-frozen`) — cùng truy vấn với panel thứ 3 trên dashboard.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` trên `.alerts-stack.alerts-default`.\n\n**Output kỳ vọng**: `200`; service có ngân sách đã chạm 100% có mặt (sau tối đa 2 chu kỳ: rule 100 ghi sự kiện, rule frozen đọc sự kiện).\n\n**Vì sao chứng minh đúng FR-005/FR-008 (spec 029)**: trạng thái suy ra từ sự kiện cạn trong 14 ngày gần nhất và ngày đạt SLO theo ngưỡng mới (5xx < 1%); ngân sách đặt lại thứ Hai không gỡ trạng thái này."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
             }
           ]
         }

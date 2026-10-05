@@ -12,17 +12,17 @@ bắt buộc: [contracts/error-budget-policy-manifest-shape.md](./contracts/erro
 
 | Trường | Ý nghĩa | Ràng buộc |
 |---|---|---|
-| `window` | Cửa sổ tính ngân sách | `calendar-month` (FR-003) |
-| `timezone` | Múi giờ của ranh giới ngày/tháng | `UTC+07:00` (giờ Việt Nam) |
+| `window` | Cửa sổ tính ngân sách | `calendar-week` (FR-003) |
+| `timezone` | Múi giờ của ranh giới ngày/tuần | `UTC+07:00` (giờ Việt Nam) |
 | `budgets` | 4 ngân sách | Đủ đúng 4 khoá: `availability`, `error-rate`, `latency-p95`, `latency-p99` (FR-002) |
 | `budgets.<x>.bad-request` | Quy tắc request "xấu" | `http-5xx` / `slower-than-slo-p95` / `slower-than-slo-p99` |
-| `budgets.<x>.allowed-bad-ratio` | Tỷ lệ xấu cho phép | `0.1%`, `0.1%`, `5%`, `1%` |
+| `budgets.<x>.allowed-bad-ratio` | Tỷ lệ xấu cho phép | `1%`, `1%`, `5%`, `1%` |
 | `alert-thresholds` | Các mốc cảnh báo | Đúng `[50%, 75%, 100%]` (FR-006) |
 | `exhausted-when` | Định nghĩa "cạn" | `any-budget-at-100%` (FR-004) |
 | `on-exhausted.who` / `.stops` / `.does` | Hệ quả khi cạn | Không rỗng (FR-009, SC-004) |
 | `recovery.consecutive-days-meeting-slo` | Điều kiện hồi phục | `3` (FR-010) |
 | `recovery.no-traffic-day-counts-as-met` | Ngày không traffic | `true` |
-| `recovery.budget-reset-clears-freeze` | Đặt lại đầu tháng có gỡ đóng băng không | `false` |
+| `recovery.budget-reset-clears-freeze` | Đặt lại đầu tuần có gỡ đóng băng không | `false` |
 
 Ngưỡng độ trễ dùng cho `latency-p95`/`latency-p99` **không** lặp lại trong khối này — luôn lấy từ
 `slos.latency` của cùng manifest (FR-013), tránh hai nguồn sự thật.
@@ -35,7 +35,7 @@ Tính bởi truy vấn ES|QL dùng chung giữa rule và dashboard; không ghi x
 |---|---|
 | `service` | `resource.attributes.service.name` |
 | `budget` | một trong 4 khoá ngân sách |
-| `total` | số span từ đầu tháng (UTC+7) tới nay |
+| `total` | số span từ đầu tuần (UTC+7) tới nay |
 | `bad` | số span xấu theo quy tắc của ngân sách |
 | `consumed_pct` | `bad / total / allowed-bad-ratio × 100` |
 
@@ -49,7 +49,7 @@ Tính bởi truy vấn ES|QL dùng chung giữa rule và dashboard; không ghi x
 | `error-budget-frozen` | một service | service đang ở trạng thái cạn ngân sách (mục 5) |
 
 Vòng đời alert: `active` (vượt mốc) → giữ `active` qua mỗi lần chạy 5 phút chừng nào còn vượt →
-`recovered` khi không còn vượt (thường là lúc sang tháng mới). Lưu trong alerts-as-data
+`recovered` khi không còn vượt (thường là lúc sang tuần mới). Lưu trong alerts-as-data
 `.alerts-stack.alerts-default`; mọi rule mang tag `slo-error-budget`.
 
 ## 4. Sự kiện cạn ngân sách (index `slo-error-budget-events`)
@@ -77,7 +77,7 @@ Chỉ ghi thêm (append-only), không sửa, không xoá.
 
 - Ngày "đạt" = ngày có traffic và cả 4 tỷ lệ xấu trong ngày ≤ tỷ lệ cho phép, **hoặc** ngày không có
   traffic.
-- Sang tháng mới KHÔNG phải một chuyển trạng thái (FR-010).
+- Sang tuần mới KHÔNG phải một chuyển trạng thái (FR-010).
 
 ## 6. Cấu hình tiêm lỗi 5xx (`Chaos:AllowFaultInjection`)
 

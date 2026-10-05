@@ -10,7 +10,7 @@ chạy. Xem [functional-debt.md](functional-debt.md).*
 ## Vấn đề trước đây
 
 Hệ thống đã có cam kết chất lượng cho từng bộ phận, có màn hình theo dõi hằng ngày, và có "ngân sách
-lỗi" theo tháng (tính năng 027). Nhưng việc **xử lý sự cố** mới chỉ được mô tả trên giấy, chưa ai
+lỗi" theo tuần (tính năng 027). Nhưng việc **xử lý sự cố** mới chỉ được mô tả trên giấy, chưa ai
 thực sự làm:
 - Khi có sự cố, ai phát hiện?
 - Đánh giá mức độ nghiêm trọng ra sao, báo tình hình cho ai, ở đâu?
@@ -27,7 +27,7 @@ kiểm tra **con người và quy trình**.
 - **Hỏng thật, nhưng không đụng vào phần mềm**: chỉ cấu hình sai (trỏ nhầm địa chỉ, giới hạn kết nối quá
   nhỏ) hoặc cố ý tạo lỗi theo một tỷ lệ. Tất cả được khoá bằng một công tắc, mặc định tắt.
 - **Phát hiện nhờ cảnh báo, không phải tình cờ**: có thêm một cảnh báo nhìn 5 phút gần nhất (cảnh báo
-  ngân sách tháng của 027 thì quá chậm cho một sự cố). Cảnh báo hiện ngay trên màn hình người vận hành
+  ngân sách tuần của 027 thì quá chậm cho một sự cố). Cảnh báo hiện ngay trên màn hình người vận hành
   mở mỗi ngày.
 - **Quy trình xử lý được viết sẵn**: phát hiện → đánh giá mức độ (3 mức) → báo tình hình trên một phiếu
   sự cố, tại mỗi mốc và mỗi 30 phút → giảm thiểu bằng một thay đổi phòng ngừa → xác nhận đã ổn.

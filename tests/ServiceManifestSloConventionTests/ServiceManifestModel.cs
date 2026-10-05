@@ -69,9 +69,9 @@ public sealed class LatencySection
 }
 
 /// <summary>
-/// The <c>error-budget-policy</c> block (specs/027-error-budget-alerting
-/// contracts/error-budget-policy-manifest-shape.md). Every value is read as written — strings stay
-/// strings (<c>0.1%</c>, <c>UTC+07:00</c>) so the tests compare against the contract verbatim instead
+/// The <c>error-budget-policy</c> block (specs/029-error-budget-weekly
+/// contracts/error-budget-policy-manifest-shape.md, which replaces the 027 calendar-month shape). Every value is read as written — strings stay
+/// strings (<c>1%</c>, <c>UTC+07:00</c>) so the tests compare against the contract verbatim instead
 /// of against a number YamlDotNet happened to parse.
 /// </summary>
 public sealed class ErrorBudgetPolicySection

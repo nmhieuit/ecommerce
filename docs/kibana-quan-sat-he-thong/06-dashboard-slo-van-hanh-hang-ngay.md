@@ -18,7 +18,7 @@ Dashboard thật: **`SLO vận hành hằng ngày — 7 service`** (id `e2e06ff5
 ## Quyết định đã khoá lúc build: cách hiển thị cột "Ngưỡng"
 
 Đã chọn **phương án (c)** trong 3 phương án đề xuất ở thiết kế gốc: "chấp nhận ghi ngưỡng trực tiếp
-trong tên cột (vd 'Error-rate — ngưỡng 0.1%') nếu ngưỡng giống nhau cho phần lớn service, chỉ ghi chú
+trong tên cột (vd 'Error-rate — ngưỡng 1%') nếu ngưỡng giống nhau cho phần lớn service, chỉ ghi chú
 riêng ngoại lệ của `Bff.Api` bằng chữ bên cạnh bảng." Lý do: Lens Table không có cách hiển nhiên để
 chèn giá trị tĩnh khác nhau theo từng dòng trong cùng 1 cột tính từ aggregation — ghi ngay trong tên
 cột là cách rẻ nhất, không cần runtime field/`esql`.
@@ -27,7 +27,7 @@ Tên cột (Name) thật đã đặt ở Task 2 Bước 2 mục 4-6:
 
 | Cột | Name (label) thật |
 |---|---|
-| Error-rate | `Error-rate — Thực tế (ngưỡng ≤ 0.1%, cả 7 service)` |
+| Error-rate | `Error-rate — Thực tế (ngưỡng < 1%, cả 7 service)` (spec 029: SLO 5xx dưới 1%) |
 | Latency p95 | `Latency p95 (ms) — Thực tế (ngưỡng 150ms; riêng Bff.Api 300ms)` |
 | Latency p99 | `Latency p99 (ms) — Thực tế (ngưỡng 500ms; riêng Bff.Api 800ms)` |
 
@@ -153,7 +153,7 @@ có của thuật toán percentile (t-digest); không phải lỗi formula.
 - Availability đo xấp xỉ (`100% − Error-rate`), không phải uptime thật — service sập hẳn (0 traces)
   sẽ biến mất khỏi bảng thay vì hiện cảnh báo (xem `SCRUM-29`/`SCRUM-30`).
 - ~~Không có alert rule tự động đi kèm dashboard này (thuộc `SCRUM-35`, giai đoạn sau).~~ Đã có từ
-  SCRUM-35 / spec 027: 4 rule ngân sách lỗi và 3 panel "Ngân sách lỗi tháng này" đặt trên cùng dashboard
+  SCRUM-35 / spec 027 (chu kỳ tuần theo spec 029): 4 rule ngân sách lỗi và 3 panel "Ngân sách lỗi tuần này" đặt trên cùng dashboard
   này — xem [`07-canh-bao-ngan-sach-loi.md`](07-canh-bao-ngan-sach-loi.md).
 - Collapsible section ở Tầng 2 lưu đúng trạng thái collapsed/expanded nhưng **không thực sự ẩn nội
   dung panel trong chế độ View** trên Kibana 9.4.4 (xem chi tiết ở mục "Đã xác nhận thật lúc build" —

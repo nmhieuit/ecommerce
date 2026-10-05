@@ -27,6 +27,10 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - **Rule phát hiện nhanh xét gateway chỉ theo 5xx**: ngưỡng gateway 150/500 ms chặt hơn BFF 300/800 ms mà nó chuyển tiếp tới.
   - **Tải nền**: bài NBomber của 026 luôn `401`, nên dùng newman chạy folder Postman 26 + 28. Token lấy mỗi 30 phút (lấy mỗi vòng làm identity vượt SLO), nghỉ 1000 ms (nghỉ 200 ms làm mức nền vượt SLO).
   - **Sai lệch Nguyên tắc III**: không viết test ("đây là diễn tập, không có code mới"), hạn tới khi SCRUM-37 xong. Xem `specs/028-incident-oncall-drill/plan.md` Complexity Tracking.
+- **[029](029_Architect_ngân%20sách%20lỗi%20theo%20tuần%20lịch.md)** — Phạm vi đổi giữa chừng so với mô tả ban đầu ("chỉ đổi chu kỳ tháng → tuần"):
+  - **Nới SLO và ngân sách**: người dùng chọn nới tỷ lệ khả dụng/5xx ×10 và đổi luôn SLO (99%/1%) để ngân sách vẫn bằng 1 − SLO → hiến chương sửa cả hai dòng mặc định của Nguyên tắc VIII (MAJOR 2.0.0), `PlatformSloDefaults` đổi theo, ngưỡng 5xx của rule `incident-fast-detection` (028) đổi thành 1%.
+  - **Sửa tại chỗ tài liệu 021/027/028** và xoá bằng chứng đo cũ (theo tháng/0.1%) khỏi tài liệu vận hành, research/tasks/quickstart 027/028 và QA 027/028; bằng chứng chỉ còn ở QA_Debt và lịch sử git.
+  - **Ngoại lệ FR-010**: nhãn cột Error-rate của "Bảng SLO — 7 service" (021) đổi thành "ngưỡng < 1%".
 
 ## 2. Bug thật phát hiện khi triển khai/xác thực
 
@@ -245,6 +249,10 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - (3) Tạo lại `identity-api` làm token của tải nền hỏng. Token vẫn qua gateway (gateway còn giữ khoá cũ) nhưng bị service hạ lưu vừa tạo lại từ chối, nên BFF trả `502`/`504`, không phải `401`. Sửa: `-Load` lấy token lại khi Id container identity đổi.
   - (4) Loại 5xx không có override, nên chạy lại compose không tạo lại đích và việc gửi header không dừng. Sửa quy trình: khôi phục = bỏ cờ khỏi `.env` rồi chạy lại compose.
   - (5) Windows PowerShell 5.1 coi stderr của `docker`/`taskkill` là lỗi chặn khi `ErrorActionPreference = Stop`; `-Load` thoát giữa buổi. `npx` gọi từ PowerShell báo "could not determine executable to run". Sửa: bọc `Continue`, dùng `npx.cmd --yes newman@6.2.2`.
+- **[029](029_Architect_ngân%20sách%20lỗi%20theo%20tuần%20lịch.md)** — Phát hiện khi chuyển trên stack đang chạy:
+  - (1) Index `slo-error-budget-events` do Kibana tự tạo (mapping động `text` + `.keyword`), không phải mapping `keyword` của file `07` — bước tạo index bị bỏ qua sau lần dựng lại Elastic ngày 03/10. Đã xoá và tạo lại đúng mapping.
+  - (2) Xoá index sự kiện trong lúc alert 100 đang active liên tục → không có sự kiện mới, service đã cạn (`Parties.Api`, 504%) không bị đóng băng. Gỡ bằng Disable rồi Enable rule `error-budget-100` (người dùng chốt); đã ghi vào file `07`.
+  - (3) Sau Disable/Enable, alert 100 cũ của `Parties.Api` vẫn `active` khoảng 10 phút trong bộ lọc 15 phút của bảng dashboard → bảng hiện trùng dòng tạm thời.
 
 ## 3. Giới hạn phạm vi đã biết
 
@@ -424,20 +432,28 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   lượng local thấp làm 1 lỗi 5xx đã vượt cả mốc 50 và 75, và vài request khởi động lạnh đã làm cạn ngân
   sách độ trễ — trên local gần như mọi service sẽ "cạn" sau mỗi lần dựng lại stack. Ngày không traffic
   tính là đạt (người dùng chốt) nên service ngừng nhận traffic 3 ngày tự hồi phục. Hồi phục thật sau 3
-  ngày và giữ đóng băng qua ranh giới tháng mới kiểm bằng sự kiện thử, chưa quan sát trên dữ liệu chạy
+  ngày và giữ đóng băng qua ranh giới tuần mới kiểm bằng sự kiện thử, chưa quan sát trên dữ liệu chạy
   liên tục. Việc "dừng merge tính năng mới" là cam kết quy trình, không có cơ chế kỹ thuật chặn merge.
   Import lại rule từ `alerts/error-budget-rules.ndjson`: 2/4 rule kẹt `pending` sau khi Enable (task tự
   tắt vì chạy đúng lúc rule bị tắt giữa chừng import) — gỡ bằng Disable rồi Enable lại; việc này có thể
-  ghi thêm sự kiện "cạn" cho alert vừa chuyển active (đã gặp: 13 → 18 sự kiện).
+  ghi thêm sự kiện "cạn" cho alert vừa chuyển active (đã gặp: 13 → 18 sự kiện). *Từ 029*: chu kỳ đổi sang
+  tuần lịch giờ Việt Nam, tỷ lệ khả dụng/5xx 1%, cửa sổ rule 7/14 ngày — giới hạn lưu lượng thấp vẫn còn (xem
+  mục 029); lần `PUT` sửa truy vấn rule ngày 2026-10-05 không đặt lại trạng thái alert, chỉ Disable/Enable mới ghi lại sự kiện.
 
 - **[028](028_Architect_diễn%20tập%20sự%20cố%20thật%20và%20phản%20ứng%20on-call.md)** — Giới hạn còn lại, không sửa trong phạm vi 028:
   - **Nhiễu khởi động nguội**: tạo lại 7 container (để che service đích) làm mọi service chậm 5–7 phút. Tiêu chí người dùng chốt "alert qua ≥ 2 lần chạy rule là sự cố", nên nhiễu đôi khi bị tính là sự cố.
   - **Môi trường local chậm từng đợt, chưa rõ nguyên nhân**: parties/products/baskets/identity có lúc p95 320–560 ms mà không bị tiêm, rule bắn lại sau hơn 15 phút. Khôi phục orders mất ~48 phút mới có 15 phút liên tục đạt SLO.
   - **Lỗi lan theo chuỗi phụ thuộc**: hỏng orders thì BFF và gateway cũng có alert; người vận hành tự lần ra gốc.
-  - **Diễn tập tiêu hao ngân sách tháng như thật** (người dùng chốt): sau các lần thử, cả 7 service ở trạng thái "cạn ngân sách" của 027.
-  - **Ngưỡng của rule `incident-fast-detection` chép tay**, không test nào canh khớp manifest.
+  - **Diễn tập tiêu hao ngân sách tuần như thật** (người dùng chốt): sau các lần thử, cả 7 service ở trạng thái "cạn ngân sách" của 027.
+  - **Ngưỡng của rule `incident-fast-detection` chép tay**, không test nào canh khớp manifest (029 đổi ngưỡng 5xx sang 1% bằng tay, vẫn chưa có test).
   - **Niêm phong dựa vào kỷ luật**: file băm, không mã hoá.
   - **Buổi diễn tập mù đầu tiên chưa chạy** (T031, người dùng tự làm).
+- **[029](029_Architect_ngân%20sách%20lỗi%20theo%20tuần%20lịch.md)** — Giới hạn còn lại:
+  - **Cửa sổ 14 ngày của rule đóng băng** (người dùng chốt): đóng băng kéo dài hơn 14 ngày có thể tự mất khi sự kiện "cạn" trôi ra ngoài cửa sổ.
+  - **Lưu lượng local thấp với chu kỳ tuần** (người dùng chốt chỉ ghi lại): vài lỗi vượt nhiều mốc trong một chu kỳ — mốc 75 của 4 service bắn trễ một lượt sau khi đã quá 100%; traffic nền làm mẫu số tăng nên mức tiêu hao tự giảm dần giữa các đợt.
+  - **V2 chỉ chứng minh một phần**: cửa sổ rule 7 ngày được chứng minh phủ ít nhất 2 ngày (dữ liệu chỉ có từ 03/10), chưa quan sát trường hợp tối Chủ nhật.
+  - **Chưa quan sát trong một phiên**: ranh giới thứ Hai 00:00 thật (12/10), hồi phục thật sau 3 ngày.
+  - **Rule `incident-fast-detection` vẫn không có test** (giữ sai lệch Nguyên tắc III của 028); alert của rule này có lúc bị Kibana đánh `flapping` và giữ active thêm vài lượt dù cửa sổ 5 phút đã sạch.
 
 ## 4. Amendment — đính chính khi thực tế lệch spec gốc
 
@@ -449,3 +465,11 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   `FeatureToggles` qua `IOptionsMonitor`, đánh giá lại mỗi request — hot-reload 1 ConfigMap/file có tác
   dụng ngay, không cần restart pod. Thay nguồn đọc bằng `IFeatureManager` do Unleash cấp sau này chỉ là
   1 thay đổi 1 dòng tại điểm đọc.
+
+- **[029](029_Architect_ngân%20sách%20lỗi%20theo%20tuần%20lịch.md)** — Đính chính so với spec/tài liệu lúc viết:
+  spec giả định Elastic trống ("người dùng đã xoá volume"), nhưng stack đang chạy có traces từ 03/10 và
+  21 sự kiện "cạn" của chế độ tháng → người dùng chốt dùng stack đó, chỉ xoá index sự kiện. Lúc specify,
+  folder Postman 27 bị mô tả nhầm là "mỗi service một request" (thực tế chỉ gọi `Orders.Api`) → folder 29
+  thiết kế lại cho 7 service. QA_Debt 027 ghi "sửa rule `error-budget-100` làm Kibana đặt lại trạng thái
+  alert": lần `PUT` sửa truy vấn ngày 2026-10-05 không tái hiện (giữ trạng thái, `new: 0`), chỉ
+  Disable/Enable mới đặt lại.

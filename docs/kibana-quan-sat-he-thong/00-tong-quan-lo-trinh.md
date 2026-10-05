@@ -28,7 +28,7 @@ Bạn chưa có kinh nghiệm với Kibana, đã dùng Postman gọi API và hi�
    đã xác nhận hệ thống này không có dữ liệu địa lý. Cần trọn vẹn 4 file trước.
 6. **[06-dashboard-slo-van-hanh-hang-ngay.md](06-dashboard-slo-van-hanh-hang-ngay.md)** — dashboard SLO
    thật đo 3 chỉ số đã khai báo trong `service-manifest.yaml` cho 7 service, xem mỗi ngày. Cần file 05.
-7. **[07-canh-bao-ngan-sach-loi.md](07-canh-bao-ngan-sach-loi.md)** — ngân sách lỗi theo tháng, 4 rule
+7. **[07-canh-bao-ngan-sach-loi.md](07-canh-bao-ngan-sach-loi.md)** — ngân sách lỗi theo tuần lịch giờ Việt Nam, 4 rule
    cảnh báo ES|QL (mốc 50/75/100 và trạng thái "cạn — ưu tiên độ tin cậy") hiện ngay trên dashboard của
    file 06. Cần file 06.
 8. **[08-phat-hien-nhanh-va-xu-ly-su-co.md](08-phat-hien-nhanh-va-xu-ly-su-co.md)** — rule ES|QL
