@@ -111,7 +111,7 @@ tests/ServiceManifestSloConventionTests/
 docs/kibana-quan-sat-he-thong/
 ├── alerts/error-budget-rules.ndjson                 # export lại (4 rule + connector)
 ├── alerts/incident-fast-detection-rule.ndjson       # export lại (ngưỡng 1%)
-├── dashboards/slo-van-hanh-hang-ngay.ndjson         # export lại (3 Discover session + panel text)
+├── dashboards/ngan-sach-loi-tuan.ndjson         # export lại (3 Discover session + panel text)
 ├── alerts/README.md, 06-*.md, 07-*.md, 08-*.md      # sửa tại chỗ; xoá bằng chứng đo cũ (07/08/README)
 └── 00-tong-quan-lo-trinh.md                         # sửa nếu nhắc tháng
 

@@ -20,7 +20,7 @@ về Acceptance Criteria gốc: xem [technical-debt.md](technical-debt.md).
 | User Story | Cần mã ứng dụng mới? | Cơ chế |
 |---|---|---|
 | US1 — kill-pod (`baskets`) | Không | Thuần vận hành: `kubectl delete pod`, quan sát qua telemetry "Polly" (020) đã có sẵn |
-| US2 — inject-latency (`orders`) | Có | Middleware mới, 2 lớp gate, tái dùng dashboard SLO (021) để quan sát tiêu hao ngân sách |
+| US2 — inject-latency (`orders`) | Có | Middleware mới, 2 lớp gate, tái dùng dashboard Xử lý sự cố (021) để quan sát tiêu hao ngân sách |
 | US3 — bản ghi kết quả | Không (tài liệu) | Thư mục `docs/dien-tap-chaos-engineering/` — mẫu + README + `ket-qua/`, không tích hợp Jira tự động |
 
 Research.md Quyết định 0 xác nhận US1 không cần sửa `services/baskets` hay BFF: `deployment.yaml.j2`
@@ -51,7 +51,7 @@ trễ được yêu cầu mà không thực sự chờ khi chạy test.
 |---|---|
 | 0 | US1 không cần mã ứng dụng mới — chỉ dùng nguyên trạng resilience (020)/telemetry (017) |
 | 1 | Middleware mới, tối thiểu, 2 lớp gate — không dùng Toxiproxy/công cụ fault-injection chuyên dụng (thêm hạ tầng mới chỉ cho 1 kịch bản), không sửa mã nguồn tạm thời mỗi lần chạy (như 021 từng làm — không phù hợp bài tập lặp lại định kỳ có ghi nhận) |
-| 2 | Quan sát tiêu hao SLO tái dùng nguyên trạng dashboard Kibana "SLO vận hành hằng ngày" (021) — không xây dashboard/panel riêng cho chaos |
+| 2 | Quan sát tiêu hao SLO tái dùng nguyên trạng dashboard Kibana "Xử lý sự cố — 7 service" (021, tách từ dashboard SLO cũ bởi 030) — không xây dashboard/panel riêng cho chaos |
 | 3 | Bản ghi kết quả là tài liệu markdown theo mẫu tại `docs/` (không phải `specs/025.../`, vì đây là artifact vận hành sống tích luỹ qua nhiều lần chạy) — không tích hợp lập trình với Jira |
 | 4 | Unit test thuần trong `Orders.Api.UnitTests` đã có, không tạo dự án test mới — middleware không phụ thuộc ngoài (không DB, không broker) |
 

@@ -9,7 +9,7 @@
    `PlatformSloDefaults` (99%/1%), 7 `service-manifest.yaml` (`slos` 99%/1%, `error-budget-policy`
    `window: calendar-week`, khả dụng/5xx `1%`, p95 `5%`, p99 `1%`).
 2. **US2 — cảnh báo và dashboard theo tuần**: 3 rule `error-budget-50/75/100` lọc từ thứ Hai 00:00 giờ Việt
-   Nam, tỷ lệ `0.01`, cửa sổ rule 7 ngày, mỗi 5 phút; 3 panel ngân sách "tuần này" `now-7d`; panel text
+   Nam, tỷ lệ `0.01`, cửa sổ rule 7 ngày, mỗi 5 phút; 3 panel ngân sách "tuần này" (từ spec 030: dashboard Ngân sách lỗi tuần, khoảng thời gian riêng 30 ngày; lúc 029 là `now-7d`); panel text
    `99%`/tuần; folder Postman 29 đốt ngân sách 7 service.
 3. **US3 — đóng băng và phát hiện nhanh**: rule `error-budget-frozen` cửa sổ 14 ngày, ngày đạt SLO khi
    5xx < 1%; rule `incident-fast-detection` bắn khi 5xx ≥ 1% trong 5 phút.
@@ -17,13 +17,13 @@
 
 ## Hướng dẫn kiểm thử happy-case (thủ công + tự động)
 
-### Thủ công — đổi cờ tiêm lỗi rồi chạy folder Postman 29; xem kết quả trên dashboard SLO hằng ngày
+### Thủ công — đổi cờ tiêm lỗi rồi chạy folder Postman 29; xem kết quả trên dashboard Ngân sách lỗi tuần
 
 Dựng stack: `./scripts/local-up.ps1` (cần `KIBANA_ENCRYPTION_KEY` trong `.env`). Tạo index
 `slo-error-budget-events` (lệnh `PUT` ở [`07-canh-bao-ngan-sach-loi.md`](../kibana-quan-sat-he-thong/07-canh-bao-ngan-sach-loi.md)),
 import [`alerts/error-budget-rules.ndjson`](../kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson),
 [`alerts/incident-fast-detection-rule.ndjson`](../kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson)
-và [`dashboards/slo-van-hanh-hang-ngay.ndjson`](../kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson),
+và [`dashboards/ngan-sach-loi-tuan.ndjson`](../kibana-quan-sat-he-thong/dashboards/ngan-sach-loi-tuan.ndjson),
 Enable 5 rule ([`alerts/README.md`](../kibana-quan-sat-he-thong/alerts/README.md)).
 Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json)
 và [`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), environment
@@ -43,7 +43,7 @@ nhận header bị bỏ qua.
 | Mức tiêu hao theo tuần, tỷ lệ 1% | (không đổi) | `29b` bước 01 | Mẫu số chỉ gồm span từ đầu tuần; 4 hàng/service | 28 hàng; span sớm nhất `04:03Z` > đầu tuần `2026-10-04T17:00Z` |
 | Mốc 50 / 75 / 100 bật trong ≤ 5 phút (SC-002) | `CHAOS_ALLOW_FAULT_INJECTION=true` + 7 container | `29a` theo vòng (16 → 8 → 10 vòng), `29b` bước 01, 02 | Alert từng mốc cho `availability`, `error-rate` của cả 7 service | Mốc 50: 4 phút 33 giây sau đợt 1; mốc 100: 1 phút 54 giây sau đợt 3, cả 7 service; mốc 75 của 4 service bắn cùng lượt với lúc đã quá 100% (lưu lượng thấp) |
 | Trạng thái cạn (US3) | (như trên) | `29b` bước 03 | 7 service trong danh sách cạn | 7/7 (6 service lúc 08:51:24Z, Parties.Api lúc 08:36:24Z) |
-| Dashboard khớp alert (SC-004) | (không đổi) | (không có) — mở dashboard SLO hằng ngày | 3 panel "tuần này", `now-7d`, số khớp `29b` | Khớp; panel text `99%`/tuần; nhãn cột Error-rate "ngưỡng < 1%" |
+| Dashboard khớp alert (SC-004) | (không đổi) | (không có) — mở dashboard Ngân sách lỗi tuần | 3 panel ngân sách "tuần này" (khoảng thời gian riêng 30 ngày từ spec 030), số khớp `29b` | Khớp; panel text `99%`/tuần; nhãn cột Error-rate "ngưỡng < 1%" |
 | Phát hiện nhanh — dưới 1% không bắn vì 5xx (SC-005) | (như trên) | Gửi 300 request thường + 1 request `X-Chaos-Fault: 5xx` vào `Orders.Api` trong một cửa sổ 5 phút | Không có alert `incident-fast-detection` cho Orders.Api | 1/359 = 0,28% → không bắn |
 | Phát hiện nhanh — từ 1% thì bắn | (như trên) | 300 request thường + 10 request `X-Chaos-Fault: 5xx` | Alert Orders.Api trong ≤ 5 phút | 10/366 = 2,73% → alert mới ở lượt chạy kế tiếp |
 | Ngày đạt SLO theo ngưỡng mới (FR-008) | (không đổi) | (không có) — sự kiện thử trong index tạm, chạy đúng ES\|QL của rule frozen | Ngày 5xx 0,5% là đạt; ngày 5xx 2% là xấu; sự kiện ngoài 14 ngày không thấy | Đúng cả 5 trường hợp thử; đã xoá index tạm |

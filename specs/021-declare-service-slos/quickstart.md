@@ -14,8 +14,8 @@ research.md Quyết định 3, cùng logic 019 đã dùng cho smoke test động
 - Elastic stack (Elasticsearch + Kibana) đang chạy và đã nhận dữ liệu OTel thật từ ít nhất một service
   — theo đúng thiết lập của 017-otel-servicedefaults-elastic. Không cần thiết lập gì thêm cho bước
   này; tái sử dụng môi trường quan sát đã có.
-- Đã import dashboard `SLO vận hành hằng ngày — 7 service` vào Kibana từ
-  `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson` (Stack Management → Saved
+- Đã import dashboard `Xử lý sự cố — 7 service` vào Kibana từ
+  `docs/kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson` (Stack Management → Saved
   Objects → Import). Nếu đã import từ trước, bỏ qua bước này.
 
 ## Bước 1 — Chạy test tĩnh: khai báo SLO đầy đủ, không placeholder (Test Scenario 1)
@@ -39,7 +39,7 @@ và chạy lại Bước 1 để xác nhận test pass trở lại.
 
 ## Bước 3 — Đối chiếu SLO khai báo với dashboard đo thật (Test Scenario 2)
 
-Mở dashboard `SLO vận hành hằng ngày — 7 service` trong Kibana, cửa sổ thời gian **Last 24 hours**.
+Mở dashboard `Xử lý sự cố — 7 service` trong Kibana, đặt thanh thời gian **Last 24 hours** (mặc định của dashboard là 1 giờ gần nhất).
 Với một service bất kỳ (ví dụ `Orders.Api`), ghi lại giá trị "Thực tế" của error-rate, latency p95,
 latency p99 hiển thị trên Tầng 1.
 

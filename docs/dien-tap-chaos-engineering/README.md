@@ -17,7 +17,7 @@ Làm theo từng bước tại
 - **kill-pod**: xóa một pod đang chạy của `baskets` trong lúc có tải nhẹ, quan sát Kubernetes tái
   lập lịch và circuit breaker/retry của BFF engage.
 - **inject-latency**: bật `Chaos:AllowLatencyInjection=true` trên môi trường diễn tập, gửi header
-  `X-Chaos-Latency-Ms` tới Orders.Api, quan sát dashboard SLO (021) thể hiện ngân sách bị tiêu hao.
+  `X-Chaos-Latency-Ms` tới Orders.Api, quan sát dashboard Xử lý sự cố (021) thể hiện ngân sách bị tiêu hao.
 
 Sau khi chạy, điền [mau-ket-qua.md](./mau-ket-qua.md) thành một file mới trong
 [ket-qua/](./ket-qua/) và thêm vào mục "Lịch sử chạy" dưới đây (mới nhất trước).
@@ -55,8 +55,8 @@ theo một tỷ lệ 5–50%. Chi tiết nằm trong research.md của spec, nh�
 
 ### 2. Phát hiện
 
-Theo dõi bảng **"Phát hiện nhanh — vượt SLO trong 5 phút gần nhất"** trên dashboard
-`SLO vận hành hằng ngày — 7 service`.
+Theo dõi bảng **"Phát hiện nhanh — service vượt SLO trong khoảng thời gian đã chọn"** trên dashboard
+`Xử lý sự cố — 7 service`.
 
 - Lúc các container được tạo lại, mọi service đều chậm do khởi động nguội; đo thật kéo dài 5–7 phút.
 - Alert chỉ có trong **một** lần chạy rule là nhiễu.

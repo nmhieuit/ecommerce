@@ -3,9 +3,9 @@
 **Feature**: [../spec.md](../spec.md)
 
 Đây là hợp đồng đầu ra cho User Story 3 — danh sách bất biến ngắn gọn, ổn định mà dashboard
-`SLO vận hành hằng ngày — 7 service` (Kibana, saved object id `e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`,
-định nghĩa đầy đủ tại [`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../../../docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md),
-export tại [`docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`](../../../docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson))
+`Xử lý sự cố — 7 service` (Kibana, saved object id `e61fc7f3-17fe-428a-a373-da88af0a4a1e`,
+định nghĩa đầy đủ tại [`docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`](../../../docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md),
+export tại [`docs/kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson`](../../../docs/kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson))
 PHẢI luôn thỏa để được xem là cơ chế đo lường liên tục hợp lệ cho tính năng này. File này không lặp
 lại nhật ký xây dựng chi tiết — chỉ nêu bất biến để `quickstart.md` và mọi lần sửa dashboard sau này
 đối chiếu.

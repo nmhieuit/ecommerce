@@ -26,7 +26,7 @@ service nào**.
 service có traffic.
 
 **Phát hiện**: một rule Kibana ES|QL mới `incident-fast-detection` (5 phút) bắn cho service nào vượt
-SLO trong 5 phút gần nhất. Trạng thái của rule hiện ở bảng mới trên dashboard SLO hằng ngày.
+SLO trong 5 phút gần nhất. Trạng thái của rule hiện ở bảng mới trên dashboard Xử lý sự cố.
 
 **Phản ứng**: người vận hành triage theo quy trình viết trong `docs/dien-tap-chaos-engineering/`, gồm:
 - Kibana Case tạo tay: severity SEV1–3, comment mỗi mốc và mỗi 30 phút, baseline "alert → merge";
@@ -122,7 +122,7 @@ docs/kibana-quan-sat-he-thong/
 ├── 00-tong-quan-lo-trinh.md                        # sửa: thêm mục 08
 ├── alerts/incident-fast-detection-rule.ndjson      # mới — export rule
 ├── alerts/README.md                                # sửa: cách import rule mới
-└── dashboards/slo-van-hanh-hang-ngay.ndjson        # sửa — thêm bảng phát hiện nhanh
+└── dashboards/xu-ly-su-co.ndjson        # sửa — thêm bảng phát hiện nhanh
 
 docs/dien-tap-chaos-engineering/
 ├── README.md                                       # sửa: mục "Diễn tập sự cố on-call (SCRUM-36)" — quy trình triage, severity

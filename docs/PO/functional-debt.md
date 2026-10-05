@@ -140,6 +140,11 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   thì bật. Cách xác định "đầu tuần giờ Việt Nam" được thử ở 4 thời điểm quanh nửa đêm Chủ nhật — đều đúng.
   Lúc chuyển còn phát hiện bảng lưu "sự kiện cạn" trên môi trường thử nghiệm bị tạo sai kiểu dữ liệu, đã
   tạo lại đúng.
+- **[030](030_PO_hai%20dashboard%20xử%20lý%20sự%20cố%20và%20ngân%20sách%20tuần.md)** —
+  Màn hình hằng ngày cũ đã tách thành hai màn hình "Xử lý sự cố" và "Ngân sách lỗi tuần", đã chạy trên môi trường thử nghiệm với số liệu thật: mọi ô của màn hình xử lý sự cố đổi theo khoảng thời gian
+  người trực chọn; màn hình tuần giữ nguyên con số khi đổi khoảng thời gian và khớp truy vấn đối chiếu (28/28 dòng). Bấm mã yêu cầu trong nhật ký lỗi mở được đúng 12 bước xử lý của yêu cầu đó. Lúc dựng còn phát
+  hiện công cụ xem trace chuyên dụng không đọc được dữ liệu của hệ thống (nên dùng màn hình tìm kiếm chung), và nút "đường dẫn sang nhau" chính thức làm hai file xuất ra giống hệt nhau (nên dùng đường dẫn thường).
+
 
 ## 2. Giới hạn hiện tại
 
@@ -281,11 +286,16 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   Lỗi do diễn tập được tính vào ngân sách lỗi tuần như thật (theo lựa chọn đã thống nhất), nên sau các
   lần thử, cả 7 bộ phận đang ở trạng thái "cạn ngân sách" trên môi trường thử nghiệm. Kiểu hỏng "giới hạn
   kết nối quá nhỏ" chỉ gây lỗi ở cổng vào hệ thống, nên chỉ được dùng cho bộ phận đó. Công cụ chưa có
-  kiểm thử tự động (đã thống nhất, sẽ bổ sung trước khi xong phần rút kinh nghiệm sau sự cố).
+  kiểm thử tự động (đã thống nhất, sẽ bổ sung trước khi xong phần rút kinh nghiệm sau sự cố). *Từ 030: riêng cảnh báo phát hiện nhanh đã có kiểm thử canh ngưỡng.*
 - **[029](029_PO_ngân%20sách%20lỗi%20theo%20tuần%20lịch.md)** —
   Khoảnh khắc chuyển tuần thật (00:00 thứ Hai) và việc hồi phục sau 3 ngày chưa quan sát được — mới kiểm
   bằng thời điểm giả định và dữ liệu thử. Lượng người dùng thử nghiệm thấp, nên với chu kỳ tuần vài lỗi đã
   đủ vượt nhiều mốc cùng lúc (theo lựa chọn đã thống nhất: chỉ ghi lại, không xử lý thêm). Một bộ phận
   "cạn" mà không ổn định lại quá 2 tuần có thể tự rời danh sách "cạn" (giới hạn của cách nhìn lại 14 ngày
-  đã chọn). Cảnh báo phát hiện nhanh vẫn chưa có kiểm thử tự động canh ngưỡng. Sau buổi diễn tập, cả 7 bộ
+  đã chọn). Cảnh báo phát hiện nhanh từng chưa có kiểm thử tự động canh ngưỡng (*từ 030: đã có*). Sau buổi diễn tập, cả 7 bộ
   phận đang ở trạng thái "cạn" trên môi trường thử nghiệm.
+- **[030](030_PO_hai%20dashboard%20xử%20lý%20sự%20cố%20và%20ngân%20sách%20tuần.md)** —
+  Màn hình "Ngân sách lỗi tuần" chỉ xem lại được tối đa **3 tuần trước**; hai ô "cảnh báo mốc" và "cạn ngân sách" luôn là tình trạng *hiện tại* (không có lịch sử từng tuần). Mở một yêu cầu cụ thể từ nhật ký lỗi ra
+  màn hình tìm kiếm chung, không phải màn hình vẽ cây thời gian chuyên dụng. Nhật ký lỗi hiển thị nguyên nội dung dòng log nên có thể lộ dữ liệu nhạy cảm nếu ứng dụng ghi vào log. Đường dẫn giữa hai
+  màn hình chỉ đúng khi hệ thống giữ nguyên mã của chúng. Cảnh báo phát hiện nhanh nay **đã có** kiểm thử tự động canh ngưỡng (đóng điều còn thiếu của 028/029). Khoảnh khắc chuyển tuần thật (00:00 thứ Hai)
+  vẫn chưa quan sát được trên màn hình tuần.

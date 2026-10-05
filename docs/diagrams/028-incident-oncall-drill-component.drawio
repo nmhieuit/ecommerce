@@ -34,7 +34,7 @@
                 <mxCell id="alerts" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="alerts-as-data .alerts-stack.alerts-default" vertex="1">
                     <mxGeometry height="50" width="440" x="1010" y="220" as="geometry"/>
                 </mxCell>
-                <mxCell id="dash" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="Dashboard &quot;SLO vận hành hằng ngày — 7 service&quot;&#xa;bảng mới: &quot;Phát hiện nhanh — vượt SLO trong 5 phút gần nhất&quot;&#xa;(Discover session incident-fast-detection-active-alerts, lọc 15 phút)&#xa;+ các panel 021/027 giữ nguyên" vertex="1">
+                <mxCell id="dash" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="Dashboard &quot;Xử lý sự cố — 7 service&quot;&#xa;bảng mới: &quot;Phát hiện nhanh — vượt SLO trong 5 phút gần nhất&quot;&#xa;(Discover session incident-fast-detection-active-alerts, lọc 15 phút)&#xa;+ các panel 021/027 giữ nguyên" vertex="1">
                     <mxGeometry height="90" width="440" x="1010" y="300" as="geometry"/>
                 </mxCell>
                 <mxCell id="case" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" value="Kibana Cases (tạo tay, license Basic)&#xa;tiêu đề [SEVn] · mô tả = mã băm · severity SEV1→critical, SEV2→high, SEV3→medium&#xa;comment tại mỗi mốc + mỗi 30 phút · baseline alert→merge" vertex="1">

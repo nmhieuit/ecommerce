@@ -33,7 +33,7 @@
 - Q: Ba mốc phát hiện / giảm thiểu / giải quyết được phân biệt thế nào? → A: Giảm thiểu = thời điểm merge PR vào master (hành động giảm thiểu đầu tiên chính là PR sửa lỗi, không có giảm thiểu tạm thời); Giải quyết = thời điểm telemetry xác nhận đạt SLO liên tục 15 phút trên bản đã merge.
 - Q: Với lỗi tiêm bằng cấu hình (không nằm trong code), PR để merge là gì? → A: Một PR phòng ngừa tái diễn (ví dụ kiểm tra cấu hình khi khởi động, giới hạn pool).
 - Q: Sau khi merge, hệ thống được đưa về trạng thái không lỗi thế nào? → A: Người vận hành pull master, build và chạy lại service bị ảnh hưởng; cấu hình tiêm lỗi được gỡ trong lúc đó.
-- Q: Rule phát hiện nhanh có hiển thị trên dashboard SLO hằng ngày không? → A: Có, thêm panel.
+- Q: Rule phát hiện nhanh có hiển thị trên dashboard Xử lý sự cố không? → A: Có, thêm panel.
 - Q: Các cơ chế tiêm lỗi mới có chặn bằng cờ không? → A: Dùng chung cờ `Chaos:AllowFaultInjection` của đặc tả 027 (mặc định tắt).
 - Q: Khoảng thời gian chọn ngẫu nhiên thời điểm tiêm? → A: Trong 0–30 phút kể từ lúc khởi chạy script.
 - Q: Lựa chọn niêm phong được tiết lộ khi nào? → A: Chỉ sau khi sự cố đã được giải quyết (đạt SLO 15 phút).
@@ -89,12 +89,12 @@ Là người đóng vai SRE, tôi muốn một cảnh báo phát hiện nhanh b�
 
 **Why this priority**: Đây chính là tiêu chí chấp nhận 1 của Jira. Bốn rule ngân sách lỗi của đặc tả 027 đo tiêu hao theo tuần nên không bắn kịp cho một sự cố đơn lẻ; cần một tín hiệu phát hiện nhanh để buổi diễn tập bắt đầu từ cảnh báo chứ không phải từ việc tự soi dashboard.
 
-**Independent Test**: Tiêm một lỗi đã biết (ngoài buổi diễn tập mù) vào một service; xác nhận rule phát hiện nhanh bắn trong 5 phút, hiện trên panel mới của dashboard SLO hằng ngày; mở Kibana Case, ghi severity, các cập nhật trạng thái và hành động giảm thiểu.
+**Independent Test**: Tiêm một lỗi đã biết (ngoài buổi diễn tập mù) vào một service; xác nhận rule phát hiện nhanh bắn trong 5 phút, hiện trên panel mới của dashboard Xử lý sự cố; mở Kibana Case, ghi severity, các cập nhật trạng thái và hành động giảm thiểu.
 
 **Acceptance Scenarios**:
 
 1. **Given** sự cố đã được tiêm và tải nền đang chạy, **When** tỷ lệ 5xx của service ≥ 1% hoặc p95/p99 vượt ngưỡng đã khai báo của chính service đó trong cửa sổ 5 phút gần nhất, **Then** rule phát hiện nhanh bắn cho đúng service đó (riêng gateway chỉ xét tỷ lệ 5xx).
-2. **Given** rule phát hiện nhanh đang hoạt động, **When** tôi mở dashboard SLO hằng ngày, **Then** panel phát hiện nhanh cho biết service nào đang vượt SLO trong 5 phút gần nhất.
+2. **Given** rule phát hiện nhanh đang hoạt động, **When** tôi mở dashboard Xử lý sự cố, **Then** panel phát hiện nhanh cho biết service nào đang vượt SLO trong 5 phút gần nhất.
 3. **Given** cảnh báo đã bắn, **When** tôi bắt đầu triage, **Then** tôi mở một Kibana Case cho sự cố và ghi một comment tại mỗi mốc: phát hiện, xác định severity (SEV1/SEV2/SEV3 theo tiêu chí đã định nghĩa), xác định nguyên nhân, giảm thiểu, giải quyết; cộng thêm cập nhật định kỳ trong lúc sự cố còn mở.
 4. **Given** tôi đã tìm ra nguyên nhân, **When** tôi giảm thiểu, **Then** hành động giảm thiểu đầu tiên là merge vào master một PR phòng ngừa tái diễn, rồi pull master, build và chạy lại service bị ảnh hưởng với cấu hình tiêm lỗi đã gỡ.
 5. **Given** sự cố đang hoạt động, **When** tôi ghi Kibana Case, **Then** Case ghi chỉ số baseline "thời gian từ lúc alert bắn tới hành động giảm thiểu đầu tiên (merge PR)".
@@ -124,7 +124,7 @@ Là người đóng vai SRE, tôi muốn chỉ đóng sự cố khi telemetry ch
 
 **Why this priority**: Đây là tiêu chí chấp nhận 3 của Jira. Nó phụ thuộc vào việc đã giảm thiểu (User Story 2) và đã có bản ghi (User Story 3).
 
-**Independent Test**: Sau khi chạy lại service từ master, theo dõi dashboard SLO hằng ngày; xác nhận chỉ ghi mốc giải quyết khi 5xx và độ trễ trong ngưỡng liên tục 15 phút và rule phát hiện nhanh đã hết hoạt động, kèm bằng chứng telemetry trong bản ghi.
+**Independent Test**: Sau khi chạy lại service từ master, theo dõi dashboard Xử lý sự cố; xác nhận chỉ ghi mốc giải quyết khi 5xx và độ trễ trong ngưỡng liên tục 15 phút và rule phát hiện nhanh đã hết hoạt động, kèm bằng chứng telemetry trong bản ghi.
 
 **Acceptance Scenarios**:
 
@@ -155,7 +155,7 @@ Là người đóng vai SRE, tôi muốn chỉ đóng sự cố khi telemetry ch
 - **FR-003**: Script PHẢI từ chối chạy khi cờ `Chaos:AllowFaultInjection` (biến `CHAOS_ALLOW_FAULT_INJECTION` trong `.env`) không bật; khi cờ tắt, KHÔNG có lỗi nào được tiêm. Lúc tiêm, script PHẢI tạo lại cả 7 container service, chỉ container đích nhận cấu hình sai.
 - **FR-004**: Diễn tập PHẢI chạy được trên Docker Compose local, với traffic nền chạy bằng folder Postman 26 qua newman, cộng thêm traffic tới parties và identity để cả 7 service đều có traffic; token chỉ được lấy lại mỗi 30 phút.
 - **FR-005**: PHẢI có một rule phát hiện nhanh trong Kibana, bắn cho từng service khi tỷ lệ 5xx ≥ 1% hoặc p95/p99 vượt ngưỡng đã khai báo của chính service đó (kể cả ngoại lệ có lý do), đo trên cửa sổ 5 phút gần nhất; riêng gateway chỉ xét tỷ lệ 5xx (người dùng chốt, vì ngưỡng độ trễ của gateway chặt hơn BFF mà nó chuyển tiếp tới); 4 rule ngân sách lỗi của đặc tả 027 giữ nguyên.
-- **FR-006**: Dashboard SLO hằng ngày PHẢI có panel thể hiện trạng thái rule phát hiện nhanh (service nào đang vượt SLO trong 5 phút gần nhất).
+- **FR-006**: Dashboard Xử lý sự cố PHẢI có panel thể hiện trạng thái rule phát hiện nhanh (service nào đang vượt SLO trong 5 phút gần nhất).
 - **FR-007**: PHẢI có quy trình triage được viết ra gồm các bước: phát hiện, đánh giá severity, thông báo trạng thái, giảm thiểu; với tiêu chí severity: SEV1 — luồng đặt hàng hỏng hoàn toàn; SEV2 — một chức năng giảm cấp rõ rệt; SEV3 — ảnh hưởng nhỏ hoặc có cách vòng.
 - **FR-008**: Thông báo trạng thái PHẢI được thực hiện trên một Kibana Case mở cho sự cố, với một comment tại mỗi mốc của dòng thời gian và các cập nhật định kỳ trong lúc sự cố còn mở.
 - **FR-009**: Kibana Case PHẢI ghi chỉ số baseline "thời gian từ lúc alert bắn tới hành động giảm thiểu đầu tiên".
@@ -187,7 +187,7 @@ Là người đóng vai SRE, tôi muốn chỉ đóng sự cố khi telemetry ch
 
 ## Assumptions
 
-- Telemetry (traces OTel qua Elasticsearch), dashboard SLO hằng ngày trên Kibana, 4 rule ngân sách lỗi và cơ chế tiêm lỗi 5xx (`X-Chaos-Fault`, cờ `Chaos:AllowFaultInjection`) đã có từ các đặc tả 021 và 027; tính năng này xây trên nền đó.
+- Telemetry (traces OTel qua Elasticsearch), dashboard Xử lý sự cố trên Kibana, 4 rule ngân sách lỗi và cơ chế tiêm lỗi 5xx (`X-Chaos-Fault`, cờ `Chaos:AllowFaultInjection`) đã có từ các đặc tả 021 và 027; tính năng này xây trên nền đó.
 - Ngưỡng SLO của 7 service (kể cả ngoại lệ độ trễ của BFF) đã khai báo trong manifest theo đặc tả 021; tính năng này không thay đổi các ngưỡng đó.
 - Folder Postman 26 (có bước lấy token) chạy được bằng newman trên Docker Compose local và, cùng traffic bổ sung cho parties/identity, tạo đủ traffic để rule phát hiện nhanh có dữ liệu đánh giá. Bài NBomber của 026 không dùng được vì luôn nhận 401 (QA_Debt mục 026).
 - "Người vận hành" là một người duy nhất đóng vai SRE/Dev (theo `docs/roadmap.md`); quy trình triage và cập nhật Kibana Case là quy trình con người, không bắt buộc tự động hóa.

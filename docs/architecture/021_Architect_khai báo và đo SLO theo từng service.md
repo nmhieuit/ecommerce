@@ -23,7 +23,7 @@ xem [technical-debt.md](technical-debt.md).
   giá trị bị sửa lệch mặc định, sẽ không ai phát hiện.
 - Dashboard Kibana đo 3/4 chỉ số (Error-rate, Latency p95, Latency p99 từ traces OTel thật, Availability
   suy ra xấp xỉ từ `100% − Error-rate`) **đã tồn tại và đã xác minh khớp dữ liệu thô** — dựng ở
-  [`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md).
+  [`docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`](../kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md).
 
 **Kết luận đã chốt**: phần việc thật của SCRUM-29 không phải "khai báo" hay "xây dashboard" từ đầu, mà
 là (a) làm cho khai báo có tính **tự bảo vệ** (test canh giữ), và (b) **chính thức hoá** dashboard đã
@@ -32,8 +32,8 @@ ai đảm bảo còn đúng.
 
 ## 2. User Story 3 — không viết code mới, chính thức hoá dashboard đã có (Quyết định 3)
 
-Dashboard `SLO vận hành hằng ngày — 7 service` (đã build ở phiên brainstorm/implementation trước,
-xem [`06-dashboard-slo-van-hanh-hang-ngay.md`](../kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md))
+Dashboard `Xử lý sự cố — 7 service` (đã build ở phiên brainstorm/implementation trước,
+xem [`06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`](../kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md))
 được chính thức hoá làm cơ chế đo lường liên tục của tính năng này — không xây lại. Hợp đồng (bất biến
 bắt buộc) được tách riêng vào `contracts/continuous-measurement-contract.md` để có 1 danh sách ổn định
 đối chiếu được, không cần đọc lại nhật ký xây dựng chi tiết. `quickstart.md` lặp lại đúng 3 kịch bản
@@ -59,7 +59,7 @@ không placeholder,      classification, trừ khi có
 classification hợp lệ)  slos.justification)
         │
         ▼ (US3, không phụ thuộc US1/US2 về implementation)
-Dashboard Kibana "SLO vận hành hằng ngày — 7 service" (đã có, chính thức hoá)
+Dashboard Kibana "Xử lý sự cố — 7 service" (đã có, chính thức hoá)
   ← Elasticsearch traces-generic.otel-default*, cửa sổ rolling 24h
 ```
 
@@ -71,7 +71,7 @@ Dashboard Kibana "SLO vận hành hằng ngày — 7 service" (đã có, chính 
 
 ## 5. Tham khảo thêm
 
-`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md` giờ tham chiếu ngược lại đặc
+`docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md` giờ tham chiếu ngược lại đặc
 tả này làm hợp đồng đo lường liên tục chính thức — đọc file đó để biết cách vận hành/đọc dashboard,
 không lặp lại ở đây.
 

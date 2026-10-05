@@ -25,14 +25,14 @@ Bất biến được kiểm tra: [contracts/error-budget-alert-rules-contract.m
 
    ```powershell
    curl.exe -X POST "http://localhost:5601/api/saved_objects/_import?overwrite=true" -H "kbn-xsrf: true" --form "file=@docs/kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson"
-   curl.exe -X POST "http://localhost:5601/api/saved_objects/_import?overwrite=true" -H "kbn-xsrf: true" --form "file=@docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson"
+   curl.exe -X POST "http://localhost:5601/api/saved_objects/_import?overwrite=true" -H "kbn-xsrf: true" --form "file=@docs/kibana-quan-sat-he-thong/dashboards/ngan-sach-loi-tuan.ndjson"
    ```
 
 5. Kibana nhập rule ở trạng thái **disabled**: vào **Stack Management → Rules**, lọc tag
    `slo-error-budget`, bật (Enable) cả 4 rule.
 
 **Kết quả mong đợi**: 4 rule enabled, chu kỳ 5 phút, sau ~5 phút mỗi rule có lượt chạy mới (rule nào kẹt
-`pending` thì Disable rồi Enable lại — xem `docs/kibana-quan-sat-he-thong/alerts/README.md`); dashboard `SLO vận hành hằng ngày — 7 service` có
+`pending` thì Disable rồi Enable lại — xem `docs/kibana-quan-sat-he-thong/alerts/README.md`); dashboard `Ngân sách lỗi tuần — 7 service` có
 nhóm "Ngân sách lỗi tuần này" ở trên cùng.
 
 ## Kịch bản 1 — Tạo lỗi tổng hợp tới khi cạn ngân sách tuần, cảnh báo bắn đúng mốc
@@ -74,7 +74,7 @@ dotnet test tests/ServiceManifestSloConventionTests
 
 ## Kịch bản 3 — Cảnh báo tới nơi người vận hành thật sự nhìn thấy
 
-Mở dashboard SLO hằng ngày như mọi ngày, **không** vào Stack Management.
+Mở dashboard Ngân sách lỗi tuần như mọi ngày, **không** vào Stack Management.
 
 **Kết quả mong đợi**: alert của Kịch bản 1 hiện ngay ở nhóm panel trên cùng, đủ service, ngân sách,
 mốc và mức tiêu hao hiện tại (SC-003).

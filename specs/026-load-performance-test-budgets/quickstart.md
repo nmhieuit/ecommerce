@@ -77,6 +77,6 @@ cùng một kết quả bất kể tình trạng thật của hệ thống (spec
 Theo research.md Quyết định 2, cổng chặn tự động (Bước 1–3) chỉ đo lớp `client-facing-bff`. Để đối
 chiếu thêm với ngân sách `internal-service-api` của 4 service phía sau BFF trong cùng cửa sổ traffic
 vừa tạo ở Bước 1, mở lại dashboard đã dựng ở
-`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md` (hạng mục 021) và xem số đo
+`docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md` (hạng mục 021) và xem số đo
 p95/p99 của `baskets`/`orders`/`products` trong khoảng thời gian bài kiểm thử tải vừa chạy — đây là
 một bước xác nhận bổ sung, không phải một phần của mã thoát pass/fail tự động.

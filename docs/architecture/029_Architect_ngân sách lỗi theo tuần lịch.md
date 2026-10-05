@@ -77,9 +77,11 @@ không có sự kiện mới nào được ghi và service cạn mà không bị
 
 ## 6. Dashboard: sửa tạm, không tách (Quyết định 4)
 
-3 Discover session của 027 đổi sang "tuần này", `time_range now-7d`; panel text ghi `99%`/tuần; nhãn cột
+3 Discover session của 027 đổi sang "tuần này", `time_range now-7d` (từ spec 030: dashboard Ngân sách lỗi tuần, khoảng riêng 30 ngày); panel text ghi `99%`/tuần; nhãn cột
 Error-rate của bảng SLO 021 đổi thành "ngưỡng < 1%" (ngoại lệ FR-010 do người dùng chốt). Id, vị trí và
 mọi panel khác giữ nguyên — tách dashboard là việc của spec B.
+
+*Từ spec 030 (spec B): dashboard SLO đã được tách thành `Xử lý sự cố — 7 service` và `Ngân sách lỗi tuần — 7 service`; xem [`030_Architect_hai dashboard xử lý sự cố và ngân sách tuần.md`](030_Architect_hai%20dashboard%20xử%20lý%20sự%20cố%20và%20ngân%20sách%20tuần.md).*
 
 ## 7. Sơ đồ
 

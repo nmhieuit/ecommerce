@@ -1,5 +1,7 @@
 # Kế hoạch triển khai: Dashboard SLO vận hành hằng ngày
 
+> **Ghi chú (spec 030, 2026-10-05)**: dashboard `SLO vận hành hằng ngày — 7 service` mô tả ở tài liệu này đã được **tách và bỏ**, thay bằng hai dashboard `Xử lý sự cố — 7 service` (mọi panel theo thanh thời gian) và `Ngân sách lỗi tuần — 7 service` (cố định tuần lịch giờ Việt Nam). Đây là tài liệu thiết kế/kế hoạch gốc, giữ nguyên làm lịch sử; hướng dẫn hiện hành: [`docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`](../../kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md) và [`specs/030-incident-and-weekly-dashboards/`](../../../specs/030-incident-and-weekly-dashboards/).
+
 > **Dành cho người/agent thực thi:** BẮT BUỘC DÙNG KÈM: superpowers:subagent-driven-development
 > (khuyến nghị) hoặc superpowers:executing-plans để thực thi kế hoạch này từng task một. Các bước
 > dùng cú pháp checkbox (`- [ ]`) để theo dõi tiến độ.
@@ -580,7 +582,7 @@ Trong `docs/superpowers/specs/2026-09-08-dashboard-slo-van-hanh-design.md`, mụ
 bước triển khai" — đổi cả 5 dòng `- [ ]` thành `- [x]`, thêm 1 dòng ngay dưới tiêu đề mục đó:
 
 ```markdown
-**Đã hoàn tất** — xem kết quả thật ở [`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../../kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md).
+**Đã hoàn tất** — xem kết quả thật ở [`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../../kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md).
 ```
 
 - [ ] **Bước 5: Bài kiểm tra "đã pass" — xác nhận cả 3 file đã đúng trạng thái mong muốn**

@@ -90,9 +90,9 @@ khi cấu hình `Chaos:AllowLatencyInjection` (bool, mặc định `false`) đan
 
 ## Quyết định 2 — Dashboard SLO đã có (021) tái sử dụng nguyên trạng cho việc quan sát ngân sách bị tiêu hao
 
-**Decision**: User Story 2 dùng lại dashboard Kibana "SLO vận hành hằng ngày — 7 service"
-(`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`,
-`dashboards/slo-van-hanh-hang-ngay.ndjson`) đã được 021-declare-service-slos dựng và xác minh —
+**Decision**: User Story 2 dùng lại dashboard Kibana "Xử lý sự cố — 7 service"
+(`docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`,
+`dashboards/xu-ly-su-co.ndjson`) đã được 021-declare-service-slos dựng và xác minh —
 không xây dashboard mới.
 
 **Rationale**: Dashboard này đã hiển thị latency p95/p99 thực tế đối chiếu ngưỡng khai báo của

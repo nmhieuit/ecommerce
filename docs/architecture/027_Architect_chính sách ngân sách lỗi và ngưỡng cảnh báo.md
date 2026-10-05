@@ -18,7 +18,7 @@ mở — xem [technical-debt.md](technical-debt.md).
 |---|---|---|
 | **Chính sách** — 4 ngân sách (khả dụng 1%, 5xx 1%, vượt p95 5%, vượt p99 1%), tuần lịch UTC+7, mốc 50/75/100, "cạn" = bất kỳ ngân sách nào 100%, hệ quả và điều kiện hồi phục 3 ngày | Khối `error-budget-policy` trong 7 `service-manifest.yaml`, ngay sau `slos` | Con người; `ErrorBudgetPolicyTests` canh hình dạng |
 | **Đo và cảnh báo** — 4 rule Kibana "Elasticsearch query" dạng ES\|QL, mỗi 5 phút | Kibana; export tại [`alerts/error-budget-rules.ndjson`](../kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson) | `ErrorBudgetRuleDefinitionTests` canh ngưỡng khớp manifest |
-| **Nhìn thấy** — 3 panel trên cùng dashboard SLO hằng ngày của 021 | Discover session ES\|QL; export trong [`dashboards/slo-van-hanh-hang-ngay.ndjson`](../kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson) | Người vận hành, mỗi ngày |
+| **Nhìn thấy** — 3 panel trên cùng dashboard Ngân sách lỗi tuần của 021 | Discover session ES\|QL; export trong [`dashboards/ngan-sach-loi-tuan.ndjson`](../kibana-quan-sat-he-thong/dashboards/ngan-sach-loi-tuan.ndjson) | Người vận hành, mỗi ngày |
 
 Ngưỡng độ trễ **chỉ có một nguồn**: `slos.latency` của manifest. Khối chính sách không chép lại; rule
 chép tay vào ES|QL nhưng test đọc file export và đỏ ngay khi lệch (đã thử phá: đổi 300 ms → 350 ms, 3 test đỏ).

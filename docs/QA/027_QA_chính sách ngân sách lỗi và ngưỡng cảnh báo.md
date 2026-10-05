@@ -6,15 +6,15 @@
 ## Luồng happy-case đã rà soát
 
 1. **US1 — chính sách bằng con số**: khối `error-budget-policy` ngay sau `slos` trong cả 7 `service-manifest.yaml` — 4 ngân sách (khả dụng 1%, 5xx 1%, vượt p95 5%, vượt p99 1%), tuần lịch UTC+7, mốc 50/75/100, "cạn" = bất kỳ ngân sách nào 100%, hệ quả (dừng merge tính năng mới) và hồi phục (3 ngày đạt SLO, ngày không traffic tính là đạt, đặt lại đầu tuần không gỡ đóng băng).
-2. **US2 — cảnh báo theo mốc**: 3 rule Kibana ES|QL `error-budget-50/75/100` mỗi 5 phút, alert theo (service, ngân sách), hiện ở 2 bảng trên cùng dashboard SLO hằng ngày; công cụ diễn tập `ChaosFaultInjectionMiddleware` (ServiceDefaults, cờ `Chaos:AllowFaultInjection` + header `X-Chaos-Fault: 5xx`).
+2. **US2 — cảnh báo theo mốc**: 3 rule Kibana ES|QL `error-budget-50/75/100` mỗi 5 phút, alert theo (service, ngân sách), hiện ở 2 bảng trên cùng dashboard Ngân sách lỗi tuần; công cụ diễn tập `ChaosFaultInjectionMiddleware` (ServiceDefaults, cờ `Chaos:AllowFaultInjection` + header `X-Chaos-Fault: 5xx`).
 3. **US3 — trạng thái cạn**: rule 100 ghi sự kiện vào `slo-error-budget-events` khi alert chuyển sang active; rule `error-budget-frozen` suy ra service đang "cạn — ưu tiên độ tin cậy", hiện ở bảng thứ 3.
 4. Hạ tầng: Kibana cần `KIBANA_ENCRYPTION_KEY` (`.env` Vùng 2) mới chạy được rule.
 
 ## Hướng dẫn kiểm thử happy-case (thủ công + tự động)
 
-### Thủ công — đổi cờ tiêm lỗi rồi bấm Postman; xem kết quả trên dashboard SLO hằng ngày
+### Thủ công — đổi cờ tiêm lỗi rồi bấm Postman; xem kết quả trên dashboard Ngân sách lỗi tuần
 
-Dựng stack: `./scripts/local-up.ps1` (cần `KIBANA_ENCRYPTION_KEY` trong `.env`). Tạo index `slo-error-budget-events`, import [`alerts/error-budget-rules.ndjson`](../kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson) và [`dashboards/slo-van-hanh-hang-ngay.ndjson`](../kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson), Enable 4 rule tag `slo-error-budget` ([`alerts/README.md`](../kibana-quan-sat-he-thong/alerts/README.md)).
+Dựng stack: `./scripts/local-up.ps1` (cần `KIBANA_ENCRYPTION_KEY` trong `.env`). Tạo index `slo-error-budget-events`, import [`alerts/error-budget-rules.ndjson`](../kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson) và [`dashboards/ngan-sach-loi-tuan.ndjson`](../kibana-quan-sat-he-thong/dashboards/ngan-sach-loi-tuan.ndjson), Enable 4 rule tag `slo-error-budget` ([`alerts/README.md`](../kibana-quan-sat-he-thong/alerts/README.md)).
 Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/ecommerce.postman_collection.v2.json) và [`postman/local.postman_environment.v2.json`](../../postman/local.postman_environment.v2.json), environment **Ecommerce - Local**; folder **`27 - Ngân sách lỗi: tiêm 5xx và cảnh báo (error budget)`** — không cần token.
 
 **Công tắc cấu hình**: `CHAOS_ALLOW_FAULT_INJECTION` trong `.env` (xem `.env.example`; cả 2 file compose, mặc định `false` = tắt), rồi `docker compose -f docker-compose.local.yml up -d --force-recreate --no-deps orders-api` và chờ healthy. **Khôi phục mặc định**: xoá dòng đó khỏi `.env` và tạo lại `orders-api`.
@@ -28,7 +28,7 @@ Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/e
 | US2 — mốc 50/75/100 bật trong ≤ 5 phút | (như trên), gửi lặp `27b` bước 01 | `27c` bước 02, 03 | Alert mỗi mốc đã vượt cho `availability`, `error-rate` |
 | FR-007 — alert giữ active | (như trên) | `27c` bước 03 lần nữa sau 5 phút | Alert 75 vẫn active, `start` không đổi |
 | US3 — trạng thái cạn | (như trên) | `27c` bước 04 | `Orders.Api` có trong danh sách cạn |
-| Kịch bản Jira 3 — nhìn thấy trên dashboard | (không đổi) | (không có) — mở dashboard SLO hằng ngày | 3 bảng trên cùng có dữ liệu |
+| Kịch bản Jira 3 — nhìn thấy trên dashboard | (không đổi) | (không có) — mở dashboard Ngân sách lỗi tuần | 3 bảng trên cùng có dữ liệu |
 | Dọn dẹp | Xoá `CHAOS_ALLOW_FAULT_INJECTION` khỏi `.env`, tạo lại `orders-api` | `27a` bước 01 | `200` |
 
 ### Tự động

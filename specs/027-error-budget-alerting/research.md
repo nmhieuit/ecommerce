@@ -14,11 +14,11 @@ Mọi quyết định dưới đây hoặc do người dùng chốt trực tiế
   Alerting không cho tạo/chạy rule.
 - Dữ liệu nguồn: index `traces-generic.otel-default*`; tên service ở
   `resource.attributes.service.name`; mã HTTP ở `attributes.http.response.status_code`; `duration`
-  tính bằng **nanosecond** (đã xác minh ở `docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`).
+  tính bằng **nanosecond** (đã xác minh ở `docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`).
 - 7 `service-manifest.yaml` đã có khối `slos` (021); `Bff.Api` có ngưỡng độ trễ p95 300ms / p99
   800ms, 6 service còn lại p95 150ms / p99 500ms.
-- Dashboard `SLO vận hành hằng ngày — 7 service` (id `e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`) là nơi
-  người vận hành mở mỗi ngày; export tại `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`.
+- Dashboard `Ngân sách lỗi tuần — 7 service` (id `2a607bf4-2449-48a1-a2e8-1336ec35a7b7`) là nơi
+  người vận hành mở mỗi ngày; export tại `docs/kibana-quan-sat-he-thong/dashboards/ngan-sach-loi-tuan.ndjson`.
 - Chưa có cơ chế tiêm lỗi 5xx; chỉ có `ChaosLatencyInjectionMiddleware` (025) riêng trong Orders.Api.
 - `tests/ServiceManifestSloConventionTests` (021) đã đọc cả 7 manifest bằng YamlDotNet.
 
@@ -100,7 +100,7 @@ thần FR-012 (vốn chỉ nói về cảnh báo) — ghi lại để không ai 
 
 **Alternatives considered**: Người vận hành tự ghi trạng thái trong manifest — bị loại bởi người dùng.
 
-## Quyết định 5 — Hiển thị trên dashboard SLO hằng ngày
+## Quyết định 5 — Hiển thị trên dashboard Ngân sách lỗi tuần
 
 **Decision** (Hệ quả của FR-008/FR-011 + Người dùng chốt "đưa vào dashboard SLO"): thêm vào dashboard
 hiện có (không tạo dashboard mới) một nhóm panel "Ngân sách lỗi tuần này" đặt **trên cùng**:
@@ -158,7 +158,7 @@ Hành vi runtime trên Kibana thật (rule bắn đúng mốc, dashboard hiển 
 
 **Decision** (Người dùng chốt): rule, connector Index và các panel mới được tạo trên UI, rồi export
 bằng Saved Objects API vào `docs/kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson` (rule +
-connector) và cập nhật `dashboards/slo-van-hanh-hang-ngay.ndjson` (dashboard). Import lại bằng
+connector) và cập nhật `dashboards/ngan-sach-loi-tuan.ndjson` (dashboard). Import lại bằng
 `_import` như README dashboard hiện có.
 
 **Hệ quả cần ghi trong tài liệu**: Kibana nhập rule ở trạng thái **disabled** và phải tạo lại API key,

@@ -1,19 +1,53 @@
-# 06 — Dashboard SLO vận hành hằng ngày
+# 06 — Hai dashboard SLO: Xử lý sự cố và Ngân sách lỗi tuần
 
-*(Cần đã làm file 00-05 — file này dựng 1 dashboard thật đo đúng 3 chỉ số SLO đã khai báo trong
+*(Cần đã làm file 00-05 — file này mô tả 2 dashboard thật đo đúng các chỉ số SLO đã khai báo trong
 `service-manifest.yaml`, khác Panel ở file 05 vốn chỉ nhằm dạy cách dùng Lens.)*
 
-Thiết kế đầy đủ: [`docs/superpowers/specs/2026-09-08-dashboard-slo-van-hanh-design.md`](../superpowers/specs/2026-09-08-dashboard-slo-van-hanh-design.md).
-Mã nguồn export thật: [`dashboards/slo-van-hanh-hang-ngay.ndjson`](dashboards/slo-van-hanh-hang-ngay.ndjson).
+Từ spec 030, dashboard `SLO vận hành hằng ngày — 7 service` (id `e2e06ff5-…`, trộn ba loại cửa sổ thời gian trên cùng một màn
+hình) đã **được tách và bỏ**. Hai dashboard thay thế:
 
-Kể từ SCRUM-29, dashboard này được chính thức hoá làm cơ chế đo lường liên tục (User Story 3) của đặc
-tả [`specs/021-declare-service-slos/`](../../specs/021-declare-service-slos/spec.md) — hợp đồng (bất
-biến bắt buộc) tại [`contracts/continuous-measurement-contract.md`](../../specs/021-declare-service-slos/contracts/continuous-measurement-contract.md),
-đã xác thực lại trên dữ liệu thật tại [`tasks.md`](../../specs/021-declare-service-slos/tasks.md) T011–T014.
+| Dashboard | Dùng khi | Thời gian | Id |
+|---|---|---|---|
+| **`Xử lý sự cố — 7 service`** | Một service đang lỗi hoặc chậm, cần thu hẹp từ "service nào" xuống "lỗi gì, endpoint nào, hạ lưu nào, trace nào" | Mọi panel theo **thanh thời gian**; mặc định 1 giờ gần nhất, tự làm mới 1 phút | `e61fc7f3-17fe-428a-a373-da88af0a4a1e` |
+| **`Ngân sách lỗi tuần — 7 service`** | Biết hạn mức SLO của tuần còn lại bao nhiêu | **Cố định tuần lịch giờ Việt Nam** (thứ Hai 00:00 → Chủ nhật 23:59, UTC+7), chọn tuần bằng điều khiển; không đổi theo thanh thời gian | `2a607bf4-2449-48a1-a2e8-1336ec35a7b7` |
 
-Dashboard thật: **`SLO vận hành hằng ngày — 7 service`** (id `e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`),
-đã dựng đủ 3 tầng đúng thiết kế gốc, tổng cộng **8 panel cấp cao nhất** (không phải `5` như dự kiến ban
-đầu — xem mục "Đã xác nhận thật lúc build" bên dưới).
+Mã nguồn export thật (mỗi dashboard một file): [`dashboards/xu-ly-su-co.ndjson`](dashboards/xu-ly-su-co.ndjson),
+[`dashboards/ngan-sach-loi-tuan.ndjson`](dashboards/ngan-sach-loi-tuan.ndjson); cách import/export ở
+[`dashboards/README.md`](dashboards/README.md). Hợp đồng bất biến: [`specs/030-incident-and-weekly-dashboards/contracts/dashboards-contract.md`](../../specs/030-incident-and-weekly-dashboards/contracts/dashboards-contract.md).
+Mỗi dashboard có một ô Markdown ở đầu trang với link sang dashboard kia (theo id cố định ở bảng trên).
+
+Hợp đồng đo lường liên tục của spec [`021-declare-service-slos`](../../specs/021-declare-service-slos/spec.md) (User Story 3) nay được thực hiện bởi
+**hai dashboard này** (Bảng SLO ở `Xử lý sự cố`; ngân sách tuần ở `Ngân sách lỗi tuần`); hợp đồng ở
+[`continuous-measurement-contract.md`](../../specs/021-declare-service-slos/contracts/continuous-measurement-contract.md), đã xác thực trên dữ liệu thật tại
+[`tasks.md`](../../specs/021-declare-service-slos/tasks.md) T011–T014 (khi còn là một dashboard).
+
+## Dashboard `Xử lý sự cố — 7 service` (mọi panel theo thanh thời gian)
+
+Section **Tình trạng SLO**:
+- **Bảng SLO — 7 service** và ô Markdown **Ngưỡng SLO** (Error-rate, p95, p99 thực tế so với ngưỡng đã khai báo; xem mục "Quyết định đã khoá lúc build" bên dưới).
+- **Phát hiện nhanh — service vượt SLO trong khoảng thời gian đã chọn**: alert của rule `incident-fast-detection` (spec 028) trong khoảng thời gian đã chọn; cột `status` phân biệt `active` với `recovered`.
+
+Section **Đào sâu lỗi**:
+- **5xx theo phút theo service**, **Latency p95 theo phút theo service**, **Traffic + 401/403 theo phút theo service** (thay panel "Tổng 401 + 403" cũ).
+- **Xu hướng dotnet.exceptions theo service**, **Phân bố status code theo service**, **Top endpoint chậm nhất**.
+- **Lỗi gọi hạ lưu — cặp service gọi → đích**: span Client tổng hợp theo cặp, "xấu" = lỗi (`status.code = Error` hoặc 5xx) hoặc chậm (vượt ngưỡng p95 của service đích: 150ms, `Bff.Api` 300ms), 20 dòng, không có link trace (bảng tổng hợp). Đích suy ra từ `attributes.server.address` (`<tên>-api` → `<Tên>.Api`).
+- **Log lỗi gần nhất (Error trở lên)**: log mức Error/Fatal (`severity_number >= 17`), 50 dòng, cột thời gian, service, nội dung, `trace_id`, `attributes.CorrelationId`. Bấm `trace_id` mở Discover lọc đúng trace đó (Kibana APM **không** đọc được dữ liệu trace OTel thô của dự án nên không dùng link APM).
+
+Cách tạo dữ liệu để các panel có số: folder Postman `30a` (5xx cần cờ `CHAOS_ALLOW_FAULT_INJECTION`, độ trễ cần `CHAOS_ALLOW_LATENCY_INJECTION`).
+
+## Dashboard `Ngân sách lỗi tuần — 7 service` (cố định tuần lịch giờ Việt Nam)
+
+Điều khiển **Tuần**: `Tuần này` (mặc định) / `Tuần trước` / `2 tuần trước` / `3 tuần trước` (biến ES|QL `?tuan_chon`). Mỗi panel có khoảng
+thời gian riêng 30 ngày nên **không** đổi theo thanh thời gian (Kibana tự cắt mọi truy vấn ES|QL theo thanh thời gian nếu panel không đặt khoảng riêng).
+
+Section **Ngân sách tuần**:
+- **Mức tiêu hao ngân sách (%) — tuần đã chọn**: 7 service × 4 ngân sách (khả dụng, 5xx, p95, p99); công thức và tỷ lệ cho phép 1% / 1% / 5% / 1% trùng rule mốc 027 (xem [`07-canh-bao-ngan-sach-loi.md`](07-canh-bao-ngan-sach-loi.md)).
+- **Hạn mức còn lại — tuần đã chọn**: `remaining_pct = 100 − consumed_pct` và `remaining_requests = FLOOR(tỷ lệ cho phép × tổng request tuần tới giờ − số request xấu đã có)` (âm = đã vượt).
+- **Cảnh báo mốc đang hoạt động (trạng thái hiện tại)** và **Cạn ngân sách — ưu tiên độ tin cậy (trạng thái hiện tại)**: alert của tuần lịch hiện tại, **không** đổi theo tuần đã chọn.
+
+Section **Xu hướng trong tuần**: **Error-rate theo ngày trong tuần**, **Latency p95 theo ngày trong tuần**, **Tiêu hao lũy kế theo ngày từ thứ Hai** (mức cao nhất trong 4 ngân sách, mỗi service một đường, chỉ ngày đã tới).
+
+Truy vấn đối chiếu số dashboard với Elasticsearch: folder Postman `30b`. Tuần chưa có dữ liệu (ví dụ ngay sau khi dọn Elastic) hiển thị "No results found", không phải số sai.
 
 ## Quyết định đã khoá lúc build: cách hiển thị cột "Ngưỡng"
 
@@ -152,9 +186,10 @@ có của thuật toán percentile (t-digest); không phải lỗi formula.
 
 - Availability đo xấp xỉ (`100% − Error-rate`), không phải uptime thật — service sập hẳn (0 traces)
   sẽ biến mất khỏi bảng thay vì hiện cảnh báo (xem `SCRUM-29`/`SCRUM-30`).
-- ~~Không có alert rule tự động đi kèm dashboard này (thuộc `SCRUM-35`, giai đoạn sau).~~ Đã có từ
-  SCRUM-35 / spec 027 (chu kỳ tuần theo spec 029): 4 rule ngân sách lỗi và 3 panel "Ngân sách lỗi tuần này" đặt trên cùng dashboard
-  này — xem [`07-canh-bao-ngan-sach-loi.md`](07-canh-bao-ngan-sach-loi.md).
-- Collapsible section ở Tầng 2 lưu đúng trạng thái collapsed/expanded nhưng **không thực sự ẩn nội
-  dung panel trong chế độ View** trên Kibana 9.4.4 (xem chi tiết ở mục "Đã xác nhận thật lúc build" —
-  không dùng section này như cơ chế ẩn/hiện nội dung khi trình bày cho người khác).
+- Cảnh báo ngân sách lỗi do 4 rule của spec 027 (chu kỳ tuần theo spec 029) đảm nhiệm, không phải dashboard — xem
+  [`07-canh-bao-ngan-sach-loi.md`](07-canh-bao-ngan-sach-loi.md); phát hiện nhanh do rule `incident-fast-detection` — xem [`08-phat-hien-nhanh-va-xu-ly-su-co.md`](08-phat-hien-nhanh-va-xu-ly-su-co.md).
+- Dashboard `Ngân sách lỗi tuần` chỉ xem lại được tối đa 3 tuần trước (khoảng thời gian riêng 30 ngày của mỗi panel).
+- Hai panel cảnh báo/cạn ngân sách luôn là trạng thái hiện tại (rule chỉ giữ alert của tuần hiện tại), không có lịch sử từng tuần.
+- Collapsible section lưu đúng trạng thái collapsed/expanded nhưng **không thực sự ẩn nội dung panel trong chế độ View** trên Kibana 9.4.4
+  (xem mục "Cách Collapsible section lưu trong saved object" ở trên) — hai dashboard dùng section luôn ở trạng thái mở, chỉ như nhãn phân nhóm.
+- Dashboard dựng bằng **Dashboards REST API của Kibana 9.4.4** (`PUT /api/dashboards/{id}`, cho phép đặt id), rồi export bằng Saved Objects Export API.

@@ -19,7 +19,7 @@ kỳ trên hạ tầng thật — không phải test chặn PR (cùng logic 019/
   diễn tập (bất kỳ công cụ nào — kể cả một vòng lặp `curl` thủ công là đủ; spec.md Assumptions không
   ràng buộc công cụ cụ thể).
 - Elastic stack (Elasticsearch + Kibana) đang chạy, đã nhận dữ liệu OTel từ BFF/orders theo đúng
-  017-otel-servicedefaults-elastic; dashboard `SLO vận hành hằng ngày — 7 service` đã import
+  017-otel-servicedefaults-elastic; dashboard `Xử lý sự cố — 7 service` đã import
   (021-declare-service-slos).
 - `dotnet test services/orders/tests/Orders.Api.UnitTests --filter FullyQualifiedName~ChaosLatencyInjection`
   đã pass trước khi diễn tập trên hạ tầng thật.
@@ -67,8 +67,8 @@ tiêm ngay lập tức — không cần restart pod nào (Bất biến 5 của h
 
 ## Bước 3 — Jira Test Scenario 3: quan sát ngân sách SLO bị tiêu hao trên dashboard trong lúc diễn tập
 
-Mở dashboard `SLO vận hành hằng ngày — 7 service` trong Kibana (đã import từ
-`docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`), đặt time range **Last 15
+Mở dashboard `Xử lý sự cố — 7 service` trong Kibana (đã import từ
+`docs/kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson`), đặt time range **Last 15
 minutes**, theo dõi **trong lúc** đang thực hiện Bước 2 (không phải sau khi đã dừng).
 
 **Kỳ vọng**: giá trị "Thực tế" của latency p95/p99 cho `Orders.Api` tăng lên gần thời gian thực,

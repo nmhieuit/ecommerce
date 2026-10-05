@@ -36,7 +36,7 @@ viết xong.
 
 ## 2. Dashboard Kibana đã có được chính thức hoá thành hợp đồng
 
-[docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md](../../docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md)
+[docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md](../../docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md)
 
 ```markdown
 Kể từ SCRUM-29, dashboard này được chính thức hoá làm cơ chế đo lường liên tục (User Story 3) của
@@ -45,8 +45,8 @@ contracts/continuous-measurement-contract.md, đã xác thực lại trên dữ 
 T011–T014.
 ```
 
-Không có panel, query, hay code dashboard nào được viết mới — dashboard `SLO vận hành hằng ngày — 7
-service` (8 panel, đo Error-rate/Latency p95/Latency p99 từ traces OTel thật, Availability suy ra
+Không có panel, query, hay code dashboard nào được viết mới — dashboard `Xử lý sự cố — 7
+service` (nay là dashboard tách từ `SLO vận hành hằng ngày`; đo Error-rate/Latency p95/Latency p99 từ traces OTel thật, Availability suy ra
 xấp xỉ từ `100% − Error-rate`) đã được dựng và xác minh ở một phiên trước đó. Bước 021 chỉ thêm liên
 kết ngược từ tài liệu vận hành đó về đặc tả, biến nó từ "tài liệu vận hành rời rạc" thành "một phần
 được công nhận, có hợp đồng" của tính năng.

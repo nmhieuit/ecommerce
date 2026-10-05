@@ -12,7 +12,7 @@
    - tạo lại cả 7 container, chỉ đích nhận cấu hình sai;
    - `-Reveal` kiểm băm.
 2. **US2 — phát hiện nhanh và triage**: rule Kibana `incident-fast-detection` (5 phút; gateway chỉ xét
-   5xx), bảng "Phát hiện nhanh" trên dashboard SLO hằng ngày, quy trình SEV1–3 + Kibana Case trong
+   5xx), bảng "Phát hiện nhanh" trên dashboard Xử lý sự cố, quy trình SEV1–3 + Kibana Case trong
    `docs/dien-tap-chaos-engineering/README.md`.
 3. **US3 — bản ghi sự cố**: mẫu `mau-ban-ghi-su-co.md`, các mốc tách bạch.
 4. **US4 — xác nhận khôi phục**: truy vấn theo phút, 15 phút liên tục đạt SLO, rule hết active.
@@ -28,7 +28,7 @@ trong `.env`).
 
 **Import Kibana**: import
 [`alerts/incident-fast-detection-rule.ndjson`](../kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson)
-và [`dashboards/slo-van-hanh-hang-ngay.ndjson`](../kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson),
+và [`dashboards/xu-ly-su-co.ndjson`](../kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson),
 rồi Enable rule tag `incident-fast-detection` ([`alerts/README.md`](../kibana-quan-sat-he-thong/alerts/README.md)).
 
 **Postman**: folder **`26 - Ngân sách hiệu năng luồng trọng yếu (browse → giỏ → checkout → đơn)`** và

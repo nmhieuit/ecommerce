@@ -1,12 +1,12 @@
 # 07 — Cảnh báo ngân sách lỗi (error budget)
 
-*(Cần đã làm file 06 — file này thêm cảnh báo tự động lên đúng dashboard SLO hằng ngày của file 06.)*
+*(Cần đã làm file 06 — file này thêm cảnh báo tự động lên đúng dashboard Ngân sách lỗi tuần của file 06.)*
 
 Đặc tả: [`specs/027-error-budget-alerting/`](../../specs/027-error-budget-alerting/spec.md) (SCRUM-35), chu kỳ tuần lịch
 và SLO 99%/1% theo [`specs/029-error-budget-weekly/`](../../specs/029-error-budget-weekly/spec.md).
 Hợp đồng: [`contracts/error-budget-alert-rules-contract.md`](../../specs/029-error-budget-weekly/contracts/error-budget-alert-rules-contract.md).
 Export thật: [`alerts/error-budget-rules.ndjson`](alerts/error-budget-rules.ndjson) (4 rule + connector),
-[`dashboards/slo-van-hanh-hang-ngay.ndjson`](dashboards/slo-van-hanh-hang-ngay.ndjson) (dashboard).
+[`dashboards/ngan-sach-loi-tuan.ndjson`](dashboards/ngan-sach-loi-tuan.ndjson) (dashboard).
 
 Chính sách (con số, hệ quả, điều kiện hồi phục) nằm trong khối `error-budget-policy` của từng
 `service-manifest.yaml`. File này chỉ nói cách Kibana đo và cảnh báo theo chính sách đó.
@@ -26,7 +26,7 @@ Invoke-RestMethod http://localhost:5601/api/alerting/_health | Select-Object has
 
 ## Truy vấn chuẩn: mức tiêu hao 4 ngân sách × 7 service
 
-Mọi rule mốc và bảng "mức tiêu hao" trên dashboard dùng **cùng một truy vấn** dưới đây, chỉ khác dòng
+Mọi rule mốc và bảng "mức tiêu hao" trên dashboard dùng **cùng một truy vấn** (bảng dashboard chỉ thay `NOW()` bằng đầu tuần theo `?tuan_chon`) dưới đây, chỉ khác dòng
 `WHERE consumed_pct >= N` cuối cùng. `tests/ServiceManifestSloConventionTests/ErrorBudgetRuleDefinitionTests.cs`
 đọc rule đã export và dựa vào đúng 3 hình dạng sau — sửa truy vấn thì giữ nguyên chúng:
 
@@ -91,16 +91,18 @@ Tạo bằng Kibana Alerting API (`POST /api/alerting/rule`, `rule_type_id: .es-
 từ thứ Hai 00:00, nên 7 ngày đủ phủ, còn dòng `WHERE` đầu truy vấn cắt lại đúng từ thứ Hai 00:00 giờ Việt
 Nam. Cửa sổ ngắn hơn 7 ngày sẽ âm thầm cắt hụt request đầu tuần.
 
-## Nhóm panel "Ngân sách lỗi tuần này" trên dashboard
+## Panel ngân sách trên dashboard `Ngân sách lỗi tuần — 7 service`
 
-Hai panel đặt trên cùng dashboard `SLO vận hành hằng ngày — 7 service`, mỗi panel là một **Discover
-session dạng ES|QL** (saved object type `search`) gắn theo tham chiếu, khoảng thời gian riêng
-`now-7d → now` (không theo time range 24 giờ của dashboard; truy vấn mức tiêu hao tự cắt từ đầu tuần):
+Từ spec 030 các panel ngân sách nằm ở dashboard riêng `Ngân sách lỗi tuần — 7 service` (cố định tuần lịch giờ Việt Nam, không phụ thuộc thanh
+thời gian; xem [06](06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md)). Mỗi panel Discover session dạng ES|QL có khoảng thời gian riêng `now-30d → now` để không bị thanh thời gian cắt thêm.
+Điều khiển `Tuần` (biến `?tuan_chon`: `Tuần này` / `Tuần trước` / `2 tuần trước` / `3 tuần trước`) chọn tuần cho hai panel tính từ traces; truy vấn dashboard tính
+`week_start = CASE(?tuan_chon == ..., t0, t0 - 7 days, ...)` với `t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours` thay cho đầu tuần hiện tại.
 
 | Panel | Discover session id | Truy vấn | Cột |
 |---|---|---|---|
-| Mức tiêu hao (%) | `slo-error-budget-consumption` | phần chung ở trên + `EVAL moc = CASE(consumed_pct >= 100, "100% - CẠN", >= 75 "75%", >= 50 "50%", "dưới 50%")`, sắp giảm dần theo `consumed_pct` | `service`, `budget`, `consumed_pct`, `moc` |
-| Cảnh báo đang hoạt động | `slo-error-budget-active-alerts` | `FROM .alerts-stack.alerts-default`, lọc tag `slo-error-budget` + `status == "active"`, lấy `kibana.alert.grouping.service/budget` | `service`, `budget`, `moc`, `kibana.alert.start` |
+| Mức tiêu hao ngân sách (%) — tuần đã chọn | `slo-error-budget-consumption` | phần chung ở trên (đầu tuần theo `?tuan_chon`) + `EVAL moc = CASE(consumed_pct >= 100, "100% - CẠN", >= 75 "75%", >= 50 "50%", "dưới 50%")`, sắp giảm dần theo `consumed_pct` | `service`, `budget`, `consumed_pct`, `moc` |
+| Hạn mức còn lại — tuần đã chọn | (nhúng trong dashboard) | phần chung + `remaining_pct = 100 - consumed_pct`, `remaining_requests = FLOOR(allowed * total - bad)` | `service`, `budget`, `remaining_pct`, `remaining_requests` |
+| Cảnh báo mốc đang hoạt động (trạng thái hiện tại) | `slo-error-budget-active-alerts` | `FROM .alerts-stack.alerts-default`, lọc tag `slo-error-budget` + `status == "active"` + `@timestamp >= đầu tuần hiện tại`, lấy `kibana.alert.grouping.service/budget` | `service`, `budget`, `moc`, `kibana.alert.start` |
 
 Vì sao Discover session thay vì Lens tô màu: lúc dựng, thao tác UI Lens qua trình duyệt tự động hoá
 không ổn định; người dùng chốt dựng bằng Saved Objects API với Discover session (cấu trúc JSON đơn giản,
@@ -172,8 +174,8 @@ thái đóng băng khi sự kiện "cạn" trôi ra ngoài cửa sổ (xem `docs
 ### Panel thứ 3
 
 Discover session `slo-error-budget-frozen` ("Cạn ngân sách — ưu tiên độ tin cậy"): alert active của rule
-`error-budget-frozen` cập nhật trong 15 phút gần nhất, cột `service`, `kibana.alert.start`; đặt ngay dưới 2
-bảng đầu, trải hết chiều ngang.
+`error-budget-frozen` cập nhật từ đầu tuần hiện tại (trạng thái hiện tại, không đổi theo tuần đã chọn), cột `service`,
+`kibana.alert.start`; hiển thị cạnh bảng cảnh báo mốc trên dashboard `Ngân sách lỗi tuần — 7 service`.
 
 ### Lưu ý vận hành: đặt lại trạng thái rule `error-budget-100` là ghi lại sự kiện "cạn"
 

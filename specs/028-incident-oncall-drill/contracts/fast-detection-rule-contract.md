@@ -14,4 +14,4 @@
 | 5 | Kết quả cuối chỉ có cột `service`, sinh từ lệnh `STATS ... BY service` cuối cùng (Ràng buộc 2–3 của research 027), nên alert không bị tạo lại mỗi lần chạy. |
 | 6 | Service không có span nào trong 5 phút → không có hàng → không có alert. |
 | 7 | Rule không có action/connector; 4 rule `slo-error-budget` của 027 và file `error-budget-rules.ndjson` không bị sửa. |
-| 8 | Dashboard `SLO vận hành hằng ngày — 7 service` có thêm bảng "Phát hiện nhanh — vượt SLO trong 5 phút gần nhất", đọc alert active có tag `incident-fast-detection` từ `.alerts-stack.alerts-default`, hiện service và thời điểm bắt đầu. Các panel hiện có (021, 027) giữ nguyên. |
+| 8 | Dashboard `Xử lý sự cố — 7 service` có thêm bảng "Phát hiện nhanh — service vượt SLO trong khoảng thời gian đã chọn", đọc alert active có tag `incident-fast-detection` từ `.alerts-stack.alerts-default`, hiện service, trạng thái alert và thời điểm bắt đầu. Từ spec 030 bảng đi theo thanh thời gian (không còn lọc 15 phút) và có test canh gác rule `IncidentFastDetectionRuleDefinitionTests`. |

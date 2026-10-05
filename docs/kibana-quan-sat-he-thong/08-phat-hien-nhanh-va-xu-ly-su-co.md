@@ -1,12 +1,12 @@
 # 08 — Phát hiện nhanh và xử lý sự cố
 
-*(Cần đã làm file 07: file này dùng cùng dữ liệu traces, cùng khoá mã hoá Kibana và cùng dashboard SLO
-hằng ngày.)*
+*(Cần đã làm file 07: file này dùng cùng dữ liệu traces, cùng khoá mã hoá Kibana và cùng dashboard
+`Xử lý sự cố — 7 service` (bảng Phát hiện nhanh).)*
 
 Đặc tả: [`specs/028-incident-oncall-drill/`](../../specs/028-incident-oncall-drill/spec.md) (SCRUM-36).
 Hợp đồng: [`contracts/fast-detection-rule-contract.md`](../../specs/028-incident-oncall-drill/contracts/fast-detection-rule-contract.md).
 Export thật: [`alerts/incident-fast-detection-rule.ndjson`](alerts/incident-fast-detection-rule.ndjson) (rule),
-[`dashboards/slo-van-hanh-hang-ngay.ndjson`](dashboards/slo-van-hanh-hang-ngay.ndjson) (dashboard).
+[`dashboards/xu-ly-su-co.ndjson`](dashboards/xu-ly-su-co.ndjson) (dashboard).
 
 Bốn rule ngân sách lỗi của file 07 đo mức tiêu hao **cả tuần lịch** (từ thứ Hai 00:00 giờ Việt Nam). Một sự cố đơn lẻ có thể cần hàng giờ
 mới đẩy mức đó qua mốc 50%, nên chúng không dùng để phát hiện sự cố. File này thêm một rule nhìn **5
@@ -59,27 +59,27 @@ Vì sao có hai lệnh `STATS` và chỉ giữ cột `service`:
 Service không có span nào trong 5 phút thì không có hàng, nên không có alert. Thiếu dữ liệu không bị
 hiểu thành sự cố.
 
-**Ngưỡng nằm ở hai nơi**: trong `CASE` ở trên và trong `slos` của manifest. Không có test nào giữ hai
-nơi này khớp nhau (sai lệch Nguyên tắc III, xem `specs/028-incident-oncall-drill/plan.md`). Sửa
-manifest thì phải sửa rule này bằng tay, rồi export lại.
+**Ngưỡng nằm ở hai nơi**: trong `CASE` ở trên và trong `slos` của manifest. Từ spec 030, test
+[`IncidentFastDetectionRuleDefinitionTests`](../../tests/ServiceManifestSloConventionTests/IncidentFastDetectionRuleDefinitionTests.cs) giữ hai
+nơi này khớp nhau (đã đóng sai lệch Nguyên tắc III của 028). Sửa manifest thì phải sửa rule này bằng tay, rồi export lại; test báo đỏ nếu quên.
 
-## Bảng trên dashboard SLO hằng ngày
+## Bảng trên dashboard Xử lý sự cố
 
-Bảng "Phát hiện nhanh — vượt SLO trong 5 phút gần nhất" là một Discover session ES|QL (id
-`incident-fast-detection-active-alerts`). Nó nằm thành một hàng rộng toàn trang, ngay dưới bảng "Cạn
-ngân sách" của file 07. Các panel bên dưới chỉ bị đẩy xuống, kích thước và nội dung giữ nguyên. Cách
-dựng giống bảng cảnh báo của 027 (Saved Objects API).
+Bảng "Phát hiện nhanh — service vượt SLO trong khoảng thời gian đã chọn" là một Discover session ES|QL (id
+`incident-fast-detection-active-alerts`) ở section "Tình trạng SLO" của dashboard `Xử lý sự cố — 7 service`
+(từ spec 030; trước đó nằm ngay dưới bảng "Cạn ngân sách" của dashboard SLO cũ). Bảng **đi theo thanh thời gian** như mọi
+panel khác của dashboard, thay vì lọc cứng 15 phút gần nhất.
 
 ```esql
 FROM .alerts-stack.alerts-default
-| WHERE kibana.alert.rule.tags == "incident-fast-detection" AND kibana.alert.status == "active" AND @timestamp >= NOW() - 15 minutes
-| EVAL service = kibana.alert.grouping.service
-| KEEP service, kibana.alert.start
-| SORT service
+| WHERE kibana.alert.rule.tags == "incident-fast-detection"
+| EVAL service = kibana.alert.grouping.service, status = kibana.alert.status
+| KEEP service, status, kibana.alert.start
+| SORT status, service
 ```
 
-`@timestamp >= NOW() - 15 minutes` bỏ các alert "mồ côi" (Kibana mất trạng thái lúc quá tải), cùng lý
-do như bảng cảnh báo của 027.
+Cột `status` phân biệt alert đang hoạt động (`active`) với alert đã tắt (`recovered`) trong khoảng thời gian đã chọn; đặt thanh thời gian
+ngắn (ví dụ 15 phút) để chỉ thấy alert gần đây. Điều kiện `@timestamp >= NOW() - 15 minutes` của bản cũ đã được bỏ.
 
 ## Nhiễu khởi động nguội
 

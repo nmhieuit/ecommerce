@@ -233,7 +233,7 @@ hiện tiêu hao — tự đủ, không phụ thuộc US1/US3.
 - [X] T009 [US2] Thực hiện [quickstart.md](./quickstart.md) Bước 2–3 trên một cluster diễn tập với
       `Chaos:AllowLatencyInjection=true`: gửi `X-Chaos-Latency-Ms: 2000` liên tục tới Orders.Api,
       xác nhận circuit breaker của `OrdersApiClient` (BFF) mở theo đúng ngưỡng, và dashboard
-      `SLO vận hành hằng ngày — 7 service` (đã import từ 021) thể hiện tiêu hao ngân sách latency
+      `Xử lý sự cố — 7 service` (đã import từ 021) thể hiện tiêu hao ngân sách latency
       của `Orders.Api` gần thời gian thực. Dừng tiêm (ngừng gửi header) và xác nhận không cần
       restart pod nào để dừng.
       (**kết quả thực tế**: CHƯA thực hiện — phiên làm việc này không có cluster Kubernetes/`kubectl`/
