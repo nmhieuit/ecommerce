@@ -1,78 +1,85 @@
 <mxfile host="65bd71144e">
     <diagram id="error-budget-alerting-component" name="Kiến trúc thành phần — chính sách ngân sách lỗi, 4 rule ES|QL, 3 panel trên dashboard SLO">
-        <mxGraphModel dx="976" dy="333" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
+        <mxGraphModel dx="2906" dy="427" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="title" value="Kiến trúc thành phần — chính sách trong manifest, đo và cảnh báo bằng 4 rule Kibana ES|QL, nhìn thấy trên dashboard SLO hằng ngày" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="10" width="1420" height="26" as="geometry"/>
+                <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" value="Kiến trúc thành phần — chính sách trong manifest, đo và cảnh báo bằng 4 rule Kibana ES|QL, nhìn thấy trên dashboard SLO hằng ngày" vertex="1">
+                    <mxGeometry height="26" width="1420" x="30" y="10" as="geometry"/>
                 </mxCell>
-                <mxCell id="manifests" value="7× service-manifest.yaml&#xa;(parties, products, baskets, orders, identity, gateway, bff)&#xa;slos: {latency.p95, latency.p99, error-rate, availability}  ← nguồn ngưỡng duy nhất&#xa;error-budget-policy (ngay sau slos):&#xa;  4 ngân sách: availability 0.1% · error-rate 0.1% · latency-p95 5% · latency-p99 1%&#xa;  tháng lịch UTC+07:00 · mốc [50%, 75%, 100%] · cạn = bất kỳ ngân sách nào 100%&#xa;  on-exhausted: dừng merge tính năng mới · recovery: 3 ngày đạt SLO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="60" width="470" height="150" as="geometry"/>
+                <mxCell id="manifests" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="7× service-manifest.yaml&#xa;(parties, products, baskets, orders, identity, gateway, bff)&#xa;slos: {latency.p95, latency.p99, error-rate, availability}  ← nguồn ngưỡng duy nhất&#xa;error-budget-policy (ngay sau slos):&#xa;  4 ngân sách: availability 0.1% · error-rate 0.1% · latency-p95 5% · latency-p99 1%&#xa;  tháng lịch UTC+07:00 · mốc [50%, 75%, 100%] · cạn = bất kỳ ngân sách nào 100%&#xa;  on-exhausted: dừng merge tính năng mới · recovery: 3 ngày đạt SLO" vertex="1">
+                    <mxGeometry height="150" width="470" x="30" y="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="services" value="7 service (.NET) — ServiceDefaults&#xa;ChaosFaultInjectionMiddleware (ngay sau CorrelationIdMiddleware)&#xa;cờ Chaos:AllowFaultInjection (compose CHAOS_ALLOW_FAULT_INJECTION, mặc định false)&#xa;+ header X-Chaos-Fault: 5xx → trả 500, không chạy tiếp pipeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="250" width="470" height="90" as="geometry"/>
+                <mxCell id="services" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="7 service (.NET) — ServiceDefaults&#xa;ChaosFaultInjectionMiddleware (ngay sau CorrelationIdMiddleware)&#xa;cờ Chaos:AllowFaultInjection (compose CHAOS_ALLOW_FAULT_INJECTION, mặc định false)&#xa;+ header X-Chaos-Fault: 5xx → trả 500, không chạy tiếp pipeline" vertex="1">
+                    <mxGeometry height="90" width="470" x="30" y="250" as="geometry"/>
                 </mxCell>
-                <mxCell id="tests" value="Test canh gác (chạy trong CI, không cần stack)&#xa;tests/ServiceManifestSloConventionTests:&#xa;  ErrorBudgetPolicyTests — 7 manifest đúng hình dạng/con số&#xa;  ErrorBudgetRuleDefinitionTests — rule export khớp manifest&#xa;shared/ServiceDefaults.UnitTests:&#xa;  ChaosFaultInjectionMiddlewareTests — 2 lớp chặn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="400" width="470" height="120" as="geometry"/>
+                <mxCell id="tests" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Test canh gác (chạy trong CI, không cần stack)&#xa;tests/ServiceManifestSloConventionTests:&#xa;  ErrorBudgetPolicyTests — 7 manifest đúng hình dạng/con số&#xa;  ErrorBudgetRuleDefinitionTests — rule export khớp manifest&#xa;shared/ServiceDefaults.UnitTests:&#xa;  ChaosFaultInjectionMiddlewareTests — 2 lớp chặn" vertex="1">
+                    <mxGeometry height="120" width="470" x="30" y="400" as="geometry"/>
                 </mxCell>
-                <mxCell id="otel" value="OTel Collector → Elasticsearch&#xa;traces-generic.otel-default*&#xa;(span server: service, status_code, duration ns)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
-                    <mxGeometry x="560" y="250" width="380" height="70" as="geometry"/>
+                <mxCell id="otel" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="OTel Collector → Elasticsearch&#xa;traces-generic.otel-default*&#xa;(span server: service, status_code, duration ns)" vertex="1">
+                    <mxGeometry height="70" width="380" x="560" y="250" as="geometry"/>
                 </mxCell>
-                <mxCell id="events" value="Index slo-error-budget-events (append-only)&#xa;{@timestamp, service, budget, event: exhausted}&#xa;ghi bởi connector Index khi alert mốc 100 chuyển active" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
-                    <mxGeometry x="560" y="400" width="380" height="70" as="geometry"/>
+                <mxCell id="events" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Index slo-error-budget-events (append-only)&#xa;{@timestamp, service, budget, event: exhausted}&#xa;ghi bởi connector Index khi alert mốc 100 chuyển active" vertex="1">
+                    <mxGeometry height="70" width="380" x="560" y="400" as="geometry"/>
                 </mxCell>
-                <mxCell id="rules" value="Kibana Alerting — 4 rule &quot;Elasticsearch query&quot; ES|QL (license Basic)&#xa;chu kỳ 5 phút · tag slo-error-budget · groupBy row&#xa;error-budget-50 / -75 / -100: % tiêu hao từ đầu tháng,&#xa;  alert theo (service, budget), cửa sổ rule 31 ngày&#xa;error-budget-100 + action Index (khi đổi trạng thái)&#xa;error-budget-frozen: alert theo service, cửa sổ 62 ngày" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
-                    <mxGeometry x="1010" y="60" width="440" height="130" as="geometry"/>
+                <mxCell id="rules" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="Kibana Alerting — 4 rule &quot;Elasticsearch query&quot; ES|QL (license Basic)&#xa;chu kỳ 5 phút · tag slo-error-budget · groupBy row&#xa;error-budget-50 / -75 / -100: % tiêu hao từ đầu tháng,&#xa;  alert theo (service, budget), cửa sổ rule 31 ngày&#xa;error-budget-100 + action Index (khi đổi trạng thái)&#xa;error-budget-frozen: alert theo service, cửa sổ 62 ngày" vertex="1">
+                    <mxGeometry height="130" width="440" x="1010" y="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="alerts" value=".alerts-stack.alerts-default&#xa;(alerts-as-data: kibana.alert.grouping.service/budget,&#xa;status active/recovered, @timestamp cập nhật mỗi lượt)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
-                    <mxGeometry x="1010" y="250" width="440" height="70" as="geometry"/>
+                <mxCell id="alerts" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value=".alerts-stack.alerts-default&#xa;(alerts-as-data: kibana.alert.grouping.service/budget,&#xa;status active/recovered, @timestamp cập nhật mỗi lượt)" vertex="1">
+                    <mxGeometry height="70" width="440" x="1010" y="250" as="geometry"/>
                 </mxCell>
-                <mxCell id="dashboard" value="Dashboard &quot;SLO vận hành hằng ngày — 7 service&quot; (của 021)&#xa;nhóm trên cùng &quot;Ngân sách lỗi tháng này&quot; — 3 Discover session ES|QL:&#xa;  slo-error-budget-consumption — mức tiêu hao 7 × 4 (%)&#xa;  slo-error-budget-active-alerts — alert active (≤ 15 phút)&#xa;  slo-error-budget-frozen — cạn, ưu tiên độ tin cậy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
-                    <mxGeometry x="1010" y="380" width="440" height="110" as="geometry"/>
+                <mxCell id="dashboard" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="Dashboard &quot;SLO vận hành hằng ngày — 7 service&quot; (của 021)&#xa;nhóm trên cùng &quot;Ngân sách lỗi tháng này&quot; — 3 Discover session ES|QL:&#xa;  slo-error-budget-consumption — mức tiêu hao 7 × 4 (%)&#xa;  slo-error-budget-active-alerts — alert active (≤ 15 phút)&#xa;  slo-error-budget-frozen — cạn, ưu tiên độ tin cậy" vertex="1">
+                    <mxGeometry height="110" width="440" x="1010" y="380" as="geometry"/>
                 </mxCell>
-                <mxCell id="key" value="Khoá KIBANA_ENCRYPTION_KEY (.env Vùng 2) → XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY — thiếu thì Alerting không chạy rule nào" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;dashed=1;" parent="1" vertex="1">
-                    <mxGeometry x="1010" y="550" width="440" height="50" as="geometry"/>
+                <mxCell id="key" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;dashed=1;" value="Khoá KIBANA_ENCRYPTION_KEY (.env Vùng 2) → XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY — thiếu thì Alerting không chạy rule nào" vertex="1">
+                    <mxGeometry height="50" width="440" x="1010" y="550" as="geometry"/>
                 </mxCell>
-                <mxCell id="export" value="Bản export version-control:&#xa;docs/kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson (4 rule + connector)&#xa;docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
-                    <mxGeometry x="560" y="550" width="380" height="70" as="geometry"/>
+                <mxCell id="export" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Bản export version-control:&#xa;docs/kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson (4 rule + connector)&#xa;docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson" vertex="1">
+                    <mxGeometry height="70" width="380" x="560" y="550" as="geometry"/>
                 </mxCell>
-                <mxCell id="e1" value="span 500 / chậm" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="services" target="otel" edge="1">
+                <mxCell id="e1" edge="1" parent="1" source="services" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="otel" value="span 500 / chậm">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e2" value="đọc mỗi 5 phút" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="otel" target="rules" edge="1">
+                <mxCell id="e2" edge="1" parent="1" source="otel" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="rules" value="đọc mỗi 5 phút">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="750" y="125"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e3" value="ngưỡng p95/p99 chép vào ES|QL" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="manifests" target="rules" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="rules" target="alerts" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="e5" value="action Index (mốc 100)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="rules" target="events" edge="1">
+                <mxCell id="e3" edge="1" parent="1" source="manifests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" target="rules" value="ngưỡng p95/p99 chép vào ES|QL">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="980" y="160"/>
-                            <mxPoint x="980" y="435"/>
+                            <mxPoint x="755" y="110"/>
+                            <mxPoint x="755" y="80"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e6" value="error-budget-frozen đọc" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="events" target="rules" edge="1">
+                <mxCell id="e4" edge="1" parent="1" source="rules" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="alerts">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" edge="1" parent="1" source="rules" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="events" value="action Index (mốc 100)">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="750" y="370"/>
-                            <mxPoint x="1230" y="370"/>
+                            <mxPoint x="960" y="160"/>
+                            <mxPoint x="960" y="435"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="alerts" target="dashboard" edge="1">
+                <mxCell id="e6" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" value="error-budget-frozen đọc">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="838" y="360"/>
+                            <mxPoint x="1318" y="360"/>
+                        </Array>
+                        <mxPoint x="838" y="400" as="sourcePoint"/>
+                        <mxPoint x="1318" y="190" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e7" edge="1" parent="1" source="alerts" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="dashboard">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e8" value="bảng mức tiêu hao" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="otel" target="dashboard" edge="1">
+                <mxCell id="e8" edge="1" parent="1" source="otel" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" target="dashboard" value="bảng mức tiêu hao">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="980" y="300"/>
@@ -80,22 +87,22 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e9" value="canh hình dạng" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="tests" target="manifests" edge="1">
+                <mxCell id="e9" edge="1" parent="1" source="tests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" target="manifests" value="canh hình dạng">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="15" y="460"/>
-                            <mxPoint x="15" y="135"/>
+                            <mxPoint y="460"/>
+                            <mxPoint y="135"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e10" value="ErrorBudgetRuleDefinitionTests đọc" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" parent="1" source="tests" target="export" edge="1">
+                <mxCell id="e10" edge="1" parent="1" source="tests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;" target="export" value="ErrorBudgetRuleDefinitionTests đọc">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="265" y="585"/>
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;strokeColor=#b85450;" parent="1" source="key" target="dashboard" edge="1">
+                <mxCell id="e11" edge="1" parent="1" source="key" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontSize=9;strokeColor=#b85450;" target="dashboard">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
             </root>
