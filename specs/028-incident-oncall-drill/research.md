@@ -35,7 +35,7 @@ Mục "Điểm phải xác minh" liệt kê những gì chưa thể khẳng đ�
   (tag `slo-error-budget`) chạy mỗi 5 phút. Dashboard `SLO vận hành hằng ngày — 7 service` được export
   ở `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`.
 - **Ngưỡng độ trễ trong manifest**: BFF p95 300 ms / p99 800 ms; 6 service còn lại p95 150 ms /
-  p99 500 ms. Ngưỡng 5xx là 0.1% cho cả 7 service.
+  p99 500 ms. Ngưỡng 5xx là 1% cho cả 7 service.
 - **Bản ghi diễn tập chaos**: `docs/dien-tap-chaos-engineering/` đã có `README.md` (mục "Lịch sử
   chạy"), `mau-ket-qua.md` và thư mục `ket-qua/` (025).
 
@@ -148,7 +148,7 @@ người dùng loại.
   - `err_pct = 5xx / tổng × 100`;
   - `p95`, `p99` của `duration` (đổi ns sang ms);
   - ngưỡng theo service bằng `CASE` khớp manifest.
-- Hàng được trả về khi `err_pct >= 0.1` hoặc `p95 > ngưỡng p95` hoặc `p99 > ngưỡng p99`. **Sửa khi triển khai (người dùng chốt 2026-10-02)**: riêng `Gateway.Api` chỉ xét `err_pct` — ngưỡng 150/500 ms của gateway chặt hơn ngưỡng 300/800 ms của BFF mà nó chuyển tiếp tới, nên gateway vượt độ trễ ngay ở mức nền.
+- Hàng được trả về khi `err_pct >= 1` hoặc `p95 > ngưỡng p95` hoặc `p99 > ngưỡng p99`. **Sửa khi triển khai (người dùng chốt 2026-10-02)**: riêng `Gateway.Api` chỉ xét `err_pct` — ngưỡng 150/500 ms của gateway chặt hơn ngưỡng 300/800 ms của BFF mà nó chuyển tiếp tới, nên gateway vượt độ trễ ngay ở mức nền.
 - Kết thúc bằng `STATS ... BY service | KEEP service`. Lý do: Hệ quả 2 và 3 của research 027 cho thấy
   mã alert ghép từ mọi cột kết quả, và chỉ lấy cột của lệnh `STATS` cuối cùng.
 - Service không có span nào trong 5 phút thì không có hàng nào, nên không có alert (Edge Case "không
@@ -187,7 +187,7 @@ trôi dạt được ghi vào technical-debt, hạn tới khi SCRUM-37 xong.
 
 **Decision** (Người dùng chốt: đạt SLO liên tục 15 phút + rule hết active; giảm thiểu = merge PR;
 giải quyết = SLO 15 phút):
-- Mốc giải quyết là thời điểm cuối của 15 phút liên tục mà 5xx < 0.1%, p95 và p99 trong ngưỡng, có
+- Mốc giải quyết là thời điểm cuối của 15 phút liên tục mà 5xx < 1%, p95 và p99 trong ngưỡng, có
   traffic, và rule `incident-fast-detection` không còn active cho service đó.
 - Bằng chứng: truy vấn ES|QL theo từng phút (có sẵn trong tài liệu Kibana mới) và ảnh chụp/link Kibana,
   đính kèm bản ghi sự cố.
@@ -203,45 +203,30 @@ giải quyết = SLO 15 phút):
 | V5 | *(bỏ — loại D đã bị loại)* | — |
 | V6 | ES|QL `PERCENTILE(duration, 95)` theo `service` với `groupBy: row` tạo đúng một alert cho mỗi service vượt SLO. | Sửa truy vấn, giữ quyết định. |
 
-## Kết quả xác minh (T005–T007) — 2026-10-01, Kibana/Elasticsearch 9.4.4, license `basic`
+## Ràng buộc kỹ thuật và quyết định rút ra khi kiểm chứng (Kibana/Elasticsearch 9.4.4, license `basic`)
 
-Chạy trên stack `ecomerce-local` đang chạy (dựng từ checkout chính; người dùng chốt dùng chung stack
-này, `.env` chép sang worktree).
+Bằng chứng đo chi tiết của lần kiểm chứng gốc nằm ở `docs/QA/QA_Debt.md` (mục 028) và lịch sử git; ở đây chỉ
+giữ những ràng buộc và quyết định mà script, rule và quy trình hiện tại dựa vào.
 
-| # | Kết quả | Bằng chứng |
-|---|---|---|
-| Tải nền (T005) | **ĐÚNG**. Newman (6.2.2) chạy folder 00 + 26 + 28, `--delay-request 200`. Sau ~6 phút, cả 7 service có span. | ES|QL 5 phút gần nhất: Baskets 175, Bff 369, Gateway 288, Identity 122, Orders 114, Parties 78, Products 115 span. |
-| V1 (T006) | **ĐÚNG**. Kibana Cases (owner `cases`) tạo được, thêm comment được, đóng được trên license Basic. | Case thử `92706c1a-…` (tag `incident-drill-v1`) — tạo → 1 comment → `closed`; để lại ở trạng thái đóng. |
-| V6 (T007) | **ĐÚNG**. Rule `.es-query` ES|QL `STATS p95 = PERCENTILE(duration, 95) BY service … KEEP service`, `groupBy: row` sinh một alert cho mỗi service; mã alert = tên service. | Rule tạm `v6-tam-028` (chu kỳ 1 phút, cửa sổ 5 phút) → 7 alert `active` (`Baskets.Api` … `Products.Api`); rule tạm đã xoá. |
+**Đã xác nhận đúng**: V1 (Kibana Cases tạo/comment/đóng được trên license Basic), V4 (middleware 027 chạy trước
+xác thực trên các route của bảng Quyết định 4, span 500 tới Elasticsearch), V6 (rule `.es-query` ES|QL
+`STATS ... BY service | KEEP service`, `groupBy: row` sinh đúng một alert cho mỗi service, mã alert = tên service).
 
-**Hệ quả 1 — trường severity của Kibana Case** chỉ có `low/medium/high/critical`, không có SEV1–3.
-Cách ghi SEV vào Case cần người dùng chốt trước khi viết quy trình (T024).
+**Ràng buộc kỹ thuật**:
+- Trường severity của Kibana Case chỉ có `low/medium/high/critical`, không có SEV1–3 — cách ghi SEV vào Case
+  do người dùng chốt (T024).
+- Một lệnh `docker compose up` gộp 7 service làm BFF/gateway kẹt `Created` (chờ service đích healthy theo
+  `depends_on`) và làm lộ service hỏng → script dùng 7 lệnh `up --no-deps` riêng, chạy liền nhau.
+- newman từ chối `--delay-request 0` (giá trị phải dương); `npx` gọi từ PowerShell báo "could not determine
+  executable to run" → script dùng `npx.cmd --yes newman@6.2.2`.
+- Chạy lại compose không đổi cấu hình thì không tạo lại container đích, nên vòng gửi header của loại C không
+  dừng → khôi phục chuẩn cho mọi loại: cờ `CHAOS_ALLOW_FAULT_INJECTION` về tắt rồi chạy lại compose (cả 7
+  container được tạo lại).
 
-**Phát hiện ngoài phạm vi** (ghi vào QA_Debt mục 028):
-- Request `04 Có token nhưng thiếu scope thì bị chặn (403)` của folder Postman 00 nhận `401 unauthorized`,
-  không phải `403 forbidden_scope`, ở mọi vòng.
-- Vòng newman đầu tiên trên stack nguội có `504` ở checkout và `/bff/parties`; từ vòng 2 thì xanh.
-
-## Kết quả xác minh (T016–T018) — 2026-10-01/02
-
-| # | Kết quả | Bằng chứng |
-|---|---|---|
-| Loại A (T016) | **ĐÚNG** cho products, bff, gateway. | 5xx 38/56 (products, 3 phút), 49/243 (bff), 93/226 (gateway). |
-| Bất biến 5 | **ĐÚNG sau khi sửa**: một lệnh `up` gộp 7 service làm BFF/gateway kẹt `Created` (chờ service đích healthy theo `depends_on`) và Compose in đích danh service hỏng. Sửa: 7 lệnh `up --no-deps` riêng, chạy liền nhau. | injector.log của run `20261001-213042` (lỗi) và `20261001-213507` (đúng). |
-| V2 — loại B trên orders (T017) | **SAI** ở tải nền 1 tiến trình newman. | 5 phút sau khi tiêm `Max Pool Size=1`: 0 lỗi, p95 25 ms, p99 67 ms. |
-
-**Phát hiện — mức nền không khoẻ (chưa tiêm lỗi)**:
-- Với folder 00 lấy token mỗi vòng: identity `POST /connect/token` p50 311 ms, p95 883 ms → identity luôn vượt p95 150 ms; gateway `POST` p95 538 ms → gateway luôn vượt (ngưỡng gateway 150/500 chặt hơn BFF 300/800 mà nó chuyển tiếp tới). Người dùng chốt: lấy token mỗi 30 phút (chế độ `-Load` của script) và rule xét gateway chỉ theo 5xx.
-- Với chế độ `-Load` (token mỗi 30 phút, 1 tiến trình, nghỉ 200 ms), sáng 2026-10-02, hai cửa sổ 5 phút liên tiếp: 5xx nền gateway 0.84–2.9%, BFF 0.32–1.1%, baskets 0.28–0.83%, products 0–0.5%; p95 vượt ngưỡng ở hầu hết service. Elasticsearch có lúc dùng 267% CPU. Rule phát hiện nhanh như thiết kế sẽ bắn cho nhiều service khi không có sự cố.
-- Hệ quả phụ: `--delay-request 0` bị newman từ chối (giá trị phải dương); `npx` gọi từ PowerShell báo "could not determine executable to run" — script dùng `npx.cmd --yes newman@6.2.2`.
-
-**Tiếp T017–T018 (2026-10-02), các quyết định người dùng chốt trong phiên `/speckit-implement`:**
-
-| Điểm | Kết quả đo | Người dùng chốt |
-|---|---|---|
-| Mức nền với `-Load` nghỉ 1000 ms | Hai cửa sổ 5 phút: 0 lỗi 5xx ở cả 7 service; p95 ≤ 133 ms, p99 ≤ 208 ms (gateway). Truy vấn rule (bản gateway chỉ xét 5xx) trả 0 hàng. | Giảm tải nền (1000 ms). |
-| V2 — loại B | orders `Max Pool Size=1`: 0 lỗi, p95 25 ms. gateway `MaxConnectionsPerServer=1`: 45.1% span 5xx (BFF 18.5%). | Loại B chỉ cho gateway. |
-| Nhiễu khởi động nguội | Phút tạo lại 7 container (09:26–09:27): p95 các service không bị tiêm vọt 2–17 s; 09:28–09:29 về bình thường. | Giữ tạo lại 7 container; quy trình triage ghi rõ alert thoáng qua do khởi động nguội là nhiễu. |
-| V4 — loại C | parties 31.8% (niêm phong 46%), identity 33.3% (niêm phong 39%). Lần đầu ra 75.7% vì mức sàn 1 request/giây → bỏ mức sàn. | — |
-| V3 — token sau khi tạo lại identity | Token cũ: 401 ở gateway, hoặc qua gateway nhưng bị service hạ lưu vừa tạo lại từ chối → BFF 502/504. | Tải nền tự lấy token lại khi gặp 401 hoặc khi Id container identity-api đổi. Sau sửa: token mới trong 27 s. |
-| Khôi phục loại C | Chạy lại compose không đổi cấu hình thì không tạo lại đích → vòng gửi header không dừng. | (hệ quả) Khôi phục chuẩn cho mọi loại: cờ `CHAOS_ALLOW_FAULT_INJECTION` về tắt rồi chạy lại compose → cả 7 container được tạo lại. |
+**Quyết định người dùng chốt trong phiên `/speckit-implement`** (lý do đầy đủ ở spec.md Clarifications):
+- Tải nền lấy token mỗi 30 phút (chế độ `-Load`), nghỉ 1000 ms giữa request; tự lấy token lại khi gặp 401
+  hoặc khi Id container `identity-api` đổi.
+- Rule phát hiện nhanh xét `Gateway.Api` chỉ theo 5xx (ngưỡng độ trễ gateway chặt hơn BFF mà nó chuyển tiếp tới).
+- Loại B (cạn pool) chỉ áp dụng cho gateway.
+- Giữ tạo lại 7 container khi tiêm; quy trình triage coi alert chỉ có trong một lần chạy rule là nhiễu khởi
+  động nguội.

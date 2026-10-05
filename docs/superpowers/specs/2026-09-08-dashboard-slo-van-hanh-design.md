@@ -11,7 +11,7 @@ gồm 4 panel, nhưng viết ra với mục đích **dạy cách dùng Lens**, n
 `GET /api/saved_objects/_find`: 0 dashboard, chỉ có 2 Lens visualization rời rạc không liên quan).
 
 `service-manifest.yaml` của cả 7 service đã khai báo sẵn SLO mục tiêu thật theo constitution
-Principle VIII (availability 99.9%/tháng, error-rate ≤0.1% 5xx, latency p95/p99 — riêng `Bff.Api` có
+Principle VIII (availability 99%/tuần, error-rate ≤1% 5xx, latency p95/p99 — riêng `Bff.Api` có
 ngân sách latency nới hơn: p95 300ms/p99 800ms so với 150ms/500ms của 6 service còn lại) — nhưng
 **chưa từng được đo tự động ở đâu** (0 alert rule trong Kibana, `docs/roadmap.md` xếp việc đo SLO thật
 vào `SCRUM-29`/`SCRUM-35` ở Giai đoạn 4-5, chưa triển khai).
@@ -49,13 +49,13 @@ Lý do 3 tầng: khớp thói quen dùng thật — liếc Tầng 1 vài giây b
 
   | Chỉ số | Thực tế | Ngưỡng |
   |---|---|---|
-  | Error-rate (5xx) | % span có `attributes.http.response.status_code >= 500` trên tổng span mỗi service | `0.1%` (cả 7 service) |
+  | Error-rate (5xx) | % span có `attributes.http.response.status_code >= 500` trên tổng span mỗi service | `1%` (cả 7 service) |
   | Latency p95 | Percentile 95 của `duration` | `150ms` (6 service) / `300ms` (`Bff.Api`) |
   | Latency p99 | Percentile 99 của `duration` | `500ms` (6 service) / `800ms` (`Bff.Api`) |
 
 - **Availability xấp xỉ** (đã thống nhất: dùng `100% − Error-rate`, không đo uptime thật vì chưa có
   synthetic check): không tách thành cột riêng vì trùng thông tin với Error-rate — chỉ ghi 1 dòng chú
-  thích dưới bảng, vd *"Availability xấp xỉ hôm nay: 99.98% — ngưỡng 99.9%"*.
+  thích dưới bảng, vd *"Availability xấp xỉ hôm nay: 99.98% — ngưỡng 99%"*.
 - **Cửa sổ thời gian**: đặt ở time picker cấp dashboard = **Last 24 hours**, áp dụng chung toàn Tầng 1.
 
 ## Tầng 1.5 — 2 trend chart
@@ -101,7 +101,7 @@ trong ở chế độ View (chỉ đổi trạng thái header), xem chi tiết v
   khác nhau theo từng dòng ngay trong cùng bảng. Cần chọn 1 trong các hướng sau lúc build, chưa chốt ở
   bước thiết kế này: (a) dùng `esql`/runtime field gán ngưỡng theo `service.name` bằng biểu thức
   `CASE`, (b) tách riêng 1 panel dạng chữ (Markdown) liệt kê ngưỡng cạnh bảng thay vì gộp chung 1 bảng,
-  (c) chấp nhận ghi ngưỡng trực tiếp trong tên cột (vd "Error-rate — ngưỡng 0.1%") nếu ngưỡng giống
+  (c) chấp nhận ghi ngưỡng trực tiếp trong tên cột (vd "Error-rate — ngưỡng 1%") nếu ngưỡng giống
   nhau cho phần lớn service, chỉ ghi chú riêng ngoại lệ của `Bff.Api` bằng chữ bên cạnh bảng.
 - **Chia cho 0**: nếu 1 service không có span nào trong 24h qua, công thức `count(5xx)/count(total)`
   có thể ra lỗi/NaN thay vì "0%" — cần kiểm tra Lens Formula xử lý mẫu số 0 thế nào lúc build; nếu

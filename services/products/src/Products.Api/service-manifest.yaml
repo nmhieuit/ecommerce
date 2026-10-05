@@ -28,29 +28,30 @@ data:
 slos:
   # Platform defaults for an internal service API (constitution Principle VIII). No justified
   # alternative is claimed, so the defaults apply verbatim.
-  availability: 99.9%          # monthly
+  availability: 99%            # weekly
   error-rate:
-    max-5xx-ratio: 0.1%
+    max-5xx-ratio: 1%
   latency:
     p95: 150ms
     p99: 500ms
 
 error-budget-policy:
-  # SCRUM-35 / constitution Principle VIII: "Sustained SLO breach consumes the error budget: when a
-  # service's error budget is exhausted, reliability work takes priority over new feature work in
-  # that service until it recovers." This block gives that sentence its numbers
-  # (specs/027-error-budget-alerting/contracts/error-budget-policy-manifest-shape.md). Measured and
-  # alerted on by the Kibana rules tagged slo-error-budget
+  # SCRUM-35 / constitution Principle VIII (2.0.0): "Sustained SLO breach consumes the error budget:
+  # when a service's error budget is exhausted, reliability work takes priority over new feature work
+  # in that service until it recovers." This block gives that sentence its numbers
+  # (specs/029-error-budget-weekly/contracts/error-budget-policy-manifest-shape.md). The budget window
+  # is the calendar week in Vietnam time — Monday 00:00 to Sunday 23:59, UTC+7 — and resets every
+  # Monday 00:00. Measured and alerted on by the Kibana rules tagged slo-error-budget
   # (docs/kibana-quan-sat-he-thong/07-canh-bao-ngan-sach-loi.md).
-  window: calendar-month
+  window: calendar-week
   timezone: UTC+07:00
   budgets:
     availability:
       bad-request: http-5xx
-      allowed-bad-ratio: 0.1%
+      allowed-bad-ratio: 1%
     error-rate:
       bad-request: http-5xx
-      allowed-bad-ratio: 0.1%
+      allowed-bad-ratio: 1%
     latency-p95:
       bad-request: slower-than-slo-p95   # threshold is slos.latency.p95 above — never restated here
       allowed-bad-ratio: 5%

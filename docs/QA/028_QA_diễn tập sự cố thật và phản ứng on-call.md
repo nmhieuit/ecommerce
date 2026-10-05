@@ -41,18 +41,18 @@ rồi Enable rule tag `incident-fast-detection` ([`alerts/README.md`](../kibana-
   Cờ đổi nên cả 7 container được tạo lại không kèm override. Chỉ chạy lại compose mà không đổi cờ thì
   loại C không được gỡ.
 
-| Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-10-01/02)** |
-|---|---|---|---|---|
-| Bất biến 1 — cờ tắt | Mặc định (không có dòng cờ) | (không có) — `-Start` | `exit 1`, không có `.incident-drill/`, uptime không đổi | Đúng |
-| Mức nền khoẻ | Mặc định; `-Load` chạy ≥ 10 phút | 26 + 28 (qua `-Load`) | Cả 7 service có span; rule 0 alert | 0 lỗi 5xx, p95 ≤ 133 ms, truy vấn rule 0 hàng (2 cửa sổ 5 phút) |
-| Loại A — products/bff/gateway | Cờ bật; `-Start -Service <svc> -FaultType A -DelaySeconds 0` | 26 + 28 | Chỉ đích nhận biến sai; đích trả 5xx | 5xx: products 38/56, bff 49/243 (downstream `OrdersApi`), gateway 93/226 |
-| Loại B — gateway | Cờ bật; `-Service gateway-api -FaultType B` | 26 + 28 | Gateway 5xx | 45.1% span gateway 5xx (BFF 18.5%) |
-| Loại C — parties, identity | Cờ bật; `-FaultType C` | 26 + 28 | 5xx ≈ tỷ lệ niêm phong; dừng gửi khi đích được tạo lại | parties 31.8% (46%), identity 33.3% (39%); dừng sau khi khôi phục |
-| Tải nền tự lấy token | (như loại C trên identity) | 26 + 28 | Token mới sau khi identity được tạo lại | identity tạo lại 10:39:28 → token mới 10:39:55 |
-| US2 — rule bắn, bảng hiện | Cờ bật; loại A trên orders | 26 + 28 | Alert `Orders.Api` ≤ 10 phút; bảng dashboard hiện | Bắn 11:02 (tiêm 11:00:25); bảng hiện (ảnh chụp trình duyệt) |
-| US2 — Case theo hướng dẫn | (không đổi) | (không có) — Kibana UI | Tiêu đề `[SEVn]`, severity ánh xạ, tag, comment mốc | Case `ab9ea3ce-…`: `[SEV2]`, `high`, tag `incident-drill`/`sev2`, 2 comment |
-| US4 — 15 phút đạt SLO | Khôi phục mặc định | 26 + 28 | Chuỗi 15 phút `dat = true`, rule hết active | Alert recovered 11:32; giải quyết 12:15 (chuỗi 12:01–12:15) |
-| Reveal | (không đổi) | (không có) — `-Reveal -RunId` | Băm khớp; xoá override | Khớp ở mọi lần chạy |
+| Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu |
+|---|---|---|---|
+| Bất biến 1 — cờ tắt | Mặc định (không có dòng cờ) | (không có) — `-Start` | `exit 1`, không có `.incident-drill/`, uptime không đổi |
+| Mức nền khoẻ | Mặc định; `-Load` chạy ≥ 10 phút | 26 + 28 (qua `-Load`) | Cả 7 service có span; rule 0 alert |
+| Loại A — products/bff/gateway | Cờ bật; `-Start -Service <svc> -FaultType A -DelaySeconds 0` | 26 + 28 | Chỉ đích nhận biến sai; đích trả 5xx |
+| Loại B — gateway | Cờ bật; `-Service gateway-api -FaultType B` | 26 + 28 | Gateway 5xx |
+| Loại C — parties, identity | Cờ bật; `-FaultType C` | 26 + 28 | 5xx ≈ tỷ lệ niêm phong; dừng gửi khi đích được tạo lại |
+| Tải nền tự lấy token | (như loại C trên identity) | 26 + 28 | Token mới sau khi identity được tạo lại |
+| US2 — rule bắn, bảng hiện | Cờ bật; loại A trên orders | 26 + 28 | Alert `Orders.Api` ≤ 10 phút; bảng dashboard hiện |
+| US2 — Case theo hướng dẫn | (không đổi) | (không có) — Kibana UI | Tiêu đề `[SEVn]`, severity ánh xạ, tag, comment mốc |
+| US4 — 15 phút đạt SLO | Khôi phục mặc định | 26 + 28 | Chuỗi 15 phút `dat = true`, rule hết active |
+| Reveal | (không đổi) | (không có) — `-Reveal -RunId` | Băm khớp; xoá override |
 
 ### Tự động
 

@@ -25,7 +25,7 @@ Mọi quyết định dưới đây hoặc do người dùng chốt trực tiế
 ## Quyết định 1 — Cơ chế tính tiêu hao và cảnh báo: Kibana rule "Elasticsearch query" dùng ES|QL
 
 **Decision** (Người dùng chốt): Mỗi mốc cảnh báo là một Kibana rule loại **Elasticsearch query**
-viết bằng **ES|QL**, tính mức tiêu hao từ đầu tháng tới nay của 4 ngân sách cho cả 7 service trong
+viết bằng **ES|QL**, tính mức tiêu hao từ đầu tuần tới nay của 4 ngân sách cho cả 7 service trong
 một truy vấn, trả về một hàng cho mỗi cặp (service, ngân sách) đang ở trên mốc.
 
 **Rationale**: Chạy được trên license Basic đang dùng; đúng yêu cầu "quản lý trong Kibana" (FR-008);
@@ -43,13 +43,13 @@ dùng chung dữ liệu traces mà dashboard 021 đã dùng nên số liệu nh�
 
 | Ngân sách | Request "xấu" | Tỷ lệ xấu cho phép |
 |---|---|---|
-| `availability` | `status_code >= 500` | 0.1% |
-| `error-rate` | `status_code >= 500` | 0.1% |
+| `availability` | `status_code >= 500` | 1% |
+| `error-rate` | `status_code >= 500` | 1% |
 | `latency-p95` | `duration > ngưỡng p95 của service × 1 000 000` (ns) | 5% |
 | `latency-p99` | `duration > ngưỡng p99 của service × 1 000 000` (ns) | 1% |
 
 `mức tiêu hao (%) = (số request xấu / tổng request) / tỷ lệ cho phép × 100`, tính trên các span có
-`@timestamp` từ **00:00 ngày 1 của tháng hiện tại theo giờ Việt Nam (UTC+7)** tới thời điểm chạy rule.
+`@timestamp` từ **thứ Hai 00:00 của tuần hiện tại theo giờ Việt Nam (UTC+7)** tới thời điểm chạy rule.
 Ngưỡng độ trễ theo từng service (CASE theo `resource.attributes.service.name`) phải khớp đúng khối
 `slos.latency` của manifest — được bảo vệ bằng test ở Quyết định 8.
 
@@ -57,14 +57,14 @@ Tập span được đếm giống hệt dashboard 021 (mọi span của service
 để con số trên rule và trên dashboard không bao giờ lệch nhau. Đây là cùng một xấp xỉ mà hợp đồng
 `specs/021-declare-service-slos/contracts/continuous-measurement-contract.md` đã chấp nhận.
 
-Service không có span nào trong tháng thì không xuất hiện hàng nào → không có alert (FR-012).
+Service không có span nào trong tuần thì không xuất hiện hàng nào → không có alert (FR-012).
 
 ## Quyết định 3 — Ba rule mốc, chu kỳ 5 phút, alert giữ liên tục
 
 **Decision**: 3 rule — `error-budget-50`, `error-budget-75`, `error-budget-100` — mỗi rule chạy
 **5 phút** một lần (Người dùng chốt). Mỗi hàng (service, ngân sách) vượt mốc là một alert riêng; alert
 giữ trạng thái active chừng nào hàng đó còn được trả về (FR-007, Người dùng chốt "giữ hoạt động liên
-tục"). Khi sang tháng mới, mức tiêu hao về 0 → hàng biến mất → alert tự recovered.
+tục"). Khi sang tuần mới, mức tiêu hao về 0 → hàng biến mất → alert tự recovered.
 
 **Rationale**: 3 rule thay vì 12 (4 ngân sách × 3 mốc) vì một truy vấn ES|QL đã tính được cả 4 ngân
 sách; tên rule nói rõ mốc, alert nói rõ service và ngân sách.
@@ -87,11 +87,11 @@ nhất quán khi sửa.
    - `frozen` khi `exhausted_at` tồn tại và số ngày trọn vẹn tính từ sau
      `MAX(ngày(exhausted_at), last_bad_day)` tới hết hôm qua **< 3**.
    Mỗi service đang `frozen` là một alert active của rule này.
-3. Vì event chỉ ghi lúc chuyển sang active (không ghi lúc recovered), việc ngân sách đặt lại đầu tháng
+3. Vì event chỉ ghi lúc chuyển sang active (không ghi lúc recovered), việc ngân sách đặt lại đầu tuần
    không xoá `exhausted_at` → không tự gỡ trạng thái đóng băng (FR-010, User Story 3 kịch bản 3).
 
 **Rationale**: Không cần lưu trạng thái ngoài Elasticsearch; trạng thái tính lại được từ dữ liệu bất
-cứ lúc nào; một chuỗi ngày đạt SLO ngay trong tháng vẫn gỡ được đóng băng dù ngân sách tháng vẫn 100%
+cứ lúc nào; một chuỗi ngày đạt SLO ngay trong tuần vẫn gỡ được đóng băng dù ngân sách tuần vẫn 100%
 (User Story 3 kịch bản 2).
 
 **Lưu ý mâu thuẫn tiềm ẩn đã được người dùng chấp nhận**: "ngày không có request tính là đạt" nghĩa là
@@ -103,7 +103,7 @@ thần FR-012 (vốn chỉ nói về cảnh báo) — ghi lại để không ai 
 ## Quyết định 5 — Hiển thị trên dashboard SLO hằng ngày
 
 **Decision** (Hệ quả của FR-008/FR-011 + Người dùng chốt "đưa vào dashboard SLO"): thêm vào dashboard
-hiện có (không tạo dashboard mới) một nhóm panel "Ngân sách lỗi tháng này" đặt **trên cùng**:
+hiện có (không tạo dashboard mới) một nhóm panel "Ngân sách lỗi tuần này" đặt **trên cùng**:
 
 1. Bảng mức tiêu hao: 7 service × 4 ngân sách, giá trị %, tô màu theo mốc 50/75/100 (cùng truy vấn
    ES|QL với rule, không theo cửa sổ thời gian của dashboard).
@@ -170,41 +170,33 @@ nên sau mỗi lần import phải bật (enable) lại 4 rule — bước này 
 |---|---|---|
 | V1 | Rule "Elasticsearch query" dạng ES|QL trên Kibana 9.4.4 tạo **một alert cho mỗi hàng/nhóm** (cần cho Quyết định 3, 4). | Dừng lại, hỏi người dùng chọn lại cơ chế — không tự đổi phương án. |
 | V2 | ES|QL đọc được hai index cùng lúc (`FROM traces-generic.otel-default*, slo-error-budget-events`) và hai tầng `STATS` theo Quyết định 4. | Dừng lại, hỏi người dùng. |
-| V3 | Biểu thức ranh giới tháng UTC+7 (`DATE_TRUNC(1 month, NOW() + 7 hours) - 7 hours`) cho đúng 00:00 ngày 1 giờ Việt Nam. | Sửa biểu thức, không đổi quyết định. |
+| V3 | Biểu thức ranh giới tuần UTC+7 (`DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours`) cho đúng thứ Hai 00:00 giờ Việt Nam. | Sửa biểu thức, không đổi quyết định. |
 | V4 | Biến môi trường `XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY` được image Kibana 9.4.4 ánh xạ vào `xpack.encryptedSavedObjects.encryptionKey`. | Mount `kibana.yml` tối thiểu thay vì biến môi trường. |
 | V5 | Data view trên index ẩn `.alerts-stack.alerts-default` dùng được trong Lens/ES|QL panel. | Thêm action Index connector cho cả 3 mốc và cho dashboard đọc `slo-error-budget-events`. |
 
-## Kết quả xác minh (T005–T008) — 2026-10-01, Kibana/Elasticsearch 9.4.4, license `basic`
+## Ràng buộc kỹ thuật (rút ra khi kiểm chứng trên Kibana/Elasticsearch 9.4.4, license `basic`)
 
-| # | Kết quả | Bằng chứng |
-|---|---|---|
-| V1 | **ĐÚNG**, kèm 2 hệ quả (bên dưới). Rule `.es-query` với `searchType: esqlQuery` + `groupBy: "row"` tạo một alert cho mỗi hàng. | Rule tạm `STATS c = COUNT(*) BY service` sinh 7 alert active, `kibana.alert.grouping = {c, service}`. |
-| V2 | **ĐÚNG**. `FROM traces-generic.otel-default*, <index sự kiện> METADATA _index` + hai tầng `STATS` chạy được. Phải `COALESCE(resource.attributes.service.name, service)` vì hai index đặt tên field service khác nhau. | Index thử với 1 event `Orders.Api` → chỉ hàng `Orders.Api` có `exhausted_at`, 6 service còn lại `null`. |
-| V3 | **ĐÚNG**. `DATE_TRUNC(1 month, NOW() + 7 hours) - 7 hours` = `2026-09-30T17:00:00Z` = 00:00 ngày 1/10 giờ Việt Nam. Ngày dùng `DATE_TRUNC(1 day, @timestamp + 7 hours)`. | `_query` lúc `2026-10-01T04:52Z`. |
-| V4 | **ĐÚNG**. Biến `XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY` được image ánh xạ; không cần `kibana.yml`. | `GET /api/alerting/_health` → `has_permanent_encryption_key: true`. |
-| V5 | **ĐÚNG**. ES|QL `FROM .alerts-stack.alerts-default` đọc được alert active; data view trên index ẩn (`allowHidden: true`) tạo được. | Truy vấn trả `kibana.alert.rule.name`, `kibana.alert.instance.id`, `kibana.alert.start` của rule tạm. |
+Bằng chứng đo chi tiết của lần kiểm chứng gốc nằm ở `docs/QA/QA_Debt.md` (mục 027) và lịch sử git; ở đây
+chỉ giữ những ràng buộc mà rule hiện tại và test dựa vào. Điểm V1–V5 ở bảng trên đều đã được xác nhận đúng.
 
-Mapping thật: `attributes.http.response.status_code` = `long`, `duration` = `long` (ns),
-`resource.attributes.service.name` = `keyword`.
-
-**Hệ quả 1 — cửa sổ thời gian của rule**: rule `.es-query` tự lọc `@timestamp` theo
-`timeWindowSize/Unit` (lý do alert ghi "in the last 5m"). Rule mốc đặt `timeWindowSize: 31`,
-`timeWindowUnit: d` (phủ trọn tháng dài nhất), dòng `WHERE @timestamp >= <đầu tháng UTC+7>` trong ES|QL
-cắt lại đúng tháng hiện tại. Rule `error-budget-frozen` cần nhìn lại xa hơn một tháng (lần cạn có thể
-ở tháng trước) nên đặt `timeWindowSize: 62`, `timeWindowUnit: d`.
-
-**Hệ quả 2 — mã alert = giá trị mọi cột kết quả** (`kibana.alert.instance.id = "31,Baskets.Api"`).
-Nếu kết quả rule có cột `consumed_pct` thì mã alert đổi sau mỗi lần chạy → alert cũ "recovered", alert
-mới sinh ra mỗi 5 phút, phá FR-007 và làm event "cạn" ghi lặp. **Người dùng chốt (2026-10-01)**: rule
-chỉ trả 2 cột `service`, `budget` (`KEEP service, budget`); bảng alert trên dashboard hiện service /
-ngân sách / mốc, còn mức tiêu hao (%) hiện ở bảng "mức tiêu hao" ngay bên cạnh. Contract bất biến 8 và
-spec SC-003 đã sửa theo.
-
-**Hệ quả 3 — Kibana chỉ lấy cột định danh alert từ lệnh `STATS` cuối cùng** (phát hiện khi chạy T030,
-2026-10-01). Với `groupBy: "row"`, `kibana.alert.grouping` chỉ gồm các cột kết quả sinh ra từ lệnh
-`STATS` cuối cùng của truy vấn. Cột `budget` sinh bởi `EVAL`/`MV_EXPAND` sau `STATS ... BY service` bị
-bỏ, nên mã alert chỉ còn `Baskets.Api` — hai ngân sách của cùng service bị gộp vào một alert (sai
-FR-006). Cách sửa đã kiểm chứng: thêm `| STATS consumed_pct = MAX(consumed_pct) BY service, budget`
-ngay trước `WHERE consumed_pct >= N | KEEP service, budget`. Sau sửa, mã alert là
-`Baskets.Api,latency-p99`; rule 50 sinh 4 alert, rule 75 sinh 2 alert, khớp từng hàng với bảng mức tiêu
-hao lúc 05:02Z; các alert kiểu cũ tự `recovered`.
+- **Mapping**: `attributes.http.response.status_code` = `long`, `duration` = `long` (nanosecond),
+  `resource.attributes.service.name` = `keyword`.
+- **Đọc hai index cùng lúc**: `FROM traces-generic.otel-default*, slo-error-budget-events METADATA _index`
+  chạy được với hai tầng `STATS`; phải `COALESCE(resource.attributes.service.name, service)` vì hai index
+  đặt tên field service khác nhau. Index sự kiện phải được tạo trước với mapping `keyword` — connector
+  Index không tự tạo mapping đúng (nếu để Kibana tự tạo thì `service`/`budget`/`event` thành `text`).
+- **Ranh giới kỳ**: dịch sang giờ Việt Nam, làm tròn, dịch ngược — `DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours`
+  (spec 029; làm tròn tuần của ES|QL bắt đầu từ thứ Hai); ngày dùng `DATE_TRUNC(1 day, @timestamp + 7 hours)`.
+- **Ràng buộc 1 — cửa sổ thời gian của rule**: rule `.es-query` tự lọc `@timestamp` theo
+  `timeWindowSize/Unit` trước khi chạy ES|QL. Rule mốc đặt `7 d` (phủ trọn một tuần lịch), dòng
+  `WHERE @timestamp >= <đầu tuần UTC+7>` cắt lại đúng tuần hiện tại; rule `error-budget-frozen` đặt `14 d`
+  (lần cạn có thể ở tuần trước) — spec 029.
+- **Ràng buộc 2 — mã alert = giá trị mọi cột kết quả**: kết quả rule có cột số thay đổi theo thời gian (vd
+  `consumed_pct`) thì mã alert đổi sau mỗi lần chạy → alert cũ "recovered", alert mới sinh ra mỗi 5 phút,
+  phá FR-007 và làm sự kiện "cạn" ghi lặp. Vì vậy rule chỉ trả cột định danh (`KEEP service, budget`;
+  `KEEP service` cho rule frozen); mức tiêu hao (%) hiện ở bảng riêng trên dashboard (người dùng chốt).
+- **Ràng buộc 3 — cột định danh lấy từ lệnh `STATS` cuối cùng**: với `groupBy: "row"`,
+  `kibana.alert.grouping` chỉ gồm các cột sinh ra từ lệnh `STATS` cuối; cột `budget` sinh bởi
+  `EVAL`/`MV_EXPAND` sau `STATS ... BY service` bị bỏ và hai ngân sách của cùng service gộp vào một alert.
+  Cách sửa: thêm `| STATS consumed_pct = MAX(consumed_pct) BY service, budget` ngay trước
+  `WHERE consumed_pct >= N | KEEP service, budget`.

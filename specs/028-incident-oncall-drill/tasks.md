@@ -40,7 +40,7 @@ lệch Nguyên tắc III, đã ghi ở plan.md Complexity Tracking, hạn tới 
 **Purpose**: Chỗ chứa file cục bộ, công cụ tải, và stack chạy được.
 
 - [X] T001 [P] Thêm dòng `.incident-drill/` kèm comment "file niêm phong và compose override tạm của diễn tập sự cố — spec 028, không commit" vào `.gitignore`.
-- [X] T002 [P] Chạy `npx newman --version` (người dùng đã đồng ý trước việc tải gói `newman`), ghi phiên bản vào ghi chú của task này. **Kết quả 2026-10-01: newman 6.2.2.**
+- [X] T002 [P] Chạy `npx newman --version` (người dùng đã đồng ý trước việc tải gói `newman`), ghi phiên bản vào ghi chú của task này.
 - [X] T003 Dựng stack bằng `docker compose -f docker-compose.local.yml up -d --build --wait`, xác nhận 7 service `healthy` và 4 rule `slo-error-budget` của 027 đang enable. Nếu stack hỏng vì lý do không thuộc 028 thì dừng và báo người dùng.
 
 ---
@@ -110,7 +110,6 @@ lệch Nguyên tắc III, đã ghi ở plan.md Complexity Tracking, hạn tới 
   - tính lại SHA-256 và so với `hash.txt`; lệch thì `exit 1`;
   - khớp thì in `sealed.json` và `injected-at.txt`, rồi xoá `docker-compose.incident.yml`.
 - [X] T015 [US1] Chạy [quickstart.md](./quickstart.md) Kịch bản 0 (cờ `false`): xác nhận `exit 1`, không có thư mục mới dưới `.incident-drill/`, uptime container không đổi. Ghi bằng chứng vào ghi chú.
-  **Kết quả 2026-10-01: `exit 1`, không có `.incident-drill/`, uptime 7 container không đổi.**
 - [X] T016 [US1] Bật cờ, giữ tải nền. Chạy chế độ không mù cho loại A trên `products-api`, loại A trên `bff-api`, và loại A trên `gateway-api` (`-DelaySeconds 0`). Mỗi lần, xác nhận:
   - cả 7 container có uptime mới;
   - chỉ service đích nhận biến sai (`docker inspect`);
@@ -119,15 +118,12 @@ lệch Nguyên tắc III, đã ghi ở plan.md Complexity Tracking, hạn tới 
   - chạy lại compose không override thì hết lỗi (bất biến 10).
 
   Ghi bằng chứng vào ghi chú.
-  **Kết quả 2026-10-01**: products-api loại A → 38/56 span 5xx trong 3 phút, p95 4.2 s; bff-api loại A (downstream `OrdersApi`) → 49/243 span 5xx; gateway-api loại A → 93/226 span 5xx. Mỗi lần: 7 container uptime mới, chỉ đích nhận biến sai, `-Reveal` khớp mã băm và xoá override, chạy lại compose không override đưa đích về cấu hình đúng.
 - [X] T017 [US1] Kiểm chứng V2: chế độ không mù loại B trên `orders-api` và trên `gateway-api` dưới tải nền. Xác nhận có 5xx hoặc p95/p99 vượt ngưỡng trong cửa sổ 5 phút. **Nếu không: DỪNG và hỏi người dùng về con số pool hoặc tốc độ tải. Không tự đổi.**
-  **Kết quả 2026-10-02 (V2 SAI một phần → người dùng chốt)**: orders-api loại B: 0 lỗi, p95 25 ms → không bắn; gateway loại B: 45% span 5xx → bắn. Người dùng chốt: **loại B chỉ cho gateway**. Trên đường đi: mức nền không khoẻ ở tải cũ → người dùng chốt tải nền nghỉ 1000 ms, token mỗi 30 phút (chế độ `-Load`), rule xét gateway chỉ theo 5xx; nhiễu khởi động nguội sau khi tạo lại 7 container → "giữ, ghi vào quy trình". Chi tiết: research.md "Kết quả xác minh (T016–T018)".
 - [X] T018 [US1] Kiểm chứng V4 và V3:
   - **V4**: chế độ không mù loại C trên `parties-api` và `identity-api`. Xác nhận span `500` của đúng service trong Elasticsearch, tỷ lệ xấp xỉ `errorRatePct`, và việc gửi dừng sau khi tạo lại container.
   - **V3**: sau khi tạo lại `identity-api`, quan sát newman ở vòng kế tiếp có hết `401` không. Nếu `401` kéo dài thì ghi lại và hỏi người dùng có loại identity khỏi bước tạo lại hay không.
 
   Ghi kết quả V2, V3, V4 vào mục "Kết quả xác minh" của `specs/028-incident-oncall-drill/research.md`. Đặt lại `CHAOS_ALLOW_FAULT_INJECTION=false`.
-  **Kết quả 2026-10-02**: V4 ĐÚNG — parties 31.8% span 500 (niêm phong 46%), identity 33.3% (niêm phong 39%); vòng gửi dừng sau khi container đích được tạo lại. Sửa script: bỏ mức sàn 1 request/giây (làm parties ra 75.7% thay vì 40%); kiểm container mỗi 5 s. V3 SAI → người dùng chốt: tải nền tự lấy token lại khi runner gặp 401 hoặc khi Id container identity-api đổi (token cũ vẫn qua gateway nhưng bị service hạ lưu vừa tạo lại từ chối → BFF 502/504). Sau sửa: identity tạo lại 10:39:28 → token mới 10:39:55. Phát hiện: loại C không có override nên chạy lại compose KHÔNG tạo lại đích — khôi phục chuẩn là đặt cờ về tắt rồi chạy lại compose (cờ đổi → cả 7 được tạo lại).
 
 **Checkpoint**: tiêm lỗi mù chạy được, chỉ bằng cấu hình, gỡ được bằng chạy lại compose (MVP).
 
@@ -146,7 +142,7 @@ lệch Nguyên tắc III, đã ghi ở plan.md Complexity Tracking, hạn tới 
   - Chạy truy vấn trong Discover khi tải nền khoẻ và xác nhận 0 hàng.
   - Ghi lại ngưỡng lấy từ `service-manifest.yaml` nào.
 - [X] T020 [US2] Trên Kibana UI tạo rule `incident-fast-detection` theo bất biến 1, 2, 7: `.es-query` ES|QL, `groupBy: row`, chu kỳ 5m, cửa sổ 5m, tag `incident-fast-detection`, không action. Ghi cấu hình vào file `08`.
-- [X] T021 [US2] Thêm bảng "Phát hiện nhanh — vượt SLO trong 5 phút gần nhất" vào dashboard `SLO vận hành hằng ngày — 7 service` (id `e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`), cạnh nhóm "Ngân sách lỗi tháng này".
+- [X] T021 [US2] Thêm bảng "Phát hiện nhanh — vượt SLO trong 5 phút gần nhất" vào dashboard `SLO vận hành hằng ngày — 7 service` (id `e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`), cạnh nhóm "Ngân sách lỗi tuần này".
   - Nguồn: alert active tag `incident-fast-detection` từ `.alerts-stack.alerts-default`; cột service và `kibana.alert.start`.
   - Dựng bằng Discover session ES|QL qua Saved Objects API, giống cách T031 của 027 đã làm.
   - Ghi cách dựng vào file `08`.
@@ -164,7 +160,6 @@ lệch Nguyên tắc III, đã ghi ở plan.md Complexity Tracking, hạn tới 
   - một Case thử tạo được theo đúng hướng dẫn T024.
 
   Ghi thời điểm vượt SLO, thời điểm alert bắn và ảnh/giá trị panel vào file `08`. Gỡ lỗi, đóng Case thử, đặt lại cờ `false`.
-  **Kết quả 2026-10-02**: tiêm A vào orders lúc 11:00:25 → rule bắn `Orders.Api` lúc 11:02:00 (lần chạy đầu, cùng lúc cả 7 service do khởi động nguội); qua 3 lần chạy: Orders, Bff (22.5% 5xx), Gateway (31.9% 5xx) giữ alert — lỗi lan đúng chuỗi phụ thuộc; Parties/Products/Baskets/Identity chậm kéo dài (p95 320–560 ms, không 5xx) và có lúc lại có alert sau >15 phút — môi trường local chậm từng đợt, chưa rõ nguyên nhân (ghi QA_Debt). Bảng trên dashboard hiển thị đúng (ảnh chụp trình duyệt). Case thử `ab9ea3ce-…` tạo theo đúng hướng dẫn (tiêu đề `[SEV2]`, severity `high`, tag, 2 comment mốc). Sửa script: `taskkill` ghi stderr làm `-Load` thoát giữa buổi (11:00) → bọc `ErrorActionPreference = Continue`. Khôi phục lúc ~11:27 (RabbitMQ `unhealthy` sẵn có làm `compose up --wait` chậm).
 
 **Checkpoint**: sự cố được phát hiện nhờ cảnh báo trên dashboard người vận hành mở mỗi ngày.
 
@@ -200,7 +195,6 @@ lệch Nguyên tắc III, đã ghi ở plan.md Complexity Tracking, hạn tới 
 - [X] T028 [US4] Thêm vào `docs/kibana-quan-sat-he-thong/08-phat-hien-nhanh-va-xu-ly-su-co.md` mục "Xác nhận khôi phục 15 phút": một truy vấn ES|QL cho một service, `BUCKET(@timestamp, 1 minute)`, cột tổng / 5xx / p95 / p99 / đạt (bool), trên 30 phút gần nhất, kèm cách đọc ra "15 phút liên tục đạt và có traffic".
 - [X] T029 [US4] Thêm bước "Xác nhận giải quyết" vào mục diễn tập sự cố của `docs/dien-tap-chaos-engineering/README.md`: chạy truy vấn T028, chụp/ghi link, kiểm tra rule không còn active cho service, rồi mới ghi `moc_giai_quyet`, đóng Case và chạy `-Reveal`.
 - [X] T030 [US4] Kiểm chứng trên dữ liệu thật của lần gỡ lỗi ở T025: chạy truy vấn T028 cho `Orders.Api`, xác định thời điểm cuối của 15 phút liên tục đạt SLO. Ghi bằng chứng vào file `08`.
-  **Kết quả 2026-10-02** (chạy trên dữ liệu đã lưu trong Elasticsearch, sau khi máy khởi động lại): khôi phục ~11:27; alert `Orders.Api` recovered 11:32:03; chuỗi 15 phút liên tục đạt SLO đầu tiên 12:01–12:15 → mốc giải quyết 12:15 (chuỗi 11:46–11:59 chỉ 14 phút, đứt ở 12:00 vì p95 167 ms). Bằng chứng ghi trong file `08`.
 
 **Checkpoint**: khôi phục được chứng minh bằng số đo, không bằng "trông có vẻ ổn".
 
@@ -255,7 +249,6 @@ lệch Nguyên tắc III, đã ghi ở plan.md Complexity Tracking, hạn tới 
   - (a) mọi link tương đối trong các file của T032–T036, T040 và trong mục 028 của technical-debt trỏ tới file có thật (giải mã `%20`/tiếng Việt);
   - (b) 3 file `.drawio` parse được bằng `python -c "import xml.etree.ElementTree as E; E.parse(...)"`, mỗi file đúng 1 `<diagram>`;
   - (c) `git status` không có file nào dưới `services/`, `shared/`, `.incident-drill/` hay `docker-compose*.yml` bị sửa.
-  **Kết quả 2026-10-02**: (a) 63 link tương đối trong 8 file tài liệu và các dòng 028 của technical-debt/functional-debt/QA_Debt — 0 lỗi; (b) 3 file `.drawio` parse XML được, mỗi file đúng 1 `<diagram>`, không cạnh nào trỏ tới khối không tồn tại; (c) `git status` không có file nào dưới `services/`, `shared/`, `docker-compose*.yml`, `.env.example` bị sửa; `.incident-drill/` bị gitignore.
 
   Ghi kết quả vào ghi chú. Phụ thuộc T032–T041.
 

@@ -10,8 +10,8 @@
 
 Biến SLO đã khai báo ở 021 thành một ngân sách có hệ quả. Mỗi `service-manifest.yaml` (7 service) có
 thêm khối `error-budget-policy`, nêu bằng con số:
-- 4 ngân sách: khả dụng 0.1%, 5xx 0.1%, độ trễ p95 5%, độ trễ p99 1%;
-- cửa sổ tháng lịch theo giờ Việt Nam;
+- 4 ngân sách: khả dụng 1%, 5xx 1%, độ trễ p95 5%, độ trễ p99 1%;
+- cửa sổ tuần lịch theo giờ Việt Nam;
 - các mốc 50%/75%/100%, và "cạn" = bất kỳ ngân sách nào đạt 100%;
 - hệ quả khi cạn: dừng merge tính năng mới;
 - điều kiện hồi phục: 3 ngày đạt SLO.
@@ -47,7 +47,7 @@ nhất chạy Elastic stack; CI Jenkins chạy các test xUnit.
 **Project Type**: Bổ sung vào monorepo microservices hiện có (cấu hình quan sát + một middleware dùng
 chung + test), không có service mới.
 
-**Performance Goals**: 4 rule × mỗi 5 phút, mỗi lần quét traces từ đầu tháng tới nay trên một máy
+**Performance Goals**: 4 rule × mỗi 5 phút, mỗi lần quét traces từ đầu tuần tới nay trên một máy
 local — chấp nhận được với khối lượng demo hiện tại.
 
 **Constraints**: Không đổi hành vi endpoint khi không tiêm lỗi (FR-015); `Chaos:AllowFaultInjection`
@@ -117,7 +117,7 @@ tests/ServiceManifestSloConventionTests/
 docs/kibana-quan-sat-he-thong/
 ├── 07-canh-bao-ngan-sach-loi.md                   # mới — cách dựng/vận hành rule, connector, panel
 ├── alerts/error-budget-rules.ndjson               # mới — export 4 rule + Index connector
-└── dashboards/slo-van-hanh-hang-ngay.ndjson       # sửa — thêm nhóm panel "Ngân sách lỗi tháng này"
+└── dashboards/slo-van-hanh-hang-ngay.ndjson       # sửa — thêm nhóm panel "Ngân sách lỗi tuần này"
 
 docker-compose.yml, docker-compose.local.yml       # sửa: Kibana nhận khoá mã hoá; 7 service nhận Chaos__AllowFaultInjection
 .env.example                                       # sửa: KIBANA_ENCRYPTION_KEY (Vùng 2), CHAOS_ALLOW_FAULT_INJECTION (Vùng 1)

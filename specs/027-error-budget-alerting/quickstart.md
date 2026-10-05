@@ -33,12 +33,12 @@ Bất biến được kiểm tra: [contracts/error-budget-alert-rules-contract.m
 
 **Kết quả mong đợi**: 4 rule enabled, chu kỳ 5 phút, sau ~5 phút mỗi rule có lượt chạy mới (rule nào kẹt
 `pending` thì Disable rồi Enable lại — xem `docs/kibana-quan-sat-he-thong/alerts/README.md`); dashboard `SLO vận hành hằng ngày — 7 service` có
-nhóm "Ngân sách lỗi tháng này" ở trên cùng.
+nhóm "Ngân sách lỗi tuần này" ở trên cùng.
 
-## Kịch bản 1 — Tạo lỗi tổng hợp tới khi cạn ngân sách tháng, cảnh báo bắn đúng mốc
+## Kịch bản 1 — Tạo lỗi tổng hợp tới khi cạn ngân sách tuần, cảnh báo bắn đúng mốc
 
-1. Lấy tổng số span tháng này của `Orders.Api` (`N`) từ bảng mức tiêu hao trên dashboard hoặc truy vấn
-   Elasticsearch. Ngân sách 5xx cạn khi số 5xx ≈ `N / 999`.
+1. Lấy tổng số span tuần này của `Orders.Api` (`N`) từ bảng mức tiêu hao trên dashboard hoặc truy vấn
+   Elasticsearch. Ngân sách 5xx (1%) cạn khi số 5xx ≈ `N / 99`.
 2. Gửi lỗi tổng hợp theo từng đợt — mỗi đợt khoảng 1/4 lượng cần thiết — tới Orders.Api (port 5041):
 
    ```powershell
@@ -88,5 +88,5 @@ mốc và mức tiêu hao hiện tại (SC-003).
 
 ## Kiểm tra theo thời gian (không làm được trong một phiên)
 
-- Hồi phục trong tháng sau 3 ngày đạt SLO (bất biến 9) và giữ đóng băng qua ranh giới tháng: quan sát
+- Hồi phục trong tuần sau 3 ngày đạt SLO (bất biến 9) và giữ đóng băng qua ranh giới tuần: quan sát
   thật theo ngày, ghi kết quả vào tài liệu QA của tính năng.

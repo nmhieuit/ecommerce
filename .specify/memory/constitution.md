@@ -1,30 +1,37 @@
 <!--
 Sync Impact Report
 ==================
-Version change: (uninitialized template) → 1.0.0
-Bump rationale: Initial ratification. First concrete constitution replacing the unfilled
-Spec Kit template; all placeholder tokens resolved.
+Version change: 1.0.0 → 2.0.0
+Bump rationale: MAJOR — two platform defaults of Principle VIII are redefined in a
+backward-incompatible way: the availability window changes from a calendar month to a calendar
+week, the availability target from 99.9% to 99%, and the 5xx ceiling from 0.1% to 1% of requests
+(specs/029-error-budget-weekly).
 
-Principles defined (template slots → concrete principles):
-- [PRINCIPLE_1_NAME] → I. Service Autonomy and Bounded Context
-- [PRINCIPLE_2_NAME] → II. Contract-First Integration
-- [PRINCIPLE_3_NAME] → III. Test-First Development (NON-NEGOTIABLE)
-- [PRINCIPLE_4_NAME] → IV. Event-Driven by Default
-- [PRINCIPLE_5_NAME] → V. Tenant Isolation Is a Security Boundary
-- (added) VI. Secure by Default
-- (added) VII. Observable by Default
-- (added) VIII. Performance and Resilience Budgets
-- (added) IX. Frontend Discipline
-- (added) X. Toggle-Gated, Reversible Delivery
+Principles modified:
+- VIII. Performance and Resilience Budgets — defaults list:
+  - "99.9% monthly availability." → "99% weekly availability."
+  - "5xx responses below 0.1% of requests." → "5xx responses below 1% of requests."
 
-Sections added:
-- [SECTION_2_NAME] → Technology and Infrastructure Constraints
-- [SECTION_3_NAME] → Development Workflow and Quality Gates
-- Governance (amendment procedure, semantic versioning policy, compliance review, deviations)
+Principles added / removed: none. Sections added / removed: none.
 
-Sections removed: none (template contained no prior content).
+Migration impact on existing services:
+- 7 service-manifest.yaml: slos.availability 99% (weekly), slos.error-rate.max-5xx-ratio 1%;
+  error-budget-policy window calendar-week, availability/error-rate allowed-bad-ratio 1%.
+  No service needs a slos.justification, because 99%/1% is now the default.
+- tests/ServiceManifestSloConventionTests/PlatformSloDefaults.cs mirrors the new defaults.
+- Kibana error-budget rules (027): calendar-week boundary, 0.01 ratios, 7-day/14-day windows.
+- Kibana incident-fast-detection rule (028): 5xx threshold 1%.
+- Daily SLO dashboard error-budget panels: weekly; 021/027/028 documentation updated in place.
 
-Deferred placeholders / follow-up TODOs: none. All tokens resolved.
+Templates reviewed:
+- .specify/templates/plan-template.md ✅ no change needed (no SLO numbers)
+- .specify/templates/spec-template.md ✅ no change needed
+- .specify/templates/tasks-template.md ✅ no change needed
+- .specify/templates/checklist-template.md ✅ no change needed
+- .specify/templates/constitution-template.md ✅ no change needed
+- Agent guidance file (CLAUDE.md / AGENTS.md / .github/copilot-instructions.md) ✅ none present
+
+Deferred placeholders / follow-up TODOs: none.
 -->
 
 # Commerce Platform Constitution
@@ -167,8 +174,8 @@ Unless a service documents a justified alternative, the platform defaults are:
 - Client-facing BFF read: p95 ≤ 300 ms, p99 ≤ 800 ms.
 - Internal service API: p95 ≤ 150 ms, p99 ≤ 500 ms.
 - Integration events processed within 5 s of publication at p95.
-- 99.9% monthly availability.
-- 5xx responses below 0.1% of requests.
+- 99% weekly availability.
+- 5xx responses below 1% of requests.
 
 Client applications MUST meet Core Web Vitals at p75 on mobile-web (LCP ≤ 2.5 s, INP ≤ 200 ms,
 CLS ≤ 0.1) and MUST declare and enforce a JavaScript bundle budget per route entry point.
@@ -274,4 +281,4 @@ be re-litigated per feature. Changing any of them is a constitutional amendment.
 - Runtime development guidance for agents lives in the repository's agent guidance file; it
   elaborates on this constitution and MUST NOT contradict it.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-13 | **Last Amended**: 2026-08-13
+**Version**: 2.0.0 | **Ratified**: 2026-08-13 | **Last Amended**: 2026-10-05

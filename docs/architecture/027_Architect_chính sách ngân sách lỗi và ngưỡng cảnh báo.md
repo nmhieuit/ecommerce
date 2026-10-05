@@ -16,7 +16,7 @@ mở — xem [technical-debt.md](technical-debt.md).
 
 | Mảnh | Nằm ở đâu | Ai đọc |
 |---|---|---|
-| **Chính sách** — 4 ngân sách (khả dụng 0.1%, 5xx 0.1%, vượt p95 5%, vượt p99 1%), tháng lịch UTC+7, mốc 50/75/100, "cạn" = bất kỳ ngân sách nào 100%, hệ quả và điều kiện hồi phục 3 ngày | Khối `error-budget-policy` trong 7 `service-manifest.yaml`, ngay sau `slos` | Con người; `ErrorBudgetPolicyTests` canh hình dạng |
+| **Chính sách** — 4 ngân sách (khả dụng 1%, 5xx 1%, vượt p95 5%, vượt p99 1%), tuần lịch UTC+7, mốc 50/75/100, "cạn" = bất kỳ ngân sách nào 100%, hệ quả và điều kiện hồi phục 3 ngày | Khối `error-budget-policy` trong 7 `service-manifest.yaml`, ngay sau `slos` | Con người; `ErrorBudgetPolicyTests` canh hình dạng |
 | **Đo và cảnh báo** — 4 rule Kibana "Elasticsearch query" dạng ES\|QL, mỗi 5 phút | Kibana; export tại [`alerts/error-budget-rules.ndjson`](../kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson) | `ErrorBudgetRuleDefinitionTests` canh ngưỡng khớp manifest |
 | **Nhìn thấy** — 3 panel trên cùng dashboard SLO hằng ngày của 021 | Discover session ES\|QL; export trong [`dashboards/slo-van-hanh-hang-ngay.ndjson`](../kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson) | Người vận hành, mỗi ngày |
 
@@ -30,8 +30,8 @@ vấn ES|QL tính được cả 4 ngân sách × 7 service từ chính index tra
 alert và trên dashboard không bao giờ lệch nhau. Ba ràng buộc của Kibana 9.4.4 định hình truy vấn —
 đều phát hiện bằng chạy thật, không có trong tài liệu Elastic:
 
-1. Rule tự lọc `@timestamp` theo cửa sổ của nó → cửa sổ rule 31 ngày (62 ngày cho rule đóng băng),
-   dòng `WHERE` cắt lại đúng từ 00:00 ngày 1 giờ Việt Nam.
+1. Rule tự lọc `@timestamp` theo cửa sổ của nó → cửa sổ rule 7 ngày (14 ngày cho rule đóng băng),
+   dòng `WHERE` cắt lại đúng từ thứ Hai 00:00 giờ Việt Nam.
 2. Mã alert = giá trị **mọi** cột kết quả → kết quả chỉ giữ `service, budget`; % tiêu hao nằm ở bảng
    riêng, nếu không alert bị tạo lại mỗi 5 phút.
 3. Mã alert chỉ lấy cột của lệnh `STATS` **cuối** → thêm `STATS ... BY service, budget` trước `KEEP`.
@@ -52,7 +52,7 @@ traces-generic.otel-default* ──┐                                         �
 ```
 
 Trạng thái được **tính lại** mỗi 5 phút từ dữ liệu, không có cờ nào phải bật/tắt bằng tay. Sự kiện chỉ
-ghi khi alert chuyển sang active nên việc ngân sách đặt lại đầu tháng không gỡ đóng băng (FR-010).
+ghi khi alert chuyển sang active nên việc ngân sách đặt lại đầu tuần không gỡ đóng băng (FR-010).
 
 ## 4. Công cụ làm cạn ngân sách: `ChaosFaultInjectionMiddleware` (Quyết định 7)
 
@@ -79,9 +79,10 @@ Disable rồi Enable lại đúng rule đó.
 
 ## 7. Tham khảo thêm
 
-Cách dựng từng rule/panel, truy vấn đầy đủ, bằng chứng diễn tập (5xx của `Orders.Api` bật mốc 75 sau
-4 phút 20 giây, mốc 100 sau 4 phút 16 giây):
-[`07-canh-bao-ngan-sach-loi.md`](../kibana-quan-sat-he-thong/07-canh-bao-ngan-sach-loi.md).
+Cách dựng từng rule/panel và truy vấn đầy đủ:
+[`07-canh-bao-ngan-sach-loi.md`](../kibana-quan-sat-he-thong/07-canh-bao-ngan-sach-loi.md). Bằng chứng diễn tập
+trên Kibana thật: [`docs/QA/QA_Debt.md`](../QA/QA_Debt.md) mục 027 và 029. Chu kỳ tuần lịch và SLO 99%/1%:
+[`029_Architect_ngân sách lỗi theo tuần lịch.md`](029_Architect_ngân%20sách%20lỗi%20theo%20tuần%20lịch.md).
 Giới hạn đã biết (Kibana mất trạng thái alert khi máy quá tải, sửa rule 100 ghi lại sự kiện "cạn", lưu
 lượng thấp làm vượt mốc rất nhanh, rule kẹt `pending` sau import, hồi phục 3 ngày chưa quan sát trên dữ
 liệu chạy liên tục): xem [technical-debt.md](technical-debt.md).

@@ -15,7 +15,7 @@ quan sát/quy ước.
 
 | Field | Kiểu | Bắt buộc | Mô tả |
 |---|---|---|---|
-| `availability` | string (phần trăm, ví dụ `99.9%`) | Có | Mục tiêu độ khả dụng hàng tháng. |
+| `availability` | string (phần trăm, ví dụ `99%`) | Có | Mục tiêu độ khả dụng hàng tuần. |
 | `error-rate.max-5xx-ratio` | string (phần trăm) | Có | Ngưỡng tối đa tỷ lệ phản hồi 5xx trên tổng request. |
 | `latency.p95` | string (đơn vị ms, ví dụ `150ms`) | Có | Ngưỡng độ trễ p95. |
 | `latency.p99` | string (đơn vị ms) | Có | Ngưỡng độ trễ p99. |
@@ -47,8 +47,8 @@ comment trỏ ngược về constitution để không trôi dạt so với ngu�
 
 | Phân loại (`classification`) | `availability` | `error-rate.max-5xx-ratio` | `latency.p95` | `latency.p99` |
 |---|---|---|---|---|
-| `client-facing-bff` | 99.9% | 0.1% | 300ms | 800ms |
-| `internal-service-api` | 99.9% | 0.1% | 150ms | 500ms |
+| `client-facing-bff` | 99% | 1% | 300ms | 800ms |
+| `internal-service-api` | 99% | 1% | 150ms | 500ms |
 
 ## Entity: Giá trị đo được liên tục (hình chiếu trên dashboard Kibana, US3)
 

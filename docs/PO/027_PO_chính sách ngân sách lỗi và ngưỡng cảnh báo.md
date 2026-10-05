@@ -17,8 +17,8 @@ thường. Màn hình có đỏ thì cũng chỉ đỏ đó, chờ ai đó tình
 
 ## Giải pháp: biến cam kết thành 1 "ngân sách" có mốc cảnh báo và hệ quả rõ ràng
 
-- **Mỗi bộ phận có 1 ngân sách lỗi theo tháng** (tháng lịch, giờ Việt Nam): được phép bao nhiêu yêu cầu
-  lỗi hoặc quá chậm trước khi coi là vi phạm. Ngân sách đặt lại vào đầu mỗi tháng.
+- **Mỗi bộ phận có 1 ngân sách lỗi theo tuần** (tuần lịch, giờ Việt Nam): được phép bao nhiêu yêu cầu
+  lỗi hoặc quá chậm trước khi coi là vi phạm. Ngân sách đặt lại vào đầu mỗi tuần.
 - **Cảnh báo tự động ở 3 mốc 50%, 75%, 100%** — hiện ngay trên màn hình người vận hành vẫn mở mỗi ngày,
   không cần ai tự đi soi số liệu.
 - **"Cạn" có định nghĩa bằng con số và có hệ quả**: chỉ cần 1 ngân sách chạm 100% là bộ phận đó dừng
@@ -28,13 +28,13 @@ thường. Màn hình có đỏ thì cũng chỉ đỏ đó, chờ ai đó tình
 
 ## Trải nghiệm thực tế diễn ra như thế nào
 
-1. **1 bộ phận bắt đầu lỗi nhiều hơn bình thường** — mỗi lỗi "tiêu" 1 phần ngân sách tháng; tới 50% thì
+1. **1 bộ phận bắt đầu lỗi nhiều hơn bình thường** — mỗi lỗi "tiêu" 1 phần ngân sách tuần; tới 50% thì
    màn hình hằng ngày hiện cảnh báo đầu tiên, tới 75% hiện cảnh báo thứ hai.
 2. **Ngân sách chạm 100%** — màn hình hiện thêm bộ phận đó trong danh sách "cạn ngân sách — ưu tiên độ
    tin cậy"; đội dừng đưa tính năng mới vào bộ phận đó, tập trung sửa cho ổn định.
 3. **Bộ phận ổn định trở lại** — đủ 3 ngày liên tiếp đạt cam kết thì tự rời khỏi danh sách "cạn", được
-   làm tính năng mới trở lại, kể cả khi tháng chưa kết thúc.
-4. **Sang tháng mới mà bộ phận vẫn chưa ổn** — ngân sách đặt lại đầy đủ nhưng bộ phận **không** tự được
+   làm tính năng mới trở lại, kể cả khi tuần chưa kết thúc.
+4. **Sang tuần mới mà bộ phận vẫn chưa ổn** — ngân sách đặt lại đầy đủ nhưng bộ phận **không** tự được
    "xoá án": vẫn phải đủ 3 ngày đạt cam kết mới hồi phục.
 5. **Muốn chắc cảnh báo hoạt động thật** — đội có công cụ chủ động gây lỗi có kiểm soát (bật/tắt được
    ngay, mặc định tắt) để diễn tập, đã thử thật: cảnh báo hiện sau khoảng 4–5 phút.

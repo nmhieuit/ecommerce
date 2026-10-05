@@ -8,7 +8,7 @@ Hợp đồng: [`contracts/fast-detection-rule-contract.md`](../../specs/028-inc
 Export thật: [`alerts/incident-fast-detection-rule.ndjson`](alerts/incident-fast-detection-rule.ndjson) (rule),
 [`dashboards/slo-van-hanh-hang-ngay.ndjson`](dashboards/slo-van-hanh-hang-ngay.ndjson) (dashboard).
 
-Bốn rule ngân sách lỗi của file 07 đo mức tiêu hao **cả tháng**. Một sự cố đơn lẻ có thể cần hàng giờ
+Bốn rule ngân sách lỗi của file 07 đo mức tiêu hao **cả tuần lịch** (từ thứ Hai 00:00 giờ Việt Nam). Một sự cố đơn lẻ có thể cần hàng giờ
 mới đẩy mức đó qua mốc 50%, nên chúng không dùng để phát hiện sự cố. File này thêm một rule nhìn **5
 phút gần nhất**, và mô tả cách xác nhận khôi phục bằng số đo. Quy trình triage (severity, Kibana Case,
 bản ghi sự cố) nằm ở
@@ -25,7 +25,7 @@ bản ghi sự cố) nằm ở
 | Id | `9b0e2c36-678b-4cd7-9de0-7468d623f82d` |
 
 Một service có alert khi, trong 5 phút gần nhất:
-- tỷ lệ 5xx ≥ 0.1%, **hoặc**
+- tỷ lệ 5xx ≥ 1% (SLO 5xx dưới 1% — hiến chương 2.0.0, spec 029), **hoặc**
 - p95 hoặc p99 vượt ngưỡng `slos.latency` trong manifest của chính nó.
 
 Ngưỡng là `Bff.Api` 300/800 ms và 150/500 ms cho mọi service còn lại.
@@ -44,14 +44,14 @@ FROM traces-generic.otel-default*
 | EVAL p95_slo_ns = CASE(service == "Bff.Api", 300000000, 150000000)
 | EVAL p99_slo_ns = CASE(service == "Bff.Api", 800000000, 500000000)
 | EVAL latency_breach = CASE(service == "Gateway.Api", false, p95_ns > p95_slo_ns OR p99_ns > p99_slo_ns)
-| WHERE err_pct >= 0.1 OR latency_breach
+| WHERE err_pct >= 1 OR latency_breach
 | STATS breaching = COUNT(*) BY service
 | KEEP service
 ```
 
 Vì sao có hai lệnh `STATS` và chỉ giữ cột `service`:
-- Hệ quả 2 và 3 trong research của 027: Kibana ghép **mã alert** từ mọi cột kết quả, và chỉ lấy cột
-  của lệnh `STATS` cuối cùng.
+- Ràng buộc kỹ thuật trong research của 027: Kibana ghép **mã alert** từ mọi cột kết quả, và chỉ lấy
+  cột của lệnh `STATS` cuối cùng.
 - Nếu giữ thêm `err_pct` hay `p95`, mã alert sẽ đổi sau mỗi lần chạy. Alert cũ sẽ "recovered" rồi alert
   mới sinh ra mỗi 5 phút, nên thời điểm bắt đầu (`kibana.alert.start`) không còn dùng làm mốc "alert
   bắn" được.
@@ -62,16 +62,6 @@ hiểu thành sự cố.
 **Ngưỡng nằm ở hai nơi**: trong `CASE` ở trên và trong `slos` của manifest. Không có test nào giữ hai
 nơi này khớp nhau (sai lệch Nguyên tắc III, xem `specs/028-incident-oncall-drill/plan.md`). Sửa
 manifest thì phải sửa rule này bằng tay, rồi export lại.
-
-### Đã kiểm chứng ở mức nền (2026-10-02)
-
-Chạy truy vấn trong Discover (ES|QL) khi tải nền `./scripts/incident-drill.ps1 -Load` đang chạy và
-không có sự cố: **0 hàng**. Số đo của hai cửa sổ 5 phút liên tiếp: 0 lỗi 5xx ở cả 7 service; p95 lớn
-nhất 133 ms và p99 lớn nhất 208 ms, đều ở gateway, nơi không xét độ trễ.
-
-Mức nền chỉ khoẻ với tải nhẹ (nghỉ 1000 ms giữa request, token lấy mỗi 30 phút). Với tải nặng hơn
-(nghỉ 200 ms, lấy token mỗi vòng), nhiều service đã vượt SLO mà không cần sự cố nào. Số đo đầy đủ ở
-`specs/028-incident-oncall-drill/research.md`, mục "Kết quả xác minh".
 
 ## Bảng trên dashboard SLO hằng ngày
 
@@ -120,7 +110,7 @@ FROM traces-generic.otel-default*
 | EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)
 | STATS total = COUNT(*), bad_5xx = SUM(is_5xx), p95_ns = PERCENTILE(duration, 95), p99_ns = PERCENTILE(duration, 99) BY minute = BUCKET(@timestamp, 1 minute)
 | EVAL err_pct = ROUND(TO_DOUBLE(bad_5xx) / total * 100.0, 2), p95_ms = ROUND(p95_ns / 1000000.0), p99_ms = ROUND(p99_ns / 1000000.0)
-| EVAL dat = total > 0 AND err_pct < 0.1 AND p95_ns <= 150000000 AND p99_ns <= 500000000
+| EVAL dat = total > 0 AND err_pct < 1 AND p95_ns <= 150000000 AND p99_ns <= 500000000
 | EVAL phut_gio_vn = DATE_FORMAT("HH:mm", minute + 7 hours)
 | KEEP phut_gio_vn, total, err_pct, p95_ms, p99_ms, dat
 | SORT phut_gio_vn
@@ -136,19 +126,5 @@ Cách đọc:
 `BUCKET` phải nằm trong `STATS ... BY`. Đặt nó trong `EVAL` thì Elasticsearch báo `cannot use grouping
 function [BUCKET(...)] outside of a STATS or LIMIT BY command`.
 
-### Đã kiểm chứng trên dữ liệu thật (T025/T030, 2026-10-02)
-
-Chế độ không mù: tiêm loại A (đích kết nối sai) vào `orders-api`.
-
-| Mốc | Thời điểm (+07:00) |
-|---|---|
-| Tiêm lỗi (`injected-at.txt`) | 11:00:25 |
-| Alert `Orders.Api` bắn (`kibana.alert.start`) | 11:02:00 — lần chạy đầu, cùng lúc cả 7 service do khởi động nguội |
-| Khôi phục: bỏ cờ khỏi `.env`, chạy lại compose | ~11:27 |
-| Alert `Orders.Api` recovered (`kibana.alert.end`) | 11:32:03 |
-| Chuỗi đạt SLO đầu tiên | 11:46–11:59 (14 phút); đứt ở 12:00 vì p95 167 ms |
-| **Giải quyết** (phút cuối của 15 phút liên tục `dat = true`) | **12:15** (chuỗi 12:01–12:15, tiếp tục đạt tới hết dữ liệu 12:29) |
-
-Từ lúc khôi phục tới lúc giải quyết mất khoảng 48 phút. Nguyên nhân là môi trường local chậm từng đợt:
-p95 của `Orders.Api` vượt 150 ms ở các phút 11:31–11:34, 11:41, 11:43–11:45, 12:00, dù không còn lỗi
-5xx nào. Đây chính là lý do không ghi "giải quyết" chỉ vì service "trông có vẻ ổn".
+Bằng chứng kiểm chứng trên dữ liệu thật không ghi ở tài liệu vận hành này; xem `docs/QA/QA_Debt.md` (mục 028, 029)
+và tài liệu QA của từng spec.

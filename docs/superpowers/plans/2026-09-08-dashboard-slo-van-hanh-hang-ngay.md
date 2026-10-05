@@ -22,8 +22,8 @@ bản thân trạng thái Kibana không nằm trong git. Task cuối viết tài
 ## Ràng buộc chung (áp dụng cho mọi task bên dưới)
 
 - **Ngưỡng SLO thật** (từ `service-manifest.yaml`, constitution Principle VIII):
-  - Availability: `99.9%`/tháng (áp dụng cả 7 service)
-  - Error-rate: `≤ 0.1%` mã 5xx (áp dụng cả 7 service)
+  - Availability: `99%`/tuần (áp dụng cả 7 service)
+  - Error-rate: `≤ 1%` mã 5xx (áp dụng cả 7 service)
   - Latency: `p95 150ms` / `p99 500ms` cho 6 service (`Baskets.Api`, `Gateway.Api`, `Identity.Api`,
     `Orders.Api`, `Parties.Api`, `Products.Api`)
   - Latency riêng `Bff.Api`: `p95 300ms` / `p99 800ms`
@@ -177,7 +177,7 @@ Kỳ vọng: `"total": 0`.
    ```
 
    Value format: **Percent**, 2 chữ số thập phân. Đổi tên cột (Label) thành:
-   `Error-rate — Thực tế (ngưỡng ≤ 0.1%, cả 7 service)`.
+   `Error-rate — Thực tế (ngưỡng ≤ 1%, cả 7 service)`.
 
 5. **Cột 2 — Latency p95**: thêm cột **Formula** mới:
 

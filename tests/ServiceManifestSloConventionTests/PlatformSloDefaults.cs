@@ -5,7 +5,8 @@ public sealed record SloProfile(string Availability, string MaxFiveXxRatio, stri
 
 /// <summary>
 /// The two platform-default SLO profiles from constitution Principle VIII ("Performance and
-/// Resilience Budgets") — mirrored here, not redefined. If the constitution's numbers ever change,
+/// Resilience Budgets", constitution 2.0.0: "99% weekly availability", "5xx responses below 1% of
+/// requests" — specs/029-error-budget-weekly) — mirrored here, not redefined. If the constitution's numbers ever change,
 /// this is the one place in the test suite that must be echoed (data-model.md § Hồ sơ mặc định nền
 /// tảng).
 /// </summary>
@@ -17,8 +18,8 @@ public static class PlatformSloDefaults
     public static readonly IReadOnlyDictionary<string, SloProfile> ByClassification = new Dictionary<string, SloProfile>
     {
         [ClientFacingBff] = new SloProfile(
-            Availability: "99.9%", MaxFiveXxRatio: "0.1%", LatencyP95: "300ms", LatencyP99: "800ms"),
+            Availability: "99%", MaxFiveXxRatio: "1%", LatencyP95: "300ms", LatencyP99: "800ms"),
         [InternalServiceApi] = new SloProfile(
-            Availability: "99.9%", MaxFiveXxRatio: "0.1%", LatencyP95: "150ms", LatencyP99: "500ms"),
+            Availability: "99%", MaxFiveXxRatio: "1%", LatencyP95: "150ms", LatencyP99: "500ms"),
     };
 }

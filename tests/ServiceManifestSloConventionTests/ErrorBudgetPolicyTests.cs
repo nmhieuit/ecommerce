@@ -3,17 +3,18 @@ using YamlDotNet.RepresentationModel;
 namespace ServiceManifestSloConventionTests;
 
 /// <summary>
-/// User Story 1 (spec 027, SCRUM-35): mọi service-manifest.yaml mang khối `error-budget-policy` định
-/// nghĩa ngân sách lỗi bằng con số — contracts/error-budget-policy-manifest-shape.md bất biến 1–7.
+/// User Story 1 (spec 027, SCRUM-35; chu kỳ tuần và tỷ lệ 1% theo spec 029): mọi service-manifest.yaml
+/// mang khối `error-budget-policy` định nghĩa ngân sách lỗi bằng con số —
+/// specs/029-error-budget-weekly/contracts/error-budget-policy-manifest-shape.md bất biến 1–7.
 /// </summary>
 public class ErrorBudgetPolicyTests
 {
-    /// <summary>4 ngân sách và giá trị bắt buộc của chúng — đúng bảng trong contract.</summary>
+    /// <summary>4 ngân sách và giá trị bắt buộc của chúng — đúng bảng trong contract (spec 029: khả dụng/5xx 1%).</summary>
     private static readonly IReadOnlyDictionary<string, (string BadRequest, string AllowedBadRatio)> ExpectedBudgets =
         new Dictionary<string, (string, string)>
         {
-            ["availability"] = ("http-5xx", "0.1%"),
-            ["error-rate"] = ("http-5xx", "0.1%"),
+            ["availability"] = ("http-5xx", "1%"),
+            ["error-rate"] = ("http-5xx", "1%"),
             ["latency-p95"] = ("slower-than-slo-p95", "5%"),
             ["latency-p99"] = ("slower-than-slo-p99", "1%"),
         };
@@ -54,10 +55,12 @@ public class ErrorBudgetPolicyTests
 
     /// <summary>
     /// Kiểm tra: `budgets` có đúng 4 khoá `availability`, `error-rate`, `latency-p95`, `latency-p99`,
-    /// mỗi khoá có `bad-request` và `allowed-bad-ratio` đúng giá trị của contract.
-    /// Lý do: FR-002 — "cạn" chỉ đo được khi mỗi ngân sách nói rõ request nào là xấu và được phép xấu
-    /// bao nhiêu; thiếu hoặc thừa một ngân sách là rule cảnh báo và chính sách nói hai điều khác nhau.
-    /// Task nguồn: spec 027 (chính sách ngân sách lỗi) — FR-002, US1 (bất biến 2).
+    /// mỗi khoá có `bad-request` và `allowed-bad-ratio` đúng giá trị của contract (khả dụng 1%, 5xx 1%,
+    /// p95 5%, p99 1%).
+    /// Lý do: FR-003 (spec 029) — "cạn" chỉ đo được khi mỗi ngân sách nói rõ request nào là xấu và được
+    /// phép xấu bao nhiêu; tỷ lệ khả dụng/5xx phải bằng 1 − SLO mới (99% / 1%), và thiếu hoặc thừa một
+    /// ngân sách là rule cảnh báo và chính sách nói hai điều khác nhau.
+    /// Task nguồn: spec 029 (ngân sách lỗi theo tuần lịch) — FR-003, US1 (bất biến 2).
     /// </summary>
     [Theory]
     [InlineData("parties")]
@@ -86,10 +89,10 @@ public class ErrorBudgetPolicyTests
     }
 
     /// <summary>
-    /// Kiểm tra: `window` là `calendar-month` và `timezone` là `UTC+07:00`.
-    /// Lý do: FR-003 — ngân sách đặt lại đầu tháng lịch theo giờ Việt Nam; một cửa sổ khác làm mức
-    /// tiêu hao trên manifest và trên rule lệch nhau ngay ở ngày đầu tháng.
-    /// Task nguồn: spec 027 (chính sách ngân sách lỗi) — FR-003, US1 (bất biến 3).
+    /// Kiểm tra: `window` là `calendar-week` và `timezone` là `UTC+07:00`.
+    /// Lý do: FR-001 — ngân sách đặt lại vào thứ Hai 00:00 giờ Việt Nam (tuần lịch thay tháng lịch của
+    /// 027); một cửa sổ khác làm mức tiêu hao trên manifest và trên rule lệch nhau ngay ở ngày đầu tuần.
+    /// Task nguồn: spec 029 (ngân sách lỗi theo tuần lịch) — FR-001, US1 (bất biến 3).
     /// </summary>
     [Theory]
     [InlineData("parties")]
@@ -99,12 +102,12 @@ public class ErrorBudgetPolicyTests
     [InlineData("identity")]
     [InlineData("gateway")]
     [InlineData("bff")]
-    public void EveryService_UsesACalendarMonthInVietnamTime(string serviceDirectoryName)
+    public void EveryService_UsesACalendarWeekInVietnamTime(string serviceDirectoryName)
     {
         var policy = RequirePolicy(serviceDirectoryName);
 
         // Assert.Equal(kỳ vọng, thực tế): xanh khi cửa sổ và múi giờ đúng nguyên văn contract.
-        Assert.Equal("calendar-month", policy.Window);
+        Assert.Equal("calendar-week", policy.Window);
         Assert.Equal("UTC+07:00", policy.Timezone);
     }
 

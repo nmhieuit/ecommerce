@@ -180,7 +180,7 @@ vốn đã đúng sẵn theo Quyết định 0 của research.md).
       phụ thuộc T011
       (**kết quả thực tế**: đối chiếu trực tiếp bằng truy vấn Elasticsearch thô [`traces-generic.otel-default`,
       `now-24h`] cho `Orders.Api` — tổng 9237 request, 1 lỗi 5xx → error-rate thật = 0.0108% [ngưỡng
-      0.1%, đạt]; p95 thật = 33.6ms [ngưỡng 150ms, đạt]; p99 thật = 393.4ms [ngưỡng 500ms, đạt, gần
+      1%, đạt]; p95 thật = 33.6ms [ngưỡng 150ms, đạt]; p99 thật = 393.4ms [ngưỡng 500ms, đạt, gần
       ngưỡng]. Khớp đúng phương pháp đối chiếu đã dùng khi build dashboard gốc)
 - [X] T013 [US3] Thực hiện [quickstart.md](./quickstart.md) Bước 4 — làm chậm có chủ đích một endpoint,
       xác nhận dashboard thể hiện rõ ngân sách bị tiêu hao (bất biến 4), rồi hoàn tác thay đổi làm

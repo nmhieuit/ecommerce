@@ -2,8 +2,9 @@
 
 `error-budget-rules.ndjson` là bản export thật (Kibana Saved Objects Export API) của 4 rule cảnh báo
 ngân sách lỗi (tag `slo-error-budget`) và connector Index mà rule `error-budget-100` dùng — đặc tả tại
-[`specs/027-error-budget-alerting/`](../../../specs/027-error-budget-alerting/spec.md), hợp đồng tại
-[`contracts/error-budget-alert-rules-contract.md`](../../../specs/027-error-budget-alerting/contracts/error-budget-alert-rules-contract.md).
+[`specs/027-error-budget-alerting/`](../../../specs/027-error-budget-alerting/spec.md), chu kỳ tuần lịch theo
+[`specs/029-error-budget-weekly/`](../../../specs/029-error-budget-weekly/spec.md), hợp đồng tại
+[`contracts/error-budget-alert-rules-contract.md`](../../../specs/029-error-budget-weekly/contracts/error-budget-alert-rules-contract.md).
 Đây là "mã nguồn" duy nhất của bộ rule được version-control; `tests/ServiceManifestSloConventionTests/ErrorBudgetRuleDefinitionTests.cs`
 đọc file này để kiểm tra ngưỡng trong rule luôn khớp `service-manifest.yaml`.
 
@@ -32,11 +33,11 @@ curl.exe -X POST "http://localhost:5601/api/saved_objects/_import?overwrite=true
 cho rule. Vào ☰ → **Stack Management** → **Rules**, lọc tag `slo-error-budget`, chọn cả 4 rule →
 **Enable**. Chưa enable thì không có cảnh báo nào bắn.
 
-Kiểm tra sau ~5 phút: mỗi rule phải có "Last run" mới. Đã gặp thật (2026-10-01): sau import, 2/4 rule
-đứng ở trạng thái `pending` mãi — task của chúng chạy đúng lúc rule đang bị tắt trong quá trình import nên
-Task Manager tự tắt task ("Disabling task … as it indicated it should disable itself"). Cách gỡ: **Disable**
-rồi **Enable** lại đúng rule đó. Lưu ý: việc này (cũng như sửa rule `error-budget-100`) có thể ghi thêm sự
-kiện `exhausted` cho các alert vừa chuyển sang active — xem `07-canh-bao-ngan-sach-loi.md`.
+Kiểm tra sau ~5 phút: mỗi rule phải có "Last run" mới. Rule có thể đứng ở trạng thái `pending` mãi sau
+import: task của nó chạy đúng lúc rule đang bị tắt trong quá trình import nên Task Manager tự tắt task
+("Disabling task … as it indicated it should disable itself"). Cách gỡ: **Disable** rồi **Enable** lại đúng
+rule đó. Lưu ý: việc này (cũng như có lúc khi sửa rule `error-budget-100`) có thể ghi thêm sự kiện
+`exhausted` cho các alert vừa chuyển sang active — xem `07-canh-bao-ngan-sach-loi.md`.
 
 ## Cách export lại (sau khi sửa rule trên UI)
 

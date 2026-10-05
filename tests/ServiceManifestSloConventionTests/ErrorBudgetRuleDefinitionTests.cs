@@ -5,9 +5,10 @@ using System.Text.RegularExpressions;
 namespace ServiceManifestSloConventionTests;
 
 /// <summary>
-/// User Story 2/3 (spec 027, SCRUM-35): bộ rule cảnh báo ngân sách lỗi đã export
-/// (`docs/kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson`) luôn khớp `service-manifest.yaml`
-/// — contracts/error-budget-alert-rules-contract.md bất biến 1–4. Rule sống trong Kibana, không nằm
+/// User Story 2/3 (spec 027, SCRUM-35; tuần lịch và tỷ lệ 1% theo spec 029): bộ rule cảnh báo ngân
+/// sách lỗi đã export (`docs/kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson`) luôn khớp
+/// `service-manifest.yaml` — specs/029-error-budget-weekly/contracts/error-budget-alert-rules-contract.md
+/// bất biến 1–4, 1b, 11–13. Rule sống trong Kibana, không nằm
 /// trong git; file export là bản duy nhất có thể kiểm tra trong CI, nên mọi lần sửa rule trên UI phải
 /// export lại — test này đỏ ngay khi rule và manifest nói hai con số khác nhau.
 /// Hình dạng ES|QL mà test dựa vào (các dòng `EVAL p95_ns = CASE(...)`, `allowed = CASE(...)`,
@@ -25,11 +26,11 @@ public partial class ErrorBudgetRuleDefinitionTests
         ["error-budget-100"] = 100,
     };
 
-    /// <summary>Tỷ lệ request xấu cho phép theo ngân sách — contract bất biến 4.</summary>
+    /// <summary>Tỷ lệ request xấu cho phép theo ngân sách — contract bất biến 4 (spec 029: khả dụng/5xx 0.01).</summary>
     private static readonly Dictionary<string, decimal> AllowedBadRatios = new Dictionary<string, decimal>
     {
-        ["availability"] = 0.001m,
-        ["error-rate"] = 0.001m,
+        ["availability"] = 0.01m,
+        ["error-rate"] = 0.01m,
         ["latency-p95"] = 0.05m,
         ["latency-p99"] = 0.01m,
     };
@@ -107,9 +108,10 @@ public partial class ErrorBudgetRuleDefinitionTests
 
     /// <summary>
     /// Kiểm tra: `allowed = CASE(budget == ..., tỷ lệ, ...)` trong truy vấn của mỗi rule mốc ánh xạ đúng
-    /// `availability`/`error-rate` → 0.001, `latency-p95` → 0.05, `latency-p99` → 0.01, không thừa không thiếu.
-    /// Lý do: FR-002 — tỷ lệ cho phép là mẫu số của mức tiêu hao; sai một chữ số là mức tiêu hao sai 10 lần.
-    /// Task nguồn: spec 027 (chính sách ngân sách lỗi) — FR-002, US2 (bất biến 4).
+    /// `availability`/`error-rate` → 0.01, `latency-p95` → 0.05, `latency-p99` → 0.01, không thừa không thiếu.
+    /// Lý do: FR-003 (spec 029) — tỷ lệ cho phép là mẫu số của mức tiêu hao; sai một chữ số là mức tiêu
+    /// hao sai 10 lần (đúng khoảng cách giữa 0.001 cũ và 0.01 mới).
+    /// Task nguồn: spec 029 (ngân sách lỗi theo tuần lịch) — FR-003, US2 (bất biến 4).
     /// </summary>
     [Theory]
     [InlineData("error-budget-50")]
@@ -129,10 +131,53 @@ public partial class ErrorBudgetRuleDefinitionTests
     }
 
     /// <summary>
+    /// Kiểm tra: ES|QL của mỗi rule mốc có đúng một điều kiện
+    /// `WHERE @timestamp >= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours` và không còn `1 month`.
+    /// Lý do: FR-001/FR-006 (spec 029) — mức tiêu hao chỉ tính request từ thứ Hai 00:00 giờ Việt Nam
+    /// của tuần hiện tại; biểu thức này đã kiểm chứng ra đúng thứ Hai 00:00 UTC+7 trên Elasticsearch
+    /// 9.4.4 (research.md V1). Còn sót `1 month` là rule vẫn tính theo tháng của 027.
+    /// Task nguồn: spec 029 (ngân sách lỗi theo tuần lịch) — FR-001, FR-006, US2 (bất biến 11).
+    /// </summary>
+    [Theory]
+    [InlineData("error-budget-50")]
+    [InlineData("error-budget-75")]
+    [InlineData("error-budget-100")]
+    public void ThresholdRule_StartsAtMondayMidnightVietnamTime(string ruleName)
+    {
+        var esql = Regex.Replace(RequireRule(ruleName).Esql, @"\s+", " ");
+
+        // Assert.Single(tập hợp): xanh khi truy vấn có đúng một điều kiện đầu tuần UTC+7.
+        Assert.Single(WeekStartFilter().Matches(esql));
+
+        // Assert.DoesNotContain(chuỗi con, chuỗi): xanh khi không còn ranh giới tháng của 027.
+        Assert.DoesNotContain("1 month", esql, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Kiểm tra: mỗi rule mốc có cửa sổ rule `timeWindowSize = 7`, `timeWindowUnit = d`.
+    /// Lý do: FR-006 (spec 029) — Kibana tự lọc `@timestamp` theo cửa sổ rule trước khi chạy ES|QL; một
+    /// tuần lịch dài tối đa 6 ngày 23 giờ 59 phút tính từ thứ Hai 00:00, nên 7 ngày đủ phủ đầu tuần
+    /// (research.md V2), còn cửa sổ ngắn hơn sẽ cắt hụt request đầu tuần mà không ai biết.
+    /// Task nguồn: spec 029 (ngân sách lỗi theo tuần lịch) — FR-006, US2 (bất biến 12).
+    /// </summary>
+    [Theory]
+    [InlineData("error-budget-50")]
+    [InlineData("error-budget-75")]
+    [InlineData("error-budget-100")]
+    public void ThresholdRule_LooksBackSevenDays(string ruleName)
+    {
+        var parameters = RequireRule(ruleName).Attributes.GetProperty("params");
+
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi cửa sổ rule đúng 7 ngày.
+        Assert.Equal(7, parameters.GetProperty("timeWindowSize").GetInt32());
+        Assert.Equal("d", parameters.GetProperty("timeWindowUnit").GetString());
+    }
+
+    /// <summary>
     /// Kiểm tra: kết quả ES|QL của mỗi rule mốc kết thúc bằng đúng `KEEP service, budget`.
     /// Lý do: FR-007 — Kibana ghép mã alert từ giá trị MỌI cột kết quả; thêm một cột số (vd
     /// `consumed_pct`) là mã alert đổi sau mỗi lần chạy, alert cũ "recovered" và alert mới mọc ra mỗi 5
-    /// phút thay vì giữ active liên tục (research.md "Hệ quả 2", đã xác minh trên Kibana 9.4.4 thật).
+    /// phút thay vì giữ active liên tục (specs/027-error-budget-alerting/research.md "Ràng buộc 2", đã xác minh trên Kibana 9.4.4 thật).
     /// Task nguồn: spec 027 (chính sách ngân sách lỗi) — FR-007, US2 (bất biến 1b).
     /// </summary>
     [Theory]
@@ -151,7 +196,7 @@ public partial class ErrorBudgetRuleDefinitionTests
     /// Kiểm tra: file export có rule `error-budget-frozen` chạy mỗi `5m`, tag `slo-error-budget`, và kết
     /// quả ES|QL chỉ giữ cột `service`.
     /// Lý do: FR-010/FR-011 — trạng thái "cạn ngân sách — ưu tiên độ tin cậy" chỉ tồn tại nếu rule này có
-    /// mặt; giữ thêm cột số là mã alert đổi mỗi lần chạy (research.md "Hệ quả 2").
+    /// mặt; giữ thêm cột số là mã alert đổi mỗi lần chạy (specs/027-error-budget-alerting/research.md "Ràng buộc 2").
     /// Task nguồn: spec 027 (chính sách ngân sách lỗi) — FR-010, FR-011, US3 (bất biến 1, 1b).
     /// </summary>
     [Fact]
@@ -168,6 +213,50 @@ public partial class ErrorBudgetRuleDefinitionTests
         // Assert.Equal(kỳ vọng, thực tế): xanh khi lệnh cuối của truy vấn chỉ giữ cột định danh alert.
         Assert.Equal("KEEP service", Regex.Replace(rule.Esql.Split('|').Last().Trim(), @"\s+", " "));
     }
+
+    /// <summary>
+    /// Kiểm tra: rule `error-budget-frozen` có cửa sổ rule `timeWindowSize = 14`, `timeWindowUnit = d`.
+    /// Lý do: FR-008 (spec 029) — rule đóng băng không có `WHERE @timestamp`, chỉ thấy sự kiện "cạn" và
+    /// ngày xấu nằm trong cửa sổ rule; 14 ngày (2 tuần) là con số người dùng chốt. Đóng băng kéo dài hơn
+    /// 14 ngày có thể tự mất — giới hạn đã biết, ghi ở technical-debt.
+    /// Task nguồn: spec 029 (ngân sách lỗi theo tuần lịch) — FR-008, US3 (bất biến 12).
+    /// </summary>
+    [Fact]
+    public void FrozenRule_LooksBackFourteenDays()
+    {
+        var parameters = RequireRule("error-budget-frozen").Attributes.GetProperty("params");
+
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi cửa sổ rule đúng 14 ngày.
+        Assert.Equal(14, parameters.GetProperty("timeWindowSize").GetInt32());
+        Assert.Equal("d", parameters.GetProperty("timeWindowUnit").GetString());
+    }
+
+    /// <summary>
+    /// Kiểm tra: điều kiện "ngày không đạt SLO" (`day_missed_slo`) của rule `error-budget-frozen` so 5xx
+    /// bằng `>= <tỷ lệ error-rate>`, vượt p95 bằng `> <tỷ lệ latency-p95>`, vượt p99 bằng
+    /// `> <tỷ lệ latency-p99>` — ba hằng số lấy từ `AllowedBadRatios`, không chép tay.
+    /// Lý do: FR-008 (spec 029) — hồi phục cần 3 ngày đạt SLO; ngưỡng ngày phải bằng SLO mới (5xx dưới
+    /// 1%), nếu còn 0.001 thì một ngày 5xx 0.5% vẫn bị tính là xấu và service không bao giờ hồi phục
+    /// đúng hạn.
+    /// Task nguồn: spec 029 (ngân sách lỗi theo tuần lịch) — FR-008, US3 (bất biến 13).
+    /// </summary>
+    [Fact]
+    public void FrozenRule_DailySloThresholdsMatchTheBudgets()
+    {
+        var esql = Regex.Replace(RequireRule("error-budget-frozen").Esql, @"\s+", " ");
+        var match = Regex.Match(esql, @"EVAL day_missed_slo = CASE\((?<body>.*?)\) \|");
+
+        // Assert.True(điều kiện, thông báo): xanh khi truy vấn có biểu thức `day_missed_slo`.
+        Assert.True(match.Success, "error-budget-frozen ES|QL has no 'EVAL day_missed_slo = CASE(...)'.");
+        var body = match.Groups["body"].Value;
+
+        // Assert.Contains(chuỗi con, chuỗi): xanh khi mỗi ngưỡng ngày bằng đúng tỷ lệ ngân sách tương ứng.
+        Assert.Contains($"TO_DOUBLE(bad_5xx) / spans >= {Format(AllowedBadRatios["error-rate"])}", body, StringComparison.Ordinal);
+        Assert.Contains($"TO_DOUBLE(bad_p95) / spans > {Format(AllowedBadRatios["latency-p95"])}", body, StringComparison.Ordinal);
+        Assert.Contains($"TO_DOUBLE(bad_p99) / spans > {Format(AllowedBadRatios["latency-p99"])}", body, StringComparison.Ordinal);
+    }
+
+    private static string Format(decimal ratio) => ratio.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Kiểm tra: rule `error-budget-100` có đúng một action loại Index (`.index`), chạy theo từng alert khi
@@ -292,6 +381,9 @@ public partial class ErrorBudgetRuleDefinitionTests
             $"'{service}': latency '{milliseconds}' is not in '<n>ms' form.");
         return decimal.Parse(milliseconds![..^2], CultureInfo.InvariantCulture) * 1_000_000m;
     }
+
+    [GeneratedRegex(@"WHERE @timestamp >= DATE_TRUNC\(1 week, NOW\(\) \+ 7 hours\) - 7 hours")]
+    private static partial Regex WeekStartFilter();
 
     [GeneratedRegex(@"WHERE\s+consumed_pct\s*>=\s*(?<n>\d+)")]
     private static partial Regex ThresholdFilter();

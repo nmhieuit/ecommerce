@@ -1,0 +1,76 @@
+<mxfile host="65bd71144e">
+    <diagram id="error-budget-weekly-component" name="Kiến trúc thành phần — ngân sách lỗi theo tuần lịch giờ Việt Nam, SLO 99%/1%">
+        <mxGraphModel dx="1500" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" value="Kiến trúc thành phần — một con số (99% / 1%), một chu kỳ (tuần lịch UTC+7) ở hiến chương, manifest, test, rule và dashboard" vertex="1">
+                    <mxGeometry height="26" width="1420" x="30" y="10" as="geometry"/>
+                </mxCell>
+                <mxCell id="constitution" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="Hiến chương 2.0.0 — Nguyên tắc VIII (sửa đổi MAJOR)&#xa;- 99% weekly availability.&#xa;- 5xx responses below 1% of requests.&#xa;(ngưỡng độ trễ giữ nguyên)" vertex="1">
+                    <mxGeometry height="90" width="470" x="30" y="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="manifests" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="7× service-manifest.yaml&#xa;slos: availability 99% (weekly) · max-5xx-ratio 1% · latency p95/p99 (giữ)&#xa;error-budget-policy:&#xa;  window: calendar-week (thứ Hai 00:00 → Chủ nhật 23:59) · timezone UTC+07:00&#xa;  4 ngân sách: availability 1% · error-rate 1% · latency-p95 5% · latency-p99 1%&#xa;  mốc [50%, 75%, 100%] · cạn = bất kỳ ngân sách nào 100% · hồi phục 3 ngày" vertex="1">
+                    <mxGeometry height="130" width="470" x="30" y="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="tests" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Test canh gác (CI, không cần stack)&#xa;PlatformSloDefaults 99%/1% → SloDefaultComplianceTests&#xa;ErrorBudgetPolicyTests: calendar-week, 1%/1%/5%/1%&#xa;ErrorBudgetRuleDefinitionTests: đầu tuần UTC+7, cửa sổ 7 d / 14 d,&#xa;  tỷ lệ 0.01, ngưỡng ngày đạt SLO = tỷ lệ ngân sách" vertex="1">
+                    <mxGeometry height="110" width="470" x="30" y="370" as="geometry"/>
+                </mxCell>
+                <mxCell id="otel" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="OTel Collector → Elasticsearch&#xa;traces-generic.otel-default*&#xa;(7 service, lỗi diễn tập tính như thật)" vertex="1">
+                    <mxGeometry height="70" width="380" x="560" y="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="events" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Index slo-error-budget-events (mapping keyword)&#xa;chỉ sự kiện từ tuần triển khai — sự kiện của chế độ tháng đã xoá" vertex="1">
+                    <mxGeometry height="70" width="380" x="560" y="370" as="geometry"/>
+                </mxCell>
+                <mxCell id="export" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Export trong repo (ndjson)&#xa;alerts/error-budget-rules.ndjson · incident-fast-detection-rule.ndjson&#xa;dashboards/slo-van-hanh-hang-ngay.ndjson" vertex="1">
+                    <mxGeometry height="70" width="380" x="560" y="520" as="geometry"/>
+                </mxCell>
+                <mxCell id="rules" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="Kibana — 4 rule ngân sách lỗi (mỗi 5 phút)&#xa;error-budget-50/75/100: WHERE @timestamp &gt;= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours&#xa;  cửa sổ rule 7 ngày · allowed 0.01 / 0.01 / 0.05 / 0.01 · alert theo (service, budget)&#xa;error-budget-frozen: cửa sổ 14 ngày · ngày không đạt khi 5xx ≥ 0.01&#xa;incident-fast-detection (028): 5xx ≥ 1% trong 5 phút" vertex="1">
+                    <mxGeometry height="130" width="440" x="1010" y="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="alerts" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Alerts-as-data&#xa;.alerts-stack.alerts-default" vertex="1">
+                    <mxGeometry height="60" width="440" x="1010" y="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="dashboard" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="Dashboard SLO hằng ngày (021) — sửa tạm, không tách (spec B)&#xa;3 panel &quot;Ngân sách lỗi tuần này&quot; (now-7d): mức tiêu hao · alert · cạn&#xa;panel text: 99%/tuần · nhãn cột Error-rate: ngưỡng &lt; 1%" vertex="1">
+                    <mxGeometry height="100" width="440" x="1010" y="350" as="geometry"/>
+                </mxCell>
+                <mxCell id="limit" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;dashed=1;" value="Giới hạn đã biết: đóng băng &gt; 14 ngày có thể tự mất;&#xa;lưu lượng thấp theo tuần làm vượt nhiều mốc trong một chu kỳ" vertex="1">
+                    <mxGeometry height="60" width="440" x="1010" y="520" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" edge="1" parent="1" source="constitution" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="manifests" value="mặc định nền tảng">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" edge="1" parent="1" source="tests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="manifests" value="canh">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" edge="1" parent="1" source="tests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="export" value="canh">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" edge="1" parent="1" source="otel" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="rules" value="span từ đầu tuần">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" edge="1" parent="1" source="manifests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="rules" value="ngưỡng độ trễ, tỷ lệ">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" edge="1" parent="1" source="rules" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="alerts" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" edge="1" parent="1" source="rules" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="events" value="rule 100: alert → active">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" edge="1" parent="1" source="events" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="rules" value="rule frozen đọc 14 ngày">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" edge="1" parent="1" source="alerts" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="dashboard" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e10" edge="1" parent="1" source="otel" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="dashboard" value="mức tiêu hao tuần">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e11" edge="1" parent="1" source="limit" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;strokeColor=#b85450;" target="rules" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

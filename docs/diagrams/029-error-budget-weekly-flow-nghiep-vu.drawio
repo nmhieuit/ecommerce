@@ -1,0 +1,61 @@
+<mxfile host="65bd71144e">
+    <diagram id="error-budget-weekly-flow" name="Luồng nghiệp vụ — ngân sách lỗi theo tuần: đầy lại mỗi thứ Hai, hệ quả và điều kiện thoát giữ nguyên">
+        <mxGraphModel dx="1500" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" value="Luồng nghiệp vụ — ngân sách lỗi theo tuần lịch giờ Việt Nam (thứ Hai 00:00 → Chủ nhật 23:59)" vertex="1">
+                    <mxGeometry height="26" width="1200" x="30" y="10" as="geometry"/>
+                </mxCell>
+                <mxCell id="s0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="Thứ Hai 00:00 (giờ Việt Nam)&#xa;ngân sách của mọi bộ phận đầy lại;&#xa;cảnh báo mốc của tuần trước tắt" vertex="1">
+                    <mxGeometry height="80" width="360" x="30" y="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="s1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=left;spacingLeft=6;" value="Bộ phận phục vụ khách hàng trong tuần&#xa;mỗi yêu cầu lỗi hoặc quá chậm &quot;tiêu&quot; một phần&#xa;ngân sách tuần (cam kết 99% khả dụng, lỗi dưới 1%)" vertex="1">
+                    <mxGeometry height="80" width="340" x="450" y="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="s2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=6;" value="Tiêu 50% rồi 75% ngân sách tuần&#xa;→ cảnh báo hiện ngay trên màn hình hằng ngày,&#xa;đội biết sớm ngay trong tuần" vertex="1">
+                    <mxGeometry height="90" width="380" x="850" y="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=left;spacingLeft=6;fontStyle=1;" value="Chạm 100% — &quot;cạn ngân sách&quot;&#xa;→ dừng đưa tính năng mới vào bộ phận đó,&#xa;chỉ làm việc nâng độ ổn định" vertex="1">
+                    <mxGeometry height="90" width="380" x="850" y="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="s4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;spacingLeft=6;" value="Đội sửa cho ổn định&#xa;mỗi ngày đạt cam kết (lỗi dưới 1%, độ trễ trong&#xa;ngân sách) hoặc không có lượt dùng được tính là đạt" vertex="1">
+                    <mxGeometry height="90" width="340" x="450" y="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="s5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=left;spacingLeft=6;" value="Đủ 3 ngày liên tiếp đạt cam kết&#xa;→ rời danh sách &quot;cạn&quot;, được làm tính năng mới&#xa;trở lại — kể cả khi tuần chưa kết thúc" vertex="1">
+                    <mxGeometry height="90" width="360" x="30" y="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="s6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;dashed=1;" value="Sang thứ Hai mà chưa đủ 3 ngày:&#xa;ngân sách đầy lại nhưng KHÔNG tự &quot;xoá án&quot; —&#xa;vẫn ở trạng thái cạn tới khi đủ 3 ngày" vertex="1">
+                    <mxGeometry height="80" width="380" x="850" y="370" as="geometry"/>
+                </mxCell>
+                <mxCell id="s7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Diễn tập chủ động gây lỗi cũng tiêu ngân sách tuần như sự cố thật;&#xa;cam kết 99% / 1% và chu kỳ tuần ghi trong quy tắc chung (bản 2.0.0)" vertex="1">
+                    <mxGeometry height="80" width="420" x="30" y="370" as="geometry"/>
+                </mxCell>
+                <mxCell id="e0" edge="1" parent="1" source="s0" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="s1" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" edge="1" parent="1" source="s1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="s2" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" edge="1" parent="1" source="s2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="s3" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" edge="1" parent="1" source="s3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="s4" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" edge="1" parent="1" source="s4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="s5" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" edge="1" parent="1" source="s3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="s6" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" edge="1" parent="1" source="s6" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="s4" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" edge="1" parent="1" source="s7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="s1" value="">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
