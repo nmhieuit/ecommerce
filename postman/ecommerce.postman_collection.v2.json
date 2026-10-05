@@ -9146,7 +9146,7 @@
     },
     {
       "name": "21 - Đo SLO trên Elasticsearch (dashboard SLO)",
-      "description": "## Bức tranh tổng thể\n\nSpec 021 yêu cầu mỗi service khai báo 4 chỉ tiêu SLO (p95, p99, tỷ lệ lỗi, độ khả dụng) và PHẢI đo được LIÊN TỤC từ dữ liệu vận hành thật, không phải một con số tĩnh nhập tay (FR-001/FR-004). Folder này không gọi API \"đo SLO\" nào cả (vì bản thân phép đo SLO là một DASHBOARD Kibana, không phải 1 endpoint) — mà tự tay chạy LẠI đúng công thức Elasticsearch mà dashboard `SLO vận hành hằng ngày — 7 service` dùng (error-rate, p95, p99 từ `traces-generic.otel-default*`), để có con số CHÍNH XÁC đối chiếu, và để phát hiện 1 lỗ hổng tinh tế mà dashboard không tự lộ ra: service KHÔNG CÓ TRAFFIC THẬT vẫn có thể hiện \"0% lỗi\" (một con số GÂY HIỂU LẦM là đang đạt ngân sách) chỉ vì vẫn có các request health-probe định kỳ — đúng ra phải hiển thị \"không có dữ liệu\" (FR-006, một phát hiện QA_Debt thật).\n\nChạy bước 01-03 khi `baskets-api` BẬT (baseline khoẻ), TẮT `baskets-api` rồi chạy 04-07 (suy giảm + phát hiện idle), BẬT lại rồi chạy 08 (phục hồi).\n\n---\n\nKiểm chứng spec 021 phần 'đo liên tục': cùng phép tính của dashboard `SLO vận hành hằng ngày — 7 service` (error-rate, p95, p99 từ `traces-generic.otel-default*`) nhưng chạy bằng request ES để có số chính xác. Chạy bước 01 → 03 khi `baskets-api` BẬT, TẮT `baskets-api` (`docker compose -f docker-compose.local.yml stop baskets-api`) rồi chạy 04 → 07, BẬT lại rồi chạy 08. Cần Elasticsearch + otel-collector + Kibana và token từ folder '00 - Xác thực & phân quyền'. Bước 06 chứng minh phát hiện QA_Debt: service idle vẫn có span probe nên dashboard hiện 0% lỗi thay vì 'không có dữ liệu'.",
+      "description": "## Bức tranh tổng thể\n\nSpec 021 yêu cầu mỗi service khai báo 4 chỉ tiêu SLO (p95, p99, tỷ lệ lỗi, độ khả dụng) và PHẢI đo được LIÊN TỤC từ dữ liệu vận hành thật, không phải một con số tĩnh nhập tay (FR-001/FR-004). Folder này không gọi API \"đo SLO\" nào cả (vì bản thân phép đo SLO là một DASHBOARD Kibana, không phải 1 endpoint) — mà tự tay chạy LẠI đúng công thức Elasticsearch mà dashboard `Xử lý sự cố — 7 service` dùng (error-rate, p95, p99 từ `traces-generic.otel-default*`), để có con số CHÍNH XÁC đối chiếu, và để phát hiện 1 lỗ hổng tinh tế mà dashboard không tự lộ ra: service KHÔNG CÓ TRAFFIC THẬT vẫn có thể hiện \"0% lỗi\" (một con số GÂY HIỂU LẦM là đang đạt ngân sách) chỉ vì vẫn có các request health-probe định kỳ — đúng ra phải hiển thị \"không có dữ liệu\" (FR-006, một phát hiện QA_Debt thật).\n\nChạy bước 01-03 khi `baskets-api` BẬT (baseline khoẻ), TẮT `baskets-api` rồi chạy 04-07 (suy giảm + phát hiện idle), BẬT lại rồi chạy 08 (phục hồi).\n\n---\n\nKiểm chứng spec 021 phần 'đo liên tục': cùng phép tính của dashboard `Xử lý sự cố — 7 service` (error-rate, p95, p99 từ `traces-generic.otel-default*`) nhưng chạy bằng request ES để có số chính xác. Chạy bước 01 → 03 khi `baskets-api` BẬT, TẮT `baskets-api` (`docker compose -f docker-compose.local.yml stop baskets-api`) rồi chạy 04 → 07, BẬT lại rồi chạy 08. Cần Elasticsearch + otel-collector + Kibana và token từ folder '00 - Xác thực & phân quyền'. Bước 06 chứng minh phát hiện QA_Debt: service idle vẫn có span probe nên dashboard hiện 0% lỗi thay vì 'không có dữ liệu'.",
       "item": [
         {
           "name": "01 Dashboard SLO đã có trong Kibana (điều kiện tiên quyết)",
@@ -9162,7 +9162,7 @@
               "type": "noauth"
             },
             "url": {
-              "raw": "{{kibanaUrl}}/api/saved_objects/dashboard/e2e06ff5-9cdf-4bea-acc8-5fd60ce26170",
+              "raw": "{{kibanaUrl}}/api/saved_objects/dashboard/e61fc7f3-17fe-428a-a373-da88af0a4a1e",
               "host": [
                 "{{kibanaUrl}}"
               ],
@@ -9170,10 +9170,10 @@
                 "api",
                 "saved_objects",
                 "dashboard",
-                "e2e06ff5-9cdf-4bea-acc8-5fd60ce26170"
+                "e61fc7f3-17fe-428a-a373-da88af0a4a1e"
               ]
             },
-            "description": "**Mục đích**: xác nhận dashboard `SLO vận hành hằng ngày — 7 service` thực sự tồn tại trong Kibana (không chỉ là ý định thiết kế) — điều kiện tiên quyết để FR-004 (\"tra cứu giá trị đo liên tục\") có nơi để tra cứu.\n\n**Input**: `GET {{kibanaUrl}}/api/saved_objects/dashboard/e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`.\n\n**Output kỳ vọng**: `200`; `attributes.title` chứa `'SLO vận hành hằng ngày'`.\n\n**Vì sao cần bước này**: nếu dashboard không tồn tại (bị xoá nhầm, hoặc chưa import), FR-004 không thể thoả bất kể các phép tính Elasticsearch ở các bước sau có đúng hay không — người vận hành cần MỘT điểm tra cứu duy nhất, không phải tự viết query.\n\n---\n\nDashboard `SLO vận hành hằng ngày — 7 service` phải đã được import từ `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`. Nếu 404: xem lệnh import trong doc QA 021."
+            "description": "**Mục đích**: xác nhận dashboard `Xử lý sự cố — 7 service` thực sự tồn tại trong Kibana (không chỉ là ý định thiết kế) — điều kiện tiên quyết để FR-004 (\"tra cứu giá trị đo liên tục\") có nơi để tra cứu.\n\n**Input**: `GET {{kibanaUrl}}/api/saved_objects/dashboard/e61fc7f3-17fe-428a-a373-da88af0a4a1e`.\n\n**Output kỳ vọng**: `200`; `attributes.title` chứa `'Xử lý sự cố'`.\n\n**Vì sao cần bước này**: nếu dashboard không tồn tại (bị xoá nhầm, hoặc chưa import), FR-004 không thể thoả bất kể các phép tính Elasticsearch ở các bước sau có đúng hay không — người vận hành cần MỘT điểm tra cứu duy nhất, không phải tự viết query.\n\n---\n\nDashboard `Xử lý sự cố — 7 service` phải đã được import từ `docs/kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson`. Nếu 404: xem lệnh import trong doc QA 021."
           },
           "event": [
             {
@@ -9183,7 +9183,7 @@
                 "exec": [
                   "pm.test(\"200 và đúng tên dashboard\", function () {",
                   "    pm.response.to.have.status(200);",
-                  "    pm.expect(pm.response.json().attributes.title).to.include('SLO vận hành hằng ngày');",
+                  "    pm.expect(pm.response.json().attributes.title).to.include('Xử lý sự cố');",
                   "});"
                 ]
               }
@@ -12020,7 +12020,7 @@
         },
         {
           "name": "27c - Cảnh báo và trạng thái cạn (Kibana)",
-          "description": "Chạy sau 27b, chờ tối đa 5 phút (chu kỳ rule). Cùng dữ liệu mà 3 panel 'Ngân sách lỗi tuần này' trên dashboard SLO hằng ngày hiển thị.",
+          "description": "Chạy sau 27b, chờ tối đa 5 phút (chu kỳ rule). Cùng dữ liệu mà 3 panel 'Ngân sách lỗi tuần này' trên dashboard Ngân sách lỗi tuần hiển thị.",
           "item": [
             {
               "name": "01 Kibana Alerting có khoá mã hoá (FR-008)",
@@ -12170,7 +12170,7 @@
                     "_query"
                   ]
                 },
-                "description": "**Mục đích**: đây là bước CHỐT của cả folder — xác nhận khi ngân sách đã cạn (100%), hệ thống thể hiện RÕ RÀNG trạng thái CHÍNH SÁCH (không chỉ số liệu %) rằng Orders.Api đang \"cạn ngân sách — ưu tiên độ tin cậy\" — trạng thái mà theo FR-009, PHẢI khiến đội vận hành DỪNG MERGE tính năng mới vào service này.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), lọc alert có `kibana.alert.rule.name == 'error-budget-frozen'` và `status == 'active'`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao đây là bước chốt của cả folder/spec 027**: đây là MỤC ĐÍCH CUỐI CÙNG của toàn bộ ngân sách lỗi — không chỉ \"biết % tiêu hao\" (bước 02) hay \"có cảnh báo kỹ thuật\" (bước 03), mà là một TÍN HIỆU NGHIỆP VỤ RÕ RÀNG, hiển thị ngay trên dashboard SLO hằng ngày (FR-011), trả lời được câu hỏi SC-004 \"ai dừng, dừng cái gì, khi nào được tiếp tục\" chỉ bằng cách đọc đúng trạng thái này, không cần tra thêm tài liệu nào khác.\n\n---\n\nSau khi alert 100 bật, Orders.Api xuất hiện ở đây trong lượt rule error-budget-frozen kế tiếp."
+                "description": "**Mục đích**: đây là bước CHỐT của cả folder — xác nhận khi ngân sách đã cạn (100%), hệ thống thể hiện RÕ RÀNG trạng thái CHÍNH SÁCH (không chỉ số liệu %) rằng Orders.Api đang \"cạn ngân sách — ưu tiên độ tin cậy\" — trạng thái mà theo FR-009, PHẢI khiến đội vận hành DỪNG MERGE tính năng mới vào service này.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), lọc alert có `kibana.alert.rule.name == 'error-budget-frozen'` và `status == 'active'`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao đây là bước chốt của cả folder/spec 027**: đây là MỤC ĐÍCH CUỐI CÙNG của toàn bộ ngân sách lỗi — không chỉ \"biết % tiêu hao\" (bước 02) hay \"có cảnh báo kỹ thuật\" (bước 03), mà là một TÍN HIỆU NGHIỆP VỤ RÕ RÀNG, hiển thị ngay trên dashboard Ngân sách lỗi tuần (FR-011), trả lời được câu hỏi SC-004 \"ai dừng, dừng cái gì, khi nào được tiếp tục\" chỉ bằng cách đọc đúng trạng thái này, không cần tra thêm tài liệu nào khác.\n\n---\n\nSau khi alert 100 bật, Orders.Api xuất hiện ở đây trong lượt rule error-budget-frozen kế tiếp."
               },
               "event": [
                 {
@@ -12557,7 +12557,7 @@
         },
         {
           "name": "29b - Trạng thái ngân sách tuần (chạy một lần)",
-          "description": "Chạy sau mỗi đợt 29a, chờ tối đa 5 phút (chu kỳ rule). Cùng dữ liệu mà 3 panel 'Ngân sách lỗi tuần này' trên dashboard SLO hằng ngày hiển thị.",
+          "description": "Chạy sau mỗi đợt 29a, chờ tối đa 5 phút (chu kỳ rule). Cùng dữ liệu mà 3 panel 'Ngân sách lỗi tuần này' trên dashboard Ngân sách lỗi tuần hiển thị.",
           "item": [
             {
               "name": "01 Mức tiêu hao ngân sách tuần này — 7 service × 4 ngân sách (FR-001, FR-003)",
@@ -12585,7 +12585,7 @@
                     "_query"
                   ]
                 },
-                "description": "**Mục đích**: đọc mức tiêu hao (%) của cả 4 ngân sách × 7 service trong TUẦN LỊCH hiện tại — cùng truy vấn với panel \"Ngân sách lỗi tuần này — mức tiêu hao (%)\" trên dashboard SLO hằng ngày và với 3 rule mốc.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), cửa sổ từ thứ Hai 00:00 giờ Việt Nam (`DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours`), tỷ lệ cho phép khả dụng 1%, 5xx 1%, p95 5%, p99 1%.\n\n**Output kỳ vọng**: `200`, mỗi service có traffic 4 hàng; cột `moc` cho biết mốc đã vượt.\n\n**Vì sao chứng minh đúng FR-001/FR-003 (spec 029)**: mẫu số chỉ gồm request từ đầu tuần giờ Việt Nam (không phải 7 ngày trượt, không phải tháng), tỷ lệ là 1 − SLO mới 99%/1%.\n\n---\n\nChạy sau mỗi đợt `29a`; `consumed_pct` ≥ 50 / 75 / 100 thì alert mốc tương ứng phải bật trong ≤ 5 phút (bước 02)."
+                "description": "**Mục đích**: đọc mức tiêu hao (%) của cả 4 ngân sách × 7 service trong TUẦN LỊCH hiện tại — cùng truy vấn với panel \"Ngân sách lỗi tuần này — mức tiêu hao (%)\" trên dashboard Ngân sách lỗi tuần và với 3 rule mốc.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), cửa sổ từ thứ Hai 00:00 giờ Việt Nam (`DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours`), tỷ lệ cho phép khả dụng 1%, 5xx 1%, p95 5%, p99 1%.\n\n**Output kỳ vọng**: `200`, mỗi service có traffic 4 hàng; cột `moc` cho biết mốc đã vượt.\n\n**Vì sao chứng minh đúng FR-001/FR-003 (spec 029)**: mẫu số chỉ gồm request từ đầu tuần giờ Việt Nam (không phải 7 ngày trượt, không phải tháng), tỷ lệ là 1 − SLO mới 99%/1%.\n\n---\n\nChạy sau mỗi đợt `29a`; `consumed_pct` ≥ 50 / 75 / 100 thì alert mốc tương ứng phải bật trong ≤ 5 phút (bước 02)."
               },
               "event": [
                 {
@@ -12679,6 +12679,780 @@
                     "exec": [
                       "pm.test(\"200 — truy vấn chạy được\", function () {",
                       "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "30 - Hai dashboard: tạo lỗi và đối chiếu số liệu",
+      "description": "## Bức tranh tổng thể\n\nSpec 030 tách dashboard SLO cũ thành hai dashboard: **`Xử lý sự cố — 7 service`** (mọi panel theo thanh thời gian) và **`Ngân sách lỗi tuần — 7 service`** (cố định tuần lịch giờ Việt Nam, có điều khiển chọn tuần). Folder này gồm hai phần:\n\n- `30a`: tạo lỗi và traffic để dashboard Xử lý sự cố có số (chạy theo vòng).\n- `30b`: truy vấn đọc ngân sách tuần để đối chiếu số trên dashboard Ngân sách tuần với Elasticsearch (chạy một lần).\n\nChi tiết: `specs/030-incident-and-weekly-dashboards/quickstart.md`.",
+      "item": [
+        {
+          "name": "30a - Tạo lỗi + traffic cho Xử lý sự cố (chạy theo vòng)",
+          "description": "Cờ `CHAOS_ALLOW_FAULT_INJECTION` (bước 01–07) và `CHAOS_ALLOW_LATENCY_INJECTION` (bước 14) BẬT. Chạy nhiều vòng (`-n`) để các panel của dashboard `Xử lý sự cố — 7 service` có số: 5xx 7 service, 401/403, lời gọi hạ lưu (span Client) và span chậm. Thứ tự bước 09 → 10 và 11 → 12–13 cố định (bước 10 dùng token của bước 09; bước 12–13 dùng token của bước 11).",
+          "item": [
+            {
+              "name": "01 Gateway.Api — X-Chaos-Fault: 5xx → 500 (FR-002, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/health/live",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Gateway.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{gatewayUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Bff.Api — X-Chaos-Fault: 5xx → 500 (FR-002, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{bffUrl}}/health/live",
+                  "host": [
+                    "{{bffUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Bff.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{bffUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 Products.Api — X-Chaos-Fault: 5xx → 500 (FR-002, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{productsUrl}}/health/live",
+                  "host": [
+                    "{{productsUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Products.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{productsUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "04 Baskets.Api — X-Chaos-Fault: 5xx → 500 (FR-002, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{basketsUrl}}/health/live",
+                  "host": [
+                    "{{basketsUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Baskets.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{basketsUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "05 Orders.Api — X-Chaos-Fault: 5xx → 500 (FR-002, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Orders.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{ordersUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "06 Parties.Api — X-Chaos-Fault: 5xx → 500 (FR-002, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{partiesUrl}}/health/live",
+                  "host": [
+                    "{{partiesUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Parties.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{partiesUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "07 Identity.Api — X-Chaos-Fault: 5xx → 500 (FR-002, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Fault",
+                    "value": "5xx"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{identityUrl}}/health/live",
+                  "host": [
+                    "{{identityUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{identityUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"500 — lỗi tiêm vào\", function () {",
+                      "    pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "08 Không token → 401 (panel Traffic + 401/403, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{basketsUrl}}/baskets/current",
+                  "host": [
+                    "{{basketsUrl}}"
+                  ],
+                  "path": [
+                    "baskets",
+                    "current"
+                  ]
+                },
+                "description": "**Mục đích**: tạo một phản hồi `401` thật để panel \"Traffic + 401/403 theo phút theo service\" có chuỗi 401.\n\n**Input**: `GET {{basketsUrl}}/baskets/current` không token.\n\n**Output kỳ vọng**: `401`.\n\n**FR (spec 030)**: FR-003 (panel Traffic + 401/403 thay panel \"Tổng 401 + 403\" cũ)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"401 — chưa xác thực\", function () {",
+                      "    pm.response.to.have.status(401);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "09 Lấy access token KHÔNG có scope ecommerce-api (chuẩn bị cho bước 10)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded"
+                  },
+                  {
+                    "key": "Host",
+                    "value": "{{identityInternalHost}}",
+                    "description": "BẮT BUỘC — cùng lý do đã giải thích ở request \"01 Lấy access token\": không có header này thì token mang iss=localhost:5205, mọi service sẽ 401 thay vì 403 như bài test này cần chứng minh."
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "grant_type",
+                      "value": "password",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "{{tokenClientId}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_secret",
+                      "value": "{{tokenClientSecret}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{testUsername}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{testPassword}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "scope",
+                      "value": "openid profile",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{identityUrl}}/connect/token",
+                  "host": [
+                    "{{identityUrl}}"
+                  ],
+                  "path": [
+                    "connect",
+                    "token"
+                  ]
+                },
+                "description": "Dùng riêng cho bước 10: token hợp lệ nhưng thiếu scope để tạo phản hồi 403 (cùng cách folder `00 - Xác thực`, bước 03). Lưu token vào biến `accessTokenNoScope`."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"trả về 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.environment.set('accessTokenNoScope', pm.response.json().access_token);"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "10 Token thiếu scope → 401/403 (panel Traffic + 401/403, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessTokenNoScope}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{basketsUrl}}/baskets/current",
+                  "host": [
+                    "{{basketsUrl}}"
+                  ],
+                  "path": [
+                    "baskets",
+                    "current"
+                  ]
+                },
+                "description": "**Mục đích**: tạo phản hồi từ chối (403 khi stack nhận token đúng issuer, 401 nếu không) để panel \"Traffic + 401/403 theo phút theo service\" có chuỗi 401/403.\n\n**Input**: `GET {{basketsUrl}}/baskets/current` kèm token thiếu scope (bước 09), header tenant/subject.\n\n**Output kỳ vọng**: `403` hoặc `401` (cả hai thuộc nhóm panel 401/403; stack local hiện trả `401`, đã ghi ở QA_Debt).\n\n**FR (spec 030)**: FR-003."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"401 hoặc 403 — bị từ chối\", function () {",
+                      "    pm.expect([401, 403]).to.include(pm.response.code);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11 Lấy access token (đủ scope ecommerce-api, chuẩn bị cho bước 12–13)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-www-form-urlencoded"
+                  },
+                  {
+                    "key": "Host",
+                    "value": "{{identityInternalHost}}",
+                    "description": "BẮT BUỘC — xem phần \"Vì sao có header Host\" trong mô tả bên dưới. Không xoá header này."
+                  }
+                ],
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "grant_type",
+                      "value": "password",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_id",
+                      "value": "{{tokenClientId}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "client_secret",
+                      "value": "{{tokenClientSecret}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "username",
+                      "value": "{{testUsername}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{testPassword}}",
+                      "type": "text"
+                    },
+                    {
+                      "key": "scope",
+                      "value": "openid profile ecommerce-api",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{identityUrl}}/connect/token",
+                  "host": [
+                    "{{identityUrl}}"
+                  ],
+                  "path": [
+                    "connect",
+                    "token"
+                  ]
+                },
+                "description": "Dùng cho bước 12–13 (đi qua gateway/BFF cần token hợp lệ). Lưu token vào biến `accessToken` như folder `00 - Xác thực`, bước 01."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"trả về 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"có access_token\", function () {",
+                      "    pm.expect(pm.response.json()).to.have.property('access_token');",
+                      "});",
+                      "",
+                      "pm.environment.set('accessToken', pm.response.json().access_token);"
+                    ]
+                  }
+                }
+              ],
+              "response": []
+            },
+            {
+              "name": "12 Qua gateway → BFF → Products: sinh span Client (lỗi gọi hạ lưu, FR-005)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/products",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "products"
+                  ]
+                },
+                "description": "**Mục đích**: tạo lời gọi service → service thật (gateway → BFF → Products) để có span `Client` cho panel \"Lỗi gọi hạ lưu — cặp service gọi → đích\". Chạy nhiều vòng cùng folder.\n\n**Input**: `GET {{gatewayUrl}}/bff/products`.\n\n**Output kỳ vọng**: `200`.\n\n**FR (spec 030)**: FR-005."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — luồng hạ lưu chạy\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "13 Qua gateway → BFF → Baskets: sinh span Client (lỗi gọi hạ lưu, FR-005)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/basket",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "basket"
+                  ]
+                },
+                "description": "**Mục đích**: thêm một đường gọi hạ lưu khác (gateway → BFF → Baskets) để panel hạ lưu có nhiều cặp.\n\n**Input**: `GET {{gatewayUrl}}/bff/basket`.\n\n**Output kỳ vọng**: `200`.\n\n**FR (spec 030)**: FR-005."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — luồng hạ lưu chạy\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "14 Orders.Api — X-Chaos-Latency-Ms: 2500 → span chậm (panel p95, FR-003)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "2500"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/live",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                },
+                "description": "**Mục đích**: tạo một span chậm (~2,5 giây) ở Orders.Api để panel \"Latency p95 theo phút theo service\" và bảng SLO vượt ngưỡng.\n\n**Input**: `GET {{ordersUrl}}/health/live`, header `X-Chaos-Latency-Ms: 2500`. Cần `CHAOS_ALLOW_LATENCY_INJECTION=true` và đã tạo lại container (spec 025).\n\n**Output kỳ vọng**: `200` sau ~2,5 giây (cờ TẮT thì trả nhanh, header bị bỏ qua).\n\n**FR (spec 030)**: FR-003."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "30b - Đối chiếu ngân sách tuần (chạy một lần)",
+          "description": "Truy vấn đọc (không tạo dữ liệu) để đối chiếu số trên dashboard `Ngân sách lỗi tuần — 7 service` với Elasticsearch. Chạy một lần, sau một đợt `30a` hoặc `29a`. Đổi tham số `tuan_chon` trong thân yêu cầu để xem tuần khác.",
+          "item": [
+            {
+              "name": "01 Mức tiêu hao ngân sách — tuần đã chọn, 7 service × 4 ngân sách (FR-008)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL week_start = CASE(?tuan_chon == \\\"Tuần này\\\", t0, ?tuan_chon == \\\"Tuần trước\\\", t0 - 7 days, ?tuan_chon == \\\"2 tuần trước\\\", t0 - 14 days, t0 - 21 days)\\n| WHERE @timestamp >= week_start AND @timestamp < week_start + 7 days\\n| EVAL service = resource.attributes.service.name\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 300000000, 150000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 800000000, 500000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service\\n| EVAL budget = [\\\"availability\\\", \\\"error-rate\\\", \\\"latency-p95\\\", \\\"latency-p99\\\"]\\n| MV_EXPAND budget\\n| EVAL bad = CASE(budget == \\\"latency-p95\\\", bad_p95, budget == \\\"latency-p99\\\", bad_p99, bad_5xx)\\n| EVAL allowed = CASE(budget == \\\"availability\\\", 0.01, budget == \\\"error-rate\\\", 0.01, budget == \\\"latency-p95\\\", 0.05, budget == \\\"latency-p99\\\", 0.01)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad) / total / allowed * 100.0, 2)\\n| EVAL moc = CASE(consumed_pct >= 100, \\\"100% - CẠN\\\", consumed_pct >= 75, \\\"75%\\\", consumed_pct >= 50, \\\"50%\\\", \\\"dưới 50%\\\")\\n| KEEP service, budget, consumed_pct, moc\\n| SORT consumed_pct DESC, service, budget\",\n  \"params\": [\n    {\n      \"tuan_chon\": \"Tuần này\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: đọc mức tiêu hao (%) của 4 ngân sách × 7 service trong TUẦN LỊCH đã chọn — cùng truy vấn với panel \"Mức tiêu hao ngân sách (%) — tuần đã chọn\" của dashboard `Ngân sách lỗi tuần — 7 service`, để đối chiếu số dashboard với Elasticsearch.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL) với tham số `tuan_chon` = `Tuần này` (đổi thành `Tuần trước`, `2 tuần trước`, `3 tuần trước` để xem tuần khác).\n\n**Output kỳ vọng**: `200`; mỗi service có traffic 4 hàng (`availability`, `error-rate`, `latency-p95`, `latency-p99`); `consumed_pct` khớp dashboard cùng thời điểm.\n\n**FR (spec 030)**: FR-008, SC-003."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"có cột consumed_pct\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('consumed_pct');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Hạn mức còn lại — tuần đã chọn: % còn lại và số request xấu còn được phép (FR-010)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL week_start = CASE(?tuan_chon == \\\"Tuần này\\\", t0, ?tuan_chon == \\\"Tuần trước\\\", t0 - 7 days, ?tuan_chon == \\\"2 tuần trước\\\", t0 - 14 days, t0 - 21 days)\\n| WHERE @timestamp >= week_start AND @timestamp < week_start + 7 days\\n| EVAL service = resource.attributes.service.name\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 300000000, 150000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 800000000, 500000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service\\n| EVAL budget = [\\\"availability\\\", \\\"error-rate\\\", \\\"latency-p95\\\", \\\"latency-p99\\\"]\\n| MV_EXPAND budget\\n| EVAL bad = CASE(budget == \\\"latency-p95\\\", bad_p95, budget == \\\"latency-p99\\\", bad_p99, bad_5xx)\\n| EVAL allowed = CASE(budget == \\\"availability\\\", 0.01, budget == \\\"error-rate\\\", 0.01, budget == \\\"latency-p95\\\", 0.05, budget == \\\"latency-p99\\\", 0.01)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad) / total / allowed * 100.0, 2)\\n| EVAL remaining_pct = ROUND(100.0 - consumed_pct, 2), remaining_requests = TO_LONG(FLOOR(allowed * total - bad))\\n| KEEP service, budget, remaining_pct, remaining_requests\\n| SORT remaining_pct ASC, service, budget\",\n  \"params\": [\n    {\n      \"tuan_chon\": \"Tuần này\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: đọc hạn mức còn lại của từng ngân sách × service trong tuần đã chọn: `remaining_pct = 100 − consumed_pct` và `remaining_requests = FLOOR(tỷ lệ cho phép × tổng request tuần tới giờ − số request xấu đã có)` (âm nghĩa là đã vượt).\n\n**Input**: `POST {{elasticsearchUrl}}/_query`, tham số `tuan_chon` như bước 01.\n\n**Output kỳ vọng**: `200`; cột `remaining_pct`, `remaining_requests`.\n\n**FR (spec 030)**: FR-010."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"có cột remaining_pct và remaining_requests\", function () {",
+                      "    const cols = pm.response.json().columns.map(c => c.name);",
+                      "    pm.expect(cols).to.include.members(['remaining_pct', 'remaining_requests']);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 Tiêu hao lũy kế theo ngày từ thứ Hai — mức cao nhất trong 4 ngân sách (FR-008)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL week_start = CASE(?tuan_chon == \\\"Tuần này\\\", t0, ?tuan_chon == \\\"Tuần trước\\\", t0 - 7 days, ?tuan_chon == \\\"2 tuần trước\\\", t0 - 14 days, t0 - 21 days)\\n| WHERE @timestamp >= week_start AND @timestamp < week_start + 7 days\\n| EVAL service = resource.attributes.service.name\\n| EVAL day_idx = DATE_DIFF(\\\"day\\\", week_start, @timestamp), as_of = [0, 1, 2, 3, 4, 5, 6]\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 300000000, 150000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 800000000, 500000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| MV_EXPAND as_of\\n| WHERE day_idx <= as_of\\n| EVAL day = CASE(as_of == 0, week_start, as_of == 1, week_start + 1 day, as_of == 2, week_start + 2 days, as_of == 3, week_start + 3 days, as_of == 4, week_start + 4 days, as_of == 5, week_start + 5 days, week_start + 6 days)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY day, service\\n| WHERE day <= NOW()\\n| EVAL consumed_5xx = TO_DOUBLE(bad_5xx) / total / 0.01 * 100.0, consumed_p95 = TO_DOUBLE(bad_p95) / total / 0.05 * 100.0, consumed_p99 = TO_DOUBLE(bad_p99) / total / 0.01 * 100.0\\n| EVAL max_consumed_pct = ROUND(GREATEST(consumed_5xx, consumed_p95, consumed_p99), 2)\\n| KEEP day, service, max_consumed_pct\\n| SORT day, service\",\n  \"params\": [\n    {\n      \"tuan_chon\": \"Tuần này\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: đọc mức tiêu hao lũy kế tại cuối từng ngày (giờ Việt Nam) từ thứ Hai của tuần đã chọn, lấy mức cao nhất trong 4 ngân sách cho mỗi service; cùng truy vấn với panel \"Tiêu hao lũy kế theo ngày từ thứ Hai\".\n\n**Input**: `POST {{elasticsearchUrl}}/_query`, tham số `tuan_chon`.\n\n**Output kỳ vọng**: `200`; với mỗi service `max_consumed_pct` không giảm khi sang ngày sau; ngày chưa tới của tuần hiện tại không có hàng.\n\n**FR (spec 030)**: FR-008."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"có cột max_consumed_pct\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('max_consumed_pct');",
                       "});"
                     ]
                   }

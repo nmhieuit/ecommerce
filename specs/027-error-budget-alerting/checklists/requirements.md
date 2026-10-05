@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Việc nhắc tới Kibana (FR-008) là ràng buộc do người dùng chốt trong phiên làm rõ (kênh nhận cảnh báo = chỉ trong Kibana, hiển thị trên dashboard SLO hằng ngày), không phải lựa chọn triển khai tự ý; OTel/Elasticsearch chỉ xuất hiện ở phần Assumptions để nêu phụ thuộc vào đặc tả 021.
+- Việc nhắc tới Kibana (FR-008) là ràng buộc do người dùng chốt trong phiên làm rõ (kênh nhận cảnh báo = chỉ trong Kibana, hiển thị trên dashboard Ngân sách lỗi tuần), không phải lựa chọn triển khai tự ý; OTel/Elasticsearch chỉ xuất hiện ở phần Assumptions để nêu phụ thuộc vào đặc tả 021.
 - Mọi điểm mơ hồ đã được người dùng trả lời trực tiếp (13 câu, ghi tại mục Clarifications của spec.md); không có giá trị nào được tự suy diễn.
 - Chu kỳ làm mới dữ liệu để tính tiêu hao/đánh giá cảnh báo được để lại cho giai đoạn `/speckit-plan` (ghi tại Assumptions).

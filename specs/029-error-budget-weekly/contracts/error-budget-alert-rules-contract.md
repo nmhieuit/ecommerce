@@ -5,7 +5,7 @@
 **Nguồn export**:
 - `docs/kibana-quan-sat-he-thong/alerts/error-budget-rules.ndjson`;
 - `docs/kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson`;
-- `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`.
+- `docs/kibana-quan-sat-he-thong/dashboards/ngan-sach-loi-tuan.ndjson`.
 
 **Người tiêu thụ**:
 - `tests/ServiceManifestSloConventionTests/ErrorBudgetRuleDefinitionTests`: bất biến 1–4, 1b, 11–13;

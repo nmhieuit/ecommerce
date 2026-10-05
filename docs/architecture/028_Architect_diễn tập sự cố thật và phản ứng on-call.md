@@ -19,7 +19,7 @@ mù đầu tiên chưa chạy (T031, người dùng tự làm). Xem [technical-d
 |---|---|---|
 | **Tiêm lỗi mù** | [`scripts/incident-drill.ps1`](../../scripts/incident-drill.ps1) `-Start` / `-Reveal`; file tạm `.incident-drill/<runId>/` (gitignore) | Bốc thăm service, loại lỗi, thời điểm; niêm phong + SHA-256; tạo lại 7 container với file compose override tạm |
 | **Tải nền** | Cùng script, `-Load`; folder Postman 00 + 26 + **28** | Traffic cho cả 7 service để rule có dữ liệu |
-| **Phát hiện** | Rule Kibana `incident-fast-detection`; export [`alerts/incident-fast-detection-rule.ndjson`](../kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson); bảng trên dashboard SLO hằng ngày | Alert theo service khi vượt SLO trong 5 phút gần nhất |
+| **Phát hiện** | Rule Kibana `incident-fast-detection`; export [`alerts/incident-fast-detection-rule.ndjson`](../kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson); bảng trên dashboard Xử lý sự cố | Alert theo service khi vượt SLO trong 5 phút gần nhất |
 | **Phản ứng** | [`docs/dien-tap-chaos-engineering/README.md`](../dien-tap-chaos-engineering/README.md) (quy trình triage), Kibana Case (tạo tay), [`mau-ban-ghi-su-co.md`](../dien-tap-chaos-engineering/mau-ban-ghi-su-co.md) | Severity SEV1–3, thông báo trạng thái, dòng thời gian có mốc tách bạch |
 
 Người dùng chốt **không sửa code service** (Quyết định 1). Không file nào dưới `services/` hay

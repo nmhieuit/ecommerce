@@ -17,12 +17,12 @@ Bất biến được kiểm tra:
    ```
 
 3. Tạo index sự kiện `slo-error-budget-events` (lệnh `PUT` nguyên văn ở `docs/kibana-quan-sat-he-thong/07-canh-bao-ngan-sach-loi.md`).
-4. Import `alerts/error-budget-rules.ndjson`, `alerts/incident-fast-detection-rule.ndjson` và `dashboards/slo-van-hanh-hang-ngay.ndjson` theo `docs/kibana-quan-sat-he-thong/alerts/README.md`.
+4. Import `alerts/error-budget-rules.ndjson`, `alerts/incident-fast-detection-rule.ndjson` và `dashboards/ngan-sach-loi-tuan.ndjson` theo `docs/kibana-quan-sat-he-thong/alerts/README.md`.
 5. Bật (Enable) 5 rule. Rule nào kẹt `pending` thì Disable rồi Enable lại (cách gỡ ở `alerts/README.md`).
 
 **Kết quả mong đợi**:
 - 4 rule tag `slo-error-budget` chạy 5 phút một lần. Rule mốc có cửa sổ 7 ngày, rule frozen 14 ngày.
-- Dashboard có 3 panel ngân sách "tuần này", khoảng thời gian `now-7d`.
+- Dashboard có 3 panel ngân sách "tuần này", khoảng thời gian `now-7d` (từ spec 030: dashboard Ngân sách lỗi tuần, khoảng riêng 30 ngày).
 - Panel text ghi `99%`/tuần.
 
 ## Kịch bản 0 — Kiểm chứng biểu thức đầu tuần (research V1)

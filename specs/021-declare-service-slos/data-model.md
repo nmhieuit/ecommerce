@@ -52,7 +52,7 @@ comment trỏ ngược về constitution để không trôi dạt so với ngu�
 
 ## Entity: Giá trị đo được liên tục (hình chiếu trên dashboard Kibana, US3)
 
-Đại diện cho giá trị thực tế mà dashboard `SLO vận hành hằng ngày — 7 service` tính từ dữ liệu traces
+Đại diện cho giá trị thực tế mà dashboard `Xử lý sự cố — 7 service` tính từ dữ liệu traces
 OTel thật, đối chiếu trực tiếp với **Khai báo ngân sách SLO** ở trên. Đây không phải dữ liệu do tính
 năng này tạo ra — nó là một hình chiếu (view) trên dữ liệu telemetry đã tồn tại từ
 017-otel-servicedefaults-elastic.
@@ -70,7 +70,7 @@ năng này tạo ra — nó là một hình chiếu (view) trên dữ liệu tel
 - Với mọi `service_name` xuất hiện trên dashboard, phải tồn tại đúng một **Khai báo ngân sách SLO**
   cùng tên để đối chiếu (SC-003).
 - Khi `data_state = no-data`, dashboard PHẢI thể hiện trạng thái này khác biệt rõ ràng với
-  `measured.error_rate = 0%` (FR-006, đã xác minh cơ chế tại `docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`
+  `measured.error_rate = 0%` (FR-006, đã xác minh cơ chế tại `docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`
   mục "Lens Formula xử lý mẫu số 0").
 
 **State transitions**: không áp dụng — đây là một hình chiếu tức thời/theo cửa sổ trượt được tính lại

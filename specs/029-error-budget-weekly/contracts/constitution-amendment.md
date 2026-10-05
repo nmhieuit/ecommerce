@@ -29,7 +29,7 @@ Bắt buộc có:
   - 7 `service-manifest.yaml` (`slos`, `error-budget-policy`);
   - `PlatformSloDefaults`;
   - 4 rule ngân sách lỗi (027), rule `incident-fast-detection` (028);
-  - dashboard SLO hằng ngày;
+  - dashboard Ngân sách lỗi tuần;
   - tài liệu 021/027/028.
 - Templates đã rà: `.specify/templates/plan-template.md`, `spec-template.md`, `tasks-template.md`, `checklist-template.md`, cùng file hướng dẫn agent của repo. Mỗi file ghi ✅ đã cập nhật hoặc ✅ không cần đổi.
 - Deferred TODOs: không có.

@@ -142,11 +142,11 @@ lệch Nguyên tắc III, đã ghi ở plan.md Complexity Tracking, hạn tới 
   - Chạy truy vấn trong Discover khi tải nền khoẻ và xác nhận 0 hàng.
   - Ghi lại ngưỡng lấy từ `service-manifest.yaml` nào.
 - [X] T020 [US2] Trên Kibana UI tạo rule `incident-fast-detection` theo bất biến 1, 2, 7: `.es-query` ES|QL, `groupBy: row`, chu kỳ 5m, cửa sổ 5m, tag `incident-fast-detection`, không action. Ghi cấu hình vào file `08`.
-- [X] T021 [US2] Thêm bảng "Phát hiện nhanh — vượt SLO trong 5 phút gần nhất" vào dashboard `SLO vận hành hằng ngày — 7 service` (id `e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`), cạnh nhóm "Ngân sách lỗi tuần này".
+- [X] T021 [US2] Thêm bảng "Phát hiện nhanh — vượt SLO trong 5 phút gần nhất" vào dashboard `Xử lý sự cố — 7 service` (id `e61fc7f3-17fe-428a-a373-da88af0a4a1e`), cạnh nhóm "Ngân sách lỗi tuần này".
   - Nguồn: alert active tag `incident-fast-detection` từ `.alerts-stack.alerts-default`; cột service và `kibana.alert.start`.
   - Dựng bằng Discover session ES|QL qua Saved Objects API, giống cách T031 của 027 đã làm.
   - Ghi cách dựng vào file `08`.
-- [X] T022 [US2] Export rule ra `docs/kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson`, và export lại dashboard ra `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`. **Không** sửa `alerts/error-budget-rules.ndjson`.
+- [X] T022 [US2] Export rule ra `docs/kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson`, và export lại dashboard ra `docs/kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson`. **Không** sửa `alerts/error-budget-rules.ndjson`.
 - [X] T023 [US2] Cập nhật `docs/kibana-quan-sat-he-thong/alerts/README.md`: thêm mục cho `incident-fast-detection-rule.ndjson` (lệnh import, lệnh export theo id, ghi chú "Enable lại rule tag `incident-fast-detection` sau import").
 - [X] T024 [US2] Thêm mục "Diễn tập sự cố on-call (SCRUM-36)" vào `docs/dien-tap-chaos-engineering/README.md`, gồm:
   1. Chuẩn bị: cờ, tải nền newman, `-Start`.

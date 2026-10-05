@@ -26,10 +26,10 @@ docker compose -f docker-compose.local.yml up -d --build --wait
 ## Kịch bản 1 — Import rule phát hiện nhanh và panel (FR-005, FR-006)
 
 1. Import `docs/kibana-quan-sat-he-thong/alerts/incident-fast-detection-rule.ndjson` và
-   `dashboards/slo-van-hanh-hang-ngay.ndjson` bằng `_import?overwrite=true`, cùng cách README alerts
+   `dashboards/xu-ly-su-co.ndjson` bằng `_import?overwrite=true`, cùng cách README alerts
    của 027.
 2. Enable rule tag `incident-fast-detection`. Kibana nhập rule ở trạng thái disabled.
-3. **Kỳ vọng**: sau ≤ 5 phút rule có "Last run"; dashboard SLO hằng ngày có bảng "Phát hiện nhanh — vượt
+3. **Kỳ vọng**: sau ≤ 5 phút rule có "Last run"; dashboard Xử lý sự cố có bảng "Phát hiện nhanh — vượt
    SLO trong 5 phút gần nhất", đang trống.
 
 ## Kịch bản 2 — Tải nền phủ cả 7 service (FR-004)

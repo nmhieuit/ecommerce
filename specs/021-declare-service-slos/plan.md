@@ -11,8 +11,8 @@
 Rà soát thực tế cho thấy phần lớn nội dung của tính năng này đã tồn tại nhưng chưa được bảo vệ hay
 chính thức hoá: cả 7 `service-manifest.yaml` (parties, products, baskets, orders, identity, gateway,
 bff) đã khai báo đủ 4 chỉ tiêu SLO khớp đúng bộ mặc định theo phân loại của constitution Principle
-VIII, và một dashboard Kibana đo liên tục 3 chỉ số SLO từ dữ liệu OTel thật (`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`,
-export tại `dashboards/slo-van-hanh-hang-ngay.ndjson`) đã được dựng và xác minh khớp dữ liệu thô.
+VIII, và một dashboard Kibana đo liên tục 3 chỉ số SLO từ dữ liệu OTel thật (`docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`,
+export tại `dashboards/xu-ly-su-co.ndjson`) đã được dựng và xác minh khớp dữ liệu thô.
 Cả hai đều làm **thủ công, không có gì bảo vệ khỏi trôi dạt (drift)**: không có test nào đọc
 `service-manifest.yaml`, không có gì ngăn một service mới thiếu SLO hoặc một giá trị bị sửa sai lệch
 âm thầm; dashboard là một tài liệu vận hành rời rạc, chưa được xem là một phần chính thức của tính
@@ -127,8 +127,8 @@ tests/
     └── SloDefaultComplianceTests.cs          # FR-002/FR-003: khớp mặc định hoặc có slos.justification
 
 docs/kibana-quan-sat-he-thong/
-├── 06-dashboard-slo-van-hanh-hang-ngay.md    # đã có — không sửa, chỉ tham chiếu làm nguồn US3
-└── dashboards/slo-van-hanh-hang-ngay.ndjson  # đã có — artifact được feature này chính thức hoá làm cơ chế đo liên tục
+├── 06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md    # đã có — không sửa, chỉ tham chiếu làm nguồn US3
+└── dashboards/xu-ly-su-co.ndjson  # đã có — artifact được feature này chính thức hoá làm cơ chế đo liên tục
 ```
 
 **Structure Decision**: Không tạo cây thư mục hạ tầng mới — tính năng chỉ thêm một dự án test quy

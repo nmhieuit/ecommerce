@@ -22,7 +22,7 @@
                 <mxCell id="events" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Index slo-error-budget-events (mapping keyword)&#xa;chỉ sự kiện từ tuần triển khai — sự kiện của chế độ tháng đã xoá" vertex="1">
                     <mxGeometry height="70" width="380" x="560" y="370" as="geometry"/>
                 </mxCell>
-                <mxCell id="export" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Export trong repo (ndjson)&#xa;alerts/error-budget-rules.ndjson · incident-fast-detection-rule.ndjson&#xa;dashboards/slo-van-hanh-hang-ngay.ndjson" vertex="1">
+                <mxCell id="export" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Export trong repo (ndjson)&#xa;alerts/error-budget-rules.ndjson · incident-fast-detection-rule.ndjson&#xa;dashboards/ngan-sach-loi-tuan.ndjson" vertex="1">
                     <mxGeometry height="70" width="380" x="560" y="520" as="geometry"/>
                 </mxCell>
                 <mxCell id="rules" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="Kibana — 4 rule ngân sách lỗi (mỗi 5 phút)&#xa;error-budget-50/75/100: WHERE @timestamp &gt;= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours&#xa;  cửa sổ rule 7 ngày · allowed 0.01 / 0.01 / 0.05 / 0.01 · alert theo (service, budget)&#xa;error-budget-frozen: cửa sổ 14 ngày · ngày không đạt khi 5xx ≥ 0.01&#xa;incident-fast-detection (028): 5xx ≥ 1% trong 5 phút" vertex="1">
@@ -31,7 +31,7 @@
                 <mxCell id="alerts" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="Alerts-as-data&#xa;.alerts-stack.alerts-default" vertex="1">
                     <mxGeometry height="60" width="440" x="1010" y="240" as="geometry"/>
                 </mxCell>
-                <mxCell id="dashboard" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="Dashboard SLO hằng ngày (021) — sửa tạm, không tách (spec B)&#xa;3 panel &quot;Ngân sách lỗi tuần này&quot; (now-7d): mức tiêu hao · alert · cạn&#xa;panel text: 99%/tuần · nhãn cột Error-rate: ngưỡng &lt; 1%" vertex="1">
+                <mxCell id="dashboard" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="Dashboard Ngân sách lỗi tuần (spec 030, tách từ dashboard SLO cũ)&#xa;3 panel &quot;Ngân sách lỗi tuần này&quot; (now-7d): mức tiêu hao · alert · cạn&#xa;panel text: 99%/tuần · nhãn cột Error-rate: ngưỡng &lt; 1%" vertex="1">
                     <mxGeometry height="100" width="440" x="1010" y="350" as="geometry"/>
                 </mxCell>
                 <mxCell id="limit" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;dashed=1;" value="Giới hạn đã biết: đóng băng &gt; 14 ngày có thể tự mất;&#xa;lưu lượng thấp theo tuần làm vượt nhiều mốc trong một chu kỳ" vertex="1">

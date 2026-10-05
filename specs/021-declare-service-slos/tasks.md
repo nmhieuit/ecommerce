@@ -168,12 +168,12 @@ vốn đã đúng sẵn theo Quyết định 0 của research.md).
 > Không có task viết code mới — dashboard và pipeline telemetry đã tồn tại (research.md Quyết định 3).
 > Các task dưới đây là xác thực trên dữ liệu thật, không chặn PR.
 
-- [X] T011 [US3] Xác nhận dashboard `SLO vận hành hằng ngày — 7 service` đã được import vào Kibana từ
-      `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`; nếu chưa, import theo
+- [X] T011 [US3] Xác nhận dashboard `Xử lý sự cố — 7 service` đã được import vào Kibana từ
+      `docs/kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson`; nếu chưa, import theo
       [quickstart.md](./quickstart.md) § Điều kiện tiên quyết
-      (**kết quả thực tế**: đã có sẵn — `GET /api/saved_objects/dashboard/e2e06ff5-9cdf-4bea-acc8-5fd60ce26170`
+      (**kết quả thực tế**: đã có sẵn — `GET /api/saved_objects/dashboard/e61fc7f3-17fe-428a-a373-da88af0a4a1e`
       trên Kibana đang chạy tại `localhost:5601` trả về đúng dashboard "SLO vận hành hằng ngày — 7
-      service", không cần import lại)
+      service" (nay đã tách thành `Xử lý sự cố — 7 service` và `Ngân sách lỗi tuần — 7 service` bởi spec 030), không cần import lại)
 - [X] T012 [US3] Thực hiện [quickstart.md](./quickstart.md) Bước 3 — đối chiếu giá trị "Thực tế" trên
       dashboard với giá trị khai báo trong `services/orders/src/Orders.Api/service-manifest.yaml`,
       xác nhận bất biến 1–2 tại [contracts/continuous-measurement-contract.md](./contracts/continuous-measurement-contract.md) —
@@ -201,7 +201,7 @@ vốn đã đúng sẵn theo Quyết định 0 của research.md).
       2020-09-08 [chắc chắn trước khi môi trường demo tồn tại] → `hits.total.value = 0`, bucket lỗi
       cũng `doc_count = 0` — ở tầng dữ liệu thô, "không có tài liệu nào khớp" [0 total] khác hẳn "có
       traffic nhưng 0 lỗi" [total=9237, err=0 nếu không có lỗi thật]. Đây chính xác là cơ chế mà
-      `docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md` đã xác minh cho Lens Table:
+      `docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md` đã xác minh cho Lens Table:
       0 tài liệu → dòng biến mất khỏi bảng [terms aggregation], không hiển thị `0%` gây hiểu lầm)
 
 **Checkpoint**: Cả 3 user story đều hoạt động độc lập — SLO vừa được khai báo đúng, vừa được bảo vệ
@@ -214,7 +214,7 @@ khỏi trôi dạt, vừa được đo lường liên tục từ dữ liệu th�
 **Purpose**: Hoàn thiện liên kết tài liệu và xác nhận toàn bộ tính năng liền mạch
 
 - [X] T015 [P] Thêm một dòng tham chiếu ngược từ
-      `docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md` tới
+      `docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md` tới
       `specs/021-declare-service-slos/` (hợp đồng đo lường liên tục chính thức), để người đọc tài liệu
       vận hành biết dashboard này giờ được một đặc tả chính thức tham chiếu
 - [X] T016 Chạy `dotnet test tests/ServiceManifestSloConventionTests` một lượt cuối, xác nhận toàn bộ

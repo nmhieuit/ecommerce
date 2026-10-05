@@ -26,8 +26,8 @@ Bạn chưa có kinh nghiệm với Kibana, đã dùng Postman gọi API và hi�
 5. **[05-dashboard-va-visualize.md](05-dashboard-va-visualize.md)** — gộp 4 tình huống điều tra thủ công
    ở file 02 thành 1 dashboard xem liên tục, dùng Lens dựng Line/Bar/Table/Metric. Không có phần Maps —
    đã xác nhận hệ thống này không có dữ liệu địa lý. Cần trọn vẹn 4 file trước.
-6. **[06-dashboard-slo-van-hanh-hang-ngay.md](06-dashboard-slo-van-hanh-hang-ngay.md)** — dashboard SLO
-   thật đo 3 chỉ số đã khai báo trong `service-manifest.yaml` cho 7 service, xem mỗi ngày. Cần file 05.
+6. **[06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md](06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md)** — hai dashboard SLO
+   thật: `Xử lý sự cố — 7 service` (mọi panel theo thanh thời gian) và `Ngân sách lỗi tuần — 7 service` (cố định tuần lịch giờ Việt Nam), đo các chỉ số đã khai báo trong `service-manifest.yaml` cho 7 service. Cần file 05.
 7. **[07-canh-bao-ngan-sach-loi.md](07-canh-bao-ngan-sach-loi.md)** — ngân sách lỗi theo tuần lịch giờ Việt Nam, 4 rule
    cảnh báo ES|QL (mốc 50/75/100 và trạng thái "cạn — ưu tiên độ tin cậy") hiện ngay trên dashboard của
    file 06. Cần file 06.

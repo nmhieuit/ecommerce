@@ -26,10 +26,10 @@ suy đoán):
   SLO hoặc một giá trị bị sửa lệch mặc định mà không ai để ý.
 - Đã có sẵn một dashboard Kibana đo 3/4 chỉ số SLO (Error-rate, Latency p95, Latency p99; Availability
   suy ra xấp xỉ từ `100% − Error-rate`) từ dữ liệu traces OTel thật, dựng và xác minh khớp dữ liệu thô
-  tại `docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md` (đối chiếu Lens Formula
+  tại `docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md` (đối chiếu Lens Formula
   với truy vấn Elasticsearch thô cho `Orders.Api`: error-rate khớp tuyệt đối, p95/p99 khớp trong sai
   số ~0.25% do cửa sổ thời gian trượt) và có sẵn artifact export tại
-  `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`. Tài liệu này cũng đã ghi
+  `docs/kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson`. Tài liệu này cũng đã ghi
   nhận rõ cách phân biệt "không có dữ liệu" với "0% lỗi" (mục FR-006 của spec) và đã đề cập trong
   `docs/roadmap.md` rằng việc đo SLO thật thuộc phạm vi `SCRUM-29`.
 - Kết luận: phần việc còn thiếu thực sự của SCRUM-29 không phải là "khai báo" hay "xây dashboard" từ
@@ -98,8 +98,8 @@ luận ban đầu ở đây rằng `bff` "có một ngoại lệ" đã bị ch�
 
 ## Quyết định 3: Cơ chế đo lường liên tục (US3, FR-004 đến FR-007)
 
-**Decision**: Chính thức hoá dashboard Kibana đã dựng (`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`,
-artifact `dashboards/slo-van-hanh-hang-ngay.ndjson`) làm cơ chế đo lường liên tục chính thức của tính
+**Decision**: Chính thức hoá dashboard Kibana đã dựng (`docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`,
+artifact `dashboards/xu-ly-su-co.ndjson`) làm cơ chế đo lường liên tục chính thức của tính
 năng này, thay vì xây một cơ chế mới. Ghi lại hợp đồng (bất biến bắt buộc) mà dashboard này phải thỏa
 tại `contracts/continuous-measurement-contract.md`, và một `quickstart.md` lặp lại đúng 3 kịch bản
 kiểm thử của Jira (đọc manifest → đối chiếu dashboard → làm chậm một endpoint và xác nhận ngân sách

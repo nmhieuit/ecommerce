@@ -17,7 +17,7 @@ Không có quyết định nào do người lập kế hoạch tự chọn. Mụ
   - Ba rule mốc: `WHERE @timestamp >= DATE_TRUNC(1 month, NOW() + 7 hours) - 7 hours`, `allowed = CASE(... 0.001, 0.001, 0.05, 0.01)`, `timeWindowSize: 31`, `timeWindowUnit: d`.
   - Rule `error-budget-frozen`: không có `WHERE @timestamp` (chỉ dựa vào cửa sổ rule), `timeWindowSize: 62`. Ngày "không đạt" khi `bad_5xx / spans >= 0.001`, hoặc `bad_p95 / spans > 0.05`, hoặc `bad_p99 / spans > 0.01`.
 - **`alerts/incident-fast-detection-rule.ndjson` (028)**: `WHERE err_pct >= 0.1 OR latency_breach`, trong đó `err_pct` tính bằng phần trăm.
-- **`dashboards/slo-van-hanh-hang-ngay.ndjson`**:
+- **`dashboards/ngan-sach-loi-tuan.ndjson`**:
   - 3 Discover session `slo-error-budget-consumption` / `-active-alerts` / `-frozen`, tiêu đề chứa "tháng này";
   - 3 panel `eb027-*` có `time_range now-62d`;
   - panel text ghi "`99.9%`/tháng".

@@ -32,8 +32,8 @@ Mục "Điểm phải xác minh" liệt kê những gì chưa thể khẳng đ�
 - **Newman**: chưa cài trên máy (`npx --no-install newman` báo lỗi). Node `v22.20.0` có sẵn.
 - **Identity**: Duende IdentityServer dùng `AddOperationalStore` (SQL Server).
 - **Kibana**: 9.4.4, license Basic, có khoá mã hoá saved objects từ 027. 4 rule ngân sách lỗi
-  (tag `slo-error-budget`) chạy mỗi 5 phút. Dashboard `SLO vận hành hằng ngày — 7 service` được export
-  ở `docs/kibana-quan-sat-he-thong/dashboards/slo-van-hanh-hang-ngay.ndjson`.
+  (tag `slo-error-budget`) chạy mỗi 5 phút. Dashboard `Xử lý sự cố — 7 service` được export
+  ở `docs/kibana-quan-sat-he-thong/dashboards/xu-ly-su-co.ndjson`.
 - **Ngưỡng độ trễ trong manifest**: BFF p95 300 ms / p99 800 ms; 6 service còn lại p95 150 ms /
   p99 500 ms. Ngưỡng 5xx là 1% cho cả 7 service.
 - **Bản ghi diễn tập chaos**: `docs/dien-tap-chaos-engineering/` đã có `README.md` (mục "Lịch sử
@@ -160,13 +160,13 @@ người dùng loại.
 **Hệ quả**: không có test giữ ngưỡng trong rule khớp manifest (người dùng chọn không viết test). Rủi ro
 trôi dạt được ghi vào technical-debt, hạn tới khi SCRUM-37 xong.
 
-## Quyết định 7 — Panel trên dashboard SLO hằng ngày
+## Quyết định 7 — Panel trên dashboard Xử lý sự cố
 
 **Decision** (Người dùng chốt "có, thêm panel"): thêm một bảng "Phát hiện nhanh — vượt SLO trong
 5 phút gần nhất" vào dashboard hiện có, đặt cạnh nhóm panel ngân sách lỗi của 027.
 - Bảng đọc alert đang active từ `.alerts-stack.alerts-default`, lọc tag `incident-fast-detection`.
 - Cột: service, thời điểm bắt đầu.
-- Cập nhật `dashboards/slo-van-hanh-hang-ngay.ndjson` bằng export Saved Objects, giống 027.
+- Cập nhật `dashboards/xu-ly-su-co.ndjson` bằng export Saved Objects, giống 027.
 
 ## Quyết định 8 — Triage, Kibana Case và bản ghi sự cố
 

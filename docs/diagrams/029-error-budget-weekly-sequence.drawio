@@ -43,7 +43,7 @@
                 <mxCell id="r7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="7. Action Index ghi {service, budget, event: exhausted};&#xa;lượt kế tiếp rule error-budget-frozen bật alert cho 7 service (cửa sổ 14 ngày)" vertex="1">
                     <mxGeometry height="50" width="550" x="860" y="580" as="geometry"/>
                 </mxCell>
-                <mxCell id="r8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;fontStyle=1;" value="8. Dashboard SLO hằng ngày: 3 panel &quot;tuần này&quot; — mức tiêu hao, alert, cạn — khớp kết quả 29b" vertex="1">
+                <mxCell id="r8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;fontStyle=1;" value="8. Dashboard Ngân sách lỗi tuần: 3 panel &quot;tuần này&quot; — mức tiêu hao, alert, cạn — khớp kết quả 29b" vertex="1">
                     <mxGeometry height="50" width="700" x="30" y="660" as="geometry"/>
                 </mxCell>
                 <mxCell id="r9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="9. Rule phát hiện nhanh: Orders.Api 0,28% 5xx → không bắn; 2,73% → bắn ở lượt kế tiếp" vertex="1">

@@ -18,7 +18,7 @@
 - Q: Ngưỡng "cạn" và các mốc cảnh báo? → A: Cảnh báo ở các mốc 50%, 75% và 100% ngân sách tháng đã tiêu; "cạn" = đã tiêu 100%.
   - *Thay bởi spec 029 (2026-10-05).*
 - Q: Kênh nhận cảnh báo? → A: Chỉ trong Kibana (không đẩy ra email/Slack).
-- Q: Làm sao đảm bảo người vận hành thực sự nhìn thấy cảnh báo (tiêu chí kiểm thử 3)? → A: Trạng thái cảnh báo và mức tiêu hao ngân sách được hiển thị ngay trên dashboard SLO hằng ngày mà người vận hành mở mỗi ngày.
+- Q: Làm sao đảm bảo người vận hành thực sự nhìn thấy cảnh báo (tiêu chí kiểm thử 3)? → A: Trạng thái cảnh báo và mức tiêu hao ngân sách được hiển thị ngay trên dashboard Ngân sách lỗi tuần mà người vận hành mở mỗi ngày.
 - Q: Với độ trễ, request nào bị tính là "xấu"? → A: Hai ngân sách độ trễ riêng: tối đa 5% request được phép vượt ngưỡng p95, và tối đa 1% request được phép vượt ngưỡng p99.
 - Q: Khi ngân sách cạn, ai dừng cái gì và khi nào là hồi phục? → A: Người vận hành (vai SRE/Dev) dừng merge tính năng mới vào service đó, chỉ làm việc nâng độ tin cậy, cho tới khi service đạt SLO liên tục N ngày — không phụ thuộc việc ngân sách đặt lại đầu tháng.
 - Q: N bằng bao nhiêu? → A: 3 ngày.
@@ -53,17 +53,17 @@ Là người đóng vai SRE, tôi muốn manifest của mỗi service ghi rõ ch
 
 ### User Story 2 - Cảnh báo tự động khi ngân sách vượt mốc, hiển thị ở nơi người vận hành nhìn mỗi ngày (Priority: P1)
 
-Là người đóng vai SRE, tôi muốn một cảnh báo tự động kích hoạt khi bất kỳ ngân sách nào của một service vượt mốc 50%, 75% hoặc 100% trong tuần, và trạng thái cảnh báo đó hiện ngay trên dashboard SLO hằng ngày tôi vẫn mở, để tôi phát hiện vi phạm nhờ cảnh báo chứ không phải tình cờ tự soi số liệu.
+Là người đóng vai SRE, tôi muốn một cảnh báo tự động kích hoạt khi bất kỳ ngân sách nào của một service vượt mốc 50%, 75% hoặc 100% trong tuần, và trạng thái cảnh báo đó hiện ngay trên dashboard Ngân sách lỗi tuần tôi vẫn mở, để tôi phát hiện vi phạm nhờ cảnh báo chứ không phải tình cờ tự soi số liệu.
 
 **Why this priority**: Tiêu chí chấp nhận 3 của Jira yêu cầu vi phạm không được phát hiện bằng cách tự kiểm tra dashboard thủ công. Chính sách (User Story 1) không có cảnh báo thì vẫn là "dashboard đỏ không ai hành động" — chính vấn đề story này muốn giải quyết.
 
-**Independent Test**: Tạo đủ lỗi tổng hợp (synthetic) cho một service để tiêu hết ngân sách tuần; xác nhận cảnh báo kích hoạt lần lượt tại các mốc 50%, 75%, 100%, và trạng thái cảnh báo hiện trên dashboard SLO hằng ngày.
+**Independent Test**: Tạo đủ lỗi tổng hợp (synthetic) cho một service để tiêu hết ngân sách tuần; xác nhận cảnh báo kích hoạt lần lượt tại các mốc 50%, 75%, 100%, và trạng thái cảnh báo hiện trên dashboard Ngân sách lỗi tuần.
 
 **Acceptance Scenarios**:
 
 1. **Given** một ngân sách của một service đang ở dưới 50%, **When** lượng request xấu khiến mức tiêu hao vượt 50% ngân sách tuần, **Then** một cảnh báo mốc 50% kích hoạt cho đúng service và đúng ngân sách đó, không cần ai mở dashboard để phát hiện.
 2. **Given** lỗi tổng hợp được tạo đủ để tiêu hết ngân sách 5xx tuần của một service, **When** mức tiêu hao lần lượt vượt 50%, 75%, 100%, **Then** cảnh báo tương ứng kích hoạt ở đúng từng mốc đã định nghĩa (không sớm hơn, không muộn hơn quá khoảng làm mới dữ liệu của hệ thống).
-3. **Given** một cảnh báo đang hoạt động, **When** người vận hành mở dashboard SLO hằng ngày, **Then** dashboard hiển thị rõ service nào, ngân sách nào, đang ở mốc nào, và mức tiêu hao hiện tại (%) — người vận hành không cần vào một màn hình khác để biết có cảnh báo.
+3. **Given** một cảnh báo đang hoạt động, **When** người vận hành mở dashboard Ngân sách lỗi tuần, **Then** dashboard hiển thị rõ service nào, ngân sách nào, đang ở mốc nào, và mức tiêu hao hiện tại (%) — người vận hành không cần vào một màn hình khác để biết có cảnh báo.
 4. **Given** mức tiêu hao của một ngân sách vẫn ở trên mốc đã vượt, **When** thời gian tiếp tục trôi trong tuần, **Then** cảnh báo giữ ở trạng thái hoạt động liên tục, không tự biến mất cho tới khi mức tiêu hao không còn ở trên mốc (ví dụ khi ngân sách đặt lại vào đầu tuần mới).
 5. **Given** 4 ngân sách của cùng một service, **When** chỉ ngân sách độ trễ p95 vượt mốc 75%, **Then** chỉ cảnh báo của ngân sách độ trễ p95 kích hoạt; ba ngân sách còn lại giữ nguyên trạng thái của chúng.
 
@@ -82,7 +82,7 @@ Là người đóng vai SRE, tôi muốn chính sách nêu rõ: khi bất kỳ n
 1. **Given** ngân sách của một service đã cạn, **When** tôi đọc chính sách của service đó, **Then** chính sách nêu rằng công việc nâng độ tin cậy được ưu tiên hơn tính năng mới cho service đó cho tới khi hồi phục, và nêu rõ ai dừng cái gì.
 2. **Given** một service đang ở trạng thái cạn ngân sách, **When** service đạt đủ mọi chỉ tiêu SLO liên tục 3 ngày, **Then** service được coi là đã hồi phục và được phép merge tính năng mới trở lại — kể cả khi tuần lịch chưa kết thúc.
 3. **Given** một service cạn ngân sách vào cuối tuần, **When** sang tuần mới và ngân sách đặt lại về đầy đủ nhưng service chưa đạt SLO liên tục 3 ngày, **Then** service vẫn chưa được coi là hồi phục — việc đặt lại ngân sách đầu tuần không tự động gỡ trạng thái đóng băng.
-4. **Given** một service đang ở trạng thái cạn ngân sách, **When** người vận hành mở dashboard SLO hằng ngày, **Then** dashboard thể hiện rõ service đó đang trong trạng thái "cạn ngân sách — ưu tiên độ tin cậy".
+4. **Given** một service đang ở trạng thái cạn ngân sách, **When** người vận hành mở dashboard Ngân sách lỗi tuần, **Then** dashboard thể hiện rõ service đó đang trong trạng thái "cạn ngân sách — ưu tiên độ tin cậy".
 
 ---
 
@@ -106,10 +106,10 @@ Là người đóng vai SRE, tôi muốn chính sách nêu rõ: khi bất kỳ n
 - **FR-005**: Hệ thống PHẢI tự động tính mức tiêu hao (%) của từng ngân sách của từng service từ telemetry đang thu thập, không cần thao tác thủ công.
 - **FR-006**: Hệ thống PHẢI kích hoạt cảnh báo tự động khi mức tiêu hao của bất kỳ ngân sách nào của bất kỳ service nào vượt các mốc 50%, 75% và 100%, riêng cho từng ngân sách và từng service.
 - **FR-007**: Cảnh báo đã kích hoạt PHẢI giữ ở trạng thái hoạt động liên tục chừng nào mức tiêu hao còn ở trên mốc tương ứng.
-- **FR-008**: Cảnh báo PHẢI được quản lý trong Kibana và trạng thái của chúng (service, ngân sách, mốc, mức tiêu hao hiện tại) PHẢI được hiển thị trên dashboard SLO hằng ngày hiện có; không yêu cầu đẩy cảnh báo ra kênh bên ngoài (email, Slack).
+- **FR-008**: Cảnh báo PHẢI được quản lý trong Kibana và trạng thái của chúng (service, ngân sách, mốc, mức tiêu hao hiện tại) PHẢI được hiển thị trên dashboard Ngân sách lỗi tuần hiện có; không yêu cầu đẩy cảnh báo ra kênh bên ngoài (email, Slack).
 - **FR-009**: Chính sách PHẢI nêu rõ hệ quả khi service cạn ngân sách: người vận hành (vai SRE/Dev) dừng merge tính năng mới vào service đó và chỉ làm công việc nâng độ tin cậy cho service đó.
 - **FR-010**: Chính sách PHẢI nêu rõ điều kiện hồi phục: service được coi là hồi phục khi đạt đủ mọi chỉ tiêu SLO đã khai báo liên tục 3 ngày (ngày theo giờ Việt Nam; một ngày không có request nào được tính là đạt); việc ngân sách đặt lại đầu tuần KHÔNG tự động gỡ trạng thái cạn ngân sách.
-- **FR-011**: Dashboard SLO hằng ngày PHẢI thể hiện service nào đang ở trạng thái "cạn ngân sách — ưu tiên độ tin cậy".
+- **FR-011**: Dashboard Ngân sách lỗi tuần PHẢI thể hiện service nào đang ở trạng thái "cạn ngân sách — ưu tiên độ tin cậy".
 - **FR-012**: Khi một service không có request nào trong tuần (hoặc thiếu dữ liệu do gián đoạn telemetry), hệ thống PHẢI thể hiện "không có dữ liệu" và KHÔNG được kích hoạt hay tắt cảnh báo chỉ vì thiếu dữ liệu.
 - **FR-013**: Ngân sách độ trễ PHẢI dùng ngưỡng p95/p99 đã khai báo của chính service đó (kể cả ngoại lệ có lý do), không dùng ngưỡng mặc định thay thế.
 - **FR-014**: PHẢI có một cách lặp lại được để tạo lỗi tổng hợp đủ làm cạn ngân sách tuần của một service, nhằm xác minh cảnh báo kích hoạt đúng các mốc đã định nghĩa.
@@ -129,13 +129,13 @@ Là người đóng vai SRE, tôi muốn chính sách nêu rõ: khi bất kỳ n
 
 - **SC-001**: 100% trong 7 service có phần chính sách ngân sách lỗi trong manifest, ghi đủ bốn ngân sách với tỷ lệ cho phép bằng con số, cửa sổ tuần lịch, các mốc 50%/75%/100%, định nghĩa "cạn", hệ quả và điều kiện hồi phục 3 ngày.
 - **SC-002**: Khi tạo đủ lỗi tổng hợp để tiêu hết ngân sách tuần của một service, cảnh báo kích hoạt ở cả ba mốc 50%, 75% và 100%, mỗi mốc kích hoạt trong vòng một chu kỳ làm mới dữ liệu kể từ khi mức tiêu hao thực tế vượt mốc.
-- **SC-003**: 100% cảnh báo đang hoạt động hiển thị trên dashboard SLO hằng ngày với đủ thông tin service, ngân sách và mốc, đặt cạnh bảng mức tiêu hao hiện tại (%) của cùng service và ngân sách; người vận hành biết có cảnh báo mà không cần mở màn hình nào khác.
+- **SC-003**: 100% cảnh báo đang hoạt động hiển thị trên dashboard Ngân sách lỗi tuần với đủ thông tin service, ngân sách và mốc, đặt cạnh bảng mức tiêu hao hiện tại (%) của cùng service và ngân sách; người vận hành biết có cảnh báo mà không cần mở màn hình nào khác.
 - **SC-004**: Người đọc chính sách trả lời được ba câu hỏi "ai dừng", "dừng cái gì" và "khi nào được tiếp tục" chỉ từ manifest của service, không cần tra tài liệu khác.
 - **SC-005**: Không có cảnh báo nào kích hoạt cho một service không có request trong tuần hoặc chỉ do thiếu dữ liệu telemetry.
 
 ## Assumptions
 
-- Telemetry (traces OTel qua Elasticsearch) và dashboard SLO hằng ngày trên Kibana đã có từ đặc tả 021 và Nguyên tắc VII; tính năng này xây trên nền đó, không dựng mới hệ thống thu thập.
+- Telemetry (traces OTel qua Elasticsearch) và dashboard Ngân sách lỗi tuần trên Kibana đã có từ đặc tả 021 và Nguyên tắc VII; tính năng này xây trên nền đó, không dựng mới hệ thống thu thập.
 - Bảy service và ngưỡng SLO của chúng (kể cả ngoại lệ độ trễ của BFF) đã được khai báo trong manifest theo đặc tả 021; tính năng này không thay đổi các ngưỡng đó.
 - Vì độ khả dụng được đo bằng tỷ lệ request không trả 5xx, ngân sách khả dụng (1% request xấu được phép) và ngân sách 5xx (dưới 1%) gần như trùng nhau về dữ liệu nguồn; hai ngân sách vẫn được giữ riêng theo đúng khai báo SLO hiện có.
 - "Người vận hành" là một người duy nhất đóng vai SRE/Dev trong dự án thực hành (theo `docs/roadmap.md`); việc dừng merge tính năng mới là cam kết quy trình được ghi trong chính sách, không bắt buộc phải có cơ chế kỹ thuật tự động chặn merge.

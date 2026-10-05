@@ -19,7 +19,7 @@
                 <mxCell id="t2" value="SloDefaultComplianceTests&#xa;khớp hồ sơ mặc định theo classification,&#xa;trừ khi có slos.justification&#xa;(T008: 7/7 PASS ngay — bff không phải ngoại lệ)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
                     <mxGeometry x="1010" y="170" width="400" height="90" as="geometry"/>
                 </mxCell>
-                <mxCell id="dashboard" value="Dashboard Kibana &quot;SLO vận hành hằng ngày — 7 service&quot;&#xa;ĐÃ CÓ SẴN (phiên trước) — nay được CHÍNH THỨC HOÁ&#xa;làm cơ chế đo lường liên tục chính thức (US3)&#xa;Nguồn: traces-generic.otel-default* (Elasticsearch), rolling 24h" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
+                <mxCell id="dashboard" value="Dashboard Kibana &quot;Xử lý sự cố — 7 service&quot;&#xa;ĐÃ CÓ SẴN (phiên trước) — nay được CHÍNH THỨC HOÁ&#xa;làm cơ chế đo lường liên tục chính thức (US3)&#xa;Nguồn: traces-generic.otel-default* (Elasticsearch), rolling 24h" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">
                     <mxGeometry x="30" y="280" width="480" height="110" as="geometry"/>
                 </mxCell>
                 <mxCell id="contract" value="contracts/continuous-measurement-contract.md&#xa;bất biến bắt buộc dashboard phải thỏa — đối chiếu&#xa;được theo thời gian, không cần đọc lại nhật ký build" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1">

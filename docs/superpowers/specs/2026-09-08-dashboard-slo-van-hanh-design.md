@@ -1,5 +1,7 @@
 # Thiết kế: Dashboard SLO vận hành hằng ngày
 
+> **Ghi chú (spec 030, 2026-10-05)**: dashboard `SLO vận hành hằng ngày — 7 service` mô tả ở tài liệu này đã được **tách và bỏ**, thay bằng hai dashboard `Xử lý sự cố — 7 service` (mọi panel theo thanh thời gian) và `Ngân sách lỗi tuần — 7 service` (cố định tuần lịch giờ Việt Nam). Đây là tài liệu thiết kế/kế hoạch gốc, giữ nguyên làm lịch sử; hướng dẫn hiện hành: [`docs/kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`](../../kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md) và [`specs/030-incident-and-weekly-dashboards/`](../../../specs/030-incident-and-weekly-dashboards/).
+
 **Ngày:** 2026-09-08
 **Trạng thái:** Đã được duyệt qua brainstorm, sẵn sàng chuyển sang kế hoạch triển khai
 
@@ -92,7 +94,7 @@ xác nhận hành vi collapse/expand hoạt động đúng ra sao ở phiên b�
 
 **Cập nhật sau khi build**: đã verify — Collapsible section KHÔNG thực sự ẩn nội dung panel bên
 trong ở chế độ View (chỉ đổi trạng thái header), xem chi tiết và bằng chứng ở
-[`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../../kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md).
+[`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../../kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md).
 
 ## Trường hợp biên & rủi ro đã biết
 
@@ -125,7 +127,7 @@ mà không tự kiểm tra lại ít nhất 1 lần:
 
 ## Việc cần làm ở bước triển khai (không thuộc phạm vi thiết kế này)
 
-**Đã hoàn tất** — xem kết quả thật ở [`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../../kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md).
+**Đã hoàn tất** — xem kết quả thật ở [`docs/kibana-quan-sat-he-thong/06-dashboard-slo-van-hanh-hang-ngay.md`](../../kibana-quan-sat-he-thong/06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md).
 
 - [x] Xác nhận cú pháp Lens Formula thật cho Error-rate (tỉ lệ 2 count có điều kiện KQL)
 - [x] Xác nhận tính năng "Customize time range" theo panel còn đúng tên/vị trí ở phiên bản Kibana này

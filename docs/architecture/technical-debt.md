@@ -1,4 +1,4 @@
-# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-028
+# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-030
 
 *Đối tượng đọc: kỹ sư phần mềm / software architect. File này gom lại mọi "lưu ý hay khám phá" (blocker
 giữa chừng, bug thật tìm được khi triển khai/xác thực, giới hạn phạm vi đã biết, amendment đính chính)
@@ -31,6 +31,13 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - **Nới SLO và ngân sách**: người dùng chọn nới tỷ lệ khả dụng/5xx ×10 và đổi luôn SLO (99%/1%) để ngân sách vẫn bằng 1 − SLO → hiến chương sửa cả hai dòng mặc định của Nguyên tắc VIII (MAJOR 2.0.0), `PlatformSloDefaults` đổi theo, ngưỡng 5xx của rule `incident-fast-detection` (028) đổi thành 1%.
   - **Sửa tại chỗ tài liệu 021/027/028** và xoá bằng chứng đo cũ (theo tháng/0.1%) khỏi tài liệu vận hành, research/tasks/quickstart 027/028 và QA 027/028; bằng chứng chỉ còn ở QA_Debt và lịch sử git.
   - **Ngoại lệ FR-010**: nhãn cột Error-rate của "Bảng SLO — 7 service" (021) đổi thành "ngưỡng < 1%".
+- **[030](030_Architect_hai%20dashboard%20xử%20lý%20sự%20cố%20và%20ngân%20sách%20tuần.md)** — Phạm vi đổi giữa chừng so với kế hoạch:
+  - **Dashboards REST API thay UI/Saved Objects thủ công**: Kibana 9.4.4 có `PUT /api/dashboards/{id}` (đặt id, panel `vis`/`discover_session`/`markdown`, section, điều khiển ES|QL); dựng bằng API, export ndjson như cũ.
+  - **Link trace mở Discover, không APM** (V5 không đạt: APM không đọc dữ liệu OTel thô); người dùng chốt.
+  - **Link hai chiều là ô Markdown, không panel Links** (panel Links tạo vòng tham chiếu, mỗi file export chứa cả hai dashboard); người dùng chốt.
+  - **Điều khiển tuần là 4 giá trị tương đối** (điều khiển lưu sẵn một giá trị mặc định cố định) và cửa sổ 30 ngày mỗi panel; người dùng chốt/đồng ý.
+  - **Sửa tại chỗ tài liệu 021/025/026/027/028/029** trỏ dashboard cũ (025/026 ngoài danh sách 021/027/028 trong mô tả ban đầu); `docs/superpowers/` chỉ thêm ghi chú đầu file.
+
 
 ## 2. Bug thật phát hiện khi triển khai/xác thực
 
@@ -253,6 +260,13 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - (1) Index `slo-error-budget-events` do Kibana tự tạo (mapping động `text` + `.keyword`), không phải mapping `keyword` của file `07` — bước tạo index bị bỏ qua sau lần dựng lại Elastic ngày 03/10. Đã xoá và tạo lại đúng mapping.
   - (2) Xoá index sự kiện trong lúc alert 100 đang active liên tục → không có sự kiện mới, service đã cạn (`Parties.Api`, 504%) không bị đóng băng. Gỡ bằng Disable rồi Enable rule `error-budget-100` (người dùng chốt); đã ghi vào file `07`.
   - (3) Sau Disable/Enable, alert 100 cũ của `Parties.Api` vẫn `active` khoảng 10 phút trong bộ lọc 15 phút của bảng dashboard → bảng hiện trùng dòng tạm thời.
+- **[030](030_Architect_hai%20dashboard%20xử%20lý%20sự%20cố%20và%20ngân%20sách%20tuần.md)** — Phát hiện khi dựng trên stack đang chạy:
+  - (1) Discover session ES|QL trên dashboard **tự bị thanh thời gian cắt** kể cả khi truy vấn đã có `WHERE @timestamp` → dashboard tuần đặt `time_range` riêng cho mọi panel.
+  - (2) Điều khiển ES|QL lưu một giá trị mặc định cố định → dashboard tuần dùng 4 giá trị tương đối, danh sách tuần theo dữ liệu bị loại.
+  - (3) Panel Links giữa hai dashboard tạo vòng tham chiếu; link ngoài đường dẫn tương đối bị Kibana vô hiệu → ô Markdown theo id cố định.
+  - (4) Bảng ES|QL trong Discover không có định dạng trường nên không làm link theo dòng → panel log lỗi dùng Discover session cổ điển + định dạng URL của index-pattern.
+  - (5) ES|QL 9.4.4 không có `DATE_ADD`; ghi chú: nhân `as_of * 1 day` không hợp lệ → dùng `DATE_DIFF` và `CASE` cho ngày.
+
 
 ## 3. Giới hạn phạm vi đã biết
 
@@ -445,7 +459,7 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - **Môi trường local chậm từng đợt, chưa rõ nguyên nhân**: parties/products/baskets/identity có lúc p95 320–560 ms mà không bị tiêm, rule bắn lại sau hơn 15 phút. Khôi phục orders mất ~48 phút mới có 15 phút liên tục đạt SLO.
   - **Lỗi lan theo chuỗi phụ thuộc**: hỏng orders thì BFF và gateway cũng có alert; người vận hành tự lần ra gốc.
   - **Diễn tập tiêu hao ngân sách tuần như thật** (người dùng chốt): sau các lần thử, cả 7 service ở trạng thái "cạn ngân sách" của 027.
-  - **Ngưỡng của rule `incident-fast-detection` chép tay**, không test nào canh khớp manifest (029 đổi ngưỡng 5xx sang 1% bằng tay, vẫn chưa có test).
+  - **Ngưỡng của rule `incident-fast-detection` chép tay**, từng không test nào canh khớp manifest (029 đổi ngưỡng 5xx sang 1% bằng tay). *Từ 030*: đã có `IncidentFastDetectionRuleDefinitionTests`.
   - **Niêm phong dựa vào kỷ luật**: file băm, không mã hoá.
   - **Buổi diễn tập mù đầu tiên chưa chạy** (T031, người dùng tự làm).
 - **[029](029_Architect_ngân%20sách%20lỗi%20theo%20tuần%20lịch.md)** — Giới hạn còn lại:
@@ -453,7 +467,16 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - **Lưu lượng local thấp với chu kỳ tuần** (người dùng chốt chỉ ghi lại): vài lỗi vượt nhiều mốc trong một chu kỳ — mốc 75 của 4 service bắn trễ một lượt sau khi đã quá 100%; traffic nền làm mẫu số tăng nên mức tiêu hao tự giảm dần giữa các đợt.
   - **V2 chỉ chứng minh một phần**: cửa sổ rule 7 ngày được chứng minh phủ ít nhất 2 ngày (dữ liệu chỉ có từ 03/10), chưa quan sát trường hợp tối Chủ nhật.
   - **Chưa quan sát trong một phiên**: ranh giới thứ Hai 00:00 thật (12/10), hồi phục thật sau 3 ngày.
-  - **Rule `incident-fast-detection` vẫn không có test** (giữ sai lệch Nguyên tắc III của 028); alert của rule này có lúc bị Kibana đánh `flapping` và giữ active thêm vài lượt dù cửa sổ 5 phút đã sạch.
+  - **Rule `incident-fast-detection` không có test** *(đã đóng bởi 030)*; alert của rule này có lúc bị Kibana đánh `flapping` và giữ active thêm vài lượt dù cửa sổ 5 phút đã sạch.
+- **[030](030_Architect_hai%20dashboard%20xử%20lý%20sự%20cố%20và%20ngân%20sách%20tuần.md)** — Giới hạn còn lại:
+  - **Xem lại tối đa 3 tuần trước** (cửa sổ 30 ngày mỗi panel); tuần cũ hơn không xem được trên dashboard.
+  - **Hai panel cảnh báo/cạn chỉ là trạng thái hiện tại** (rule chỉ giữ alert của tuần hiện tại); alert `active` không còn được rule cập nhật rơi khỏi bảng khi sang tuần mới.
+  - **Link Markdown theo id cố định**: chỉ đúng khi Kibana giữ nguyên id (Kibana mặc định/sạch); import vào space khác đổi id.
+  - **Panel phụ thuộc Dashboards REST API và Lens ES|QL của 9.4.4**: nâng phiên bản Kibana có thể đổi cú pháp/hành vi; không có test canh dashboard (người dùng chốt).
+  - **Log lỗi hiển thị nội dung log**: có thể chứa dữ liệu nhạy cảm (Nguyên tắc VI), chưa lọc.
+  - **Span Client tới `identity-api`** (lấy cấu hình OIDC) lẫn trong bảng lỗi hạ lưu; đích suy ra từ `server.address` theo quy ước `<tên>-api` → `<Tên>.Api` (không có `peer.service`).
+  - **Đã đóng**: rule `incident-fast-detection` nay có test canh gác (`IncidentFastDetectionRuleDefinitionTests`, 7 test) — sai lệch Nguyên tắc III của 028 không còn.
+
 
 ## 4. Amendment — đính chính khi thực tế lệch spec gốc
 
@@ -473,3 +496,5 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   thiết kế lại cho 7 service. QA_Debt 027 ghi "sửa rule `error-budget-100` làm Kibana đặt lại trạng thái
   alert": lần `PUT` sửa truy vấn ngày 2026-10-05 không tái hiện (giữ trạng thái, `new: 0`), chỉ
   Disable/Enable mới đặt lại.
+
+- **[030](030_Architect_hai%20dashboard%20xử%20lý%20sự%20cố%20và%20ngân%20sách%20tuần.md)** — Đính chính so với kế hoạch lúc viết: kế hoạch (`plan.md`/`research.md`) giả định bộ chọn tuần lấy danh sách từ dữ liệu, link bằng panel Links và link trace sang Kibana APM; cả ba bị thay lúc triển khai sau khi kiểm chứng V1–V8 trên Kibana thật (xem `specs/030-incident-and-weekly-dashboards/research.md` "Kết quả xác minh"). Lúc `/speckit-plan` còn nói log "không có correlation id" — thực tế `CorrelationIdMiddleware` đã đẩy id vào log và Elasticsearch có `attributes.CorrelationId` (chỉ chưa có log nào nằm trong request lúc đó).

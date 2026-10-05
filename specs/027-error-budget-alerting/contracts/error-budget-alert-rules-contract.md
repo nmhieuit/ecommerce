@@ -28,6 +28,6 @@ Mọi rule mang tag `slo-error-budget`.
 | 5 | Cửa sổ tính bắt đầu đúng thứ Hai 00:00 của tuần hiện tại giờ Việt Nam. | FR-003 |
 | 6 | Alert kích hoạt trong vòng 1 chu kỳ (≤ 5 phút) kể từ khi mức tiêu hao thật vượt mốc, và giữ active chừng nào còn vượt. | FR-006, FR-007, SC-002 |
 | 7 | Service không có span nào trong tuần không sinh alert nào; thiếu dữ liệu không bật hay tắt alert. | FR-012, SC-005 |
-| 8 | Dashboard SLO hằng ngày có nhóm panel "Ngân sách lỗi tuần này" ở trên cùng: bảng mức tiêu hao 7 × 4 (%), bảng alert đang active (service, ngân sách, mốc) đặt cạnh bảng mức tiêu hao, bảng service đang "cạn — ưu tiên độ tin cậy". | FR-008, FR-011, SC-003 |
+| 8 | Dashboard Ngân sách lỗi tuần có nhóm panel "Ngân sách lỗi tuần này" ở trên cùng: bảng mức tiêu hao 7 × 4 (%), bảng alert đang active (service, ngân sách, mốc) đặt cạnh bảng mức tiêu hao, bảng service đang "cạn — ưu tiên độ tin cậy". | FR-008, FR-011, SC-003 |
 | 9 | `error-budget-frozen` giữ active sau khi sang tuần mới cho tới khi đủ 3 ngày đạt SLO; được gỡ trong tuần nếu đủ 3 ngày đạt SLO dù ngân sách tuần vẫn 100%. | FR-010 |
 | 10 | 5 bất biến của `specs/021-declare-service-slos/contracts/continuous-measurement-contract.md` vẫn thỏa sau khi sửa dashboard. | FR-015 (không phá cái đã có) |

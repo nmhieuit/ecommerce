@@ -21,7 +21,7 @@ Kibana chạy 4 rule ES|QL (license Basic), mỗi 5 phút một lần:
 - 1 rule suy ra trạng thái "cạn — ưu tiên độ tin cậy" từ sự kiện cạn ngân sách và kết quả SLO theo
   ngày.
 
-Toàn bộ trạng thái cảnh báo hiện ở nhóm panel trên cùng của dashboard SLO hằng ngày. Một middleware
+Toàn bộ trạng thái cảnh báo hiện ở nhóm panel trên cùng của dashboard Ngân sách lỗi tuần. Một middleware
 tiêm lỗi 5xx trong ServiceDefaults (tắt mặc định, hai lớp chặn như 025) cho phép làm cạn ngân sách thật
 qua đường OTel để kiểm chứng. Chi tiết quyết định: [research.md](./research.md).
 
@@ -117,7 +117,7 @@ tests/ServiceManifestSloConventionTests/
 docs/kibana-quan-sat-he-thong/
 ├── 07-canh-bao-ngan-sach-loi.md                   # mới — cách dựng/vận hành rule, connector, panel
 ├── alerts/error-budget-rules.ndjson               # mới — export 4 rule + Index connector
-└── dashboards/slo-van-hanh-hang-ngay.ndjson       # sửa — thêm nhóm panel "Ngân sách lỗi tuần này"
+└── dashboards/ngan-sach-loi-tuan.ndjson       # sửa — thêm nhóm panel "Ngân sách lỗi tuần này"
 
 docker-compose.yml, docker-compose.local.yml       # sửa: Kibana nhận khoá mã hoá; 7 service nhận Chaos__AllowFaultInjection
 .env.example                                       # sửa: KIBANA_ENCRYPTION_KEY (Vùng 2), CHAOS_ALLOW_FAULT_INJECTION (Vùng 1)

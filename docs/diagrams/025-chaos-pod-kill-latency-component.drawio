@@ -19,7 +19,7 @@
                 <mxCell id="orders" value="Orders.Api&#xa;ChaosLatencyInjectionMiddleware (Features/Chaos/)&#xa;2 lớp gate: Chaos:AllowLatencyInjection + header X-Chaos-Latency-Ms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="330" y="180" width="400" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="dashboard" value="Dashboard Kibana &quot;SLO vận hành hằng ngày&quot; (021)&#xa;tái dùng nguyên trạng, không xây panel riêng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                <mxCell id="dashboard" value="Dashboard Kibana &quot;Xử lý sự cố&quot; (021)&#xa;tái dùng nguyên trạng, không xây panel riêng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="830" y="180" width="320" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="docs" value="docs/dien-tap-chaos-engineering/&#xa;mau-ket-qua.md + README.md + ket-qua/*.md&#xa;KHÔNG tích hợp Jira tự động" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" parent="1" vertex="1">

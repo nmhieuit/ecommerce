@@ -127,7 +127,7 @@ Là người đóng vai SRE, tôi muốn chính sách ngân sách lỗi của c�
 
 ### User Story 2 - Cảnh báo mốc và dashboard tính theo tuần lịch (Priority: P1)
 
-Là người đóng vai SRE, tôi muốn các cảnh báo mốc 50%/75%/100% tính mức tiêu hao từ thứ Hai 00:00 giờ Việt Nam của tuần hiện tại, với tỷ lệ cho phép mới. Tôi cũng muốn các panel ngân sách trên dashboard SLO hằng ngày hiển thị đúng mức tiêu hao của tuần này. Như vậy, thứ tôi thấy trên dashboard và thứ làm cảnh báo bắn là cùng một con số.
+Là người đóng vai SRE, tôi muốn các cảnh báo mốc 50%/75%/100% tính mức tiêu hao từ thứ Hai 00:00 giờ Việt Nam của tuần hiện tại, với tỷ lệ cho phép mới. Tôi cũng muốn các panel ngân sách trên dashboard Ngân sách lỗi tuần hiển thị đúng mức tiêu hao của tuần này. Như vậy, thứ tôi thấy trên dashboard và thứ làm cảnh báo bắn là cùng một con số.
 
 **Why this priority**: Tiêu chí "vi phạm được phát hiện bằng cảnh báo, không phải tự soi dashboard" của 027 vẫn phải đúng sau khi đổi chu kỳ. Nếu rule tính theo tuần mà dashboard còn theo tháng, người vận hành sẽ thấy hai con số mâu thuẫn trên cùng một màn hình.
 
@@ -141,7 +141,7 @@ Là người đóng vai SRE, tôi muốn các cảnh báo mốc 50%/75%/100% tí
 1. **Given** một ngân sách của một service đang dưới 50% trong tuần hiện tại, **When** lượng request xấu từ thứ Hai 00:00 giờ Việt Nam làm mức tiêu hao vượt 50% (tính trên tỷ lệ cho phép mới), **Then** cảnh báo mốc 50% bắn cho đúng service và ngân sách đó trong vòng một chu kỳ đánh giá (5 phút).
 2. **Given** lỗi tổng hợp đủ để tiêu hết ngân sách 5xx tuần của một service, **When** mức tiêu hao lần lượt vượt 50%, 75%, 100%, **Then** cảnh báo tương ứng bắn ở đúng từng mốc. Trên môi trường lưu lượng thấp, nhiều mốc có thể bắn cùng một chu kỳ (giới hạn đã biết, xem Edge Cases).
 3. **Given** request xấu xảy ra vào Chủ nhật tuần trước (giờ Việt Nam), **When** sang thứ Hai 00:00 giờ Việt Nam, **Then** những request đó không còn được tính vào mức tiêu hao tuần mới, và cảnh báo mốc của tuần cũ tắt trong vòng một chu kỳ đánh giá.
-4. **Given** người vận hành mở dashboard SLO hằng ngày, **When** xem nhóm panel ngân sách, **Then** cả 3 panel (mức tiêu hao, cảnh báo đang hoạt động, cạn ngân sách) ghi "tuần này", hiển thị dữ liệu theo cửa sổ tuần lịch, và panel text nêu cam kết 99%/tuần thay cho 99.9%/tháng.
+4. **Given** người vận hành mở dashboard Ngân sách lỗi tuần, **When** xem nhóm panel ngân sách, **Then** cả 3 panel (mức tiêu hao, cảnh báo đang hoạt động, cạn ngân sách) ghi "tuần này", hiển thị dữ liệu theo cửa sổ tuần lịch, và panel text nêu cam kết 99%/tuần thay cho 99.9%/tháng.
 5. **Given** bố cục dashboard hiện có, **When** spec này hoàn thành, **Then** dashboard không bị tách, không bị sắp xếp lại, và không có panel nào ngoài phần ngân sách và panel text bị thay đổi (việc tách thuộc spec B).
 
 ---
@@ -222,7 +222,7 @@ Là người đọc tài liệu dự án (PO, QA, kiến trúc, người vận h
 - **FR-007**: Cả 4 cảnh báo ngân sách PHẢI được đánh giá mỗi 5 phút. Cảnh báo đã bắn giữ ở trạng thái hoạt động liên tục chừng nào mức tiêu hao còn trên mốc.
 - **FR-008**: Trạng thái "cạn ngân sách — ưu tiên độ tin cậy" PHẢI được suy ra từ sự kiện cạn và kết quả SLO theo ngày trong 14 ngày gần nhất. Một ngày được tính là đạt SLO khi 5xx dưới 1% và độ trễ trong ngân sách p95 5% / p99 1%.
 - **FR-009**: Cảnh báo phát hiện nhanh của 028 PHẢI bắn khi tỷ lệ 5xx của service trong 5 phút gần nhất ≥ 1%, hoặc khi p95/p99 vượt ngưỡng đã khai báo của service. Riêng gateway vẫn chỉ xét 5xx.
-- **FR-010**: Dashboard SLO hằng ngày PHẢI hiển thị 3 panel ngân sách (mức tiêu hao, cảnh báo đang hoạt động, cạn ngân sách) theo cửa sổ tuần lịch, với tiêu đề "tuần này" và khoảng thời gian khớp cửa sổ mới. Panel text PHẢI nêu cam kết 99%/tuần. Dashboard KHÔNG được tách hay sắp xếp lại trong spec này.
+- **FR-010**: Dashboard Ngân sách lỗi tuần PHẢI hiển thị 3 panel ngân sách (mức tiêu hao, cảnh báo đang hoạt động, cạn ngân sách) theo cửa sổ tuần lịch, với tiêu đề "tuần này" và khoảng thời gian khớp cửa sổ mới. Panel text PHẢI nêu cam kết 99%/tuần. Dashboard KHÔNG được tách hay sắp xếp lại trong spec này.
 - **FR-011**: Khi triển khai, ngân sách tuần PHẢI bắt đầu tính từ thứ Hai 00:00 giờ Việt Nam của tuần chứa ngày triển khai. Không mang dữ liệu tiêu hao, sự kiện "cạn" hay trạng thái đóng băng của chu kỳ tháng sang.
 - **FR-012**: Lỗi phát sinh từ diễn tập (025/027/028) PHẢI được tính vào ngân sách tuần như lỗi thật.
 - **FR-013**: Khi một service không có request trong tuần, hoặc thiếu dữ liệu do gián đoạn telemetry, hệ thống PHẢI hiển thị "không có dữ liệu" và KHÔNG được bắn hay tắt cảnh báo chỉ vì thiếu dữ liệu.
@@ -266,7 +266,7 @@ Là người đọc tài liệu dự án (PO, QA, kiến trúc, người vận h
 - **SC-001**: Cả 7/7 manifest khai cửa sổ tuần lịch giờ Việt Nam, SLO khả dụng 99% và 5xx dưới 1%, tỷ lệ cho phép 1% / 1% / 5% / 1%. Hiến chương ở phiên bản 2.0.0 với hai dòng mặc định mới.
 - **SC-002**: Khi tạo đủ lỗi tổng hợp để tiêu hết ngân sách 5xx tuần của một service, cảnh báo bắn ở cả ba mốc 50%, 75% và 100%. Mỗi mốc bắn trong vòng một chu kỳ đánh giá (5 phút) kể từ khi mức tiêu hao thực tế vượt mốc.
 - **SC-003**: Sau thứ Hai 00:00 giờ Việt Nam, mức tiêu hao của tuần mới không chứa request của tuần trước, và cảnh báo mốc của tuần cũ (nếu không còn trên mốc) tắt trong vòng một chu kỳ đánh giá. Trạng thái đóng băng vẫn giữ nếu chưa đủ 3 ngày đạt SLO.
-- **SC-004**: 100% panel ngân sách trên dashboard SLO hằng ngày hiển thị theo tuần lịch, không còn nhãn "tháng". Con số trên panel khớp với điều kiện làm cảnh báo bắn ở cùng thời điểm.
+- **SC-004**: 100% panel ngân sách trên dashboard Ngân sách lỗi tuần hiển thị theo tuần lịch, không còn nhãn "tháng". Con số trên panel khớp với điều kiện làm cảnh báo bắn ở cùng thời điểm.
 - **SC-005**: Rule phát hiện nhanh không bắn vì 5xx khi tỷ lệ 5xx trong 5 phút dưới 1%, và bắn trong vòng một chu kỳ khi tỷ lệ ≥ 1%.
 - **SC-006**: Tìm trên toàn repo không còn tham chiếu nào tới chu kỳ ngân sách tháng hay SLO 99.9% / 0.1% trong hiện vật và tài liệu đang dùng của 021/027/028. Chỉ còn ở phần lịch sử phiên bản của hiến chương và các bản ghi lịch sử đã loại trừ ở FR-016.
 - **SC-007**: Toàn bộ kiểm thử quy ước manifest và kiểm thử định nghĩa cảnh báo chạy xanh. Mỗi kiểm thử chu kỳ tuần/tỷ lệ mới được chạy thấy đỏ trước khi sửa manifest/rule (Nguyên tắc III).
