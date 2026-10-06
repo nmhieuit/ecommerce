@@ -9,8 +9,8 @@
 |---|---|
 | 1 | Đúng một rule, loại `.es-query`, `searchType: esqlQuery`, `groupBy: row`, `schedule.interval = 5m`, `timeWindowSize = 5`, `timeWindowUnit = m`, tag `incident-fast-detection`. |
 | 2 | Nguồn dữ liệu là `traces-generic.otel-default*` (giống dashboard 021 và rule 027); service lấy từ `resource.attributes.service.name`. |
-| 3 | Một hàng (một alert) cho mỗi service mà, trong 5 phút gần nhất, `5xx / tổng ≥ 1%` HOẶC p95 `duration` > ngưỡng p95 HOẶC p99 `duration` > ngưỡng p99. Riêng `Gateway.Api` chỉ xét `5xx / tổng ≥ 1%` (người dùng chốt 2026-10-02). |
-| 4 | Ngưỡng theo service khớp `slos` trong `service-manifest.yaml`: `Bff.Api` 300/800 ms, sáu service còn lại 150/500 ms (`duration` là ns, nhân 1 000 000). |
+| 3 | Một hàng (một alert) cho mỗi service mà, trong 5 phút gần nhất, `5xx / tổng ≥ 1%` HOẶC p95 `duration` > ngưỡng p95 HOẶC p99 `duration` > ngưỡng p99. `Gateway.Api` được xét giống mọi service (2026-10-06; trước đó chỉ xét 5xx). |
+| 4 | Ngưỡng theo service khớp `slos` trong `service-manifest.yaml`: `Bff.Api` 700/1000 ms, `Gateway.Api` 800/1100 ms, năm service còn lại 500/700 ms (`duration` là ns, nhân 1 000 000). |
 | 5 | Kết quả cuối chỉ có cột `service`, sinh từ lệnh `STATS ... BY service` cuối cùng (Ràng buộc 2–3 của research 027), nên alert không bị tạo lại mỗi lần chạy. |
 | 6 | Service không có span nào trong 5 phút → không có hàng → không có alert. |
 | 7 | Rule không có action/connector; 4 rule `slo-error-budget` của 027 và file `error-budget-rules.ndjson` không bị sửa. |

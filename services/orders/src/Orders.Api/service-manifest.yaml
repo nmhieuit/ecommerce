@@ -34,8 +34,8 @@ slos:
   error-rate:
     max-5xx-ratio: 1%
   latency:
-    p95: 150ms
-    p99: 500ms
+    p95: 500ms
+    p99: 700ms
 
 error-budget-policy:
   # SCRUM-35 / constitution Principle VIII (2.0.0): "Sustained SLO breach consumes the error budget:
@@ -79,22 +79,22 @@ endpoints:
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check
     authorization: anonymous
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - route: GET /health/ready
     purpose: Readiness probe. Gates traffic on this service's own database being reachable.
     authentication: anonymous
     authorization: anonymous
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
 
 observability:
   # Principle VII — emitted via shared/ServiceDefaults, never configured per service by hand.

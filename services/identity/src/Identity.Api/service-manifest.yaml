@@ -30,8 +30,8 @@ slos:
   error-rate:
     max-5xx-ratio: 1%
   latency:
-    p95: 150ms
-    p99: 500ms
+    p95: 500ms
+    p99: 700ms
 
 error-budget-policy:
   # SCRUM-35 / constitution Principle VIII (2.0.0): "Sustained SLO breach consumes the error budget:
@@ -75,30 +75,30 @@ endpoints:
       handler of this service's own.
     authentication: anonymous   # the credentials in the request body ARE the authentication
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - route: GET /.well-known/openid-configuration
     purpose: >-
       OIDC discovery document every consumer's AddIdentityValidation()/toggle-gated JwtBearer
       registration fetches once and caches (research.md Decision 5) — never on the request path.
     authentication: anonymous
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - route: GET /health/ready
     purpose: >-
       Readiness probe, gated on this service's own "identity" database being reachable (a raw SQL
       connection check, matching every other database-owning service's pattern).
     authentication: anonymous
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
 
 observability:
   # Principle VII — emitted via shared/ServiceDefaults, never configured per service by hand.

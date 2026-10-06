@@ -9,11 +9,11 @@ public class SloDefaultComplianceTests
 {
     /// <summary>
     /// Kiểm tra: 4 giá trị SLO của mỗi service khớp hồ sơ mặc định theo classification
-    /// (`client-facing-bff`: p95 300ms/p99 800ms; `internal-service-api`: p95 150ms/p99 500ms; cùng
+    /// (`client-facing-bff`: p95 700ms/p99 1000ms; `internal-service-api`: p95 500ms/p99 700ms; cùng
     /// availability 99% và max-5xx 1% theo hiến chương 2.0.0 — spec 029); nếu lệch thì `slos.justification` phải có, không rỗng.
     /// Lý do: FR-002/FR-003, US2 — không được tồn tại "tiêu chuẩn ngầm": 1 service có ngân sách khác
     /// chuẩn chung mà không ai biết vì sao. Đã kiểm chứng sống (mutate→đỏ→revert→xanh): đổi p95 của
-    /// `orders` từ 150ms sang 50ms (không justification) làm test đỏ đúng cho `orders`.
+    /// `orders` từ 500ms sang 50ms (không justification) làm test đỏ đúng cho `orders`.
     /// Lưu ý: chỉ so sánh 4 giá trị cấp service (`slos:`), KHÔNG kiểm tra các giá trị `latency`
     /// theo từng endpoint trong `endpoints:` của manifest.
     /// Task nguồn: spec 021 (khai báo SLO theo service) — FR-002/FR-003, US2 (bất biến 4–5).

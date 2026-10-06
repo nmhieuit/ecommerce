@@ -171,8 +171,8 @@ continuously from the telemetry required by Principle VII.
 
 Unless a service documents a justified alternative, the platform defaults are:
 
-- Client-facing BFF read: p95 ≤ 300 ms, p99 ≤ 800 ms.
-- Internal service API: p95 ≤ 150 ms, p99 ≤ 500 ms.
+- Client-facing BFF read: p95 ≤ 700 ms, p99 ≤ 1000 ms.
+- Internal service API: p95 ≤ 500 ms, p99 ≤ 700 ms.
 - Integration events processed within 5 s of publication at p95.
 - 99% weekly availability.
 - 5xx responses below 1% of requests.

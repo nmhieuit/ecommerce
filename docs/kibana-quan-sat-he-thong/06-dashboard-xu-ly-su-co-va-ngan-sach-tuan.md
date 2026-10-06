@@ -62,8 +62,8 @@ Tên cột (Name) thật đã đặt ở Task 2 Bước 2 mục 4-6:
 | Cột | Name (label) thật |
 |---|---|
 | Error-rate | `Error-rate — Thực tế (ngưỡng < 1%, cả 7 service)` (spec 029: SLO 5xx dưới 1%) |
-| Latency p95 | `Latency p95 (ms) — Thực tế (ngưỡng 150ms; riêng Bff.Api 300ms)` |
-| Latency p99 | `Latency p99 (ms) — Thực tế (ngưỡng 500ms; riêng Bff.Api 800ms)` |
+| Latency p95 | `Latency p95 (ms) — Thực tế (ngưỡng 500ms; riêng Bff.Api 700ms, Gateway.Api 800ms)` |
+| Latency p99 | `Latency p99 (ms) — Thực tế (ngưỡng 700ms; riêng Bff.Api 1000ms, Gateway.Api 1100ms)` |
 
 Khác nhỏ so với mô tả gốc: ngoại lệ `Bff.Api` được ghi thẳng trong cùng tên cột (trong ngoặc), không
 tách thành 1 dòng chữ riêng "bên cạnh bảng" — gộp lại cho gọn, không ảnh hưởng nội dung.

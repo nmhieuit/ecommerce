@@ -13,8 +13,8 @@ Rule **không đổi** trong spec này; test khoá giá trị hiện có (tính 
 | 1 | Rule được export, là loại `.es-query` (ES|QL), có tag `incident-fast-detection`, chu kỳ `5m`, cửa sổ `5 m`, `groupBy: row`, `timeField: @timestamp` | file ndjson |
 | 2 | Truy vấn chỉ nhìn 5 phút gần nhất (`NOW() - 5 minutes`) | file ndjson |
 | 3 | Ngưỡng 5xx là `err_pct >= 1`, bằng SLO 5xx mặc định của hiến chương/manifest (5xx dưới 1%) | `PlatformSloDefaults`, 7 manifest |
-| 4 | Ngưỡng p95/p99 theo từng service khớp manifest: p95 150 ms / p99 500 ms, `Bff.Api` 300/800 ms | 7 manifest (`slos`) |
-| 5 | Gateway chỉ xét 5xx: `latency_breach` luôn `false` với `Gateway.Api` | file ndjson |
+| 4 | Ngưỡng p95/p99 theo từng service khớp manifest: p95 500 ms / p99 700 ms, `Bff.Api` 700/1000 ms, `Gateway.Api` 800/1100 ms | 7 manifest (`slos`) |
+| 5 | Gateway được xét độ trễ như mọi service: `latency_breach` không có nhánh riêng cho `Gateway.Api` (từ 2026-10-06) | file ndjson |
 | 6 | Kết quả chỉ giữ cột `service` (kết quả rule chỉ giữ cột định danh alert) | file ndjson |
 | 7 | Ngưỡng cảnh báo `> 0` trên số service vi phạm (`thresholdComparator: >`, `threshold: [0]`) | file ndjson |
 

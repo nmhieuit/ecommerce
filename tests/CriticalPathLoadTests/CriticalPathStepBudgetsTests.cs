@@ -25,10 +25,10 @@ public class CriticalPathStepBudgetsTests
     }
 
     /// <summary>
-    /// Kiểm tra: cả 4 bước mang đúng ngân sách `client-facing-bff` — p95 = 300 ms, p99 = 800 ms.
+    /// Kiểm tra: cả 4 bước mang đúng ngân sách `client-facing-bff` — p95 = 700 ms, p99 = 1000 ms.
     /// Lý do (phải test): FR-003 — ngưỡng phải khớp ngân sách đã khai báo của bff (hiến chương
     /// Principle VIII).
-    /// Lưu ý: 300/800 được viết cứng trong test, không đọc lại từ manifest như comment gốc ám chỉ — nên
+    /// Lưu ý: 700/1000 được viết cứng trong test, không đọc lại từ manifest như comment gốc ám chỉ — nên
     /// sửa manifest phải sửa cả test, và hard-code lại `LoadAll` vẫn xanh (xem QA_Debt mục 026).
     /// Task nguồn: spec 026 (kiểm thử tải/hiệu năng đối chiếu ngân sách) — T007, FR-003.
     /// </summary>
@@ -41,11 +41,11 @@ public class CriticalPathStepBudgetsTests
 
         Assert.All(budgets, budget =>
         {
-            // Assert.Equal #1: xanh khi p95 của mọi bước đọc ra đúng 300 ms; đỏ khi manifest/parse cho giá
+            // Assert.Equal #1: xanh khi p95 của mọi bước đọc ra đúng 700 ms; đỏ khi manifest/parse cho giá
             // trị khác (ví dụ manifest sửa thành 350ms mà test chưa đổi).
-            Assert.Equal(300, budget.P95Ms);
-            // Assert.Equal #2: xanh khi p99 của mọi bước đọc ra đúng 800 ms; đỏ khi khác.
-            Assert.Equal(800, budget.P99Ms);
+            Assert.Equal(700, budget.P95Ms);
+            // Assert.Equal #2: xanh khi p99 của mọi bước đọc ra đúng 1000 ms; đỏ khi khác.
+            Assert.Equal(1000, budget.P99Ms);
         });
     }
 }

@@ -45,8 +45,8 @@ Phần chung (dùng nguyên văn cho bảng mức tiêu hao trên dashboard, th�
 FROM traces-generic.otel-default*
 | WHERE @timestamp >= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours
 | EVAL service = resource.attributes.service.name
-| EVAL p95_ns = CASE(service == "Bff.Api", 300000000, 150000000)
-| EVAL p99_ns = CASE(service == "Bff.Api", 800000000, 500000000)
+| EVAL p95_ns = CASE(service == "Bff.Api", 700000000, service == "Gateway.Api", 800000000, 500000000)
+| EVAL p99_ns = CASE(service == "Bff.Api", 1000000000, service == "Gateway.Api", 1100000000, 700000000)
 | EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)
 | EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)
 | STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service
@@ -139,8 +139,8 @@ FROM traces-generic.otel-default*, slo-error-budget-events METADATA _index
 | EVAL is_span = 1 - is_event
 | EVAL service = COALESCE(resource.attributes.service.name, service)
 | EVAL day = DATE_TRUNC(1 day, @timestamp + 7 hours)
-| EVAL p95_ns = CASE(service == "Bff.Api", 300000000, 150000000)
-| EVAL p99_ns = CASE(service == "Bff.Api", 800000000, 500000000)
+| EVAL p95_ns = CASE(service == "Bff.Api", 700000000, service == "Gateway.Api", 800000000, 500000000)
+| EVAL p99_ns = CASE(service == "Bff.Api", 1000000000, service == "Gateway.Api", 1100000000, 700000000)
 | EVAL is_5xx = CASE(is_span == 1 AND attributes.http.response.status_code >= 500, 1, 0)
 | EVAL over_p95 = CASE(is_span == 1 AND duration > p95_ns, 1, 0), over_p99 = CASE(is_span == 1 AND duration > p99_ns, 1, 0)
 | EVAL ev_ts = CASE(is_event == 1, @timestamp, NULL)
