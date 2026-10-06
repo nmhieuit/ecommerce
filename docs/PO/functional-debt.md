@@ -151,6 +151,13 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   xin đều được ghi lại. Lúc thử còn thấy hai điều đáng biết: kho dữ liệu ngừng làm bộ phận chủ báo "chưa
   sẵn sàng" dù tiến trình vẫn chạy, và khi gỡ lỗi cần chờ bộ phận thật sự sẵn sàng chứ không chỉ chờ tiến
   trình sống. Phần bài tập "giết một bộ phận" trên cụm máy của tính năng 025 đã gỡ khỏi tài liệu.
+- **[032](032_PO_tài%20liệu%20luyện%20troubleshoot%20theo%20nhóm%20lỗi.md)** —
+  Cả 8 nhóm lỗi đã được thử thật rồi viết thành hướng dẫn từng bước, kèm số liệu đo thật và cách tự đo lại.
+  Lúc thử còn thấy vài điều đáng biết: lỗi ở bộ phận phía sau lan lên các bộ phận phía trước nên cảnh
+  báo ở phía trước dễ làm người luyện nghi nhầm; màn hình ghi lỗi bị một bộ phận khác lấp đầy thông báo không
+  liên quan sau mỗi lần khởi động lại; và khi hệ thống vừa khởi động lại thì nhiều bộ phận chậm một lúc,
+  khiến cảnh báo bắn cả cho bộ phận không bị lỗi. Hướng dẫn nói rõ từng điểm này để người luyện không kết
+  luận sai.
 
 ## 2. Giới hạn hiện tại
 
@@ -314,3 +321,12 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   chứng). Với các nhóm không khởi động lại cả hệ thống, người luyện có thể đoán ra bộ phận hỏng chỉ bằng
   cách xem trạng thái các bộ phận — đã chấp nhận. Mỗi lúc chỉ chạy được một lần tập. Chưa có nơi chạy nào
   ngoài máy local; việc thêm nơi chạy khác (triển khai, cụm máy) để dành cho sau.
+- **[032](032_PO_tài%20liệu%20luyện%20troubleshoot%20theo%20nhóm%20lỗi.md)** —
+  Chưa có người thật nào làm theo hướng dẫn từ đầu đến cuối (người viết cũng là người đã chạy thử nên không
+  phát hiện được chỗ khó hiểu); việc này để người dùng tự thực hiện sau. Phần gợi ý trong tài liệu và phần
+  gợi ý của công cụ được viết riêng nên sau này có thể lệch nhau. Công cụ gây lỗi vẫn chưa có kiểm thử tự
+  động (đã nêu ở 031; đã quyết mở một việc riêng để làm kiểm thử cho công cụ này). Vài nhóm lỗi khó thấy hoặc khó đo: kiểu "nghẽn kết nối" không để
+  lại dấu vết nào, kiểu "thiếu tài nguyên" chỉ làm chậm nhẹ nên cảnh báo tự động có thể không bắn, và hai
+  kiểu làm bộ phận biến mất (đứt mạng, bộ phận chết) không hiện đỏ trên màn hình theo dõi mà chỉ lộ qua
+  bộ phận gọi nó. Khi luyện nhiều lần liên tiếp, cảnh báo của lần trước còn bật nên không đo riêng được thời
+  gian phát hiện của từng nhóm; muốn đo phải chờ các cảnh báo tắt hẳn giữa hai lần.

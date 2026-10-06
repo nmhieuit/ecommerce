@@ -165,6 +165,12 @@ và đã chạy `-Load` để có token):
 
 Dạng (a) không phải bài mù: script in rõ đã tiêm gì. Chỉ một lần chạy mở tại một thời điểm.
 
+**Tài liệu luyện theo từng nhóm** (spec 032), trong chuỗi
+[`docs/kibana-quan-sat-he-thong/`](../kibana-quan-sat-he-thong/00-tong-quan-lo-trinh.md): file 09–16 là
+hướng dẫn step by step cho dạng (a), mỗi nhóm một file; file
+[17](../kibana-quan-sat-he-thong/17-goi-y-theo-trieu-chung.md) gợi ý theo triệu chứng cho dạng (b), mở dần từ
+nhẹ đến đáp án (cùng nghĩa với ba mức của `-Hint`, nhưng viết riêng và có chỉ dẫn cách kiểm).
+
 ## Lịch sử chạy
 
 Gồm bản ghi bài tập chaos (`ket-qua/<ngày>-<kịch bản>.md`, theo [mau-ket-qua.md](./mau-ket-qua.md)) và

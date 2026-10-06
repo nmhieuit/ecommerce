@@ -1,9 +1,11 @@
 # Quan sát hệ thống với Kibana — Tổng quan & Lộ trình học
 
-Bộ 4 file trong thư mục này dạy bạn thao tác thật với Kibana/Elasticsearch trên chính dữ liệu telemetry
-mà nền tảng ecommerce này đang tự sinh ra — không phải ví dụ Kibana chung chung tải từ đâu đó. Mọi
-lệnh, URL, tên field trong 4 file đều đã được xác minh trực tiếp trên hệ thống đang chạy tại thời điểm
-viết tài liệu này (không suy đoán từ tài liệu Elastic).
+Bộ 17 file (01–17) trong thư mục này dạy bạn thao tác thật với Kibana/Elasticsearch trên chính dữ liệu
+telemetry mà nền tảng ecommerce này đang tự sinh ra — không phải ví dụ Kibana chung chung tải từ đâu đó.
+Mọi lệnh, URL, tên field trong các file đều đã được xác minh trực tiếp trên hệ thống đang chạy tại thời
+điểm viết tài liệu (không suy đoán từ tài liệu Elastic). Chia làm ba chặng: file 01–05 học đọc dữ liệu
+và dựng dashboard, file 06–08 dùng dashboard và cảnh báo SLO để phát hiện sự cố, file 09–17 luyện
+troubleshoot trên các nhóm lỗi tiêm có chủ đích hoặc bất ngờ.
 
 ## Bạn là ai để đọc bộ này
 
@@ -35,7 +37,26 @@ Bạn chưa có kinh nghiệm với Kibana, đã dùng Postman gọi API và hi�
    `incident-fast-detection` báo service vượt SLO trong 5 phút gần nhất (bảng trên dashboard của file
    06), và truy vấn xác nhận khôi phục 15 phút cho buổi diễn tập sự cố on-call (SCRUM-36). Cần file 07.
 
-## Chuẩn bị chung cho cả 6 file
+9. **[09-dich-ket-noi-sai.md](09-dich-ket-noi-sai.md)** — nhóm 1, lỗi có kịch bản: một service trỏ tới đích
+   không tồn tại; theo dõi lỗi lan từ cuối chuỗi gọi lên BFF và gateway. Cần file 06 và 08.
+10. **[10-nghen-va-loi-theo-ty-le.md](10-nghen-va-loi-theo-ty-le.md)** — nhóm 2: cạn pool kết nối của gateway
+    và 5xx theo tỷ lệ.
+11. **[11-do-tre-orders.md](11-do-tre-orders.md)** — nhóm 3: độ trễ tiêm vào `Orders.Api`.
+12. **[12-ha-tang-dung.md](12-ha-tang-dung.md)** — nhóm 4: một cơ sở dữ liệu dừng.
+13. **[13-xac-thuc-hong.md](13-xac-thuc-hong.md)** — nhóm 5: địa chỉ máy chủ định danh sai.
+14. **[14-thieu-tai-nguyen.md](14-thieu-tai-nguyen.md)** — nhóm 6: giới hạn CPU và bộ nhớ.
+15. **[15-mang-dut.md](15-mang-dut.md)** — nhóm 7: một service bị tách khỏi mạng chung.
+16. **[16-container-chet-hoac-khoi-dong-lai.md](16-container-chet-hoac-khoi-dong-lai.md)** — nhóm 8: container
+    bị buộc dừng.
+17. **[17-goi-y-theo-trieu-chung.md](17-goi-y-theo-trieu-chung.md)** — luyện **lỗi bất ngờ**: tra theo triệu
+    chứng, mở dần gợi ý từ nhẹ đến mạnh rồi đáp án. Làm sau khi đã qua file 09–16.
+
+Mỗi file 09–16 có bài tập tự làm và checklist "đã đạt". Quy trình triage, mức SEV và mẫu bản ghi sự cố dùng
+chung cho cả chặng này nằm ở
+[`docs/dien-tap-chaos-engineering/README.md`](../dien-tap-chaos-engineering/README.md#diễn-tập-sự-cố-on-call-scrum-36)
+và [`mau-ban-ghi-su-co.md`](../dien-tap-chaos-engineering/mau-ban-ghi-su-co.md) (không chép lại ở đây).
+
+## Chuẩn bị chung cho cả 17 file
 
 - Stack phải chạy qua **`docker-compose.local.yml`** (không phải `docker-compose.yml` mặc định) — chỉ
   file này mới publish Kibana (`5601`) và Elasticsearch (`9200`) ra host:
@@ -46,6 +67,11 @@ Bạn chưa có kinh nghiệm với Kibana, đã dùng Postman gọi API và hi�
   `postman/local.postman_environment.v2.json`. Đây là bản có sẵn folder lấy token thật, dùng ở file 04.
   Sau khi import, chọn environment **Ecommerce - Local** ở góc trên phải Postman.
 - Không cần đăng nhập Kibana — `xpack.security.enabled: false` trong `docker-compose.local.yml`.
+- Riêng file 06–17: import hai dashboard và rule cảnh báo theo
+  [`dashboards/README.md`](dashboards/README.md) và [`alerts/README.md`](alerts/README.md). Riêng file 09–17: thêm
+  `CHAOS_ALLOW_FAULT_INJECTION=true` vào `.env` (nhóm 3 còn cần `CHAOS_ALLOW_LATENCY_INJECTION=true`), chỉ
+  trong lúc luyện, và chạy tải nền `./scripts/incident-drill.ps1 -Load` ở một terminal riêng để dashboard có
+  số liệu. Lỗi luyện tính vào ngân sách lỗi tuần như sự cố thật.
 
 ## Dữ liệu của bạn đi đâu — sơ đồ 1 câu
 
