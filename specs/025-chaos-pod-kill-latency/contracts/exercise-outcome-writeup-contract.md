@@ -6,7 +6,7 @@
 
 ## Bất biến bắt buộc
 
-1. **Một bài tập — một bản ghi**: mỗi lần chạy một trong hai kịch bản chaos (kill-pod, inject-latency)
+1. **Một bài tập — một bản ghi**: mỗi lần chạy kịch bản chaos tiêm độ trễ (inject-latency; kịch bản kill-pod đã gỡ ở spec 031)
    PHẢI tạo đúng một file mới tại `docs/dien-tap-chaos-engineering/ket-qua/<YYYY-MM-DD>-<kich-ban>.md`
    trước khi coi bài tập là hoàn tất (spec FR-007).
 2. **Đủ trường bắt buộc**: mỗi bản ghi PHẢI điền đủ `ngay_chay`, `kich_ban`, `nguoi_thuc_hien`,

@@ -13462,6 +13462,524 @@
           ]
         }
       ]
+    },
+    {
+      "name": "31 - Danh mục nhóm lỗi: kiểm chứng thủ công 6 nhóm D–I",
+      "description": "Spec 031 (danh mục 8 nhóm lỗi). Theo nếp QA 008+: THỦ CÔNG — người vận hành điều khiển lỗi bằng `.env`/compose và `scripts/incident-drill.ps1` ngoài Postman; Postman chỉ đo. Mỗi subfolder D–I có 2 request: `01 Gây triệu chứng` (chạy khi lỗi đang bật, kỳ vọng lỗi/chậm) và `02 Kiểm khôi phục` (chạy sau `-Restore`, kỳ vọng bình thường). Thứ tự mỗi nhóm: (1) chạy folder 00 lấy token; (2) tiêm bằng lệnh nêu ở mô tả subfolder; (3) chạy request 01; (4) `-Restore -RunId <id>`; (5) chạy request 02. Không chạy cả folder bằng một lệnh newman liền mạch: các request 01 chỉ đúng khi lỗi đang bật. Điều kiện: stack local khoẻ, `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` (nhóm D còn cần `CHAOS_ALLOW_LATENCY_INJECTION=true`). Nhóm 1–2 (loại A, B, C) đã được kiểm ở folder 27/28/29; folder này chỉ phủ 6 nhóm mới D–I. Lưu ý token: nhóm D và F tạo lại cả 7 container (kể cả identity) nên token cũ bị từ chối cho tới khi `-Load` lấy token mới (≈ 1–2 phút) — chờ rồi mới chạy request; với newman dùng `-e .incident-drill/load/environment-with-token.json` (environment do `-Load` sinh, đã có `accessToken`). Chi tiết: `docs/QA/031_QA_danh mục 8 nhóm lỗi luyện troubleshoot.md`.",
+      "item": [
+        {
+          "name": "D - Độ trễ (orders-api, header X-Chaos-Latency-Ms)",
+          "description": "Nhóm 3. Tiêm: `./scripts/incident-drill.ps1 -Inject -Type D -Target orders-api -DurationSeconds 600` (cần CHAOS_ALLOW_FAULT_INJECTION=true và CHAOS_ALLOW_LATENCY_INJECTION=true trong `.env`, và `-Load` đã chạy). Hai request dưới gọi thẳng orders-api (header không đi xuyên gateway/BFF) với header trễ tự gửi; trễ chỉ xuất hiện khi cờ latency bật. Khôi phục: `-Restore -RunId <id>`.",
+          "item": [
+            {
+              "name": "01 Gây triệu chứng — GET /orders/{guid} + X-Chaos-Latency-Ms: 2000 → 404 chậm ≥ 1,9 s",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Chaos-Latency-Ms",
+                    "value": "2000"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/orders/{{$guid}}",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{$guid}}"
+                  ]
+                },
+                "description": "Cờ latency BẬT: orders-api trễ ≈ 2 s trước khi trả 404 (đơn không tồn tại). Cờ TẮT: trả 404 nhanh (đã đo 2026-10-05: 2024 ms khi bật, ≈ 100 ms khi tắt)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"404 — đơn không tồn tại\", function () { pm.response.to.have.status(404); });",
+                      "pm.test(\"chậm ≥ 1900 ms vì đã tiêm độ trễ 2000 ms\", function () { pm.expect(pm.response.responseTime).to.be.above(1900); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Kiểm khôi phục — cùng request không header → 404 nhanh",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/orders/{{$guid}}",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{$guid}}"
+                  ]
+                },
+                "description": "Không gửi header trễ: orders-api trả 404 nhanh như bình thường."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"404 — đơn không tồn tại\", function () { pm.response.to.have.status(404); });",
+                      "pm.test(\"nhanh < 1000 ms\", function () { pm.expect(pm.response.responseTime).to.be.below(1000); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "E - Cơ sở dữ liệu dừng (orders-db → /health/ready của orders-api)",
+          "description": "Nhóm 4. Tiêm: `./scripts/incident-drill.ps1 -Inject -Type E -Target orders-db`. Service chủ vẫn sống nhưng `/health/ready` trả 503 (health của chính container vẫn `healthy`). Khôi phục: `-Restore -RunId <id>` (chờ khoảng 1 phút để DB và service ready lại).",
+          "item": [
+            {
+              "name": "01 Gây triệu chứng — GET orders /health/ready → 503",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/ready",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "ready"
+                  ]
+                },
+                "description": "Khi orders-db dừng: orders-api báo chưa sẵn sàng (503) trong vài giây."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"503 — orders-api chưa sẵn sàng vì DB dừng\", function () { pm.response.to.have.status(503); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Kiểm khôi phục — GET orders /health/ready → 200",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/health/ready",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "ready"
+                  ]
+                },
+                "description": "Sau `-Restore`: DB healthy và orders-api ready lại (đã đo ≈ 68 s sau khi khởi động DB)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — orders-api sẵn sàng\", function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "F - Địa chỉ máy chủ định danh sai (gateway-api)",
+          "description": "Nhóm 5. Tiêm: `./scripts/incident-drill.ps1 -Inject -Type F -Target gateway-api` (tạo lại cả 7 container, gateway nhận `Identity__Authority` sai). Request có token bị treo nhiều giây rồi lỗi. Với đích khác (products/baskets/orders/parties/bff) triệu chứng là 502/504 qua gateway. Khôi phục: `-Restore -RunId <id>`. Sau khi khôi phục, identity được tạo lại nên token cũ có thể bị từ chối một lúc: chạy lại folder 00 để lấy token mới.",
+          "item": [
+            {
+              "name": "01 Gây triệu chứng — GET /bff/products có token → 401/502/504 (chậm)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/products",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "products"
+                  ]
+                },
+                "description": "Đã đo 2026-10-05: gateway sai Authority trả 401 sau ≈ 24 s; BFF sai trả 504 sau ≈ 10 s; service phía sau sai trả 502 qua gateway."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"không phải 200 — xác thực hỏng\", function () { pm.expect(pm.response.code).to.be.oneOf([401, 502, 504]); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Kiểm khôi phục — GET /bff/products có token → 200",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/products",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "products"
+                  ]
+                },
+                "description": "Sau `-Restore` (và lấy token mới nếu cần): 200."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — danh sách sản phẩm\", function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "G - Thiếu tài nguyên (products-api, cpus 0,1, memory 256m)",
+          "description": "Nhóm 6. Tiêm: `./scripts/incident-drill.ps1 -Inject -Type G -Target products-api -DurationSeconds 600`. Triệu chứng NHẸ (giới hạn đã ghi ở QA_Debt): dưới tải nền p95 ≈ 100 ms, p99 ≈ 200 ms — chưa vượt ngưỡng 150 ms; request vẫn đúng kết quả. Chạy cùng `-Load` và so p95 trên Kibana với lúc chưa tiêm. Khôi phục: `-Restore -RunId <id>` (tạo lại container).",
+          "item": [
+            {
+              "name": "01 Gây triệu chứng — GET /bff/products → 200 (đúng kết quả, chậm hơn nền)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/products",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "products"
+                  ]
+                },
+                "description": "Kết quả vẫn đúng; chỉ độ trễ tăng. Xem p95/p99 của Products.Api trên Kibana để thấy triệu chứng."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — vẫn đúng kết quả\", function () { pm.response.to.have.status(200); });",
+                      "console.log('responseTime ms: ' + pm.response.responseTime);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Kiểm khôi phục — GET /bff/products → 200 nhanh",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/products",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "products"
+                  ]
+                },
+                "description": "Sau `-Restore`: container được tạo lại không giới hạn tài nguyên."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200\", function () { pm.response.to.have.status(200); });",
+                      "pm.test(\"không quá chậm < 1000 ms\", function () { pm.expect(pm.response.responseTime).to.be.below(1000); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "H - Mạng đứt (baskets-api tách khỏi network chung)",
+          "description": "Nhóm 7. Tiêm: `./scripts/incident-drill.ps1 -Inject -Type H -Target baskets-api`. Container vẫn `healthy` nhìn từ máy chủ nhưng BFF không gọi tới được: gateway trả 504 sau ≈ 3 s. Khôi phục: `-Restore -RunId <id>` (nối lại network kèm alias gốc).",
+          "item": [
+            {
+              "name": "01 Gây triệu chứng — GET /bff/baskets/{guid} → 502/504",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/baskets/{{$guid}}",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "baskets",
+                    "{{$guid}}"
+                  ]
+                },
+                "description": "Đã đo 2026-10-05: 504 sau ≈ 3 s."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"502/504 — baskets không tới được\", function () { pm.expect(pm.response.code).to.be.oneOf([502, 504]); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Kiểm khôi phục — GET /bff/baskets/{guid} → 404 nhanh",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/baskets/{{$guid}}",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "baskets",
+                    "{{$guid}}"
+                  ]
+                },
+                "description": "Sau `-Restore`: giỏ không tồn tại → 404 (request đã tới baskets)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200/404 — request đã tới baskets\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I - Container chết (parties-api bị buộc dừng)",
+          "description": "Nhóm 8 (thay cho kill-pod của 025). Tiêm: `./scripts/incident-drill.ps1 -Inject -Type I -Target parties-api`. Service không tự sống lại (không có `restart:`): gateway trả 504 sau ≈ 3 s. Khôi phục: `-Restore -RunId <id>` (tạo lại container, healthy sau ≈ 10–15 s).",
+          "item": [
+            {
+              "name": "01 Gây triệu chứng — GET /bff/parties/{guid} → 502/504",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/parties/{{$guid}}",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "parties",
+                    "{{$guid}}"
+                  ]
+                },
+                "description": "Đã đo 2026-10-05: 504 sau ≈ 3 s; `docker inspect` cho exit 137."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"502/504 — parties không phản hồi\", function () { pm.expect(pm.response.code).to.be.oneOf([502, 504]); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Kiểm khôi phục — GET /bff/parties/{guid} → 404",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{accessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/parties/{{$guid}}",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "parties",
+                    "{{$guid}}"
+                  ]
+                },
+                "description": "Sau `-Restore`: 404 (party không tồn tại) — request đã tới parties, như folder 28."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"404 — party không tồn tại, nhưng request đã tới parties\", function () { pm.response.to.have.status(404); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "event": [

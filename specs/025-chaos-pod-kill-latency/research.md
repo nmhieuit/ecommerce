@@ -1,46 +1,18 @@
-# Research: Diễn tập chaos engineering — giết pod / tiêm độ trễ
+# Research: Diễn tập chaos engineering — tiêm độ trễ
+
+> **Cập nhật (spec 031, 2026-10-06)**: phần giết pod/Kubernetes đã gỡ; xem [spec 031](../031-error-group-catalog/spec.md) nhóm 8 (container chết).
 
 **Feature**: [spec.md](./spec.md)
 
-Mục tiêu của Phase 0 không phải khảo sát công nghệ chưa biết — cả hai kịch bản chaos của SCRUM-34
-đều dùng công cụ vận hành đã có sẵn trong repo (kubectl, Elastic/Kibana). Mục tiêu thật là **rà soát
-xem những gì SCRUM-34 giả định đã tồn tại (circuit breaker, dashboard SLO, cluster K8s) thực sự có
+Mục tiêu của Phase 0 không phải khảo sát công nghệ chưa biết — kịch bản chaos còn lại của SCRUM-34
+dùng công cụ vận hành đã có sẵn trong repo (Elastic/Kibana). Mục tiêu thật là **rà soát
+xem những gì SCRUM-34 giả định đã tồn tại (circuit breaker, dashboard SLO) thực sự có
 đúng như mong đợi hay không**, để plan không đặt nền trên một giả định sai. Mỗi mục dưới đây là một
 phát hiện xác minh được trong mã nguồn/tài liệu hiện có, không phải một lựa chọn công nghệ.
 
-## Quyết định 0 — Kịch bản kill-pod (US1) không cần thêm mã ứng dụng nào
+## Quyết định 0 — (ĐÃ GỠ) Kịch bản kill-pod (US1)
 
-**Decision**: User Story 1 hiện thực hoàn toàn bằng lệnh vận hành (`kubectl delete pod`) + quan sát
-hạ tầng/telemetry đã có. Không sửa `services/baskets`, không sửa BFF.
-
-**Rationale (xác minh được)**:
-- `deploy/ansible/roles/service_deployment/templates/deployment.yaml.j2` không khai báo trường
-  `replicas` cho bất kỳ service nào → Kubernetes mặc định 1 replica cho `baskets` (và mọi service
-  khác) hiện nay. Đây là một phát hiện thật, không phải giả định: nghĩa là "K8s reschedules it" ở
-  Acceptance Criteria 1 của SCRUM-34 là **cold-start lại từ đầu**, không phải failover sang một pod
-  dự phòng đang chạy sẵn — trong khoảng pod cũ đã chết và pod mới chưa `READY`, basket service có
-  một cửa sổ gián đoạn thật. Đây chính xác là điều User Story 1 muốn quan sát (không che giấu, không
-  "sửa" thành đa replica — làm vậy sẽ đổi phạm vi từ "diễn tập chaos" sang "xây high-availability",
-  ngoài phạm vi 9 yêu cầu chức năng của spec.md).
-- `services/bff/src/Bff.Api/DownstreamClients/DownstreamClientRegistrationExtensions.cs` (từ
-  020-timeouts-retry-circuit-breaker) đã đăng ký `BasketsApiClient` với `AddStandardResilienceHandler()`:
-  `AttemptTimeout=1s`, `TotalRequestTimeout=3s`, `MaxRetryAttempts=2` (delay 200ms, chỉ áp dụng cho
-  method an toàn GET/HEAD), `CircuitBreaker.SamplingDuration=10s`. Đây là ngân sách có sẵn mà FR-004
-  của spec.md ("circuit breaker/retry engage") tham chiếu tới — không cần thêm cấu hình mới.
-- `shared/ServiceDefaults/ServiceDefaultsExtensions.cs` đã có `.AddSource("Polly")` và
-  `.AddMeter("Polly")` (từ 020) — mọi lần thử, retry, và đổi trạng thái circuit breaker của
-  `BasketsApiClient` đã phát ra telemetry theo đúng activity source "Polly", chảy qua pipeline OTel
-  → Elastic có sẵn từ 017-otel-servicedefaults-elastic. `specs/020-timeouts-retry-circuit-breaker/quickstart.md`
-  Bước 6 đã xác nhận cách quan sát: log có cấu trúc gắn nguồn `"Polly"` (qua Elastic nếu OTel
-  Collector đang chạy, hoặc `dotnet-counters monitor --process-id <pid> Polly` khi chạy cục bộ không
-  có Elastic) — tái sử dụng đúng kỹ thuật này cho User Story 1 thay vì phát minh một cách quan sát
-  mới.
-
-**Alternatives considered**: Xây một dashboard Kibana riêng cho "trạng thái circuit breaker" (tương
-tự dashboard SLO của 021) — bị loại vì SCRUM-34 chỉ yêu cầu circuit breaker "quan sát được", không
-yêu cầu một dashboard thường trực; 020 đã chứng minh log/telemetry có cấu trúc là đủ để quan sát
-trong lúc diễn tập. Thêm một dashboard mới cho một tính năng chỉ chạy vài lần một quý là phức tạp
-không tương xứng (constitution Principle I tinh thần "đơn giản tương xứng với miền").
+**Đã gỡ ở spec 031.** Kịch bản giết pod trên Kubernetes không còn được dùng. Điều đáng giữ lại về resilience của BFF: `BasketsApiClient` đã có `AddStandardResilienceHandler()` (từ 020: `AttemptTimeout=1s`, `TotalRequestTimeout=3s`, `MaxRetryAttempts=2`, `CircuitBreaker.SamplingDuration=10s`) và telemetry Polly đã lên OTel → Elastic (từ 017/020), dùng chung cho quan sát circuit breaker/retry ở các kịch bản còn lại và ở nhóm 8 của spec 031.
 
 ## Quyết định 1 — Kịch bản tiêm độ trễ (US2) cần một cơ chế mới, tối thiểu, có thể tắt ngay không cần redeploy
 
@@ -62,10 +34,10 @@ khi cấu hình `Chaos:AllowLatencyInjection` (bool, mặc định `false`) đan
 - Hai lớp gate (cấu hình môi trường `AllowLatencyInjection` + header per-request) tách rõ "môi
   trường này có được phép chạy bài tập chaos không" (quyết định vận hành, chỉ bật ở môi trường diễn
   tập, không bao giờ bật ở production — spec FR-006) khỏi "ngay bây giờ có đang tiêm độ trễ không"
-  (quyết định tại chỗ của người thực hiện bài tập, không cần restart pod để bật/tắt — bắt đầu và
+  (quyết định tại chỗ của người thực hiện bài tập, không cần restart container để bật/tắt — bắt đầu và
   dừng tiêm chỉ là gửi/không gửi header). Điều này thỏa Principle X ("Rolling back... MUST NOT
   require a code change or a redeploy") theo đúng tinh thần: dừng tiêm giữa chừng không cần đổi mã
-  hay khởi động lại pod.
+  hay khởi động lại container.
 - Giới hạn trên (`MaxInjectedLatencyMs = 30_000`) áp cho giá trị header, chặn một sai sót thao tác
   (gõ nhầm số 0) biến bài tập có kiểm soát thành treo vô hạn — nhất quán với chính tinh thần
   Principle VIII mà SCRUM-34 đang kiểm chứng ("unbounded waits cannot exist"), kể cả trong công cụ
@@ -85,7 +57,7 @@ khi cấu hình `Chaos:AllowLatencyInjection` (bool, mặc định `false`) đan
   chạy không phù hợp với một hoạt động vận hành lặp lại, và không tương thích với Test-First
   (Principle III) vì "mã nguồn" đó không tồn tại lâu đủ để có một test bảo vệ nó.
 - *Bật tiêm độ trễ qua biến môi trường thay vì header*: bị loại vì đổi biến môi trường trên
-  Deployment (`kubectl set env`) kích hoạt một rolling restart của pod — chính là hành vi "redeploy"
+  container (đổi biến môi trường của compose) buộc tạo lại container — chính là hành vi "redeploy"
   mà Principle X muốn tránh cho việc bật/tắt; header per-request tránh hoàn toàn việc đó.
 
 ## Quyết định 2 — Dashboard SLO đã có (021) tái sử dụng nguyên trạng cho việc quan sát ngân sách bị tiêu hao

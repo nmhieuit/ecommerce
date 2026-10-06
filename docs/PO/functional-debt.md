@@ -1,4 +1,4 @@
-# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 26 tính năng
+# Ghi chú thực tế — bằng chứng đã kiểm chứng và giới hạn hiện tại của toàn bộ 29 tính năng
 
 *Viết cho: người quản lý sản phẩm, stakeholder không trực tiếp code. Không yêu cầu đọc code hay biết
 tên bất kỳ công cụ kỹ thuật nào.*
@@ -144,7 +144,13 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   Màn hình hằng ngày cũ đã tách thành hai màn hình "Xử lý sự cố" và "Ngân sách lỗi tuần", đã chạy trên môi trường thử nghiệm với số liệu thật: mọi ô của màn hình xử lý sự cố đổi theo khoảng thời gian
   người trực chọn; màn hình tuần giữ nguyên con số khi đổi khoảng thời gian và khớp truy vấn đối chiếu (28/28 dòng). Bấm mã yêu cầu trong nhật ký lỗi mở được đúng 12 bước xử lý của yêu cầu đó. Lúc dựng còn phát
   hiện công cụ xem trace chuyên dụng không đọc được dữ liệu của hệ thống (nên dùng màn hình tìm kiếm chung), và nút "đường dẫn sang nhau" chính thức làm hai file xuất ra giống hệt nhau (nên dùng đường dẫn thường).
-
+- **[031](031_PO_danh%20mục%208%20nhóm%20lỗi%20luyện%20troubleshoot.md)** —
+  Đội đã thử từng nhóm lỗi trong danh mục trên hệ thống chạy thật: kho dữ liệu ngừng, đăng nhập hỏng, thiếu
+  tài nguyên, đứt mạng, bộ phận chết hẳn và chậm có kiểm soát đều gây ra và gỡ được bằng một lệnh; chọn
+  bất ngờ qua 24 lần bốc thăm phủ đủ cả 8 nhóm. Gợi ý theo ba mức không lộ đáp án ở mức 1 và 2, và mỗi lần
+  xin đều được ghi lại. Lúc thử còn thấy hai điều đáng biết: kho dữ liệu ngừng làm bộ phận chủ báo "chưa
+  sẵn sàng" dù tiến trình vẫn chạy, và khi gỡ lỗi cần chờ bộ phận thật sự sẵn sàng chứ không chỉ chờ tiến
+  trình sống. Phần bài tập "giết một bộ phận" trên cụm máy của tính năng 025 đã gỡ khỏi tài liệu.
 
 ## 2. Giới hạn hiện tại
 
@@ -299,3 +305,12 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   màn hình tìm kiếm chung, không phải màn hình vẽ cây thời gian chuyên dụng. Nhật ký lỗi hiển thị nguyên nội dung dòng log nên có thể lộ dữ liệu nhạy cảm nếu ứng dụng ghi vào log. Đường dẫn giữa hai
   màn hình chỉ đúng khi hệ thống giữ nguyên mã của chúng. Cảnh báo phát hiện nhanh nay **đã có** kiểm thử tự động canh ngưỡng (đóng điều còn thiếu của 028/029). Khoảnh khắc chuyển tuần thật (00:00 thứ Hai)
   vẫn chưa quan sát được trên màn hình tuần.
+- **[031](031_PO_danh%20mục%208%20nhóm%20lỗi%20luyện%20troubleshoot.md)** —
+  Công cụ chưa có kiểm thử tự động (đã thống nhất, sẽ xem lại sau khi xong tài liệu hướng dẫn tìm lỗi chi
+  tiết). Lỗi "thiếu tài nguyên" mới chỉ làm chậm nhẹ với lượng khách mô phỏng hiện tại, và kiểu "giới hạn
+  kết nối quá nhỏ" ở cổng vào hệ thống chưa thấy triệu chứng khi lượng khách mô phỏng ít. Kiểu "dừng bộ phận
+  đăng nhập" đã bỏ vì không gây triệu chứng với phiên đăng nhập có sẵn. Kho dữ liệu, bộ nhớ đệm và hàng đợi
+  thông điệp: chỉ kho dữ liệu là nhóm lỗi (hai thứ kia hiện không ai dùng nên dừng chúng không có triệu
+  chứng). Với các nhóm không khởi động lại cả hệ thống, người luyện có thể đoán ra bộ phận hỏng chỉ bằng
+  cách xem trạng thái các bộ phận — đã chấp nhận. Mỗi lúc chỉ chạy được một lần tập. Chưa có nơi chạy nào
+  ngoài máy local; việc thêm nơi chạy khác (triển khai, cụm máy) để dành cho sau.

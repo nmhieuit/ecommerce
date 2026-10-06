@@ -1,4 +1,6 @@
-# Implementation Plan: Diễn tập chaos engineering — giết một pod / tiêm độ trễ để kiểm chứng resilience
+# Implementation Plan: Diễn tập chaos engineering — tiêm độ trễ để kiểm chứng resilience
+
+> **Cập nhật (spec 031, 2026-10-06)**: kịch bản giết pod trên Kubernetes đã gỡ; việc luyện "dịch vụ chết" do nhóm 8 của [spec 031](../031-error-group-catalog/spec.md) đảm nhiệm trên Docker Compose. Các mục kill-pod bên dưới được thay bằng ghi chú "đã gỡ".
 
 **Branch**: `code/Chaos-exercise-kill-pod-inject-latency` | **Date**: 2026-09-12 | **Spec**: [spec.md](./spec.md)
 
@@ -12,14 +14,7 @@ Rà soát mã nguồn hiện có cho thấy phần lớn "lưới an toàn" mà 
 từ các story trước — tính năng này không xây lại chúng, chỉ khép kín 3 khoảng hở để bài tập chaos có
 thể chạy lặp lại được:
 
-1. **Kịch bản kill-pod (US1) không thiếu gì cả**: `baskets` đã có resilience đầy đủ ở BFF
-   (`AddStandardResilienceHandler()` từ 020: AttemptTimeout 1s/TotalRequestTimeout 3s/CircuitBreaker
-   SamplingDuration 10s) và telemetry Polly đã lên OTel (từ 020) → Elastic (từ 017). Nhưng rà soát
-   `deploy/ansible/roles/service_deployment/templates/deployment.yaml.j2` phát hiện **không có
-   service nào khai báo `replicas`** → mọi service (kể cả `baskets`) hiện chạy 1 replica, nên
-   "K8s reschedules it" thực chất là cold-start có gián đoạn thật, không phải failover liền mạch.
-   Đây là một phát hiện cần ghi nhận trong bài tập, không phải một khoảng hở cần vá (vá nó — thêm
-   HA — sẽ đổi phạm vi từ "diễn tập chaos" sang một tính năng hạ tầng khác, ngoài 9 FR của spec.md).
+1. **Kịch bản kill-pod (US1)**: đã gỡ ở spec 031 (kịch bản này chạy trên cluster Kubernetes mà dự án không còn dùng cho diễn tập chaos).
 2. **Kịch bản inject-latency (US2) thiếu một cơ chế tiêm lỗi**: không có công cụ fault-injection nào
    trong repo; tiền lệ duy nhất (021's quickstart Bước 4) là sửa mã nguồn tạm thời — không khả thi
    cho một bài tập lặp lại định kỳ có ghi nhận từng lần (US3). Thêm
@@ -49,12 +44,11 @@ Toxiproxy hay công cụ fault-injection ngoài (research.md Quyết định 1).
 `services/orders/tests/Orders.Api.UnitTests` (research.md Quyết định 4) — dùng `TimeProvider` giả lập
 thay vì `Task.Delay` thật để test tất định và nhanh, theo đúng khuôn mẫu unit-test-thuần mà
 `RetryMethodPolicyTests` (020) đã dùng cho một mối lo tương tự (một quy tắc cấu hình, không cần hạ
-tầng thật). Ba kịch bản kiểm thử của Jira SCRUM-34 (kill pod thật, tiêm độ trễ thật, xác nhận
-dashboard) là hành vi động trên cluster thật — tài liệu hoá tại `quickstart.md`, chạy tay/định kỳ,
+tầng thật). Các kịch bản kiểm thử còn lại của Jira SCRUM-34 (tiêm độ trễ thật, xác nhận
+dashboard) là hành vi động trên stack Docker Compose thật — tài liệu hoá tại `quickstart.md`, chạy tay/định kỳ,
 không chặn PR (cùng logic 019/021 đã dùng).
 
-**Target Platform**: Container Linux trên Kubernetes tự vận hành (self-hosted, theo constitution) —
-không đổi so với hiện tại. Middleware chạy trong chính pod Orders.Api hiện có, không cần hạ tầng mới.
+**Target Platform**: Container Linux; bài tập chạy trên Docker Compose local. Middleware chạy trong chính container Orders.Api hiện có, không cần hạ tầng mới.
 
 **Project Type**: Bổ sung một middleware nhỏ vào một service backend hiện có (Orders.Api) + tài liệu
 runbook — không phải service runtime mới, không có "frontend" liên quan tới tính năng này.
@@ -67,13 +61,11 @@ runbook — không phải service runtime mới, không có "frontend" liên qua
 cấu hình nào đại diện cho production. Độ trễ tiêm vào PHẢI có trần an toàn (30s — spec Edge Case 2:
 "độ trễ được tiêm vượt xa timeout đã cấu hình... circuit breaker có mở đúng theo ngưỡng"). Middleware
 KHÔNG được thay đổi hợp đồng phản hồi (status/headers/body) của bất kỳ route nào của Orders.Api.
-KHÔNG được thêm replica hay sửa hành vi reschedule của Kubernetes cho `baskets` — bài tập quan sát
-hành vi hiện tại (1 replica), không thay đổi nó (ngoài phạm vi 9 FR).
 
 **Scale/Scope**: 1 middleware mới + 1 cấu hình mới trong Orders.Api; 1 dự án test đã có (thêm test
 mới, không tạo dự án mới); 1 thư mục tài liệu mới (`docs/dien-tap-chaos-engineering/`, 3 file: mẫu +
 README + thư mục `ket-qua/` ban đầu rỗng). Không sửa `services/baskets`, không sửa BFF, không sửa
-Ansible/K8s manifest, không xây dashboard mới.
+manifest triển khai, không xây dashboard mới.
 
 ## Constitution Check
 

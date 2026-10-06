@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="error-budget-weekly-flow" name="Luồng nghiệp vụ — ngân sách lỗi theo tuần: đầy lại mỗi thứ Hai, hệ quả và điều kiện thoát giữ nguyên">
-        <mxGraphModel dx="1500" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="700" math="0" shadow="0">
+        <mxGraphModel dx="623" dy="356" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="700" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -35,7 +35,12 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e1" edge="1" parent="1" source="s1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="s2" value="">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="810" y="115"/>
+                            <mxPoint x="810" y="115"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e2" edge="1" parent="1" source="s2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="s3" value="">
                     <mxGeometry relative="1" as="geometry"/>
@@ -53,7 +58,13 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e7" edge="1" parent="1" source="s7" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="s1" value="">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="10" y="410"/>
+                            <mxPoint x="10" y="180"/>
+                            <mxPoint x="620" y="180"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
             </root>
         </mxGraphModel>

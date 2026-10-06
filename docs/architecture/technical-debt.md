@@ -1,4 +1,4 @@
-# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-030
+# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-031
 
 *Đối tượng đọc: kỹ sư phần mềm / software architect. File này gom lại mọi "lưu ý hay khám phá" (blocker
 giữa chừng, bug thật tìm được khi triển khai/xác thực, giới hạn phạm vi đã biết, amendment đính chính)
@@ -37,7 +37,10 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - **Link hai chiều là ô Markdown, không panel Links** (panel Links tạo vòng tham chiếu, mỗi file export chứa cả hai dashboard); người dùng chốt.
   - **Điều khiển tuần là 4 giá trị tương đối** (điều khiển lưu sẵn một giá trị mặc định cố định) và cửa sổ 30 ngày mỗi panel; người dùng chốt/đồng ý.
   - **Sửa tại chỗ tài liệu 021/025/026/027/028/029** trỏ dashboard cũ (025/026 ngoài danh sách 021/027/028 trong mô tả ban đầu); `docs/superpowers/` chỉ thêm ghi chú đầu file.
-
+- **[031](031_Architect_danh%20mục%208%20nhóm%20lỗi%20luyện%20troubleshoot.md)** — Ba thay đổi phạm vi/quyết định khi triển khai, đều do kết quả đo thật và người dùng chốt:
+  - (1) Biến thể "dừng identity-api" của nhóm 5 bị **bỏ**: dừng 10 phút dưới tải nền không gây triệu chứng trên đường dữ liệu (token cũ còn dùng được nhờ khoá ký đã cache; chỉ cấp token/discovery lỗi kết nối).
+  - (2) Nhóm 6 đổi `--memory` từ 96m sang **256m**: 96m làm `products-api` bị OOM-kill ngay (exit 137), triệu chứng thành nhóm 8.
+  - (3) Loại D gửi header trễ **thẳng vào orders-api** (kèm token và `X-Tenant-Id`), không qua gateway: header `X-Chaos-Latency-Ms` không đi xuyên gateway/BFF (gateway trả 404 sau 9 ms; BFF dựng request riêng).
 
 ## 2. Bug thật phát hiện khi triển khai/xác thực
 
@@ -209,19 +212,16 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   service thật ngoài `WebApplicationFactory` — bộ test tích hợp (chạy cùng tiến trình test) không bao
   giờ khởi động bus theo đúng cách runtime thật làm, nên không bao giờ bắt được sự cố license này.
 - **[025](025_Architect_diễn%20tập%20chaos%20engineering%20giết%20pod%20tiêm%20độ%20trễ.md)** — Phát
-  hiện quan trọng nhất của tính năng này: circuit breaker của `OrdersApiClient`/`BasketsApiClient`
-  **chưa từng trip** qua 4 lần thử độc lập (2 lần trên container Docker, 2 lần trên Pod Kubernetes
-  thật, kể cả lần dùng công cụ load-test thật `autocannon` — 50 kết nối đồng thời × 25s). Tổng 8-9 lỗi
+  hiện quan trọng nhất của tính năng này: circuit breaker của `OrdersApiClient`
+  **chưa từng trip** qua nhiều lần thử độc lập trên container Docker, kể cả lần dùng công cụ load-test
+  thật `autocannon` — 50 kết nối đồng thời × 25s. Tổng 8-9 lỗi
   thật quan sát được qua các lần thử, luôn **rải rác**, không đủ mật độ trong cửa sổ sampling của
   circuit breaker. Nguyên nhân xác nhận: `research.md` Quyết định 1 chọn `Task.Delay` KHÔNG chặn
   thread có chủ đích (để tiêm độ trễ không làm sập hạ tầng thật khi diễn tập) — hệ quả "không đủ áp
   lực tài nguyên để trip breaker" là đánh đổi đã biết trước, không phải lỗi thiết kế phát sinh ngoài
   dự kiến (`tasks.md` T016 tự ghi nhận). Đáng mở 1 bug/thảo luận ticket riêng về việc Acceptance
   Criteria gốc của SCRUM-34 có còn phù hợp với thiết kế tiêm lỗi không-chặn-thread hiện tại hay
-  không — **chưa có ticket đó tại thời điểm viết tài liệu này**. Phụ: pod thay thế của US1 không tự
-  khởi động ứng dụng (dùng image công khai + `kubectl cp`/`kubectl exec` thủ công thay vì image thật
-  của cluster test, do giới hạn image-loading) nên thời gian phục hồi đo được (~42s) gồm cả thao tác
-  thủ công, không thuần là thời gian khởi động container/readiness gate của Kubernetes.
+  không — **chưa có ticket đó tại thời điểm viết tài liệu này**. (Phần kill-pod/Kubernetes của 025 đã gỡ ở spec 031, cùng các ghi chú về thời gian phục hồi trên cluster test.)
 - **[026](026_Architect_kiểm%20thử%20tải%20hiệu%20năng%20luồng%20nghiệp%20vụ%20trọng%20yếu.md)** —
   Phát hiện license NBomber: bản mới nhất trên NuGet (dòng 5.x/6.x, hiện `6.6.0`) phát hành dưới
   "NBomber Business License" — miễn phí CHỈ cho cá nhân, không được dùng cho tổ chức. Đã ghim đúng
@@ -266,7 +266,12 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - (3) Panel Links giữa hai dashboard tạo vòng tham chiếu; link ngoài đường dẫn tương đối bị Kibana vô hiệu → ô Markdown theo id cố định.
   - (4) Bảng ES|QL trong Discover không có định dạng trường nên không làm link theo dòng → panel log lỗi dùng Discover session cổ điển + định dạng URL của index-pattern.
   - (5) ES|QL 9.4.4 không có `DATE_ADD`; ghi chú: nhân `as_of * 1 day` không hợp lệ → dùng `DATE_DIFF` và `CASE` cho ngày.
-
+- **[031](031_Architect_danh%20mục%208%20nhóm%20lỗi%20luyện%20troubleshoot.md)** — Phát hiện khi chạy trên stack đang chạy (đã xử lý trong script hoặc ghi lại):
+  - (1) Health của chính container service vẫn `healthy` khi DB đã dừng và `/health/ready` đã trả 503: bước khôi phục phải chờ `/health/ready` 200, không chỉ health của docker.
+  - (2) Sau `docker network connect` chỉ còn alias `<service>`, mất alias tên container: khôi phục truyền cả hai alias.
+  - (3) Gửi header trễ tuần tự chỉ đạt ≈ 0,5 request/giây (mỗi request chờ 2 s) nên không đạt tỷ lệ 50%: vòng gửi loại D dùng `HttpClient.SendAsync` bất đồng bộ.
+  - (4) `ConvertTo-Json` qua pipe làm phẳng mảng một phần tử trong PowerShell 5.1: dùng `-InputObject @(...)` và bọc `@(...)` khi đọc.
+  - (5) Heredoc của bash cắt mất nội dung dài khi viết file PowerShell: dùng công cụ ghi file thay vì heredoc.
 
 ## 3. Giới hạn phạm vi đã biết
 
@@ -409,12 +414,9 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   cơ chế sẵn sàng trong schema nhưng chưa thực chiến. p99 của `Orders.Api` đo được (393,4ms) gần ngưỡng
   khai báo (500ms) ngay ở điều kiện vận hành bình thường — đáng theo dõi tiếp, không phải lỗi cần sửa
   ngay.
-- **[025](025_Architect_diễn%20tập%20chaos%20engineering%20giết%20pod%20tiêm%20độ%20trễ.md)** — US1
-  chỉ xác nhận được trên 1 cluster test tạm thời (`kind`/docker-desktop) do giới hạn image-loading
-  (image build cục bộ không nạp được vào containerd multi-node, registry-mirror nội bộ chặn registry
-  tùy chỉnh — đã thử 3 cách độc lập) — chưa xác nhận trên cluster production-shaped thật với image
-  pipeline thật. US3 (bản ghi kết quả) không tích hợp Jira thật — trường `jira_ticket` trong cả 2 bản
-  ghi kết quả vẫn để trống, chưa có ticket thật được mở dù `ket_luan: sai_lệch`.
+- **[025](025_Architect_diễn%20tập%20chaos%20engineering%20giết%20pod%20tiêm%20độ%20trễ.md)** — US3
+  (bản ghi kết quả) không tích hợp Jira thật — trường `jira_ticket` trong bản ghi kết quả vẫn để trống,
+  chưa có ticket thật được mở dù `ket_luan: sai_lệch`. (US1 kill-pod trên cluster test đã gỡ ở spec 031.)
 - **[026](026_Architect_kiểm%20thử%20tải%20hiệu%20năng%20luồng%20nghiệp%20vụ%20trọng%20yếu.md)** —
   Chỉ đo lớp `client-facing-bff` (qua BFF) một cách tự động/chặn được — lớp `internal-service-api` (4
   service phía sau BFF) chỉ xác nhận qua dashboard 021 như bước bổ sung thủ công trong `quickstart.md`,
@@ -476,7 +478,17 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - **Log lỗi hiển thị nội dung log**: có thể chứa dữ liệu nhạy cảm (Nguyên tắc VI), chưa lọc.
   - **Span Client tới `identity-api`** (lấy cấu hình OIDC) lẫn trong bảng lỗi hạ lưu; đích suy ra từ `server.address` theo quy ước `<tên>-api` → `<Tên>.Api` (không có `peer.service`).
   - **Đã đóng**: rule `incident-fast-detection` nay có test canh gác (`IncidentFastDetectionRuleDefinitionTests`, 7 test) — sai lệch Nguyên tắc III của 028 không còn.
-
+- **[031](031_Architect_danh%20mục%208%20nhóm%20lỗi%20luyện%20troubleshoot.md)** — Giới hạn còn lại, không sửa trong phạm vi 031:
+  - **Sai lệch Nguyên tắc III**: không có test tự động cho `incident-drill.ps1` mở rộng, `catalog.json` và folder Postman 31 (người dùng chốt). Hạn: tới khi spec D (tài liệu troubleshoot chi tiết) hoàn tất. Rủi ro: danh mục và bộ chuyển đổi lệch nhau, hoặc lệnh docker đổi hành vi theo phiên bản, mà không build nào bắt.
+  - **Không che đích** cho nhóm E, G, H, I (không tạo lại container): `docker ps` có thể lộ đích (người dùng chấp nhận); chỉ nhóm A, B, C, D, F giữ nhiễu "tạo lại cả 7".
+  - **Redis và RabbitMQ không là đích của nhóm 4**: không service nào dùng Redis; RabbitMQ chỉ orders-api dùng khi `ORDERS_RABBITMQ_CONNECTION` được đặt (mặc định rỗng).
+  - **Nhóm G triệu chứng nhẹ**: `--cpus 0.1` + 256m cho p95 ≈ 102 ms, p99 ≈ 198 ms dưới tải nền (chưa vượt 150 ms); `--cpus 0.05` trễ rõ, `0.02` gần như chết (người dùng chốt giữ 0,1).
+  - **Loại B (gateway) không có triệu chứng** dưới `-Load` 1 tiến trình (0% 5xx): cần tải đồng thời cao hơn (giới hạn của 028, không đổi).
+  - **Loại D chỉ làm chậm request do script gửi**, không làm chậm lưu lượng qua BFF; cần `-Load` đã chạy để có token.
+  - **Nhiễu khởi động nguội 5–7 phút, lỗi lan theo chuỗi phụ thuộc, token hỏng sau khi tạo lại identity (028)** áp dụng thêm cho 031: sau khi tiêm/khôi phục loại A, B, C, D, F, request có token trả 401/502 trong 1–2 phút tới khi `-Load` lấy token mới.
+  - **Một lần chạy mở tại một thời điểm**; lần chạy `failed` chặn lần mới tới khi `-Restore`.
+  - **Dạng (b) không có kịch bản nhiều bước/chuỗi**; chưa có bộ chuyển đổi CD/Kubernetes (chỉ chừa điểm mở rộng).
+  - **Elastic đã xoá sạch** (cả volume `local-es-data`) theo xác nhận của người dùng sau khi triển khai xong 031; Kibana mất rule, dashboard và Case đã import — import lại từ `docs/kibana-quan-sat-he-thong/` khi cần.
 
 ## 4. Amendment — đính chính khi thực tế lệch spec gốc
 

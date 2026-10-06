@@ -1,0 +1,302 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": 1,
+      "name": "Đích kết nối sai",
+      "description": "Service hoặc tầng trung gian được trỏ tới một đích (cơ sở dữ liệu hoặc service phía sau) không tồn tại."
+    },
+    {
+      "id": 2,
+      "name": "Nghẽn và lỗi theo tỷ lệ",
+      "description": "Một phần request thất bại: do nghẽn kết nối ở tầng trung gian hoặc do lỗi 5xx được tiêm theo tỷ lệ."
+    },
+    {
+      "id": 3,
+      "name": "Độ trễ",
+      "description": "Một phần request bị làm chậm có chủ đích trong khi kết quả vẫn đúng."
+    },
+    {
+      "id": 4,
+      "name": "Phụ thuộc hạ tầng dừng",
+      "description": "Một thành phần hạ tầng mà service phụ thuộc (cơ sở dữ liệu) bị dừng."
+    },
+    {
+      "id": 5,
+      "name": "Xác thực hỏng",
+      "description": "Một service không thể xác thực token vì địa chỉ máy chủ định danh bị cấu hình sai."
+    },
+    {
+      "id": 6,
+      "name": "Thiếu tài nguyên",
+      "description": "Một service bị giới hạn CPU và bộ nhớ ở mức rất thấp nên xử lý chậm."
+    },
+    {
+      "id": 7,
+      "name": "Mạng đứt",
+      "description": "Một service bị tách khỏi mạng chung nên các thành phần khác không gọi tới được."
+    },
+    {
+      "id": 8,
+      "name": "Container chết hoặc khởi động lại",
+      "description": "Tiến trình của một service bị buộc dừng đột ngột và không tự sống lại."
+    }
+  ],
+  "types": [
+    {
+      "code": "A",
+      "groupId": 1,
+      "name": "Đích kết nối sai",
+      "targetKind": "app-service",
+      "targets": [
+        "gateway-api",
+        "bff-api",
+        "products-api",
+        "baskets-api",
+        "orders-api",
+        "parties-api",
+        "identity-api"
+      ],
+      "parameters": {
+        "destination": "nonexistent"
+      },
+      "requiresFlags": [
+        "FAULT_INJECTION"
+      ],
+      "masksByRecreatingAll": true,
+      "restoreKind": "recreate-without-override",
+      "symptoms": "Service báo không sẵn sàng hoặc trả 5xx vì đích kết nối (cơ sở dữ liệu hoặc service phía sau) không tồn tại.",
+      "hints": {
+        "1": "Một service báo không sẵn sàng hoặc trả lỗi ngay từ khi khởi động; log cho thấy không phân giải được hay không kết nối được tới một đích phía sau. Hãy xem đích mà service đó đang trỏ tới.",
+        "2": "Nhóm 1 — Đích kết nối sai: cấu hình của một service trỏ tới một đích không tồn tại.",
+        "3": "Loại A (đích kết nối sai): đích {target}, tham số {parameters}. Service bị ảnh hưởng: {service}. Cấu hình kết nối của service này trỏ tới một host không tồn tại."
+      }
+    },
+    {
+      "code": "B",
+      "groupId": 2,
+      "name": "Cạn pool kết nối của gateway",
+      "targetKind": "gateway-only",
+      "targets": [
+        "gateway-api"
+      ],
+      "parameters": {
+        "maxConnectionsPerServer": 1
+      },
+      "requiresFlags": [
+        "FAULT_INJECTION"
+      ],
+      "masksByRecreatingAll": true,
+      "restoreKind": "recreate-without-override",
+      "symptoms": "Gateway trả 5xx ngắt quãng khi tải tăng vì số kết nối tới BFF bị giới hạn rất thấp.",
+      "hints": {
+        "1": "Tầng vào hệ thống trả 5xx ngắt quãng, nhất là khi nhiều request đến cùng lúc, dù các service phía sau vẫn khoẻ. Hãy xem giới hạn kết nối đồng thời của tầng đó.",
+        "2": "Nhóm 2 — Nghẽn và lỗi theo tỷ lệ: một giới hạn kết nối quá thấp làm request xếp hàng rồi lỗi.",
+        "3": "Loại B (cạn pool kết nối): đích {target}, tham số {parameters}. Giới hạn số kết nối đồng thời từ gateway tới BFF chỉ còn một."
+      }
+    },
+    {
+      "code": "C",
+      "groupId": 2,
+      "name": "Lỗi 5xx theo tỷ lệ",
+      "targetKind": "app-service",
+      "targets": [
+        "gateway-api",
+        "bff-api",
+        "products-api",
+        "baskets-api",
+        "orders-api",
+        "parties-api",
+        "identity-api"
+      ],
+      "parameters": {
+        "errorRatePctRange": [
+          5,
+          50
+        ]
+      },
+      "requiresFlags": [
+        "FAULT_INJECTION"
+      ],
+      "masksByRecreatingAll": true,
+      "restoreKind": "stop-sending",
+      "symptoms": "Một phần request tới một service trả 500; tỷ lệ 5xx của service đó tăng theo tỷ lệ đã chọn, độ trễ gần như không đổi.",
+      "hints": {
+        "1": "Một phần nhỏ request tới một service trả 500 ngẫu nhiên trong khi độ trễ gần như không đổi và service vẫn báo khoẻ. Hãy so sánh request lỗi với request thành công cùng route và tìm điểm khác biệt ở header.",
+        "2": "Nhóm 2 — Nghẽn và lỗi theo tỷ lệ: lỗi 5xx xuất hiện theo một tỷ lệ cố định.",
+        "3": "Loại C (5xx theo tỷ lệ): đích {target}, tỷ lệ {errorRatePct}%. Có tiến trình gửi request mang header chaos tới service này."
+      }
+    },
+    {
+      "code": "D",
+      "groupId": 3,
+      "name": "Độ trễ theo tỷ lệ",
+      "targetKind": "orders-only",
+      "targets": [
+        "orders-api"
+      ],
+      "parameters": {
+        "latencyMs": 2000,
+        "errorRatePctRange": [
+          5,
+          50
+        ]
+      },
+      "requiresFlags": [
+        "FAULT_INJECTION",
+        "LATENCY_INJECTION"
+      ],
+      "masksByRecreatingAll": true,
+      "restoreKind": "stop-sending",
+      "symptoms": "p95 và p99 của một service tăng vọt trong khi tỷ lệ 5xx gần như không đổi.",
+      "hints": {
+        "1": "p95 và p99 của một service tăng vọt trong khi tỷ lệ 5xx gần như không đổi và kết quả trả về vẫn đúng. Hãy so sánh span chậm với span bình thường: chúng chậm đều đặn một khoảng thời gian cố định.",
+        "2": "Nhóm 3 — Độ trễ: một phần request bị làm chậm có chủ đích.",
+        "3": "Loại D (độ trễ theo tỷ lệ): đích {target}, tham số {parameters}, khoảng {errorRatePct}% request bị làm chậm bằng header chaos."
+      }
+    },
+    {
+      "code": "E",
+      "groupId": 4,
+      "name": "Cơ sở dữ liệu dừng",
+      "targetKind": "database",
+      "targets": [
+        "products-db",
+        "baskets-db",
+        "orders-db",
+        "parties-db",
+        "identity-db"
+      ],
+      "parameters": {
+        "action": "stop"
+      },
+      "requiresFlags": [
+        "FAULT_INJECTION"
+      ],
+      "masksByRecreatingAll": false,
+      "restoreKind": "resume-component",
+      "symptoms": "Service sở hữu cơ sở dữ liệu báo chưa sẵn sàng (503) dù tiến trình vẫn chạy; lỗi lan lên BFF và gateway.",
+      "hints": {
+        "1": "Một service báo chưa sẵn sàng (503) dù tiến trình vẫn chạy; lỗi lan lên các tầng phía trên. Hãy xem thành phần mà service đó phụ thuộc để lưu dữ liệu.",
+        "2": "Nhóm 4 — Phụ thuộc hạ tầng dừng: một thành phần hạ tầng mà service dựa vào đã dừng.",
+        "3": "Loại E (cơ sở dữ liệu dừng): đích {target}, service chủ {service}. Container cơ sở dữ liệu đã bị dừng."
+      }
+    },
+    {
+      "code": "F",
+      "groupId": 5,
+      "name": "Địa chỉ máy chủ định danh sai",
+      "targetKind": "app-service",
+      "targets": [
+        "gateway-api",
+        "bff-api",
+        "products-api",
+        "baskets-api",
+        "orders-api",
+        "parties-api"
+      ],
+      "parameters": {
+        "authority": "wrong"
+      },
+      "requiresFlags": [
+        "FAULT_INJECTION"
+      ],
+      "masksByRecreatingAll": true,
+      "restoreKind": "recreate-without-override",
+      "symptoms": "Request có token bị treo nhiều giây rồi trả 401, 502 hoặc 504 ở service hoặc ở tầng đi qua nó.",
+      "hints": {
+        "1": "Request có token bị treo nhiều giây rồi trả 401, 502 hoặc 504 ở một service hoặc ở tầng đi qua nó, trong khi các service khác dùng cùng token vẫn bình thường. Hãy xem service đó lấy khoá xác thực từ đâu.",
+        "2": "Nhóm 5 — Xác thực hỏng: một service không xác thực được token.",
+        "3": "Loại F (địa chỉ máy chủ định danh sai): đích {target}. Biến cấu hình địa chỉ máy chủ định danh của service này trỏ tới một host không tồn tại."
+      }
+    },
+    {
+      "code": "G",
+      "groupId": 6,
+      "name": "Giới hạn CPU và bộ nhớ thấp",
+      "targetKind": "app-service",
+      "targets": [
+        "gateway-api",
+        "bff-api",
+        "products-api",
+        "baskets-api",
+        "orders-api",
+        "parties-api",
+        "identity-api"
+      ],
+      "parameters": {
+        "cpuLimit": 0.1,
+        "memoryLimitMb": 256
+      },
+      "requiresFlags": [
+        "FAULT_INJECTION"
+      ],
+      "masksByRecreatingAll": false,
+      "restoreKind": "recreate-target",
+      "symptoms": "Một service chậm rõ rệt (p95 tăng nhiều lần), dùng hết phần CPU được cấp, nhưng vẫn trả đúng kết quả.",
+      "hints": {
+        "1": "Một service chậm đều hơn bình thường nhưng vẫn trả đúng kết quả; mức dùng CPU của nó luôn chạm một mức trần thấp trong khi các service khác nhàn rỗi. Hãy xem giới hạn tài nguyên được cấp cho container.",
+        "2": "Nhóm 6 — Thiếu tài nguyên: một service bị giới hạn CPU và bộ nhớ rất thấp.",
+        "3": "Loại G (giới hạn CPU và bộ nhớ thấp): đích {target}, tham số {parameters}."
+      }
+    },
+    {
+      "code": "H",
+      "groupId": 7,
+      "name": "Tách khỏi mạng chung",
+      "targetKind": "app-service",
+      "targets": [
+        "gateway-api",
+        "bff-api",
+        "products-api",
+        "baskets-api",
+        "orders-api",
+        "parties-api",
+        "identity-api"
+      ],
+      "parameters": {
+        "action": "detach-network"
+      },
+      "requiresFlags": [
+        "FAULT_INJECTION"
+      ],
+      "masksByRecreatingAll": false,
+      "restoreKind": "reattach-network",
+      "symptoms": "Một service vẫn báo khoẻ trên máy chủ nhưng các thành phần khác không gọi được (504 sau vài giây); gọi trực tiếp thì treo tới hết thời gian chờ.",
+      "hints": {
+        "1": "Một service vẫn báo khoẻ khi nhìn từ máy chủ nhưng các thành phần khác gọi tới nó đều hết thời gian chờ sau vài giây; gọi trực tiếp vào cổng của nó cũng treo. Hãy xem nó đang được nối vào mạng nào.",
+        "2": "Nhóm 7 — Mạng đứt: một service bị tách khỏi mạng chung.",
+        "3": "Loại H (tách khỏi mạng chung): đích {target}. Container đã bị ngắt khỏi network chung của hệ thống."
+      }
+    },
+    {
+      "code": "I",
+      "groupId": 8,
+      "name": "Tiến trình bị buộc dừng",
+      "targetKind": "app-service",
+      "targets": [
+        "gateway-api",
+        "bff-api",
+        "products-api",
+        "baskets-api",
+        "orders-api",
+        "parties-api",
+        "identity-api"
+      ],
+      "parameters": {
+        "action": "kill"
+      },
+      "requiresFlags": [
+        "FAULT_INJECTION"
+      ],
+      "masksByRecreatingAll": false,
+      "restoreKind": "recreate-target",
+      "symptoms": "Một service ngừng hẳn (tiến trình thoát mã 137, trạng thái exited); mọi request tới nó lỗi kết nối hoặc hết thời gian chờ.",
+      "hints": {
+        "1": "Một service ngừng hẳn: mọi request tới nó lỗi kết nối hoặc hết thời gian chờ và không tự hồi phục theo thời gian. Hãy xem trạng thái của container và mã thoát.",
+        "2": "Nhóm 8 — Container chết hoặc khởi động lại: tiến trình của một service bị buộc dừng.",
+        "3": "Loại I (container chết): đích {target}. Tiến trình bị buộc dừng và không có chính sách tự khởi động lại."
+      }
+    }
+  ]
+}

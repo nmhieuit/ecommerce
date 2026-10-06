@@ -3,7 +3,7 @@
 ## Phạm vi
 
 Tài liệu này mô tả phần code được tạo bởi bước 025 (SCRUM-34, `specs/025-chaos-pod-kill-latency/`) so
-với trạng thái code sau bước 024. US1 (kill-pod) và US3 (bản ghi kết quả) không thêm mã ứng dụng nào —
+với trạng thái code sau bước 024. US3 (bản ghi kết quả) không thêm mã ứng dụng nào (US1 kill-pod đã gỡ ở spec 031) —
 chỉ US2 (inject-latency) chạm `services/orders/`.
 
 Ranh giới commit được xác định từ lịch sử Git:
@@ -12,7 +12,7 @@ Ranh giới commit được xác định từ lịch sử Git:
 - Đặc tả: commit `e616520` (spec), `db85704` (plan), `76147b8` (tasks).
 - Triển khai middleware tiêm độ trễ: commit `286173e`.
 - Chạy bài tập chaos thật, đóng `tasks.md`: commit `2b8705d`.
-- Chạy lại US1/US2 trên Pod Kubernetes thật: commit `aaea036`.
+- (Đã gỡ ở spec 031) Chạy lại US1/US2 trên Pod Kubernetes thật: commit `aaea036`.
 - Đóng T015/T016 với 1 lượt quickstart liền mạch: commit `6750d2d` (mốc hoàn tất bước 025).
 
 ## 1. Middleware tiêm độ trễ — mới hoàn toàn, chỉ trên Orders.Api
@@ -78,10 +78,9 @@ app.UseMiddleware<ChaosLatencyInjectionMiddleware>();
 `appsettings.json` thêm khối `"Chaos": { "AllowLatencyInjection": false }` — mặc định tắt ở mọi cấu
 hình đã commit (spec FR-006: không bao giờ bật ở production).
 
-## 2. US1 (kill-pod) và US3 (bản ghi kết quả) — không có mã ứng dụng
+## 2. US3 (bản ghi kết quả) — không có mã ứng dụng
 
-US1 hoàn toàn là lệnh vận hành (`kubectl delete pod -l app=baskets`) + quan sát telemetry `"Polly"`
-(020) đã có sẵn — không sửa `services/baskets` hay BFF. US3 là tài liệu markdown mới ở
+US1 (kill-pod) đã gỡ ở spec 031 — không sửa `services/baskets` hay BFF. US3 là tài liệu markdown mới ở
 `docs/dien-tap-chaos-engineering/` (`mau-ket-qua.md`, `README.md`, `ket-qua/*.md`) — không phải mã
 nghiệp vụ, xem chi tiết ở
 [025_Architect_*.md](../architecture/025_Architect_diễn%20tập%20chaos%20engineering%20giết%20pod%20tiêm%20độ%20trễ.md)
