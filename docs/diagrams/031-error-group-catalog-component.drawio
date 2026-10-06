@@ -1,29 +1,74 @@
 <mxfile host="65bd71144e">
     <diagram id="error-group-catalog-component" name="Kiến trúc thành phần — danh mục nhóm lỗi tách khỏi bộ chuyển đổi Compose">
-        <mxGraphModel dx="976" dy="333" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="700" math="0" shadow="0">
+        <mxGraphModel dx="1031" dy="390" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="700" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="title" value="Kiến trúc thành phần — danh mục 8 nhóm lỗi (dữ liệu) tách khỏi bộ chuyển đổi Compose (cách làm); thêm bộ chuyển đổi CD/Kubernetes sau này không đụng danh mục" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" parent="1" vertex="1"><mxGeometry x="30" y="10" width="1440" height="26" as="geometry"/></mxCell>
-                <mxCell id="catalog" value="scripts/incident-drill/catalog.json (danh mục — dữ liệu thuần)&#xa;8 nhóm · 9 loại A–I · đích áp dụng · tham số trừu tượng&#xa;triệu chứng · 3 mức gợi ý · restoreKind&#xa;KHÔNG có lệnh docker hay biến compose" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1"><mxGeometry x="30" y="60" width="470" height="110" as="geometry"/></mxCell>
-                <mxCell id="script" value="scripts/incident-drill.ps1 — điểm vào duy nhất&#xa;-Inject (dạng a, có chủ đích, -DurationSeconds tự gỡ)&#xa;-Start (dạng b, bốc mù 8 nhóm, niêm phong SHA-256)&#xa;-Restore · -Hint · -Reveal · -Load&#xa;chỉ chạy khi .env có CHAOS_ALLOW_FAULT_INJECTION=true (loại D thêm cờ latency)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1"><mxGeometry x="30" y="210" width="470" height="130" as="geometry"/></mxCell>
-                <mxCell id="adapter" value="Bộ chuyển đổi Compose (hàm trong script)&#xa;Invoke-ComposeInject / Invoke-ComposeRestore&#xa;A, B, C, D, F: file override + tạo lại cả 7 container&#xa;E: stop/start DB · G: update cpus+memory · H: network disconnect/connect · I: kill" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1"><mxGeometry x="560" y="210" width="470" height="130" as="geometry"/></mxCell>
-                <mxCell id="future" value="Bộ chuyển đổi CD / Kubernetes (sau này)&#xa;cùng giao diện tiêm – khôi phục – chờ khoẻ&#xa;chưa làm — chỉ chừa điểm mở rộng" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;dashed=1;" parent="1" vertex="1"><mxGeometry x="560" y="60" width="470" height="90" as="geometry"/></mxCell>
-                <mxCell id="state" value=".incident-drill/&lt;runId&gt;/ (gitignore)&#xa;sealed.json (băm) · hash.txt · state.json (pending → injected → restored)&#xa;hint-log.json · stop.flag · injected-at.txt · injector.log&#xa;docker-compose.incident.yml (chỉ environment của đích)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1"><mxGeometry x="30" y="380" width="470" height="110" as="geometry"/></mxCell>
-                <mxCell id="stack" value="Docker Compose local (docker-compose.local.yml)&#xa;7 service app · 5 DB · network backbone&#xa;KHÔNG sửa code service, KHÔNG sửa compose để tiêm lỗi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1"><mxGeometry x="1090" y="210" width="360" height="130" as="geometry"/></mxCell>
-                <mxCell id="load" value="scripts/incident-drill.ps1 -Load&#xa;newman: folder Postman 00 (token) → 26 + 28&#xa;token lại khi hết 30 phút / 401 / identity tạo lại" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1"><mxGeometry x="1090" y="60" width="360" height="90" as="geometry"/></mxCell>
-                <mxCell id="postman" value="Folder Postman 31 (thủ công, 6 subfolder D–I)&#xa;request 01 gây triệu chứng · 02 kiểm khôi phục&#xa;tiêm/khôi phục bằng script ngoài Postman" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1"><mxGeometry x="1090" y="380" width="360" height="110" as="geometry"/></mxCell>
-                <mxCell id="otel" value="OTel Collector → Elasticsearch / Kibana&#xa;đo triệu chứng, xác nhận khôi phục (rule 028/029 giữ nguyên)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1"><mxGeometry x="560" y="380" width="470" height="110" as="geometry"/></mxCell>
-                <mxCell id="docs" value="docs/dien-tap-chaos-engineering/README.md — quy trình, danh mục, lệnh&#xa;spec D: tài liệu troubleshoot chi tiết theo triệu chứng (sau)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" parent="1" vertex="1"><mxGeometry x="560" y="530" width="470" height="70" as="geometry"/></mxCell>
-                <mxCell id="note" value="Không file nào dưới services/ hay shared/ bị sửa; deploy/ansible, Jenkinsfile, lint manifest, hiến chương giữ nguyên. Phần Kubernetes của 025 đã gỡ. Không có test tự động (sai lệch Nguyên tắc III, hạn tới khi spec D xong)." style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;fontStyle=2;" parent="1" vertex="1"><mxGeometry x="30" y="640" width="1420" height="30" as="geometry"/></mxCell>
-                <mxCell id="e1" value="đọc &amp; kiểm" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="script" target="catalog" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
-                <mxCell id="e2" value="gọi" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="script" target="adapter" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
-                <mxCell id="e3" value="ghi" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="script" target="state" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
-                <mxCell id="e4" value="docker / compose" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="adapter" target="stack" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
-                <mxCell id="e5" value="cùng giao diện" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" parent="1" source="future" target="adapter" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
-                <mxCell id="e6" value="traffic" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="load" target="stack" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
-                <mxCell id="e7" value="telemetry" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="stack" target="otel" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
-                <mxCell id="e8" value="đo" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" parent="1" source="postman" target="stack" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" value="Kiến trúc thành phần — danh mục 8 nhóm lỗi (dữ liệu) tách khỏi bộ chuyển đổi Compose (cách làm); thêm bộ chuyển đổi CD/Kubernetes sau này không đụng danh mục" vertex="1">
+                    <mxGeometry height="26" width="1440" x="30" y="10" as="geometry"/>
+                </mxCell>
+                <mxCell id="catalog" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="scripts/incident-drill/catalog.json (danh mục — dữ liệu thuần)&#xa;8 nhóm · 9 loại A–I · đích áp dụng · tham số trừu tượng&#xa;triệu chứng · 3 mức gợi ý · restoreKind&#xa;KHÔNG có lệnh docker hay biến compose" vertex="1">
+                    <mxGeometry height="110" width="470" x="30" y="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="script" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="scripts/incident-drill.ps1 — điểm vào duy nhất&#xa;-Inject (dạng a, có chủ đích, -DurationSeconds tự gỡ)&#xa;-Start (dạng b, bốc mù 8 nhóm, niêm phong SHA-256)&#xa;-Restore · -Hint · -Reveal · -Load&#xa;chỉ chạy khi .env có CHAOS_ALLOW_FAULT_INJECTION=true (loại D thêm cờ latency)" vertex="1">
+                    <mxGeometry height="130" width="470" x="30" y="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="adapter" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="Bộ chuyển đổi Compose (hàm trong script)&#xa;Invoke-ComposeInject / Invoke-ComposeRestore&#xa;A, B, C, D, F: file override + tạo lại cả 7 container&#xa;E: stop/start DB · G: update cpus+memory · H: network disconnect/connect · I: kill" vertex="1">
+                    <mxGeometry height="130" width="470" x="560" y="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="future" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;dashed=1;" value="Bộ chuyển đổi CD / Kubernetes (sau này)&#xa;cùng giao diện tiêm – khôi phục – chờ khoẻ&#xa;chưa làm — chỉ chừa điểm mở rộng" vertex="1">
+                    <mxGeometry height="90" width="470" x="560" y="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="state" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value=".incident-drill/&lt;runId&gt;/ (gitignore)&#xa;sealed.json (băm) · hash.txt · state.json (pending → injected → restored)&#xa;hint-log.json · stop.flag · injected-at.txt · injector.log&#xa;docker-compose.incident.yml (chỉ environment của đích)" vertex="1">
+                    <mxGeometry height="110" width="470" x="30" y="380" as="geometry"/>
+                </mxCell>
+                <mxCell id="stack" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="Docker Compose local (docker-compose.local.yml)&#xa;7 service app · 5 DB · network backbone&#xa;KHÔNG sửa code service, KHÔNG sửa compose để tiêm lỗi" vertex="1">
+                    <mxGeometry height="130" width="360" x="1090" y="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="load" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="scripts/incident-drill.ps1 -Load&#xa;newman: folder Postman 00 (token) → 26 + 28&#xa;token lại khi hết 30 phút / 401 / identity tạo lại" vertex="1">
+                    <mxGeometry height="90" width="360" x="1090" y="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="postman" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Folder Postman 31 (thủ công, 6 subfolder D–I)&#xa;request 01 gây triệu chứng · 02 kiểm khôi phục&#xa;tiêm/khôi phục bằng script ngoài Postman" vertex="1">
+                    <mxGeometry height="110" width="360" x="1090" y="380" as="geometry"/>
+                </mxCell>
+                <mxCell id="otel" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="OTel Collector → Elasticsearch / Kibana&#xa;đo triệu chứng, xác nhận khôi phục (rule 028/029 giữ nguyên)" vertex="1">
+                    <mxGeometry height="110" width="470" x="560" y="380" as="geometry"/>
+                </mxCell>
+                <mxCell id="docs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="docs/dien-tap-chaos-engineering/README.md — quy trình, danh mục, lệnh&#xa;spec D: tài liệu troubleshoot chi tiết theo triệu chứng (sau)" vertex="1">
+                    <mxGeometry height="70" width="470" x="560" y="530" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" parent="1" style="text;html=1;fontSize=10;fontColor=#666666;whiteSpace=wrap;align=left;fontStyle=2;" value="Không file nào dưới services/ hay shared/ bị sửa; deploy/ansible, Jenkinsfile, lint manifest, hiến chương giữ nguyên. Phần Kubernetes của 025 đã gỡ. Không có test tự động (sai lệch Nguyên tắc III, hạn tới khi spec D xong)." vertex="1">
+                    <mxGeometry height="30" width="1420" x="30" y="640" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" edge="1" parent="1" source="script" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="catalog" value="đọc &amp; kiểm">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" edge="1" parent="1" source="script" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="adapter" value="gọi">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" edge="1" parent="1" source="script" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="state" value="ghi">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" edge="1" parent="1" source="adapter" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="stack" value="docker / compose">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" edge="1" parent="1" source="future" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="adapter" value="cùng giao diện">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" edge="1" parent="1" source="load" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="stack" value="traffic">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" edge="1" parent="1" source="stack" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="otel" value="telemetry">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1240" y="360"/>
+                            <mxPoint x="795" y="360"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e8" edge="1" parent="1" source="postman" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="stack" value="đo">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
             </root>
         </mxGraphModel>
     </diagram>
