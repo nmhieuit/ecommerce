@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Không tham chiếu service nào, cùng lý do với ServiceManifestSloConventionTests: bộ test này chỉ đọc
+       file trên đĩa (scripts/incident-drill/catalog.json và docs/kibana-quan-sat-he-thong/*.md) nên không cần
+       build hay chạy service, cũng không cần Docker (spec 032 research.md Quyết định 1). -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

@@ -1,4 +1,4 @@
-# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-031
+# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-032
 
 *Đối tượng đọc: kỹ sư phần mềm / software architect. File này gom lại mọi "lưu ý hay khám phá" (blocker
 giữa chừng, bug thật tìm được khi triển khai/xác thực, giới hạn phạm vi đã biết, amendment đính chính)
@@ -41,6 +41,11 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - (1) Biến thể "dừng identity-api" của nhóm 5 bị **bỏ**: dừng 10 phút dưới tải nền không gây triệu chứng trên đường dữ liệu (token cũ còn dùng được nhờ khoá ký đã cache; chỉ cấp token/discovery lỗi kết nối).
   - (2) Nhóm 6 đổi `--memory` từ 96m sang **256m**: 96m làm `products-api` bị OOM-kill ngay (exit 137), triệu chứng thành nhóm 8.
   - (3) Loại D gửi header trễ **thẳng vào orders-api** (kèm token và `X-Tenant-Id`), không qua gateway: header `X-Chaos-Latency-Ms` không đi xuyên gateway/BFF (gateway trả 404 sau 9 ms; BFF dựng request riêng).
+- **[032](032_Architect_tài%20liệu%20luyện%20troubleshoot%20theo%20nhóm%20lỗi.md)** — Các quyết định thiết kế và thay đổi giữa chừng, đều do người dùng chốt hoặc do số đo thật:
+  - (1) File 17 **không liên kết** từ mức 1–2 sang file 09–16 (các file đó ghi sẵn nhóm/đáp án ở tiêu đề): truy vấn dùng chung Q1–Q9 được chép vào chính file 17, và mục "Truy vấn dùng chung" được thêm vào danh sách mục không phải triệu chứng của test.
+  - (2) Bài tập của nhóm 2 gộp loại B và C (một file); loại B được viết là "không tạo triệu chứng đo được" thay vì hứa triệu chứng.
+  - (3) Folder Postman 32: nhóm 1–2 mới (A, B, C), nhóm 3–8 là bản sao sâu của subfolder D–I trong folder 31 (không sửa folder 31) kèm liên kết sang file hướng dẫn mới.
+  - (4) Test chỉ kiểm phủ và cấu trúc, không kiểm nội dung khớp `catalog.json` (người dùng chốt viết riêng); thêm 4 bất biến rẻ (đủ 6 mục, thứ tự 1→2→3, rò rỉ mức 1–2, 00 liệt kê đủ 09–17) vì bắt đúng các lỗi dễ lọt.
 
 ## 2. Bug thật phát hiện khi triển khai/xác thực
 
@@ -272,6 +277,12 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - (3) Gửi header trễ tuần tự chỉ đạt ≈ 0,5 request/giây (mỗi request chờ 2 s) nên không đạt tỷ lệ 50%: vòng gửi loại D dùng `HttpClient.SendAsync` bất đồng bộ.
   - (4) `ConvertTo-Json` qua pipe làm phẳng mảng một phần tử trong PowerShell 5.1: dùng `-InputObject @(...)` và bọc `@(...)` khi đọc.
   - (5) Heredoc của bash cắt mất nội dung dài khi viết file PowerShell: dùng công cụ ghi file thay vì heredoc.
+- **[032](032_Architect_tài%20liệu%20luyện%20troubleshoot%20theo%20nhóm%20lỗi.md)** — Phát hiện khi chạy thật 8 nhóm để lấy số đo (đã xử lý trong tài liệu hoặc ghi lại):
+  - (1) Kibana đang trống (0 dashboard, 0 rule): dashboard `Xử lý sự cố` và rule `incident-fast-detection` phải import lại (`saved_objects/_import`), và rule vào ở trạng thái **tắt** nên phải bật bằng `POST /api/alerting/rule/<id>/_enable`; điều kiện này được ghi vào mục "Điều kiện" của file 09.
+  - (2) Hai lần đo burst của loại B cho kết quả ngược chiều nhau: script node (một lần mỗi điều kiện, sau 8 phút) p95 554/2574 ms khi tiêm so với 409/1638 ms khi gỡ (tiêm chậm hơn), còn `curl.exe -Z --parallel-max` (ba vòng, sau 8 phút) p95 272/989 ms khi tiêm so với 516/889 ms khi gỡ (hiệu số đổi dấu) ⇒ chênh lệch là nhiễu của máy, B không có triệu chứng ổn định; tài liệu chỉ dùng số `curl` vì lệnh đó chạy được trên mọi máy Windows. PowerShell 5.1 `Start-Job` cho burst quá chậm (98 giây cho 30 request, 3 lần 504) nên không dùng.
+  - (3) Loại D qua gateway không làm gì (404 sau 40 ms) — xác nhận lại số đo của 031; tài liệu hướng dẫn gửi thẳng cổng của `orders-api`.
+  - (4) `-DurationSeconds` tính từ lúc `injected`, không từ lúc gõ lệnh, và khôi phục loại tạo lại container mất thêm ≈ 20–60 giây (A, B, F), nên tổng thời gian dài hơn thời lượng khai báo (ví dụ 300 s → 5 phút 14–27 giây).
+  - (5) Bản chạy newman đầu của folder Postman 32 hỏng vì Windows PowerShell 5.1 đọc file `.ps1` UTF-8 không BOM theo ANSI (chuỗi tiếng Việt làm lệch dấu nháy) và vì splat mảng `@('-Inject', …)` truyền tham số theo vị trí thay vì theo tên; sửa bằng thêm BOM và splat bằng hashtable.
 
 ## 3. Giới hạn phạm vi đã biết
 
@@ -489,6 +500,18 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   - **Một lần chạy mở tại một thời điểm**; lần chạy `failed` chặn lần mới tới khi `-Restore`.
   - **Dạng (b) không có kịch bản nhiều bước/chuỗi**; chưa có bộ chuyển đổi CD/Kubernetes (chỉ chừa điểm mở rộng).
   - **Elastic đã xoá sạch** (cả volume `local-es-data`) theo xác nhận của người dùng sau khi triển khai xong 031; Kibana mất rule, dashboard và Case đã import — import lại từ `docs/kibana-quan-sat-he-thong/` khi cần.
+- **[032](032_Architect_tài%20liệu%20luyện%20troubleshoot%20theo%20nhóm%20lỗi.md)** — Giới hạn còn lại, không sửa trong phạm vi 032:
+  - **Sai lệch Nguyên tắc III của 031 còn mở, đã có hướng xử lý**: `incident-drill.ps1` và `catalog.json` vẫn không có test tự động. Hạn "đến khi spec D hoàn tất" của 031 hết ở đây; ngày 2026-10-06 người dùng quyết **mở một spec riêng cho test script** (chưa tạo — sẽ mở bằng `/speckit-specify`), nên hạn mới là "khi spec riêng đó xong". Phần tài liệu của 032 thì có test (`TroubleshootGuideConventionTests`, 38 test, viết trước, đã kiểm bắt lỗi).
+  - **Hai nơi gợi ý có thể lệch**: file 17 (viết riêng, nặng hơn, có chỉ dẫn cách kiểm) và 27 đoạn trong `catalog.json` dùng cho `-Hint` (đã duyệt ở 031, không sửa). Test chỉ kiểm phủ (mỗi nhóm/loại có mục, đủ 3 mức, mức 1–2 không lộ), không kiểm nội dung khớp: sửa một nơi mà quên nơi kia thì không build nào báo.
+  - **Số đo phụ thuộc máy và tải nền**: mỗi file 09–16 ghi ngày và điều kiện đo kèm truy vấn tự đo lại; chuỗi "15 phút liên tục sạch" chỉ đo trọn cho nhóm 1 (file 09), các nhóm khác đo tới phút đầu tiên `dat = true` (và Postman folder 32 chạy từng request).
+  - **Không đo được thời gian báo riêng của từng nhóm khi tiêm nối tiếp**: cả 7 alert `incident-fast-detection` `active` liên tục từ 10:34:59 tới ≥ 12:07 (2026-10-06) vì nhiễu khởi động nguội cộng dồn; chỉ có số cho C (`Products.Api` active sau ≈ 1 phút 48 giây) và D (`Orders.Api` sau ≈ 4 phút 39 giây). Muốn đo riêng phải chờ mọi alert `recovered` (≈ 15–20 phút sạch) giữa hai lần.
+  - **Tỷ lệ chaos thực tế lệch tỷ lệ script in ra** (C: ≈ 24% so với 14%; D: 56% so với 47%) do tốc độ nền đo lúc tiêm cao hơn tốc độ nền thật sau đó (cold start); tài liệu ghi số đo thật chứ không ghi tỷ lệ niêm phong.
+  - **Triệu chứng gần như trùng giữa các nhóm**: A và E (cùng `Name or service not known`), H và I (cùng timeout 1 giây, 504, service biến mất): phân biệt chỉ nhờ `docker ps -a`/`docker inspect`, nên bài mù ở các nhóm này lộ đáp án nếu xem trạng thái container (đã chấp nhận ở 031).
+  - **Service bị tách hoặc bị kill (H, I) biến mất khỏi bảng SLO và cảnh báo**: không có span nào thì không có hàng; phát hiện phải qua phía gọi (span Client không mã HTTP, 504). Đây là giới hạn đã ghi trong ô "Ngưỡng SLO" của dashboard, chưa có synthetic check (SCRUM-29/30).
+  - **Panel "Log lỗi gần nhất" bị `Identity.Api` lấp** sau mỗi lần tạo lại container (`Error unprotecting the IdentityServer signing key`: khoá bảo vệ dữ liệu mất khi tạo lại; 1057 trong 1734 dòng ở lần đo): luôn cần lọc theo service. Bảng "Lỗi gọi hạ lưu" luôn có dòng `Bff.Api → Parties.Api` 100% do tải nền gọi đối tác không tồn tại (404).
+  - **Máy này không có Python**: các bước kiểm JSON/XML dùng `node`/PowerShell; một lệnh `node -e` có dấu backtick trong chuỗi nháy kép của bash từng làm hỏng một đoạn tài liệu (đã khôi phục).
+  - **`dotnet test Ecommerce.slnx` không chạy trọn được trong môi trường này** vì `shared/IntegrationTestSupport` thiếu `BouncyCastle.Cryptography 2.7.0` (testhost thoát lỗi, "Test Run Aborted"), không liên quan 032; các suite quy ước (Container 9, Deployment 58, Structure 9, TroubleshootGuide 38) vẫn xanh.
+  - **Elastic đã xoá sạch** (cả volume `ecomerce-local_local-es-data`) theo xác nhận của người dùng ngày 2026-10-06 sau khi triển khai xong 032; Kibana mất dashboard `Xử lý sự cố` và rule `incident-fast-detection` đã import thủ công cho buổi đo (import lại theo `dashboards/README.md` và `alerts/README.md`, rule vào ở trạng thái tắt). Elasticsearch/Kibana/otel-collector được dựng lại healthy và chỉ còn dữ liệu telemetry mới.
 
 ## 4. Amendment — đính chính khi thực tế lệch spec gốc
 
