@@ -24,15 +24,21 @@ data:
   owned-exclusively: false
 
 slos:
-  # Platform defaults for an internal service API (constitution Principle VIII). The gateway adds
-  # only forwarding overhead on top of the BFF's own budget; no justified alternative is claimed,
-  # so the defaults apply verbatim.
+  # Deliberately NOT the internal-service-api default (p95 500ms / p99 700ms): every gateway request
+  # is forwarded to the BFF, so its latency is the BFF's client-facing budget (p95 700ms / p99
+  # 1000ms) plus the gateway's own forwarding overhead. A gateway budget at or below the BFF's could
+  # never be met by a healthy system, hence the 100ms of headroom on top of the BFF's figures.
   availability: 99%            # weekly
   error-rate:
     max-5xx-ratio: 1%
   latency:
-    p95: 150ms
-    p99: 500ms
+    p95: 800ms
+    p99: 1100ms
+  justification: >-
+    The gateway forwards every request to the BFF, so its latency includes the BFF's own budget
+    (p95 700ms / p99 1000ms) plus about 100ms of forwarding overhead. Holding it to the
+    internal-service-api default (p95 500ms / p99 700ms) would be tighter than the service it
+    fronts, which no healthy system can satisfy.
 
 error-budget-policy:
   # SCRUM-35 / constitution Principle VIII (2.0.0): "Sustained SLO breach consumes the error budget:
@@ -80,16 +86,16 @@ endpoints:
     forwarding-timeout: 10s     # must stay >= the BFF's 3s per-downstream budget (data-model.md);
                                 # enforced by Gateway.Api.UnitTests/ForwardingTimeoutBudgetTests
     latency:
-      # The gateway's own overhead on top of whatever the BFF spends, not an end-to-end budget:
-      # the BFF's client-facing SLO (p95 300ms / p99 800ms) governs what a caller actually sees.
-      p95: 150ms
-      p99: 500ms
+      # Includes the BFF's time (the gateway forwards every request to it): the BFF's client-facing
+      # SLO (p95 700ms / p99 1000ms) plus the gateway's own forwarding overhead.
+      p95: 800ms
+      p99: 1100ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - route: GET /health/ready
     purpose: >-
       Readiness probe. Gates traffic on this process accepting requests only — deliberately not on
@@ -97,8 +103,8 @@ endpoints:
       rather than pulling every gateway instance out of rotation.
     authentication: anonymous
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
 
 observability:
   # Principle VII — emitted via shared/ServiceDefaults, never configured per service by hand.

@@ -9264,7 +9264,7 @@
                 "_search"
               ]
             },
-            "description": "**Mục đích**: xác nhận công thức đo của dashboard, khi hệ thống khoẻ, cho kết quả ĐÚNG NHƯ KỲ VỌNG: 0 lỗi 5xx và p95/p99 trong ngưỡng đã khai báo ở manifest của BFF — baseline để đối chiếu với bước 05 (khi suy giảm).\n\n**Input**: `POST {{elasticsearchUrl}}/traces-generic.otel-default*/_search`, lọc theo `service.name == Bff.Api` và thời gian sau `slo021StartMs`, tính `err` (đếm lỗi 5xx) và percentile `p95`/`p99` của độ trễ.\n\n**Output kỳ vọng**: có request thật (`n > 0`); `err == 0`; `p95 ≤ 300ms` và `p99 ≤ 800ms` (khớp đúng ngân sách khai trong manifest `bff`).\n\n**Vì sao chứng minh đúng FR-004/FR-005**: con số đo được ở đây PHẢI khớp đúng những gì manifest khai báo khi hệ thống khoẻ — là bằng chứng công thức tính không có sai số hệ thống (ví dụ đơn vị nano giây bị tính nhầm thành mili giây sẽ lộ ra ngay ở phép so sánh ngưỡng này).\n\n---\n\nĐúng công thức dashboard nhưng chỉ tính span `kind: Server` và bỏ `/health/*`: số request, số 5xx, p95/p99 (ms) của `Bff.Api` từ mốc. SLO BFF (`client-facing-bff`): p95 ≤ 300 ms, p99 ≤ 800 ms.",
+            "description": "**Mục đích**: xác nhận công thức đo của dashboard, khi hệ thống khoẻ, cho kết quả ĐÚNG NHƯ KỲ VỌNG: 0 lỗi 5xx và p95/p99 trong ngưỡng đã khai báo ở manifest của BFF — baseline để đối chiếu với bước 05 (khi suy giảm).\n\n**Input**: `POST {{elasticsearchUrl}}/traces-generic.otel-default*/_search`, lọc theo `service.name == Bff.Api` và thời gian sau `slo021StartMs`, tính `err` (đếm lỗi 5xx) và percentile `p95`/`p99` của độ trễ.\n\n**Output kỳ vọng**: có request thật (`n > 0`); `err == 0`; `p95 ≤ 700ms` và `p99 ≤ 1000ms` (khớp đúng ngân sách khai trong manifest `bff`).\n\n**Vì sao chứng minh đúng FR-004/FR-005**: con số đo được ở đây PHẢI khớp đúng những gì manifest khai báo khi hệ thống khoẻ — là bằng chứng công thức tính không có sai số hệ thống (ví dụ đơn vị nano giây bị tính nhầm thành mili giây sẽ lộ ra ngay ở phép so sánh ngưỡng này).\n\n---\n\nĐúng công thức dashboard nhưng chỉ tính span `kind: Server` và bỏ `/health/*`: số request, số 5xx, p95/p99 (ms) của `Bff.Api` từ mốc. SLO BFF (`client-facing-bff`): p95 ≤ 700 ms, p99 ≤ 1000 ms.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Bff.Api\"\n          }\n        },\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"{{slo021StartMs}}\",\n              \"format\": \"epoch_millis\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"kind\": \"Server\"\n          }\n        }\n      ],\n      \"must_not\": [\n        {\n          \"prefix\": {\n            \"attributes.http.route\": \"/health\"\n          }\n        }\n      ]\n    }\n  },\n  \"aggs\": {\n    \"err\": {\n      \"filter\": {\n        \"range\": {\n          \"attributes.http.response.status_code\": {\n            \"gte\": 500\n          }\n        }\n      }\n    },\n    \"lat\": {\n      \"percentiles\": {\n        \"field\": \"duration\",\n        \"percents\": [\n          95,\n          99\n        ]\n      }\n    }\n  }\n}",
@@ -9289,7 +9289,7 @@
                   "const p99 = j.aggregations.lat.values['99.0'] / 1e6;",
                   "console.log('Bff.Api khi khoẻ: n=' + n + ' 5xx=' + err + ' p95=' + p95.toFixed(0) + 'ms p99=' + p99.toFixed(0) + 'ms');",
                   "pm.test('có request thật và 0 lỗi 5xx', function () { pm.expect(n).to.be.above(0); pm.expect(err).to.equal(0); });",
-                  "pm.test('p95 ≤ 300 ms và p99 ≤ 800 ms (khớp manifest bff)', function () { pm.expect(p95).to.be.at.most(300); pm.expect(p99).to.be.at.most(800); });"
+                  "pm.test('p95 ≤ 700 ms và p99 ≤ 1000 ms (khớp manifest bff)', function () { pm.expect(p95).to.be.at.most(700); pm.expect(p99).to.be.at.most(1000); });"
                 ]
               }
             }
@@ -9360,7 +9360,7 @@
                 "_search"
               ]
             },
-            "description": "**Mục đích**: đây là phép thử TRỌNG TÂM của FR-007 — khi hiệu năng thực tế thay đổi (ở đây là một dependency chết hẳn, trường hợp cực đoan của \"suy giảm\"), giá trị đo liên tục PHẢI phản ánh NGAY sự thay đổi đó, không cần chờ chu kỳ rà soát thủ công.\n\n**Input**: cùng truy vấn như bước 03 nhưng chạy LẠI sau khi baskets-api tắt.\n\n**Output kỳ vọng**: `err >= 1` (có ít nhất 1 lỗi 5xx); `p95 > 300ms` (vượt ngưỡng).\n\n**Vì sao chứng minh đúng FR-007**: đối chiếu trực tiếp với bước 03 (cùng 1 service, cùng công thức, 2 thời điểm khác nhau) cho thấy phép đo PHẢN ỨNG được với thay đổi thật — không phải một con số tĩnh không bao giờ đổi.\n\n---\n\nCùng truy vấn bước 03, không thu thập lại thủ công: số đo phải phản ánh suy giảm ở bước 04 (5xx > 0, p95 > 800 ms) — chính là cái dashboard phải hiện đỏ.",
+            "description": "**Mục đích**: đây là phép thử TRỌNG TÂM của FR-007 — khi hiệu năng thực tế thay đổi (ở đây là một dependency chết hẳn, trường hợp cực đoan của \"suy giảm\"), giá trị đo liên tục PHẢI phản ánh NGAY sự thay đổi đó, không cần chờ chu kỳ rà soát thủ công.\n\n**Input**: cùng truy vấn như bước 03 nhưng chạy LẠI sau khi baskets-api tắt.\n\n**Output kỳ vọng**: `err >= 1` (có ít nhất 1 lỗi 5xx); `p95 > 700ms` (vượt ngưỡng).\n\n**Vì sao chứng minh đúng FR-007**: đối chiếu trực tiếp với bước 03 (cùng 1 service, cùng công thức, 2 thời điểm khác nhau) cho thấy phép đo PHẢN ỨNG được với thay đổi thật — không phải một con số tĩnh không bao giờ đổi.\n\n---\n\nCùng truy vấn bước 03, không thu thập lại thủ công: số đo phải phản ánh suy giảm ở bước 04 (5xx > 0, p95 > 1000 ms) — chính là cái dashboard phải hiện đỏ.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Bff.Api\"\n          }\n        },\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"{{slo021StartMs}}\",\n              \"format\": \"epoch_millis\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"kind\": \"Server\"\n          }\n        }\n      ],\n      \"must_not\": [\n        {\n          \"prefix\": {\n            \"attributes.http.route\": \"/health\"\n          }\n        }\n      ]\n    }\n  },\n  \"aggs\": {\n    \"err\": {\n      \"filter\": {\n        \"range\": {\n          \"attributes.http.response.status_code\": {\n            \"gte\": 500\n          }\n        }\n      }\n    },\n    \"lat\": {\n      \"percentiles\": {\n        \"field\": \"duration\",\n        \"percents\": [\n          95,\n          99\n        ]\n      }\n    }\n  }\n}",
@@ -9385,7 +9385,7 @@
                   "const p99 = j.aggregations.lat.values['99.0'] / 1e6;",
                   "console.log('Bff.Api khi baskets tắt: n=' + n + ' 5xx=' + err + ' p95=' + p95.toFixed(0) + 'ms p99=' + p99.toFixed(0) + 'ms');",
                   "pm.test('có ít nhất 1 lỗi 5xx', function () { pm.expect(err).to.be.at.least(1); });",
-                  "pm.test('p95 vượt ngưỡng 300 ms (suy giảm nhìn thấy được)', function () { pm.expect(p95).to.be.above(300); });"
+                  "pm.test('p95 vượt ngưỡng 700 ms (suy giảm nhìn thấy được)', function () { pm.expect(p95).to.be.above(700); });"
                 ]
               }
             }
@@ -11576,7 +11576,7 @@
     },
     {
       "name": "26 - Ngân sách hiệu năng luồng trọng yếu (browse → giỏ → checkout → đơn)",
-      "description": "## Bức tranh tổng thể\n\nSpec 026 (SCRUM-32) là bài kiểm thử TẢI trên đúng LUỒNG TRỌNG YẾU browse → giỏ → checkout → đơn, đối chiếu p95/p99 ĐO ĐƯỢC với NGÂN SÁCH ĐÃ KHAI BÁO của BFF (300ms, theo manifest `client-facing-bff` từ spec 021) — khác hẳn các folder trước (vốn chỉ gọi 1-2 request để xem CÓ ĐÚNG hay không), folder này PHẢI chạy bằng POSTMAN RUNNER VỚI 30 VÒNG LẶP (Iterations = 30) để có đủ mẫu tính percentile p95 có ý nghĩa thống kê — chạy 1 lần duy nhất không đủ dữ liệu để nói \"p95 đạt hay không đạt\".\n\nVòng lặp ĐẦU TIÊN được coi là \"làm ấm\" (warm-up — JIT, connection pool, cache đều cần vài request đầu để ổn định) nên KHÔNG tính vào kết luận cuối cùng; 29 vòng còn lại mới là dữ liệu thật để tính p95. Mỗi vòng tạo THẬT 1 đơn hàng mới trong DB (phải dọn bằng `DELETE FROM Orders WHERE PlacedAtUtc >= ...` sau khi chạy xong, xem docs/QA/026) — đây LÀ MỘT BÀI TEST TẢI THẬT, không phải giả lập. Công tắc suy giảm hạ tầng (không sửa mã, để DIỄN TẬP hồi quy hiệu năng theo FR-009): `docker update --cpus 0.1 ecomerce-local-baskets-api-1` (giảm hẳn CPU của Baskets để CỐ Ý ép bước 02 vượt ngân sách, chứng minh bài test THỰC SỰ phát hiện được hồi quy) rồi `docker update --cpus 0` để gỡ giới hạn (xem ghi chú: lệnh gỡ giới hạn này KHÔNG xoá sạch cấu hình cgroup cũ — phải RECREATE container nếu cần khôi phục hoàn toàn mặc định).\n\n---\n\nKiểm chứng spec 026 (SCRUM-32) bằng Runner: chạy folder này với **30 vòng lặp** (Iterations = 30, vòng đầu là làm ấm) — mỗi request có assertion `responseTime` < 300 ms (ngân sách p95 của `client-facing-bff`, manifest bff). Đỏ ở bước nào thì bước đó vượt ngân sách. Công tắc suy giảm hạ tầng (không sửa mã): `docker update --cpus 0.1 ecomerce-local-baskets-api-1` (giảm CPU của baskets) và `docker update --cpus 0 ...` (bỏ giới hạn). Mỗi vòng tạo 1 đơn hàng — dọn bằng `DELETE FROM Orders WHERE PlacedAtUtc >= ...` trong orders-db (xem doc QA 026). Cần token ở folder '00 - Xác thực & phân quyền'.",
+      "description": "## Bức tranh tổng thể\n\nSpec 026 (SCRUM-32) là bài kiểm thử TẢI trên đúng LUỒNG TRỌNG YẾU browse → giỏ → checkout → đơn, đối chiếu p95/p99 ĐO ĐƯỢC với NGÂN SÁCH ĐÃ KHAI BÁO của BFF (700ms, theo manifest `client-facing-bff` từ spec 021) — khác hẳn các folder trước (vốn chỉ gọi 1-2 request để xem CÓ ĐÚNG hay không), folder này PHẢI chạy bằng POSTMAN RUNNER VỚI 30 VÒNG LẶP (Iterations = 30) để có đủ mẫu tính percentile p95 có ý nghĩa thống kê — chạy 1 lần duy nhất không đủ dữ liệu để nói \"p95 đạt hay không đạt\".\n\nVòng lặp ĐẦU TIÊN được coi là \"làm ấm\" (warm-up — JIT, connection pool, cache đều cần vài request đầu để ổn định) nên KHÔNG tính vào kết luận cuối cùng; 29 vòng còn lại mới là dữ liệu thật để tính p95. Mỗi vòng tạo THẬT 1 đơn hàng mới trong DB (phải dọn bằng `DELETE FROM Orders WHERE PlacedAtUtc >= ...` sau khi chạy xong, xem docs/QA/026) — đây LÀ MỘT BÀI TEST TẢI THẬT, không phải giả lập. Công tắc suy giảm hạ tầng (không sửa mã, để DIỄN TẬP hồi quy hiệu năng theo FR-009): `docker update --cpus 0.1 ecomerce-local-baskets-api-1` (giảm hẳn CPU của Baskets để CỐ Ý ép bước 02 vượt ngân sách, chứng minh bài test THỰC SỰ phát hiện được hồi quy) rồi `docker update --cpus 0` để gỡ giới hạn (xem ghi chú: lệnh gỡ giới hạn này KHÔNG xoá sạch cấu hình cgroup cũ — phải RECREATE container nếu cần khôi phục hoàn toàn mặc định).\n\n---\n\nKiểm chứng spec 026 (SCRUM-32) bằng Runner: chạy folder này với **30 vòng lặp** (Iterations = 30, vòng đầu là làm ấm) — mỗi request có assertion `responseTime` < 700 ms (ngân sách p95 của `client-facing-bff`, manifest bff). Đỏ ở bước nào thì bước đó vượt ngân sách. Công tắc suy giảm hạ tầng (không sửa mã): `docker update --cpus 0.1 ecomerce-local-baskets-api-1` (giảm CPU của baskets) và `docker update --cpus 0 ...` (bỏ giới hạn). Mỗi vòng tạo 1 đơn hàng — dọn bằng `DELETE FROM Orders WHERE PlacedAtUtc >= ...` trong orders-db (xem doc QA 026). Cần token ở folder '00 - Xác thực & phân quyền'.",
       "item": [
         {
           "name": "00 Dọn giỏ (không tính vào ngân sách)",
@@ -11620,7 +11620,7 @@
           ]
         },
         {
-          "name": "01 Duyệt sản phẩm — GET /bff/products (ngân sách p95 ≤ 300 ms)",
+          "name": "01 Duyệt sản phẩm — GET /bff/products (ngân sách p95 ≤ 700 ms)",
           "request": {
             "method": "GET",
             "header": [],
@@ -11644,7 +11644,7 @@
                 "products"
               ]
             },
-            "description": "**Mục đích**: đo request ĐẦU TIÊN của luồng trọng yếu — duyệt danh sách sản phẩm — đối chiếu trực tiếp với ngân sách p95 đã khai báo trong manifest `client-facing-bff` (300ms, theo FR-003/SC-002 của spec 026, kế thừa từ spec 021).\n\n**Input**: `GET {{gatewayUrl}}/bff/products`.\n\n**Output kỳ vọng**: `200` và `responseTime < 300ms` — ĐÚNG Ở MỖI VÒNG LẶP riêng lẻ (assertion per-iteration), nhưng ý nghĩa thống kê thật (p95 across 30 runs) chỉ có khi NHÌN TOÀN BỘ kết quả Runner sau khi chạy xong, không phải từng request đơn lẻ.\n\n**Vì sao chứng minh đúng FR-002/FR-003**: một vài vòng lặp riêng lẻ có thể \"may mắn\" đạt dưới 300ms dù p95 THẬT SỰ (tính trên nhiều mẫu) đã vượt ngân sách — đây là lý do phải chạy ĐỦ 30 vòng và nhìn kết quả tổng hợp của Runner (không chỉ xem từng request xanh/đỏ riêng lẻ), đúng khoảng cách giữa \"mỗi lần gọi có vẻ ổn\" và \"p95 thực sự trong ngân sách\".\n\n---\n\nBước 1 của luồng trọng yếu. Ngân sách `client-facing-bff`: p95 ≤ 300 ms, p99 ≤ 800 ms (manifest bff)."
+            "description": "**Mục đích**: đo request ĐẦU TIÊN của luồng trọng yếu — duyệt danh sách sản phẩm — đối chiếu trực tiếp với ngân sách p95 đã khai báo trong manifest `client-facing-bff` (700ms, theo FR-003/SC-002 của spec 026, kế thừa từ spec 021).\n\n**Input**: `GET {{gatewayUrl}}/bff/products`.\n\n**Output kỳ vọng**: `200` và `responseTime < 700ms` — ĐÚNG Ở MỖI VÒNG LẶP riêng lẻ (assertion per-iteration), nhưng ý nghĩa thống kê thật (p95 across 30 runs) chỉ có khi NHÌN TOÀN BỘ kết quả Runner sau khi chạy xong, không phải từng request đơn lẻ.\n\n**Vì sao chứng minh đúng FR-002/FR-003**: một vài vòng lặp riêng lẻ có thể \"may mắn\" đạt dưới 700ms dù p95 THẬT SỰ (tính trên nhiều mẫu) đã vượt ngân sách — đây là lý do phải chạy ĐỦ 30 vòng và nhìn kết quả tổng hợp của Runner (không chỉ xem từng request xanh/đỏ riêng lẻ), đúng khoảng cách giữa \"mỗi lần gọi có vẻ ổn\" và \"p95 thực sự trong ngân sách\".\n\n---\n\nBước 1 của luồng trọng yếu. Ngân sách `client-facing-bff`: p95 ≤ 700 ms, p99 ≤ 1000 ms (manifest bff)."
           },
           "event": [
             {
@@ -11652,9 +11652,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"200 và dưới 300 ms\", function () {",
+                  "pm.test(\"200 và dưới 700 ms\", function () {",
                   "    pm.response.to.have.status(200);",
-                  "    pm.expect(pm.response.responseTime).to.be.below(300);",
+                  "    pm.expect(pm.response.responseTime).to.be.below(700);",
                   "});"
                 ]
               }
@@ -11662,7 +11662,7 @@
           ]
         },
         {
-          "name": "02 Thêm vào giỏ — POST /bff/basket/items (p95 ≤ 300 ms)",
+          "name": "02 Thêm vào giỏ — POST /bff/basket/items (p95 ≤ 700 ms)",
           "request": {
             "method": "POST",
             "header": [
@@ -11692,7 +11692,7 @@
                 "items"
               ]
             },
-            "description": "**Mục đích**: đo request THỨ 2 của luồng — thêm sản phẩm vào giỏ — đây là bước sẽ ĐỎ RÕ RỆT khi công tắc suy giảm CPU của `baskets-api` được bật (`docker update --cpus 0.1`), vì route này gọi thẳng Baskets.\n\n**Input**: `POST {{gatewayUrl}}/bff/basket/items`, `{\"productId\": \"...0001\", \"quantity\": 1}`.\n\n**Output kỳ vọng**: `200`/`201` và `responseTime < 300ms`.\n\n**Vì sao chứng minh đúng FR-004/FR-009 (khi diễn tập hồi quy)**: khi CPU của Baskets bị giới hạn còn 0.1 lõi, request này sẽ VƯỢT 300ms rõ rệt và đánh dấu TOÀN BỘ lần chạy là THẤT BẠI (không chỉ cảnh báo) — đúng yêu cầu FR-004 (\"vượt ngân sách PHẢI đánh dấu THẤT BẠI, không chỉ ghi chú\"); gỡ giới hạn CPU rồi chạy lại phải THÀNH CÔNG trở lại — đúng kịch bản chứng minh SC-003/SC-004 (phát hiện đúng hồi quy, rồi xác nhận đúng khi đã khắc phục).\n\n---\n\nBước 2: thêm 1 sổ tay vào giỏ.",
+            "description": "**Mục đích**: đo request THỨ 2 của luồng — thêm sản phẩm vào giỏ — đây là bước sẽ ĐỎ RÕ RỆT khi công tắc suy giảm CPU của `baskets-api` được bật (`docker update --cpus 0.1`), vì route này gọi thẳng Baskets.\n\n**Input**: `POST {{gatewayUrl}}/bff/basket/items`, `{\"productId\": \"...0001\", \"quantity\": 1}`.\n\n**Output kỳ vọng**: `200`/`201` và `responseTime < 700ms`.\n\n**Vì sao chứng minh đúng FR-004/FR-009 (khi diễn tập hồi quy)**: khi CPU của Baskets bị giới hạn còn 0.1 lõi, request này sẽ VƯỢT 700ms rõ rệt và đánh dấu TOÀN BỘ lần chạy là THẤT BẠI (không chỉ cảnh báo) — đúng yêu cầu FR-004 (\"vượt ngân sách PHẢI đánh dấu THẤT BẠI, không chỉ ghi chú\"); gỡ giới hạn CPU rồi chạy lại phải THÀNH CÔNG trở lại — đúng kịch bản chứng minh SC-003/SC-004 (phát hiện đúng hồi quy, rồi xác nhận đúng khi đã khắc phục).\n\n---\n\nBước 2: thêm 1 sổ tay vào giỏ.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"productId\": \"9f8d6b1e-0001-4000-8000-000000000001\",\n  \"quantity\": 1\n}",
@@ -11709,9 +11709,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"200/201 và dưới 300 ms\", function () {",
+                  "pm.test(\"200/201 và dưới 700 ms\", function () {",
                   "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-                  "    pm.expect(pm.response.responseTime).to.be.below(300);",
+                  "    pm.expect(pm.response.responseTime).to.be.below(700);",
                   "});"
                 ]
               }
@@ -11719,7 +11719,7 @@
           ]
         },
         {
-          "name": "03 Thanh toán — POST /bff/checkout (p95 ≤ 300 ms)",
+          "name": "03 Thanh toán — POST /bff/checkout (p95 ≤ 700 ms)",
           "request": {
             "method": "POST",
             "header": [],
@@ -11743,7 +11743,7 @@
                 "checkout"
               ]
             },
-            "description": "**Mục đích**: đo request THỨ 3 — thanh toán — đây là bước TẠO THẬT 1 ĐƠN HÀNG MỚI mỗi vòng lặp (khác 2 bước trên vốn không ghi dữ liệu mới mỗi lần), nên cần dọn dữ liệu sau khi chạy xong (xem docs/QA/026).\n\n**Input**: `POST {{gatewayUrl}}/bff/checkout`.\n\n**Output kỳ vọng**: `200`/`201` và `responseTime < 300ms`. Lưu `id` của đơn vừa tạo vào `load026OrderId` cho bước 04.\n\n**Vì sao cần ghi chú riêng về việc tạo dữ liệu**: 30 vòng lặp = 30 đơn hàng thật được tạo trong `orders-db` — nếu không dọn bằng `DELETE FROM Orders WHERE PlacedAtUtc >= ...` sau khi chạy, dữ liệu test sẽ tích luỹ qua nhiều lần chạy Runner và có thể ảnh hưởng tới các phép đo khác (ví dụ số lượng bản ghi ảnh hưởng gián tiếp tới hiệu năng truy vấn ở các folder khác).\n\n---\n\nBước 3: tạo đơn từ giỏ. Lưu mã đơn cho bước 04."
+            "description": "**Mục đích**: đo request THỨ 3 — thanh toán — đây là bước TẠO THẬT 1 ĐƠN HÀNG MỚI mỗi vòng lặp (khác 2 bước trên vốn không ghi dữ liệu mới mỗi lần), nên cần dọn dữ liệu sau khi chạy xong (xem docs/QA/026).\n\n**Input**: `POST {{gatewayUrl}}/bff/checkout`.\n\n**Output kỳ vọng**: `200`/`201` và `responseTime < 700ms`. Lưu `id` của đơn vừa tạo vào `load026OrderId` cho bước 04.\n\n**Vì sao cần ghi chú riêng về việc tạo dữ liệu**: 30 vòng lặp = 30 đơn hàng thật được tạo trong `orders-db` — nếu không dọn bằng `DELETE FROM Orders WHERE PlacedAtUtc >= ...` sau khi chạy, dữ liệu test sẽ tích luỹ qua nhiều lần chạy Runner và có thể ảnh hưởng tới các phép đo khác (ví dụ số lượng bản ghi ảnh hưởng gián tiếp tới hiệu năng truy vấn ở các folder khác).\n\n---\n\nBước 3: tạo đơn từ giỏ. Lưu mã đơn cho bước 04."
           },
           "event": [
             {
@@ -11751,9 +11751,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"201 và dưới 300 ms\", function () {",
+                  "pm.test(\"201 và dưới 700 ms\", function () {",
                   "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-                  "    pm.expect(pm.response.responseTime).to.be.below(300);",
+                  "    pm.expect(pm.response.responseTime).to.be.below(700);",
                   "});",
                   "pm.collectionVariables.set('load026OrderId', pm.response.json().id);"
                 ]
@@ -11762,7 +11762,7 @@
           ]
         },
         {
-          "name": "04 Xem đơn — GET /bff/orders/{id} (p95 ≤ 300 ms)",
+          "name": "04 Xem đơn — GET /bff/orders/{id} (p95 ≤ 700 ms)",
           "request": {
             "method": "GET",
             "header": [],
@@ -11787,7 +11787,7 @@
                 "{{load026OrderId}}"
               ]
             },
-            "description": "**Mục đích**: đo request CUỐI của luồng — đọc lại đơn vừa đặt — hoàn tất đủ 4 chặng của luồng trọng yếu browse→giỏ→checkout→đơn mà FR-001 yêu cầu bài kiểm thử tải phải bao phủ.\n\n**Input**: `GET {{gatewayUrl}}/bff/orders/{{load026OrderId}}`.\n\n**Output kỳ vọng**: `200` và `responseTime < 300ms`.\n\n**Vì sao đây là bước chốt của cả folder**: sau khi cả 4 bước (01-04) chạy đủ 30 vòng, Runner cho ra 1 bộ số liệu p95/p99 CHO TỪNG BƯỚC RIÊNG BIỆT (đúng FR-002: \"không gộp chung thành 1 con số trung bình duy nhất\") — đây chính là baseline (FR-005/SC-001) để so sánh cho các lần chạy sau, và là cơ sở để tích hợp vào pipeline tự động theo lịch trình (FR-007) thay vì chỉ chạy tay 1 lần.\n\n---\n\nBước 4: đọc lại đơn vừa tạo."
+            "description": "**Mục đích**: đo request CUỐI của luồng — đọc lại đơn vừa đặt — hoàn tất đủ 4 chặng của luồng trọng yếu browse→giỏ→checkout→đơn mà FR-001 yêu cầu bài kiểm thử tải phải bao phủ.\n\n**Input**: `GET {{gatewayUrl}}/bff/orders/{{load026OrderId}}`.\n\n**Output kỳ vọng**: `200` và `responseTime < 700ms`.\n\n**Vì sao đây là bước chốt của cả folder**: sau khi cả 4 bước (01-04) chạy đủ 30 vòng, Runner cho ra 1 bộ số liệu p95/p99 CHO TỪNG BƯỚC RIÊNG BIỆT (đúng FR-002: \"không gộp chung thành 1 con số trung bình duy nhất\") — đây chính là baseline (FR-005/SC-001) để so sánh cho các lần chạy sau, và là cơ sở để tích hợp vào pipeline tự động theo lịch trình (FR-007) thay vì chỉ chạy tay 1 lần.\n\n---\n\nBước 4: đọc lại đơn vừa tạo."
           },
           "event": [
             {
@@ -11795,9 +11795,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"200 và dưới 300 ms\", function () {",
+                  "pm.test(\"200 và dưới 700 ms\", function () {",
                   "    pm.response.to.have.status(200);",
-                  "    pm.expect(pm.response.responseTime).to.be.below(300);",
+                  "    pm.expect(pm.response.responseTime).to.be.below(700);",
                   "});"
                 ]
               }
@@ -12574,7 +12574,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL service = resource.attributes.service.name\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 300000000, 150000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 800000000, 500000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service\\n| EVAL budget = [\\\"availability\\\", \\\"error-rate\\\", \\\"latency-p95\\\", \\\"latency-p99\\\"]\\n| MV_EXPAND budget\\n| EVAL bad = CASE(budget == \\\"latency-p95\\\", bad_p95, budget == \\\"latency-p99\\\", bad_p99, bad_5xx)\\n| EVAL allowed = CASE(budget == \\\"availability\\\", 0.01, budget == \\\"error-rate\\\", 0.01, budget == \\\"latency-p95\\\", 0.05, budget == \\\"latency-p99\\\", 0.01)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad) / total / allowed * 100.0, 2)\\n| EVAL moc = CASE(consumed_pct >= 100, \\\"100% - CẠN\\\", consumed_pct >= 75, \\\"75%\\\", consumed_pct >= 50, \\\"50%\\\", \\\"dưới 50%\\\")\\n| KEEP service, budget, consumed_pct, moc\\n| SORT consumed_pct DESC, service, budget\"\n}"
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL service = resource.attributes.service.name\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 700000000, service == \\\"Gateway.Api\\\", 800000000, 500000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 1000000000, service == \\\"Gateway.Api\\\", 1100000000, 700000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service\\n| EVAL budget = [\\\"availability\\\", \\\"error-rate\\\", \\\"latency-p95\\\", \\\"latency-p99\\\"]\\n| MV_EXPAND budget\\n| EVAL bad = CASE(budget == \\\"latency-p95\\\", bad_p95, budget == \\\"latency-p99\\\", bad_p99, bad_5xx)\\n| EVAL allowed = CASE(budget == \\\"availability\\\", 0.01, budget == \\\"error-rate\\\", 0.01, budget == \\\"latency-p95\\\", 0.05, budget == \\\"latency-p99\\\", 0.01)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad) / total / allowed * 100.0, 2)\\n| EVAL moc = CASE(consumed_pct >= 100, \\\"100% - CẠN\\\", consumed_pct >= 75, \\\"75%\\\", consumed_pct >= 50, \\\"50%\\\", \\\"dưới 50%\\\")\\n| KEEP service, budget, consumed_pct, moc\\n| SORT consumed_pct DESC, service, budget\"\n}"
                 },
                 "url": {
                   "raw": "{{elasticsearchUrl}}/_query",
@@ -13338,7 +13338,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL week_start = CASE(?tuan_chon == \\\"Tuần này\\\", t0, ?tuan_chon == \\\"Tuần trước\\\", t0 - 7 days, ?tuan_chon == \\\"2 tuần trước\\\", t0 - 14 days, t0 - 21 days)\\n| WHERE @timestamp >= week_start AND @timestamp < week_start + 7 days\\n| EVAL service = resource.attributes.service.name\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 300000000, 150000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 800000000, 500000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service\\n| EVAL budget = [\\\"availability\\\", \\\"error-rate\\\", \\\"latency-p95\\\", \\\"latency-p99\\\"]\\n| MV_EXPAND budget\\n| EVAL bad = CASE(budget == \\\"latency-p95\\\", bad_p95, budget == \\\"latency-p99\\\", bad_p99, bad_5xx)\\n| EVAL allowed = CASE(budget == \\\"availability\\\", 0.01, budget == \\\"error-rate\\\", 0.01, budget == \\\"latency-p95\\\", 0.05, budget == \\\"latency-p99\\\", 0.01)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad) / total / allowed * 100.0, 2)\\n| EVAL moc = CASE(consumed_pct >= 100, \\\"100% - CẠN\\\", consumed_pct >= 75, \\\"75%\\\", consumed_pct >= 50, \\\"50%\\\", \\\"dưới 50%\\\")\\n| KEEP service, budget, consumed_pct, moc\\n| SORT consumed_pct DESC, service, budget\",\n  \"params\": [\n    {\n      \"tuan_chon\": \"Tuần này\"\n    }\n  ]\n}"
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL week_start = CASE(?tuan_chon == \\\"Tuần này\\\", t0, ?tuan_chon == \\\"Tuần trước\\\", t0 - 7 days, ?tuan_chon == \\\"2 tuần trước\\\", t0 - 14 days, t0 - 21 days)\\n| WHERE @timestamp >= week_start AND @timestamp < week_start + 7 days\\n| EVAL service = resource.attributes.service.name\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 700000000, service == \\\"Gateway.Api\\\", 800000000, 500000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 1000000000, service == \\\"Gateway.Api\\\", 1100000000, 700000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service\\n| EVAL budget = [\\\"availability\\\", \\\"error-rate\\\", \\\"latency-p95\\\", \\\"latency-p99\\\"]\\n| MV_EXPAND budget\\n| EVAL bad = CASE(budget == \\\"latency-p95\\\", bad_p95, budget == \\\"latency-p99\\\", bad_p99, bad_5xx)\\n| EVAL allowed = CASE(budget == \\\"availability\\\", 0.01, budget == \\\"error-rate\\\", 0.01, budget == \\\"latency-p95\\\", 0.05, budget == \\\"latency-p99\\\", 0.01)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad) / total / allowed * 100.0, 2)\\n| EVAL moc = CASE(consumed_pct >= 100, \\\"100% - CẠN\\\", consumed_pct >= 75, \\\"75%\\\", consumed_pct >= 50, \\\"50%\\\", \\\"dưới 50%\\\")\\n| KEEP service, budget, consumed_pct, moc\\n| SORT consumed_pct DESC, service, budget\",\n  \"params\": [\n    {\n      \"tuan_chon\": \"Tuần này\"\n    }\n  ]\n}"
                 },
                 "url": {
                   "raw": "{{elasticsearchUrl}}/_query",
@@ -13383,7 +13383,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL week_start = CASE(?tuan_chon == \\\"Tuần này\\\", t0, ?tuan_chon == \\\"Tuần trước\\\", t0 - 7 days, ?tuan_chon == \\\"2 tuần trước\\\", t0 - 14 days, t0 - 21 days)\\n| WHERE @timestamp >= week_start AND @timestamp < week_start + 7 days\\n| EVAL service = resource.attributes.service.name\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 300000000, 150000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 800000000, 500000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service\\n| EVAL budget = [\\\"availability\\\", \\\"error-rate\\\", \\\"latency-p95\\\", \\\"latency-p99\\\"]\\n| MV_EXPAND budget\\n| EVAL bad = CASE(budget == \\\"latency-p95\\\", bad_p95, budget == \\\"latency-p99\\\", bad_p99, bad_5xx)\\n| EVAL allowed = CASE(budget == \\\"availability\\\", 0.01, budget == \\\"error-rate\\\", 0.01, budget == \\\"latency-p95\\\", 0.05, budget == \\\"latency-p99\\\", 0.01)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad) / total / allowed * 100.0, 2)\\n| EVAL remaining_pct = ROUND(100.0 - consumed_pct, 2), remaining_requests = TO_LONG(FLOOR(allowed * total - bad))\\n| KEEP service, budget, remaining_pct, remaining_requests\\n| SORT remaining_pct ASC, service, budget\",\n  \"params\": [\n    {\n      \"tuan_chon\": \"Tuần này\"\n    }\n  ]\n}"
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL week_start = CASE(?tuan_chon == \\\"Tuần này\\\", t0, ?tuan_chon == \\\"Tuần trước\\\", t0 - 7 days, ?tuan_chon == \\\"2 tuần trước\\\", t0 - 14 days, t0 - 21 days)\\n| WHERE @timestamp >= week_start AND @timestamp < week_start + 7 days\\n| EVAL service = resource.attributes.service.name\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 700000000, service == \\\"Gateway.Api\\\", 800000000, 500000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 1000000000, service == \\\"Gateway.Api\\\", 1100000000, 700000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY service\\n| EVAL budget = [\\\"availability\\\", \\\"error-rate\\\", \\\"latency-p95\\\", \\\"latency-p99\\\"]\\n| MV_EXPAND budget\\n| EVAL bad = CASE(budget == \\\"latency-p95\\\", bad_p95, budget == \\\"latency-p99\\\", bad_p99, bad_5xx)\\n| EVAL allowed = CASE(budget == \\\"availability\\\", 0.01, budget == \\\"error-rate\\\", 0.01, budget == \\\"latency-p95\\\", 0.05, budget == \\\"latency-p99\\\", 0.01)\\n| EVAL consumed_pct = ROUND(TO_DOUBLE(bad) / total / allowed * 100.0, 2)\\n| EVAL remaining_pct = ROUND(100.0 - consumed_pct, 2), remaining_requests = TO_LONG(FLOOR(allowed * total - bad))\\n| KEEP service, budget, remaining_pct, remaining_requests\\n| SORT remaining_pct ASC, service, budget\",\n  \"params\": [\n    {\n      \"tuan_chon\": \"Tuần này\"\n    }\n  ]\n}"
                 },
                 "url": {
                   "raw": "{{elasticsearchUrl}}/_query",
@@ -13429,7 +13429,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL week_start = CASE(?tuan_chon == \\\"Tuần này\\\", t0, ?tuan_chon == \\\"Tuần trước\\\", t0 - 7 days, ?tuan_chon == \\\"2 tuần trước\\\", t0 - 14 days, t0 - 21 days)\\n| WHERE @timestamp >= week_start AND @timestamp < week_start + 7 days\\n| EVAL service = resource.attributes.service.name\\n| EVAL day_idx = DATE_DIFF(\\\"day\\\", week_start, @timestamp), as_of = [0, 1, 2, 3, 4, 5, 6]\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 300000000, 150000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 800000000, 500000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| MV_EXPAND as_of\\n| WHERE day_idx <= as_of\\n| EVAL day = CASE(as_of == 0, week_start, as_of == 1, week_start + 1 day, as_of == 2, week_start + 2 days, as_of == 3, week_start + 3 days, as_of == 4, week_start + 4 days, as_of == 5, week_start + 5 days, week_start + 6 days)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY day, service\\n| WHERE day <= NOW()\\n| EVAL consumed_5xx = TO_DOUBLE(bad_5xx) / total / 0.01 * 100.0, consumed_p95 = TO_DOUBLE(bad_p95) / total / 0.05 * 100.0, consumed_p99 = TO_DOUBLE(bad_p99) / total / 0.01 * 100.0\\n| EVAL max_consumed_pct = ROUND(GREATEST(consumed_5xx, consumed_p95, consumed_p99), 2)\\n| KEEP day, service, max_consumed_pct\\n| SORT day, service\",\n  \"params\": [\n    {\n      \"tuan_chon\": \"Tuần này\"\n    }\n  ]\n}"
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL week_start = CASE(?tuan_chon == \\\"Tuần này\\\", t0, ?tuan_chon == \\\"Tuần trước\\\", t0 - 7 days, ?tuan_chon == \\\"2 tuần trước\\\", t0 - 14 days, t0 - 21 days)\\n| WHERE @timestamp >= week_start AND @timestamp < week_start + 7 days\\n| EVAL service = resource.attributes.service.name\\n| EVAL day_idx = DATE_DIFF(\\\"day\\\", week_start, @timestamp), as_of = [0, 1, 2, 3, 4, 5, 6]\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 700000000, service == \\\"Gateway.Api\\\", 800000000, 500000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 1000000000, service == \\\"Gateway.Api\\\", 1100000000, 700000000)\\n| EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(duration > p95_ns, 1, 0), over_p99 = CASE(duration > p99_ns, 1, 0)\\n| MV_EXPAND as_of\\n| WHERE day_idx <= as_of\\n| EVAL day = CASE(as_of == 0, week_start, as_of == 1, week_start + 1 day, as_of == 2, week_start + 2 days, as_of == 3, week_start + 3 days, as_of == 4, week_start + 4 days, as_of == 5, week_start + 5 days, week_start + 6 days)\\n| STATS total = COUNT(*), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99) BY day, service\\n| WHERE day <= NOW()\\n| EVAL consumed_5xx = TO_DOUBLE(bad_5xx) / total / 0.01 * 100.0, consumed_p95 = TO_DOUBLE(bad_p95) / total / 0.05 * 100.0, consumed_p99 = TO_DOUBLE(bad_p99) / total / 0.01 * 100.0\\n| EVAL max_consumed_pct = ROUND(GREATEST(consumed_5xx, consumed_p95, consumed_p99), 2)\\n| KEEP day, service, max_consumed_pct\\n| SORT day, service\",\n  \"params\": [\n    {\n      \"tuan_chon\": \"Tuần này\"\n    }\n  ]\n}"
                 },
                 "url": {
                   "raw": "{{elasticsearchUrl}}/_query",

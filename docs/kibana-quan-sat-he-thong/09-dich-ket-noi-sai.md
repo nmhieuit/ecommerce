@@ -153,7 +153,7 @@ Lệnh tạo lại 7 container không kèm cấu hình sai và chờ đích kho�
 
 "Đã gỡ" mới là lệnh `-Restore` chạy xong và container đích `healthy`. Mốc **giải quyết** vẫn theo file 08: service đạt SLO
 liên tục 15 phút có traffic và rule không còn alert active. Chạy truy vấn "Xác nhận khôi phục 15 phút" của
-[file 08](08-phat-hien-nhanh-va-xu-ly-su-co.md#xác-nhận-khôi-phục-15-phút) cho `Orders.Api` (ngưỡng 150000000 / 500000000
+[file 08](08-phat-hien-nhanh-va-xu-ly-su-co.md#xác-nhận-khôi-phục-15-phút) cho `Orders.Api` (ngưỡng 500000000 / 700000000
 ns). Số đo thật sau lần khôi phục này (giờ Việt Nam): phút 10:04 còn `total = 37`, p95 15750 ms (khởi động nguội); từ phút
 10:05 tới 10:19 là **15 phút liên tiếp** `dat = true` (84–92 span mỗi phút, 0% 5xx, p95 20–59 ms), nên mốc giải quyết là
 10:19. Rule `incident-fast-detection` chuyển cả 7 alert sang `recovered` lúc 10:20:01 (alert bắt đầu 10:05:00). Mốc giải

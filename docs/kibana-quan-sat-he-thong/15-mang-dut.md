@@ -70,7 +70,7 @@ FROM traces-generic.otel-default*
 | SORT n DESC
 ```
 
-**5xx từng phút của service gọi** (truy vấn "Xác nhận khôi phục 15 phút" của file 08 cho `Bff.Api`, ngưỡng 300000000 / 800000000 ns). Với service bị tách thì chạy truy vấn đó và **tìm phút không có dòng**.
+**5xx từng phút của service gọi** (truy vấn "Xác nhận khôi phục 15 phút" của file 08 cho `Bff.Api`, ngưỡng 700000000 / 1000000000 ns). Với service bị tách thì chạy truy vấn đó và **tìm phút không có dòng**.
 
 Trực tiếp từ Docker:
 

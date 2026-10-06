@@ -65,7 +65,7 @@ Lần đo: 110/159 span 401, p95 10581 ms, container `healthy`. Khôi phục: `-
 
 ## Triệu chứng 5 — Chậm nhẹ gấp nhiều lần, chưa vượt SLO, không có lỗi
 
-**Mức 1 — Gợi ý triệu chứng**: Một service chậm gấp khoảng 10 lần các service cùng loại (p95 chừng 100 ms so với 8–25 ms), nhưng **dưới** ngưỡng 150 ms; 0% 5xx, không có log lỗi, container `healthy`, thường không có cảnh báo nào bắn.
+**Mức 1 — Gợi ý triệu chứng**: Một service chậm gấp khoảng 10 lần các service cùng loại (p95 chừng 100 ms so với 8–25 ms), nhưng **dưới** ngưỡng 500 ms; 0% 5xx, không có log lỗi, container `healthy`, thường không có cảnh báo nào bắn.
 Cách kiểm: so p50/p95/p99 của các service trong cùng một khoảng thời gian (Q1 ở mục [Truy vấn dùng chung](#truy-vấn-dùng-chung)); dùng `docker stats` so cột bộ nhớ của service nghi vấn với service khác.
 
 **Mức 2 — Nhóm lỗi**: Nhóm 6 (thiếu tài nguyên): container của một service bị giới hạn CPU và bộ nhớ.

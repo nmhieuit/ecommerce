@@ -18,8 +18,8 @@ public static class PlatformSloDefaults
     public static readonly IReadOnlyDictionary<string, SloProfile> ByClassification = new Dictionary<string, SloProfile>
     {
         [ClientFacingBff] = new SloProfile(
-            Availability: "99%", MaxFiveXxRatio: "1%", LatencyP95: "300ms", LatencyP99: "800ms"),
+            Availability: "99%", MaxFiveXxRatio: "1%", LatencyP95: "700ms", LatencyP99: "1000ms"),
         [InternalServiceApi] = new SloProfile(
-            Availability: "99%", MaxFiveXxRatio: "1%", LatencyP95: "150ms", LatencyP99: "500ms"),
+            Availability: "99%", MaxFiveXxRatio: "1%", LatencyP95: "500ms", LatencyP99: "700ms"),
     };
 }

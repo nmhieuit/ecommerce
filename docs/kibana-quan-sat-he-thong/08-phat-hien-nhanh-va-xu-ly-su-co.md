@@ -28,11 +28,14 @@ Một service có alert khi, trong 5 phút gần nhất:
 - tỷ lệ 5xx ≥ 1% (SLO 5xx dưới 1% — hiến chương 2.0.0, spec 029), **hoặc**
 - p95 hoặc p99 vượt ngưỡng `slos.latency` trong manifest của chính nó.
 
-Ngưỡng là `Bff.Api` 300/800 ms và 150/500 ms cho mọi service còn lại.
+Ngưỡng (nâng ngày 2026-10-06) là `Bff.Api` 700/1000 ms, `Gateway.Api` 800/1100 ms và 500/700 ms cho mọi
+service còn lại.
 
-**Riêng `Gateway.Api` chỉ xét 5xx** (người dùng chốt 2026-10-02). Ngưỡng 150/500 ms của gateway chặt
-hơn ngưỡng 300/800 ms của BFF, trong khi mọi request của gateway đều đi qua BFF. Vì vậy ở mức nền
-gateway đã vượt độ trễ: đo được p95 245 ms, POST p95 538 ms.
+**`Gateway.Api` được xét độ trễ như mọi service khác** (từ 2026-10-06). Trước đó gateway chỉ bị xét 5xx
+(người dùng chốt 2026-10-02) vì ngưỡng 150/500 ms của nó chặt hơn ngưỡng 300/800 ms của BFF, trong khi mọi
+request của gateway đều đi qua BFF, nên ở mức nền gateway đã vượt độ trễ (p95 245 ms, POST p95 538 ms). Sau khi
+nâng SLO, ngưỡng gateway (800/1100 ms) cao hơn BFF (700/1000 ms) nên lý do đó không còn; test
+`Rule_GatewayLatencyIsJudgedLikeEveryOtherService` khoá hành vi mới.
 
 ```esql
 FROM traces-generic.otel-default*
@@ -41,9 +44,9 @@ FROM traces-generic.otel-default*
 | EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)
 | STATS total = COUNT(*), bad_5xx = SUM(is_5xx), p95_ns = PERCENTILE(duration, 95), p99_ns = PERCENTILE(duration, 99) BY service
 | EVAL err_pct = TO_DOUBLE(bad_5xx) / total * 100.0
-| EVAL p95_slo_ns = CASE(service == "Bff.Api", 300000000, 150000000)
-| EVAL p99_slo_ns = CASE(service == "Bff.Api", 800000000, 500000000)
-| EVAL latency_breach = CASE(service == "Gateway.Api", false, p95_ns > p95_slo_ns OR p99_ns > p99_slo_ns)
+| EVAL p95_slo_ns = CASE(service == "Bff.Api", 700000000, service == "Gateway.Api", 800000000, 500000000)
+| EVAL p99_slo_ns = CASE(service == "Bff.Api", 1000000000, service == "Gateway.Api", 1100000000, 700000000)
+| EVAL latency_breach = p95_ns > p95_slo_ns OR p99_ns > p99_slo_ns
 | WHERE err_pct >= 1 OR latency_breach
 | STATS breaching = COUNT(*) BY service
 | KEEP service
@@ -102,7 +105,7 @@ lỗi mà không cần làm gì. Ghi lại điều này trong bản ghi sự c�
 
 Mốc "giải quyết" chỉ được ghi khi service đạt SLO **liên tục 15 phút có traffic** **và** rule không còn
 alert active cho service đó (spec FR-013). Truy vấn theo từng phút, thay `Orders.Api` và hai ngưỡng
-bằng service đang xử lý (`Bff.Api`: 300000000/800000000):
+bằng service đang xử lý (`Bff.Api`: 700000000/1000000000, `Gateway.Api`: 800000000/1100000000):
 
 ```esql
 FROM traces-generic.otel-default*
@@ -110,7 +113,7 @@ FROM traces-generic.otel-default*
 | EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)
 | STATS total = COUNT(*), bad_5xx = SUM(is_5xx), p95_ns = PERCENTILE(duration, 95), p99_ns = PERCENTILE(duration, 99) BY minute = BUCKET(@timestamp, 1 minute)
 | EVAL err_pct = ROUND(TO_DOUBLE(bad_5xx) / total * 100.0, 2), p95_ms = ROUND(p95_ns / 1000000.0), p99_ms = ROUND(p99_ns / 1000000.0)
-| EVAL dat = total > 0 AND err_pct < 1 AND p95_ns <= 150000000 AND p99_ns <= 500000000
+| EVAL dat = total > 0 AND err_pct < 1 AND p95_ns <= 500000000 AND p99_ns <= 700000000
 | EVAL phut_gio_vn = DATE_FORMAT("HH:mm", minute + 7 hours)
 | KEEP phut_gio_vn, total, err_pct, p95_ms, p99_ms, dat
 | SORT phut_gio_vn

@@ -111,7 +111,7 @@ public partial class IncidentFastDetectionRuleDefinitionTests
     /// Kiểm tra: với mỗi service trong 7 manifest, ngưỡng độ trễ (nanosecond) mà truy vấn áp cho service đó
     /// (`p95_slo_ns`/`p99_slo_ns` = CASE theo tên service, hoặc giá trị mặc định cuối CASE) bằng đúng
     /// `slos.latency.p95/p99` của manifest × 1 000 000.
-    /// Lý do: ngân sách độ trễ phải dùng ngưỡng của chính service (BFF 300/800ms, còn lại 150/500ms); rule chép tay
+    /// Lý do: ngân sách độ trễ phải dùng ngưỡng của chính service (BFF 700/1000ms, Gateway 800/1100ms, còn lại 500/700ms); rule chép tay
     /// ngưỡng nên đây là chỗ dễ trôi dạt nhất khi một manifest đổi SLO.
     /// Task nguồn: spec 030 (test canh gác rule 028) — FR-015 (bất biến 4).
     /// </summary>
@@ -135,18 +135,23 @@ public partial class IncidentFastDetectionRuleDefinitionTests
     }
 
     /// <summary>
-    /// Kiểm tra: `latency_breach = CASE(service == "Gateway.Api", false, ...)` — Gateway chỉ bị xét 5xx, không xét độ trễ.
-    /// Lý do: 028 — gateway là cổng vào mỏng, độ trễ của nó phản ánh service hạ lưu; xét thêm độ trễ làm một
-    /// sự cố ở service hạ lưu bắn hai cảnh báo (gateway và chính service đó).
-    /// Task nguồn: spec 030 (test canh gác rule 028) — FR-015 (bất biến 5).
+    /// Kiểm tra: `latency_breach` không còn nhánh riêng `CASE(service == "Gateway.Api", false, ...)` — Gateway bị xét độ trễ
+    /// như mọi service khác, theo ngưỡng gateway trong manifest (đã được `ThresholdRule_...` ở trên so khớp).
+    /// Lý do: trước 2026-10-06 gateway chỉ bị xét 5xx vì ngưỡng 150/500 ms của nó chặt hơn ngưỡng 300/800 ms của BFF mà
+    /// mọi request gateway đều đi qua BFF. Sau khi nâng SLO, gateway là 800/1100 ms, cao hơn BFF 700/1000 ms, nên lý do đó
+    /// không còn và ngoại lệ bị gỡ để rule khớp manifest.
+    /// Task nguồn: spec 030 (test canh gác rule 028) — FR-015 (bất biến 5, đổi ngày 2026-10-06).
     /// </summary>
     [Fact]
-    public void Rule_GatewayIsJudgedOnFiveXxOnly()
+    public void Rule_GatewayLatencyIsJudgedLikeEveryOtherService()
     {
         var esql = Regex.Replace(RequireRule().Esql, @"\s+", " ");
 
-        // Assert.Contains(chuỗi con, chuỗi): xanh khi nhánh Gateway.Api của latency_breach luôn là false.
-        Assert.Contains("latency_breach = CASE(service == \"Gateway.Api\", false,", esql, StringComparison.Ordinal);
+        // Assert.DoesNotContain(chuỗi con, chuỗi): xanh khi không còn nhánh riêng nào buộc latency_breach = false cho Gateway.Api.
+        Assert.DoesNotContain("service == \"Gateway.Api\", false", esql, StringComparison.Ordinal);
+
+        // Assert.Contains(chuỗi con, chuỗi): xanh khi latency_breach vẫn là phép so p95/p99 với ngưỡng của service.
+        Assert.Contains("latency_breach = p95_ns > p95_slo_ns OR p99_ns > p99_slo_ns", esql, StringComparison.Ordinal);
     }
 
     /// <summary>

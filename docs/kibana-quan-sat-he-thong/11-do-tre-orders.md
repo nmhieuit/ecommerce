@@ -55,7 +55,7 @@ Thiếu `X-Tenant-Id` thì `Orders.Api` trả 500 `MissingTenantContext` — l�
 
 ### Nơi nhìn trên Kibana
 
-1. **Bảng SLO — 7 service**: dòng `Orders.Api` có cột Latency p95/p99 vượt ngưỡng (150 ms / 500 ms), Error-rate vẫn 0%.
+1. **Bảng SLO — 7 service**: dòng `Orders.Api` có cột Latency p95/p99 vượt ngưỡng (500 ms / 700 ms), Error-rate vẫn 0%.
 2. **Latency p95 theo phút theo service**: chỉ đường của `Orders.Api` nhảy lên khoảng 2000 ms và nằm phẳng ở đó.
 3. **5xx theo phút theo service**: không có đường nào thay đổi — đây là điểm phân biệt với file 09 và file 10 (loại C).
 4. **Top endpoint chậm nhất**: `/orders/{orderId:guid}` đứng đầu (trung bình 1424 ms trong 10 phút tới 11:27, route đứng thứ hai chỉ 119 ms).
@@ -149,7 +149,7 @@ active. Bản đo này chưa chờ đủ 15 phút (file 09 đã đo trọn chu�
 - [ ] Giải thích được vì sao không có 5xx và không có log lỗi dù người dùng thấy chậm.
 - [ ] Phân biệt được request chaos (`server.address = localhost`) với tải nền (`server.address = orders-api`).
 - [ ] Nêu đúng vì sao độ trễ không lan sang BFF/gateway (header không được chuyển tiếp).
-- [ ] Khôi phục bằng `-Restore` (hoặc `-DurationSeconds`) và p95 về dưới 150 ms.
+- [ ] Khôi phục bằng `-Restore` (hoặc `-DurationSeconds`) và p95 về dưới 500 ms.
 - [ ] Truy vấn 15 phút ở file 08 cho `Orders.Api` đạt 15 phút liền `dat = true`, không còn alert active.
 
 ## Xem thêm

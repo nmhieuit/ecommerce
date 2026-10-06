@@ -80,8 +80,8 @@ public partial class ErrorBudgetRuleDefinitionTests
     /// Kiểm tra: với mỗi service trong 7 manifest, ngưỡng độ trễ (nanosecond) mà truy vấn của mỗi rule
     /// mốc áp cho service đó (`p95_ns`/`p99_ns` = CASE theo tên service, hoặc giá trị mặc định cuối
     /// CASE) bằng đúng `slos.latency.p95/p99` của manifest × 1 000 000.
-    /// Lý do: FR-013 — ngân sách độ trễ phải dùng ngưỡng của chính service (BFF 300/800ms, còn lại
-    /// 150/500ms); rule chép tay ngưỡng nên đây là chỗ dễ trôi dạt nhất khi một manifest đổi SLO.
+    /// Lý do: FR-013 — ngân sách độ trễ phải dùng ngưỡng của chính service (BFF 700/1000ms, Gateway 800/1100ms, còn lại
+    /// 500/700ms); rule chép tay ngưỡng nên đây là chỗ dễ trôi dạt nhất khi một manifest đổi SLO.
     /// Task nguồn: spec 027 (chính sách ngân sách lỗi) — FR-013, US2 (bất biến 3).
     /// </summary>
     [Theory]

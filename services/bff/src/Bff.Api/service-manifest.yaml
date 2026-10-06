@@ -29,13 +29,13 @@ data:
 slos:
   # Client-facing BFF read budget (constitution Principle VIII), which is looser than the
   # internal-service-api default the four downstream services carry: a BFF read legitimately spans
-  # one or more downstream calls, each of which is itself allowed p95 150ms / p99 500ms.
+  # one or more downstream calls, each of which is itself allowed p95 500ms / p99 700ms.
   availability: 99%            # weekly
   error-rate:
     max-5xx-ratio: 1%
   latency:
-    p95: 300ms
-    p99: 800ms
+    p95: 700ms
+    p99: 1000ms
 
 error-budget-policy:
   # SCRUM-35 / constitution Principle VIII (2.0.0): "Sustained SLO breach consumes the error budget:
@@ -78,23 +78,23 @@ downstream-dependencies:
   - service: products
     base-url-key: Services:ProductsApi:BaseUrl
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - service: baskets
     base-url-key: Services:BasketsApi:BaseUrl
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - service: orders
     base-url-key: Services:OrdersApi:BaseUrl
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - service: parties
     base-url-key: Services:PartiesApi:BaseUrl
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
 
 endpoints:
   # The client-facing surface. Every one of these is a proxy-and-shape over a single downstream
@@ -108,8 +108,8 @@ endpoints:
     authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: products
     latency:
-      p95: 300ms
-      p99: 800ms
+      p95: 700ms
+      p99: 1000ms
   - route: POST /bff/basket/items
     purpose: >-
       Adds a product to the caller's current basket, merging onto an existing line for the same
@@ -120,8 +120,8 @@ endpoints:
     authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: baskets
     latency:
-      p95: 300ms
-      p99: 800ms
+      p95: 700ms
+      p99: 1000ms
   - route: POST /bff/checkout
     purpose: >-
       Reads the caller's basket, places an order for its lines, then clears the basket
@@ -133,39 +133,39 @@ endpoints:
     authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: [baskets, orders]
     latency:
-      p95: 300ms
-      p99: 800ms
+      p95: 700ms
+      p99: 1000ms
   - route: GET /bff/baskets/{basketId}
     purpose: Single basket, shaped from the baskets service. 404 when no such basket exists.
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: baskets
     latency:
-      p95: 300ms
-      p99: 800ms
+      p95: 700ms
+      p99: 1000ms
   - route: GET /bff/orders/{orderId}
     purpose: Single order, shaped from the orders service. 404 when no such order exists.
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: orders
     latency:
-      p95: 300ms
-      p99: 800ms
+      p95: 700ms
+      p99: 1000ms
   - route: GET /bff/parties/{partyId}
     purpose: Single party (customer), shaped from the parties service. 404 when no such party exists.
     authentication: bearer   # 014-identity-server-auth: AddIdentityValidation(), independent of the gateway (spec FR-004)
     authorization: ecommerce-api-scope   # 015-deny-by-default-authz: .RequireAuthorization(AuthorizationPolicies.ApiScope)
     proxies: parties
     latency:
-      p95: 300ms
-      p99: 800ms
+      p95: 700ms
+      p99: 1000ms
   - route: GET /health/live
     purpose: Liveness probe. Kubernetes restarts the pod on repeated failure.
     authentication: anonymous   # probes cannot present a token — see plan.md Constitution Check
     authorization: anonymous
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - route: GET /health/ready
     purpose: >-
       Readiness probe. Gates traffic on this process accepting requests only — deliberately not on
@@ -175,8 +175,8 @@ endpoints:
     authentication: anonymous
     authorization: anonymous
     latency:
-      p95: 150ms
-      p99: 500ms
+      p95: 500ms
+      p99: 700ms
   - route: GET /openapi/v1.json
     purpose: >-
       Generated OpenAPI document (research.md Decision 6) consumed by the frontend's Orval codegen
@@ -185,8 +185,8 @@ endpoints:
     authorization: anonymous
     environments: [development]
     latency:
-      p95: 300ms
-      p99: 800ms
+      p95: 700ms
+      p99: 1000ms
 
 observability:
   # Principle VII — emitted via shared/ServiceDefaults, never configured per service by hand.
