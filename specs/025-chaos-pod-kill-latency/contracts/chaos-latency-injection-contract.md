@@ -28,8 +28,7 @@ cụ diễn tập có kiểm soát thành một rủi ro vận hành thật.
 
 - Không có yêu cầu về việc `AllowLatencyInjection` phải là `true` ở bất kỳ môi trường nào — việc bật
   nó ở một môi trường diễn tập cụ thể là một quyết định vận hành ngoài phạm vi mã nguồn (spec FR-006).
-- Không áp dụng cho service nào khác ngoài Orders.Api — User Story 1 (kill-pod trên `baskets`) không
-  cần và không có cơ chế tương đương.
+- Không áp dụng cho service nào khác ngoài Orders.Api. Việc luyện "service chết" (trước đây là kill-pod) do nhóm 8 của spec 031 đảm nhiệm bằng lệnh Docker ngoài, không qua cơ chế này.
 
 ## Quy tắc thay đổi
 

@@ -3,8 +3,8 @@
 *Viết cho: người quản lý sản phẩm, stakeholder không trực tiếp code. Không yêu cầu đọc code hay biết
 tên bất kỳ công cụ kỹ thuật nào.*
 
-*Trạng thái: đã hoàn thành — 16/16 hạng mục công việc, xác minh bằng cách thực sự chạy 4 lần trên hạ
-tầng thật. Kết quả trung thực: cả 3 lần ghi nhận đều kết luận "phát hiện sai lệch", không phải "đạt" —
+*Trạng thái: đã hoàn thành — 16/16 hạng mục công việc, xác minh bằng cách thực sự chạy trên hạ
+tầng thật (phần xoá bộ phận trên cụm Kubernetes đã gỡ ở tính năng 031). Kết quả trung thực: lần ghi nhận còn lại kết luận "phát hiện sai lệch", không phải "đạt" —
 xem [functional-debt.md](functional-debt.md), đây là đúng giá trị của việc chủ động thử, không phải
 thất bại của tính năng.*
 
@@ -17,9 +17,7 @@ thứ vẫn chỉ là điều đã được cấu hình đúng trên giấy, ch�
 
 ## Giải pháp: chủ động gây sự cố có kiểm soát, trong môi trường dành riêng cho việc đó
 
-- **Chủ động xoá 1 bộ phận đang chạy** (giống như rút phích cắm) trong lúc hệ thống có 1 lượng người
-  dùng giả lập, rồi quan sát: hệ thống có tự khởi động lại bộ phận đó không, và các bộ phận khác có tự
-  bảo vệ mình khi bộ phận kia chưa sẵn sàng trở lại hay không.
+- ~~Chủ động xoá 1 bộ phận đang chạy~~ — kịch bản này (chạy trên cụm Kubernetes) **đã gỡ** ở tính năng 031; việc luyện "một bộ phận ngừng hẳn" nay nằm trong danh mục nhóm lỗi của tính năng đó.
 - **Chủ động làm chậm 1 bộ phận** một cách có kiểm soát, dừng được ngay lập tức khi cần, để xem công cụ
   giám sát có kịp hiển thị việc "ngân sách hiệu năng đang bị tiêu hao" gần với thời gian thực hay
   không.
@@ -28,9 +26,8 @@ thứ vẫn chỉ là điều đã được cấu hình đúng trên giấy, ch�
 
 ## Trải nghiệm thực tế diễn ra như thế nào
 
-1. **Đội chủ động xoá 1 bộ phận đang chạy** trong lúc có traffic giả lập — quan sát hệ thống có tự khởi
-   động lại bộ phận thay thế hay không, và các bộ phận gọi tới nó có phản ứng ra sao trong lúc chờ.
-2. **Đội chủ động làm chậm 1 bộ phận khác**, xem công cụ giám sát có hiển thị kịp thời việc "sắp vượt
+1. ~~Đội chủ động xoá 1 bộ phận đang chạy~~ — đã gỡ ở tính năng 031 (xem trên).
+2. **Đội chủ động làm chậm 1 bộ phận**, xem công cụ giám sát có hiển thị kịp thời việc "sắp vượt
    ngưỡng cam kết" hay không — rồi dừng lại, xác nhận mọi thứ trở về bình thường không cần can thiệp gì
    thêm.
 3. **Mỗi lần thử đều được ghi thành 1 bản kết luận** — nêu rõ đã thử gì, quan sát được gì, và kết luận

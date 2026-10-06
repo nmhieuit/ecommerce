@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Diễn tập chaos engineering — giết một pod / tiêm độ trễ để kiểm chứng resilience
+# Specification Quality Checklist: Diễn tập chaos engineering — tiêm độ trễ để kiểm chứng resilience
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-09-12
@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Không phát sinh mục [NEEDS CLARIFICATION] nào: cả ba tiêu chí chấp nhận trong SCRUM-34 (kill pod + circuit breaker, tiêm độ trễ + dashboard SLO, ghi nhận kết quả) đều đủ rõ để suy ra yêu cầu chức năng và giả định hợp lý mà không cần hỏi thêm.
-- Đặc tả này chỉ mô tả hành vi kỳ vọng của bài tập chaos (WHAT/WHY); công cụ tiêm lỗi cụ thể, kịch bản kubectl, hay cấu trúc dashboard OTel là chi tiết triển khai sẽ thuộc về `/speckit-plan`.
+- Không phát sinh mục [NEEDS CLARIFICATION] nào: các tiêu chí chấp nhận còn lại trong SCRUM-34 (tiêm độ trễ + dashboard SLO, ghi nhận kết quả; kịch bản kill pod đã gỡ ở spec 031) đều đủ rõ để suy ra yêu cầu chức năng và giả định hợp lý mà không cần hỏi thêm.
+- Đặc tả này chỉ mô tả hành vi kỳ vọng của bài tập chaos (WHAT/WHY); công cụ tiêm lỗi cụ thể hay cấu trúc dashboard OTel là chi tiết triển khai sẽ thuộc về `/speckit-plan`.
 - Sẵn sàng cho `/speckit-clarify` (nếu muốn rà soát thêm) hoặc `/speckit-plan`.

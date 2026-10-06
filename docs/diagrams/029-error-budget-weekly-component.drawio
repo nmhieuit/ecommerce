@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="error-budget-weekly-component" name="Kiến trúc thành phần — ngân sách lỗi theo tuần lịch giờ Việt Nam, SLO 99%/1%">
-        <mxGraphModel dx="1500" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
+        <mxGraphModel dx="1443" dy="468" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="900" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -44,31 +44,66 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e3" edge="1" parent="1" source="tests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="export" value="canh">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="265" y="555"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e4" edge="1" parent="1" source="otel" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="rules" value="span từ đầu tuần">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="975" y="225"/>
+                            <mxPoint x="975" y="150"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e5" edge="1" parent="1" source="manifests" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="rules" value="ngưỡng độ trễ, tỷ lệ">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="520" y="255"/>
+                            <mxPoint x="520" y="100"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e6" edge="1" parent="1" source="rules" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="alerts" value="">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e7" edge="1" parent="1" source="rules" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="events" value="rule 100: alert → active">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="540" y="125"/>
+                            <mxPoint x="540" y="405"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e8" edge="1" parent="1" source="events" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="rules" value="rule frozen đọc 14 ngày">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="750" y="480"/>
+                            <mxPoint x="1490" y="480"/>
+                            <mxPoint x="1490" y="125"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e9" edge="1" parent="1" source="alerts" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;" target="dashboard" value="">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e10" edge="1" parent="1" source="otel" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;" target="dashboard" value="mức tiêu hao tuần">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="800" y="320"/>
+                            <mxPoint x="1160" y="320"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="e11" edge="1" parent="1" source="limit" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;fontSize=9;dashed=1;strokeColor=#b85450;" target="rules" value="">
-                    <mxGeometry relative="1" as="geometry"/>
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1470" y="550"/>
+                            <mxPoint x="1470" y="90"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
             </root>
         </mxGraphModel>

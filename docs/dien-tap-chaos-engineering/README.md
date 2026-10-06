@@ -1,7 +1,7 @@
 # Diễn tập chaos engineering
 
-Runbook cho [SCRUM-34](https://nmhieuit.atlassian.net/browse/SCRUM-34) — chủ động giết một pod hoặc
-tiêm độ trễ vào hệ thống đang chạy để kiểm chứng bằng thực nghiệm rằng các lưới an toàn resilience
+Runbook cho [SCRUM-34](https://nmhieuit.atlassian.net/browse/SCRUM-34) — chủ động tiêm độ trễ vào
+hệ thống đang chạy để kiểm chứng bằng thực nghiệm rằng các lưới an toàn resilience
 (020) và ngân sách SLO (021) hoạt động đúng, không chỉ đúng trên giấy.
 
 Đây là thư mục tài liệu vận hành sống — tích luỹ dần theo mỗi lần bài tập được chạy — khác với
@@ -12,19 +12,20 @@ tiêm độ trễ vào hệ thống đang chạy để kiểm chứng bằng th�
 
 Làm theo từng bước tại
 [specs/025-chaos-pod-kill-latency/quickstart.md](../../specs/025-chaos-pod-kill-latency/quickstart.md)
-— không lặp lại nội dung ở đây để tránh hai nơi lệch nhau theo thời gian. Tóm tắt hai kịch bản:
+— không lặp lại nội dung ở đây để tránh hai nơi lệch nhau theo thời gian. Tóm tắt kịch bản:
 
-- **kill-pod**: xóa một pod đang chạy của `baskets` trong lúc có tải nhẹ, quan sát Kubernetes tái
-  lập lịch và circuit breaker/retry của BFF engage.
 - **inject-latency**: bật `Chaos:AllowLatencyInjection=true` trên môi trường diễn tập, gửi header
   `X-Chaos-Latency-Ms` tới Orders.Api, quan sát dashboard Xử lý sự cố (021) thể hiện ngân sách bị tiêu hao.
+
+Kịch bản giết pod trên Kubernetes đã gỡ ở spec 031; việc luyện "service chết" và các nhóm lỗi khác nay
+nằm ở mục "Danh mục nhóm lỗi" bên dưới.
 
 Sau khi chạy, điền [mau-ket-qua.md](./mau-ket-qua.md) thành một file mới trong
 [ket-qua/](./ket-qua/) và thêm vào mục "Lịch sử chạy" dưới đây (mới nhất trước).
 
 ## Diễn tập sự cố on-call (SCRUM-36)
 
-Khác hai bài tập trên: người vận hành **không biết trước** service nào hỏng, hỏng kiểu gì, và lúc nào.
+Khác bài tập trên: người vận hành **không biết trước** service nào hỏng, hỏng kiểu gì, và lúc nào.
 Phải phát hiện nhờ cảnh báo, rồi tự xử lý như sự cố thật. Đặc tả:
 [specs/028-incident-oncall-drill/](../../specs/028-incident-oncall-drill/spec.md). Cách đo và cảnh báo:
 [08-phat-hien-nhanh-va-xu-ly-su-co.md](../kibana-quan-sat-he-thong/08-phat-hien-nhanh-va-xu-ly-su-co.md).
@@ -50,8 +51,10 @@ Chạy trên Docker Compose local (`docker-compose.local.yml`).
    container sẽ được tạo lại, và một service bị hỏng bằng cấu hình sai. **Không mở thư mục
    `.incident-drill/`.**
 
-Ba loại hỏng hóc có thể gặp: đích kết nối sai; cạn connection pool (chỉ ở gateway); lỗi 5xx của 027
-theo một tỷ lệ 5–50%. Chi tiết nằm trong research.md của spec, nhưng đừng đọc trước buổi diễn tập.
+Từ spec 031, `-Start` bốc từ tám nhóm lỗi (chín loại A–I: đích kết nối sai, nghẽn và lỗi theo tỷ lệ, độ
+trễ, cơ sở dữ liệu dừng, xác thực hỏng, thiếu tài nguyên, mạng đứt, container chết). Chi tiết nằm trong
+danh mục và research.md của spec, nhưng đừng đọc trước buổi diễn tập. Khi bế tắc, xin gợi ý theo mức
+(`-Hint`, xem dưới); mỗi lần xin được ghi lại.
 
 ### 2. Phát hiện
 
@@ -135,16 +138,40 @@ Postmortem không đổ lỗi và ticket follow-up: SCRUM-37.
 Script in rõ "CHẾ ĐỘ KHÔNG MÙ" và ghi `"blind": false` vào bản niêm phong. Không dùng chế độ này cho
 buổi diễn tập.
 
+## Danh mục nhóm lỗi (spec 031)
+
+Tám nhóm, chín loại lỗi (A–I) mô tả trong [`scripts/incident-drill/catalog.json`](../../scripts/incident-drill/catalog.json),
+tiêm bằng cấu hình sai hoặc công cụ Docker bên ngoài (không sửa code service), chỉ trên Docker Compose local.
+
+| Nhóm | Loại | Đích |
+|---|---|---|
+| 1 Đích kết nối sai | A | 7 service |
+| 2 Nghẽn và lỗi theo tỷ lệ | B (cạn pool), C (5xx theo tỷ lệ) | B: gateway; C: 7 service |
+| 3 Độ trễ | D | orders-api |
+| 4 Phụ thuộc hạ tầng dừng | E | 5 cơ sở dữ liệu |
+| 5 Xác thực hỏng | F | 6 service dùng máy chủ định danh |
+| 6 Thiếu tài nguyên | G | 7 service |
+| 7 Mạng đứt | H | 7 service |
+| 8 Container chết | I | 7 service |
+
+Lệnh (cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env`; loại D còn cần `CHAOS_ALLOW_LATENCY_INJECTION=true`
+và đã chạy `-Load` để có token):
+
+```powershell
+./scripts/incident-drill.ps1 -Inject -Type E -Target orders-db -DurationSeconds 600   # dạng a: có chủ đích, tự gỡ sau 10 phút
+./scripts/incident-drill.ps1 -Restore -RunId <runId>                                  # khôi phục mọi loại
+./scripts/incident-drill.ps1 -Hint -RunId <runId> -Level 1                            # gợi ý bài mù: 1 triệu chứng, 2 nhóm, 3 đáp án
+```
+
+Dạng (a) không phải bài mù: script in rõ đã tiêm gì. Chỉ một lần chạy mở tại một thời điểm.
+
 ## Lịch sử chạy
 
 Gồm bản ghi bài tập chaos (`ket-qua/<ngày>-<kịch bản>.md`, theo [mau-ket-qua.md](./mau-ket-qua.md)) và
 bản ghi sự cố (`ket-qua/<ngày>-su-co-<runId>.md`, theo [mau-ban-ghi-su-co.md](./mau-ban-ghi-su-co.md)).
 Với bản ghi sự cố, ghi kèm kết luận ngắn: khớp/không khớp niêm phong, severity, baseline alert→merge.
 
-- [2026-09-14 — kill-pod (chạy liền mạch trên Kubernetes thật, gồm cả Bước 1→4 + Dọn dẹp)](./ket-qua/2026-09-14-kill-pod.md)
-  — sai lệch (thời gian phục hồi lẫn thao tác thủ công tái cấp app; circuit breaker không trip)
-- [2026-09-14 — inject-latency (chạy liền mạch trên Kubernetes thật, dùng `autocannon`, dashboard SLO đã xác nhận)](./ket-qua/2026-09-14-inject-latency.md)
+- [2026-09-14 — inject-latency (dùng `autocannon`, dashboard SLO đã xác nhận)](./ket-qua/2026-09-14-inject-latency.md)
   — sai lệch (circuit breaker không trip sau 4 lần thử độc lập kể cả với công cụ load-test thật)
-- [2026-09-12 — kill-pod (trên container Docker)](./ket-qua/2026-09-12-kill-pod.md) — sai lệch (chạy
-  trên container Docker thay vì pod Kubernetes thật; xem bản ghi 2026-09-14 để có kết quả trên k8s
-  thật)
+
+Hai bản ghi kill-pod (2026-09-12, 2026-09-14) đã gỡ cùng phần Kubernetes của 025 ở spec 031.

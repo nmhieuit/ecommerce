@@ -1,4 +1,6 @@
-# Data Model: Diễn tập chaos engineering — giết pod / tiêm độ trễ
+# Data Model: Diễn tập chaos engineering — tiêm độ trễ
+
+> **Cập nhật (spec 031, 2026-10-06)**: loại kịch bản `kill-pod` đã gỡ; chỉ còn `inject-latency`.
 
 **Feature**: [spec.md](./spec.md) | Nghiên cứu: [research.md](./research.md)
 
@@ -31,9 +33,9 @@ truy vấn/API cho thực thể này — chỉ yêu cầu con người tra cứu
 
 | Trường | Mô tả |
 |---|---|
-| Loại kịch bản | `kill-pod` (basket service) hoặc `inject-latency` (orders service) |
-| Service mục tiêu | `baskets` hoặc `orders` (khớp `app` label / `service_name` trong `deploy/ansible/inventories/services.yml`) |
-| Tham số | Với `inject-latency`: giá trị `X-Chaos-Latency-Ms` đã dùng. Với `kill-pod`: tên pod đã xoá (`kubectl get pods -l app=baskets`) |
+| Loại kịch bản | `inject-latency` (orders service) |
+| Service mục tiêu | `orders` (Orders.Api) |
+| Tham số | Giá trị `X-Chaos-Latency-Ms` đã dùng |
 | Thời điểm bắt đầu/kết thúc | Ghi tại chỗ khi thực hiện |
 | Trạng thái tải nền | Có/không có tải tổng hợp đang chạy, và bằng công cụ nào (spec.md Assumptions: không ràng buộc công cụ cụ thể) |
 
@@ -45,9 +47,9 @@ mỗi lần chạy lưu tại `docs/dien-tap-chaos-engineering/ket-qua/<YYYY-MM-
 | Trường | Bắt buộc | Mô tả |
 |---|---|---|
 | `ngay_chay` | Có | Ngày thực hiện bài tập |
-| `kich_ban` | Có | `kill-pod` hoặc `inject-latency` (mục 2) |
+| `kich_ban` | Có | `inject-latency` (mục 2) |
 | `nguoi_thuc_hien` | Có | Ai chạy bài tập |
-| `quan_sat` | Có | Mô tả quan sát được — thời gian phục hồi đo được (kill-pod) hoặc mức ngân sách SLO bị tiêu hao quan sát trên dashboard (inject-latency), kèm bằng chứng (ảnh chụp/link Kibana) |
+| `quan_sat` | Có | Mô tả quan sát được — mức ngân sách SLO bị tiêu hao quan sát trên dashboard (inject-latency), kèm bằng chứng (ảnh chụp/link Kibana) |
 | `ket_luan` | Có | Một trong hai giá trị: `dat` (lưới an toàn hoạt động đúng) hoặc `sai_lech` |
 | `jira_ticket` | Có nếu `ket_luan = sai_lech` | Liên kết bug ticket đã tạo thủ công (FR-008); để trống nếu `ket_luan = dat` |
 
