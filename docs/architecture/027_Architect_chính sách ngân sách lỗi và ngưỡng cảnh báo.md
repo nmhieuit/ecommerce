@@ -1,5 +1,7 @@
 # Kiến trúc: Chính sách ngân sách lỗi (error budget) và ngưỡng cảnh báo gắn với SLO từng service
 
+> **Cập nhật spec 033**: rule và panel ES|QL/Lens loại span `/health*` bằng `COALESCE(attributes.url.path, "")`; khoá `excluded-path-prefixes` trong manifest. Xem [033 Architect](033_Architect_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md).
+
 *Đối tượng đọc: kỹ sư phần mềm / software architect gia nhập dự án, cần hiểu hệ thống hoạt động ra
 sao để bảo trì hoặc mở rộng.*
 

@@ -1,6 +1,6 @@
 # Contract: Khối `slos` (phần khả dụng/5xx) và `error-budget-policy` trong `service-manifest.yaml`, chu kỳ tuần
 
-**Feature**: [../spec.md](../spec.md) | **Thay thế**: `specs/027-error-budget-alerting/contracts/error-budget-policy-manifest-shape.md` (sẽ được sửa tại chỗ cho khớp contract này)
+**Feature**: [../spec.md](../spec.md) (khoá `excluded-path-prefixes` thêm bởi spec 033) | **Thay thế**: `specs/027-error-budget-alerting/contracts/error-budget-policy-manifest-shape.md` (sẽ được sửa tại chỗ cho khớp contract này)
 
 **Người tiêu thụ**: `tests/ServiceManifestSloConventionTests/ErrorBudgetPolicyTests`, `SloDefaultComplianceTests` (qua `PlatformSloDefaults`)
 
@@ -24,6 +24,7 @@ error-budget-policy:
   # thứ Hai 00:00 → Chủ nhật 23:59 (specs/029-error-budget-weekly).
   window: calendar-week
   timezone: UTC+07:00
+  excluded-path-prefixes: [/health]   # spec 033: span có đường dẫn bắt đầu bằng tiền tố này KHÔNG tính vào ngân sách
   budgets:
     availability:
       bad-request: http-5xx
@@ -62,3 +63,4 @@ error-budget-policy:
 | 7 | Khối này không khai báo ngưỡng độ trễ. | FR-013 (027) | — |
 | 8 | `slos.availability = 99%` và `slos.error-rate.max-5xx-ratio = 1%` với cả hai loại service, khớp `PlatformSloDefaults`. Không manifest nào cần `slos.justification` vì lý do này. | FR-002, FR-004 | `99.9%`/`0.1%` → `99%`/`1%` |
 | 9 | Với khả dụng và 5xx, `allowed-bad-ratio` = 100% − `slos.availability` = `slos.error-rate.max-5xx-ratio`. | FR-003 | mới (nêu rõ quan hệ 1 − SLO) |
+| 10 | `excluded-path-prefixes` có đúng giá trị `[/health]`, giống hệt nhau ở cả 7 manifest, đặt ngang hàng `window`/`timezone` (không nằm trong `budgets`). Rule và panel ngân sách loại span theo đúng tiền tố này. | FR-007 (033) | mới (spec 033; xem `specs/033-exclude-health-spans/contracts/budget-exclusion-contract.md`) |

@@ -1,5 +1,7 @@
 # QA: Ngân sách lỗi theo tuần lịch giờ Việt Nam (thay thế tháng lịch của 027)
 
+> **Cập nhật spec 033**: công thức ngân sách loại span có đường dẫn bắt đầu bằng `/health`; việc tiêm lỗi/độ trễ nay đi vào route nghiệp vụ. Xem [033 QA](033_QA_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md).
+
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.*
 

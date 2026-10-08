@@ -9414,7 +9414,7 @@
                 "_search"
               ]
             },
-            "description": "**Mục đích**: đây là bước phát hiện lỗ hổng QA_Debt quan trọng nhất của folder — Orders KHÔNG nhận request nghiệp vụ nào trong lúc QA (idle thật), nhưng VẪN có traffic health-probe định kỳ (Kubernetes/compose tự gọi `/health/live` liên tục) — nếu dashboard tính % lỗi dựa trên MỌI span (bao gồm cả probe), nó sẽ thấy \"0 lỗi / tổng số request > 0\" và hiển thị \"0% lỗi\" — một con số trông như \"đang đạt ngân sách hoàn hảo\" nhưng thực ra sai về bản chất (FR-006 yêu cầu phải hiện \"không có dữ liệu\" khi không có TRAFFIC THẬT).\n\n**Input**: `POST {{elasticsearchUrl}}/traces-generic.otel-default*/_search`, đếm riêng `a.all` (mọi span Server) và `a.real` (span KHÔNG phải `/health/*`).\n\n**Output kỳ vọng**: `a.all.doc_count > 0` (CÓ span, vì vẫn có probe); `a.real.doc_count == 0` (KHÔNG có request người dùng thật).\n\n**Vì sao đây là phát hiện QA_Debt, không phải hành vi mong muốn**: chính 2 con số này (span > 0 NHƯNG request-thật = 0) là bằng chứng cụ thể cho khoảng trống của FR-006 — dashboard hiện tại (dùng mọi span để tính %lỗi) sẽ hiển thị nhầm \"0% lỗi\" cho Orders trong tình huống này, thay vì đúng ra phải hiện \"không có dữ liệu\".\n\n---\n\nOrders.Api không được gọi ở bước nào của folder này. Truy vấn 1 (mọi span Server, giống công thức dashboard): có span. Truy vấn 2 (bỏ `/health/*`): 0. Nghĩa là dashboard hiện số đo của service idle chỉ từ span probe (0% lỗi, ~1 ms) thay vì 'không có dữ liệu'.",
+            "description": "**Mục đích**: đây là bước phát hiện lỗ hổng QA_Debt quan trọng nhất của folder — Orders KHÔNG nhận request nghiệp vụ nào trong lúc QA (idle thật), nhưng VẪN có traffic health-probe định kỳ (Kubernetes/compose tự gọi `/health/live` liên tục) — nếu dashboard tính % lỗi dựa trên MỌI span (bao gồm cả probe), nó sẽ thấy \"0 lỗi / tổng số request > 0\" và hiển thị \"0% lỗi\" — một con số trông như \"đang đạt ngân sách hoàn hảo\" nhưng thực ra sai về bản chất (FR-006 yêu cầu phải hiện \"không có dữ liệu\" khi không có TRAFFIC THẬT).\n\n**Input**: `POST {{elasticsearchUrl}}/traces-generic.otel-default*/_search`, đếm riêng `a.all` (mọi span Server) và `a.real` (span KHÔNG phải `/health/*`).\n\n**Output kỳ vọng**: `a.all.doc_count > 0` (CÓ span, vì vẫn có probe); `a.real.doc_count == 0` (KHÔNG có request người dùng thật).\n\n**Vì sao đây là phát hiện QA_Debt, không phải hành vi mong muốn**: chính 2 con số này (span > 0 NHƯNG request-thật = 0) là bằng chứng cụ thể cho khoảng trống của FR-006 — dashboard hiện tại (dùng mọi span để tính %lỗi) sẽ hiển thị nhầm \"0% lỗi\" cho Orders trong tình huống này, thay vì đúng ra phải hiện \"không có dữ liệu\".\n\n---\n\nOrders.Api không được gọi ở bước nào của folder này. Truy vấn 1 (mọi span Server, giống công thức dashboard): có span. Truy vấn 2 (bỏ `/health/*`): 0. Nghĩa là dashboard hiện số đo của service idle chỉ từ span probe (0% lỗi, ~1 ms) thay vì 'không có dữ liệu'.\n\n---\n\n**Cập nhật (spec 033)**: từ spec 033, ngân sách lỗi, Bảng SLO và các panel ngân sách không còn tính span `/health*`, nên traffic health-probe nêu ở trên không còn ảnh hưởng ngân sách/Bảng SLO (bước này vẫn đúng với dữ liệu thô trong Elasticsearch).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Orders.Api\"\n          }\n        },\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"{{slo021StartMs}}\",\n              \"format\": \"epoch_millis\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"kind\": \"Server\"\n          }\n        }\n      ]\n    }\n  },\n  \"aggs\": {\n    \"all\": {\n      \"filter\": {\n        \"match_all\": {}\n      }\n    },\n    \"real\": {\n      \"filter\": {\n        \"bool\": {\n          \"must_not\": [\n            {\n              \"prefix\": {\n                \"attributes.http.route\": \"/health\"\n              }\n            }\n          ]\n        }\n      }\n    }\n  }\n}",
@@ -11115,16 +11115,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: xác nhận khi `CHAOS_ALLOW_LATENCY_INJECTION` TẮT (mặc định, trạng thái production thật), header `X-Chaos-Latency-Ms` KHÔNG CÓ HIỆU LỰC GÌ CẢ — dù client gửi giá trị lớn (2000ms), service vẫn trả lời ngay, không chậm đi chút nào.\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Latency-Ms: 2000`.\n\n**Output kỳ vọng**: `200`; `responseTime < 1000ms`.\n\n**Vì sao chứng minh đúng bất biến 1**: đây là bất biến AN TOÀN quan trọng nhất của cả spec 025 — cơ chế tiêm chaos chỉ được phép hoạt động khi BẬT TƯỜNG MINH; nếu header này vô tình có hiệu lực ở môi trường production (cờ mặc định tắt), bất kỳ ai cũng có thể làm chậm orders-api bằng 1 header HTTP đơn giản — một lỗ hổng từ chối dịch vụ (DoS) nghiêm trọng.\n\n---\n\n`GET orders /health/live` với `X-Chaos-Latency-Ms: 2000` khi cờ tắt: không trễ."
+                "description": "**Mục đích**: xác nhận khi `CHAOS_ALLOW_LATENCY_INJECTION` TẮT (mặc định, trạng thái production thật), header `X-Chaos-Latency-Ms` KHÔNG CÓ HIỆU LỰC GÌ CẢ — dù client gửi giá trị lớn (2000ms), service vẫn trả lời ngay, không chậm đi chút nào.\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Latency-Ms: 2000`.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`); `responseTime < 1000ms`.\n\n**Vì sao chứng minh đúng bất biến 1**: đây là bất biến AN TOÀN quan trọng nhất của cả spec 025 — cơ chế tiêm chaos chỉ được phép hoạt động khi BẬT TƯỜNG MINH; nếu header này vô tình có hiệu lực ở môi trường production (cờ mặc định tắt), bất kỳ ai cũng có thể làm chậm orders-api bằng 1 header HTTP đơn giản — một lỗ hổng từ chối dịch vụ (DoS) nghiêm trọng.\n\n---\n\n`GET orders /orders/{{unknownGuid}}` với `X-Chaos-Latency-Ms: 2000` khi cờ tắt: không trễ."
               },
               "event": [
                 {
@@ -11132,8 +11132,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 và dưới 1000 ms\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "    pm.expect(pm.response.responseTime).to.be.below(1000);",
                       "});"
                     ]
@@ -11161,16 +11161,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: đây là happy path của US2 — khi cờ BẬT, header `X-Chaos-Latency-Ms: 2000` phải khiến response THỰC SỰ chậm đi đúng khoảng 2 giây, đủ để làm p95/p99 của service vượt ngưỡng SLO đã khai báo (chuẩn bị cho bước đo trên dashboard SLO).\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Latency-Ms: 2000`, prerequest lưu mốc thời gian bắt đầu.\n\n**Output kỳ vọng**: `200` sau 1,9–4 giây (khoảng dung sai quanh 2 giây, tính cả hao phí mạng/xử lý).\n\n**Vì sao chứng minh đúng FR-002**: đây là bằng chứng ĐỘ TRỄ THẬT được tiêm vào, không chỉ một cờ bật/tắt hình thức — khoảng dung sai 1,9-4 giây đủ chặt để phân biệt \"có trễ ~2 giây\" với \"không trễ chút nào\" (bất biến 1) hay \"trễ kẹp trần 30 giây\" (bất biến 4, bước 06).\n\n---\n\nTrễ khoảng 2000 ms rồi trả 200 như thường."
+                "description": "**Mục đích**: đây là happy path của US2 — khi cờ BẬT, header `X-Chaos-Latency-Ms: 2000` phải khiến response THỰC SỰ chậm đi đúng khoảng 2 giây, đủ để làm p95/p99 của service vượt ngưỡng SLO đã khai báo (chuẩn bị cho bước đo trên dashboard SLO).\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Latency-Ms: 2000`, prerequest lưu mốc thời gian bắt đầu.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`) sau 1,9–4 giây (khoảng dung sai quanh 2 giây, tính cả hao phí mạng/xử lý).\n\n**Vì sao chứng minh đúng FR-002**: đây là bằng chứng ĐỘ TRỄ THẬT được tiêm vào, không chỉ một cờ bật/tắt hình thức — khoảng dung sai 1,9-4 giây đủ chặt để phân biệt \"có trễ ~2 giây\" với \"không trễ chút nào\" (bất biến 1) hay \"trễ kẹp trần 30 giây\" (bất biến 4, bước 06).\n\n---\n\nTrễ khoảng 2000 ms rồi trả 200 như thường."
               },
               "event": [
                 {
@@ -11187,8 +11187,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 sau 1,9–4 giây\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 sau 1,9–4 giây\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "    pm.expect(pm.response.responseTime).to.be.within(1900, 4000);",
                       "});"
                     ]
@@ -11210,16 +11210,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: một trong các điều kiện của bất biến 3 — giá trị header KHÔNG PARSE ĐƯỢC thành số phải được coi như KHÔNG CÓ header, không được gây lỗi hay mặc định về một giá trị nguy hiểm nào khác (ví dụ 0 lại hiểu nhầm thành \"tiêm 0ms\" là đúng, nhưng \"tiêm vô hạn\" mới là sai).\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Latency-Ms: abc`.\n\n**Output kỳ vọng**: `200` và `< 1000ms` — giống hệt hành vi \"không có header\" ở bước 01 (25a).\n\n**Vì sao chứng minh đúng bất biến 3**: input rác (`abc`) không được làm service crash (500) hay bị coi là \"trễ tối đa\" — phải được xử lý êm như không hề có cờ tiêm chaos nào.\n\n---\n\nKhông trễ."
+                "description": "**Mục đích**: một trong các điều kiện của bất biến 3 — giá trị header KHÔNG PARSE ĐƯỢC thành số phải được coi như KHÔNG CÓ header, không được gây lỗi hay mặc định về một giá trị nguy hiểm nào khác (ví dụ 0 lại hiểu nhầm thành \"tiêm 0ms\" là đúng, nhưng \"tiêm vô hạn\" mới là sai).\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Latency-Ms: abc`.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`) và `< 1000ms` — giống hệt hành vi \"không có header\" ở bước 01 (25a).\n\n**Vì sao chứng minh đúng bất biến 3**: input rác (`abc`) không được làm service crash (500) hay bị coi là \"trễ tối đa\" — phải được xử lý êm như không hề có cờ tiêm chaos nào.\n\n---\n\nKhông trễ."
               },
               "event": [
                 {
@@ -11227,8 +11227,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 và dưới 1000 ms\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "    pm.expect(pm.response.responseTime).to.be.below(1000);",
                       "});"
                     ]
@@ -11250,16 +11250,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: giá trị `0` tuy là SỐ hợp lệ nhưng VỀ MẶT NGỮ NGHĨA là \"không trễ\" — phải xử lý giống hệt \"không có header\", không coi là một giá trị tiêm chaos có hiệu lực.\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Latency-Ms: 0`.\n\n**Output kỳ vọng**: `200` và `< 1000ms`.\n\n**Liên hệ**: cùng nhóm bất biến 3 với bước 02, 04, 05 — mỗi bước kiểm MỘT dạng input biên khác nhau (không phải số / 0 / âm / số thực) để không nhánh validate nào bị bỏ sót.\n\n---\n\nGiá trị ≤ 0 coi như vắng."
+                "description": "**Mục đích**: giá trị `0` tuy là SỐ hợp lệ nhưng VỀ MẶT NGỮ NGHĨA là \"không trễ\" — phải xử lý giống hệt \"không có header\", không coi là một giá trị tiêm chaos có hiệu lực.\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Latency-Ms: 0`.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`) và `< 1000ms`.\n\n**Liên hệ**: cùng nhóm bất biến 3 với bước 02, 04, 05 — mỗi bước kiểm MỘT dạng input biên khác nhau (không phải số / 0 / âm / số thực) để không nhánh validate nào bị bỏ sót.\n\n---\n\nGiá trị ≤ 0 coi như vắng."
               },
               "event": [
                 {
@@ -11267,8 +11267,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 và dưới 1000 ms\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "    pm.expect(pm.response.responseTime).to.be.below(1000);",
                       "});"
                     ]
@@ -11290,16 +11290,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: giá trị ÂM không có ý nghĩa vật lý (không thể \"trễ -5 mili giây\") — phải coi như vắng mặt, tương tự bước 03.\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Latency-Ms: -5`.\n\n**Output kỳ vọng**: `200` và `< 1000ms`.\n\n**Liên hệ**: cùng nhóm bất biến 3.\n\n---\n\nGiá trị âm coi như vắng."
+                "description": "**Mục đích**: giá trị ÂM không có ý nghĩa vật lý (không thể \"trễ -5 mili giây\") — phải coi như vắng mặt, tương tự bước 03.\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Latency-Ms: -5`.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`) và `< 1000ms`.\n\n**Liên hệ**: cùng nhóm bất biến 3.\n\n---\n\nGiá trị âm coi như vắng."
               },
               "event": [
                 {
@@ -11307,8 +11307,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 và dưới 1000 ms\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "    pm.expect(pm.response.responseTime).to.be.below(1000);",
                       "});"
                     ]
@@ -11330,16 +11330,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: giá trị SỐ THỰC (không phải số nguyên) — service tiêm độ trễ theo mili giây nguyên, một giá trị thập phân không parse được thành số nguyên hợp lệ phải coi như vắng mặt, không làm tròn hay ném lỗi.\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Latency-Ms: 1.5`.\n\n**Output kỳ vọng**: `200` và `< 1000ms`.\n\n**Liên hệ**: hoàn tất 4/4 dạng input bất thường của bất biến 3 (không phải số, 0, âm, số thực) — bộ 4 bước 02-05 cùng nhau là bằng chứng ĐẦY ĐỦ cho bất biến 3, không chỉ 1 trường hợp đơn lẻ.\n\n---\n\nKhông phải số nguyên coi như vắng."
+                "description": "**Mục đích**: giá trị SỐ THỰC (không phải số nguyên) — service tiêm độ trễ theo mili giây nguyên, một giá trị thập phân không parse được thành số nguyên hợp lệ phải coi như vắng mặt, không làm tròn hay ném lỗi.\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Latency-Ms: 1.5`.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`) và `< 1000ms`.\n\n**Liên hệ**: hoàn tất 4/4 dạng input bất thường của bất biến 3 (không phải số, 0, âm, số thực) — bộ 4 bước 02-05 cùng nhau là bằng chứng ĐẦY ĐỦ cho bất biến 3, không chỉ 1 trường hợp đơn lẻ.\n\n---\n\nKhông phải số nguyên coi như vắng."
               },
               "event": [
                 {
@@ -11347,8 +11347,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 và dưới 1000 ms\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 và dưới 1000 ms\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "    pm.expect(pm.response.responseTime).to.be.below(1000);",
                       "});"
                     ]
@@ -11370,16 +11370,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: đây là phép thử TRỌNG TÂM của bất biến 4 — một giá trị CỰC LỚN (40 giây) phải bị KẸP TRẦN ở 30 giây, không được tiêm đúng y nguyên 40 giây như client yêu cầu. Đây là lưới an toàn: nếu không có trần, ai đó gửi header với giá trị cực lớn (ví dụ hàng giờ) có thể biến tính năng chaos thành một cuộc tấn công DoS thật sự ngay cả khi cờ đang BẬT đúng mục đích diễn tập.\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Latency-Ms: 40000`.\n\n**Output kỳ vọng**: `200` sau 29–33 giây (khoảng quanh 30 giây, KHÔNG PHẢI 40 giây).\n\n**Vì sao chứng minh đúng bất biến 4**: nếu không có trần, bước này sẽ mất ~40 giây thay vì ~30 giây — khoảng dung sai 29-33 giây đủ hẹp để phân biệt rõ 2 trường hợp.\n\n---\n\nKẹp về 30 000 ms: trễ ~30 giây, không phải 40."
+                "description": "**Mục đích**: đây là phép thử TRỌNG TÂM của bất biến 4 — một giá trị CỰC LỚN (40 giây) phải bị KẸP TRẦN ở 30 giây, không được tiêm đúng y nguyên 40 giây như client yêu cầu. Đây là lưới an toàn: nếu không có trần, ai đó gửi header với giá trị cực lớn (ví dụ hàng giờ) có thể biến tính năng chaos thành một cuộc tấn công DoS thật sự ngay cả khi cờ đang BẬT đúng mục đích diễn tập.\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Latency-Ms: 40000`.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`) sau 29–33 giây (khoảng quanh 30 giây, KHÔNG PHẢI 40 giây).\n\n**Vì sao chứng minh đúng bất biến 4**: nếu không có trần, bước này sẽ mất ~40 giây thay vì ~30 giây — khoảng dung sai 29-33 giây đủ hẹp để phân biệt rõ 2 trường hợp.\n\n---\n\nKẹp về 30 000 ms: trễ ~30 giây, không phải 40."
               },
               "event": [
                 {
@@ -11387,8 +11387,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 sau 29–33 giây\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 sau 29–33 giây\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "    pm.expect(pm.response.responseTime).to.be.within(29000, 33000);",
                       "});"
                     ]
@@ -11498,16 +11498,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: tạo thêm 1 request chậm NỮA (2,5 giây, khác giá trị với bước 01 để dễ phân biệt khi soát log) — tích luỹ đủ SỐ LƯỢNG span chậm cần thiết để bước 10 (Elasticsearch) tìm thấy \"ít nhất 4 span chậm ≥ 2 giây\".\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Latency-Ms: 2500`.\n\n**Output kỳ vọng**: `200` sau 2,4–4,5 giây. Chờ thêm 20 giây để span kịp chảy tới Elasticsearch.\n\n**Liên hệ**: cùng với các request trễ trước đó trong folder (bước \"01 [cờ BẬT]\", \"07\") tích luỹ đủ dữ liệu cho bước 10.\n\n---\n\nThêm 1 span > 2 giây."
+                "description": "**Mục đích**: tạo thêm 1 request chậm NỮA (2,5 giây, khác giá trị với bước 01 để dễ phân biệt khi soát log) — tích luỹ đủ SỐ LƯỢNG span chậm cần thiết để bước 10 (Elasticsearch) tìm thấy \"ít nhất 4 span chậm ≥ 2 giây\".\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Latency-Ms: 2500`.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`) sau 2,4–4,5 giây. Chờ thêm 20 giây để span kịp chảy tới Elasticsearch.\n\n**Liên hệ**: cùng với các request trễ trước đó trong folder (bước \"01 [cờ BẬT]\", \"07\") tích luỹ đủ dữ liệu cho bước 10.\n\n---\n\nThêm 1 span > 2 giây."
               },
               "event": [
                 {
@@ -11515,8 +11515,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 sau 2,4–4,5 giây\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 sau 2,4–4,5 giây\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "    pm.expect(pm.response.responseTime).to.be.within(2400, 4500);",
                       "});",
                       "setTimeout(function () {}, 20000);"
@@ -11815,7 +11815,7 @@
           "description": "Chạy khi `CHAOS_ALLOW_FAULT_INJECTION` không khai báo hoặc `false`. Header `X-Chaos-Fault` phải bị bỏ qua (contract tiêm lỗi, bất biến 2).",
           "item": [
             {
-              "name": "01 [cờ TẮT] Header 5xx bị bỏ qua → 200 (bất biến 2)",
+              "name": "01 [cờ TẮT] Header 5xx bị bỏ qua → 401 (bất biến 2)",
               "request": {
                 "method": "GET",
                 "header": [
@@ -11828,16 +11828,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: xác nhận khi `CHAOS_ALLOW_FAULT_INJECTION` TẮT (mặc định, trạng thái production), header `X-Chaos-Fault: 5xx` KHÔNG CÓ HIỆU LỰC — service trả lời bình thường, không bị ép lỗi.\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Fault: 5xx`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng bất biến 2 (an toàn)**: giống hệt vai trò bất biến 1 của spec 025 — cơ chế tiêm lỗi CHỦ ĐỘNG chỉ được hoạt động khi BẬT TƯỜNG MINH, nếu không, bất kỳ ai gửi 1 header đơn giản cũng có thể tự ý gây lỗi 500 hàng loạt ở production — một lỗ hổng DoS nghiêm trọng khác.\n\n---\n\n`GET orders /health/live` với `X-Chaos-Fault: 5xx` khi cờ tắt."
+                "description": "**Mục đích**: xác nhận khi `CHAOS_ALLOW_FAULT_INJECTION` TẮT (mặc định, trạng thái production), header `X-Chaos-Fault: 5xx` KHÔNG CÓ HIỆU LỰC — service trả lời bình thường, không bị ép lỗi.\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Fault: 5xx`.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`).\n\n**Vì sao chứng minh đúng bất biến 2 (an toàn)**: giống hệt vai trò bất biến 1 của spec 025 — cơ chế tiêm lỗi CHỦ ĐỘNG chỉ được hoạt động khi BẬT TƯỜNG MINH, nếu không, bất kỳ ai gửi 1 header đơn giản cũng có thể tự ý gây lỗi 500 hàng loạt ở production — một lỗ hổng DoS nghiêm trọng khác.\n\n---\n\n`GET orders /orders/{{unknownGuid}}` với `X-Chaos-Fault: 5xx` khi cờ tắt."
               },
               "event": [
                 {
@@ -11845,8 +11845,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 — không tiêm lỗi khi cờ tắt\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 — không tiêm lỗi khi cờ tắt\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "});"
                     ]
                   }
@@ -11873,16 +11873,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: xác nhận khi cờ BẬT, header `X-Chaos-Fault: 5xx` THỰC SỰ ép service trả lỗi `500` — đây là \"công cụ\" chính để tạo đủ lỗi tổng hợp làm cạn ngân sách tuần (FR-014), và lỗi được ném RA NGAY, không chạy tiếp các middleware/logic phía sau (để lỗi tiêm vào không vô tình kích hoạt tác dụng phụ khác).\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Fault: 5xx`.\n\n**Output kỳ vọng**: `500`.\n\n**Vì sao chứng minh đúng bất biến 3/FR-014**: đây là bằng chứng công tắc tiêm lỗi hoạt động đúng, là tiền đề để bước này (hoặc một request tương tự) được GỌI LẶP LẠI NHIỀU LẦN ở giai đoạn 27b nhằm tiêu hao đủ % ngân sách lỗi tuần của Orders.Api, kiểm chứng FR-014 (\"PHẢI có cách lặp lại được để tạo lỗi tổng hợp đủ làm cạn ngân sách\").\n\n---\n\nMỗi lần gửi đốt thêm ngân sách 5xx của Orders.Api. Ngân sách 1% số span tuần này — xem 27c bước 02 để biết cần gửi bao nhiêu lần."
+                "description": "**Mục đích**: xác nhận khi cờ BẬT, header `X-Chaos-Fault: 5xx` THỰC SỰ ép service trả lỗi `500` — đây là \"công cụ\" chính để tạo đủ lỗi tổng hợp làm cạn ngân sách tuần (FR-014), và lỗi được ném RA NGAY, không chạy tiếp các middleware/logic phía sau (để lỗi tiêm vào không vô tình kích hoạt tác dụng phụ khác).\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Fault: 5xx`.\n\n**Output kỳ vọng**: `500`.\n\n**Vì sao chứng minh đúng bất biến 3/FR-014**: đây là bằng chứng công tắc tiêm lỗi hoạt động đúng, là tiền đề để bước này (hoặc một request tương tự) được GỌI LẶP LẠI NHIỀU LẦN ở giai đoạn 27b nhằm tiêu hao đủ % ngân sách lỗi tuần của Orders.Api, kiểm chứng FR-014 (\"PHẢI có cách lặp lại được để tạo lỗi tổng hợp đủ làm cạn ngân sách\").\n\n---\n\nMỗi lần gửi đốt thêm ngân sách 5xx của Orders.Api. Ngân sách 1% số span tuần này — xem 27c bước 02 để biết cần gửi bao nhiêu lần."
               },
               "event": [
                 {
@@ -11933,7 +11933,7 @@
               ]
             },
             {
-              "name": "03 [cờ BẬT] Giá trị khác `5xx` (\"500\") → 200 (bất biến 4)",
+              "name": "03 [cờ BẬT] Giá trị khác `5xx` (\"500\") → 401 (bất biến 4)",
               "request": {
                 "method": "GET",
                 "header": [
@@ -11946,16 +11946,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: kiểm tra một giá trị header GẦN GIỐNG nhưng KHÔNG ĐÚNG contract (`\"500\"` thay vì `\"5xx\"`) — xác nhận cơ chế tiêm lỗi so khớp CHÍNH XÁC giá trị `5xx`, không phải \"bất kỳ giá trị nào trông giống lỗi server\".\n\n**Input**: `GET {{ordersUrl}}/health/live`, `X-Chaos-Fault: 500`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng bất biến 4 (mặt chặt chẽ của contract)**: nếu middleware so khớp lỏng lẻo (ví dụ `value.startsWith('5')`), giá trị `\"500\"` cũng sẽ bị hiểu nhầm thành lệnh tiêm lỗi — bước này xác nhận contract ĐÚNG CHỈ MỘT GIÁ TRỊ `5xx`, tránh kích hoạt nhầm bởi giá trị khác vô tình giống.\n\n---\n\nHeader gõ sai không âm thầm thành lỗi thật."
+                "description": "**Mục đích**: kiểm tra một giá trị header GẦN GIỐNG nhưng KHÔNG ĐÚNG contract (`\"500\"` thay vì `\"5xx\"`) — xác nhận cơ chế tiêm lỗi so khớp CHÍNH XÁC giá trị `5xx`, không phải \"bất kỳ giá trị nào trông giống lỗi server\".\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, `X-Chaos-Fault: 500`.\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`).\n\n**Vì sao chứng minh đúng bất biến 4 (mặt chặt chẽ của contract)**: nếu middleware so khớp lỏng lẻo (ví dụ `value.startsWith('5')`), giá trị `\"500\"` cũng sẽ bị hiểu nhầm thành lệnh tiêm lỗi — bước này xác nhận contract ĐÚNG CHỈ MỘT GIÁ TRỊ `5xx`, tránh kích hoạt nhầm bởi giá trị khác vô tình giống.\n\n---\n\nHeader gõ sai không âm thầm thành lỗi thật."
               },
               "event": [
                 {
@@ -11963,8 +11963,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200 — chỉ đúng giá trị 5xx mới có hiệu lực\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401 — chỉ đúng giá trị 5xx mới có hiệu lực\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "});"
                     ]
                   }
@@ -12294,16 +12294,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{gatewayUrl}}/health/live",
+                  "raw": "{{gatewayUrl}}/bff/products",
                   "host": [
                     "{{gatewayUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "bff",
+                    "products"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Gateway.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Gateway.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{gatewayUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Gateway.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Gateway.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{gatewayUrl}}/bff/products`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
               },
               "event": [
                 {
@@ -12333,16 +12333,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{bffUrl}}/health/live",
+                  "raw": "{{bffUrl}}/bff/products",
                   "host": [
                     "{{bffUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "bff",
+                    "products"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Bff.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Bff.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{bffUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Bff.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Bff.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{bffUrl}}/bff/products`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
               },
               "event": [
                 {
@@ -12372,16 +12372,15 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{productsUrl}}/health/live",
+                  "raw": "{{productsUrl}}/products",
                   "host": [
                     "{{productsUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "products"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Products.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Products.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{productsUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Products.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Products.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{productsUrl}}/products`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
               },
               "event": [
                 {
@@ -12411,16 +12410,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{basketsUrl}}/health/live",
+                  "raw": "{{basketsUrl}}/baskets/current",
                   "host": [
                     "{{basketsUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "baskets",
+                    "current"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Baskets.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Baskets.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{basketsUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Baskets.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Baskets.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{basketsUrl}}/baskets/current`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
               },
               "event": [
                 {
@@ -12450,16 +12449,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Orders.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Orders.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{ordersUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Orders.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Orders.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
               },
               "event": [
                 {
@@ -12489,16 +12488,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{partiesUrl}}/health/live",
+                  "raw": "{{partiesUrl}}/parties/{{unknownGuid}}",
                   "host": [
                     "{{partiesUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "parties",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Parties.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Parties.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{partiesUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Parties.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Parties.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{partiesUrl}}/parties/{{unknownGuid}}`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
               },
               "event": [
                 {
@@ -12528,16 +12527,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{identityUrl}}/health/live",
+                  "raw": "{{identityUrl}}/.well-known/openid-configuration",
                   "host": [
                     "{{identityUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    ".well-known",
+                    "openid-configuration"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Identity.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{identityUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Identity.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
               },
               "event": [
                 {
@@ -12711,16 +12710,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{gatewayUrl}}/health/live",
+                  "raw": "{{gatewayUrl}}/bff/products",
                   "host": [
                     "{{gatewayUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "bff",
+                    "products"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Gateway.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{gatewayUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Gateway.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{gatewayUrl}}/bff/products`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
               },
               "event": [
                 {
@@ -12750,16 +12749,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{bffUrl}}/health/live",
+                  "raw": "{{bffUrl}}/bff/products",
                   "host": [
                     "{{bffUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "bff",
+                    "products"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Bff.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{bffUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Bff.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{bffUrl}}/bff/products`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
               },
               "event": [
                 {
@@ -12789,16 +12788,15 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{productsUrl}}/health/live",
+                  "raw": "{{productsUrl}}/products",
                   "host": [
                     "{{productsUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "products"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Products.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{productsUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Products.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{productsUrl}}/products`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
               },
               "event": [
                 {
@@ -12828,16 +12826,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{basketsUrl}}/health/live",
+                  "raw": "{{basketsUrl}}/baskets/current",
                   "host": [
                     "{{basketsUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "baskets",
+                    "current"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Baskets.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{basketsUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Baskets.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{basketsUrl}}/baskets/current`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
               },
               "event": [
                 {
@@ -12867,16 +12865,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Orders.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{ordersUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Orders.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
               },
               "event": [
                 {
@@ -12906,16 +12904,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{partiesUrl}}/health/live",
+                  "raw": "{{partiesUrl}}/parties/{{unknownGuid}}",
                   "host": [
                     "{{partiesUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "parties",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Parties.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{partiesUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Parties.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{partiesUrl}}/parties/{{unknownGuid}}`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
               },
               "event": [
                 {
@@ -12945,16 +12943,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{identityUrl}}/health/live",
+                  "raw": "{{identityUrl}}/.well-known/openid-configuration",
                   "host": [
                     "{{identityUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    ".well-known",
+                    "openid-configuration"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{identityUrl}}/health/live`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
               },
               "event": [
                 {
@@ -13292,16 +13290,16 @@
                   "type": "noauth"
                 },
                 "url": {
-                  "raw": "{{ordersUrl}}/health/live",
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
                   "host": [
                     "{{ordersUrl}}"
                   ],
                   "path": [
-                    "health",
-                    "live"
+                    "orders",
+                    "{{unknownGuid}}"
                   ]
                 },
-                "description": "**Mục đích**: tạo một span chậm (~2,5 giây) ở Orders.Api để panel \"Latency p95 theo phút theo service\" và bảng SLO vượt ngưỡng.\n\n**Input**: `GET {{ordersUrl}}/health/live`, header `X-Chaos-Latency-Ms: 2500`. Cần `CHAOS_ALLOW_LATENCY_INJECTION=true` và đã tạo lại container (spec 025).\n\n**Output kỳ vọng**: `200` sau ~2,5 giây (cờ TẮT thì trả nhanh, header bị bỏ qua).\n\n**FR (spec 030)**: FR-003."
+                "description": "**Mục đích**: tạo một span chậm (~2,5 giây) ở Orders.Api để panel \"Latency p95 theo phút theo service\" và bảng SLO vượt ngưỡng.\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, header `X-Chaos-Latency-Ms: 2500`. Cần `CHAOS_ALLOW_LATENCY_INJECTION=true` và đã tạo lại container (spec 025).\n\n**Output kỳ vọng**: `401` (route nghiệp vụ cần token; spec 033 thay `/health/live`) sau ~2,5 giây (cờ TẮT thì trả nhanh, header bị bỏ qua).\n\n**FR (spec 030)**: FR-003."
               },
               "event": [
                 {
@@ -13309,8 +13307,8 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "pm.test(\"200\", function () {",
-                      "    pm.response.to.have.status(200);",
+                      "pm.test(\"401\", function () {",
+                      "    pm.response.to.have.status(401);",
                       "});"
                     ]
                   }
@@ -14692,6 +14690,209 @@
                     "type": "text/javascript",
                     "exec": [
                       "pm.test(\"404 — party không tồn tại, nhưng request đã tới parties\", function () { pm.response.to.have.status(404); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "33 - Health: loại khỏi ngân sách",
+      "description": "Spec 033: span có đường dẫn bắt đầu bằng `/health` không tính vào công thức ngân sách lỗi. `33a` tạo request nghiệp vụ; `33b` là truy vấn đọc để đối chiếu số span health và nghiệp vụ, và tín hiệu health lỗi (rule `health-failure`).",
+      "item": [
+        {
+          "name": "33a - Tạo request nghiệp vụ (chạy theo vòng)",
+          "description": "Request nghiệp vụ không mang header tiêm lỗi, để mẫu số ngân sách chỉ gồm request nghiệp vụ.",
+          "item": [
+            {
+              "name": "01 Products — danh sách sản phẩm",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{productsUrl}}/products",
+                  "host": [
+                    "{{productsUrl}}"
+                  ],
+                  "path": [
+                    "products"
+                  ]
+                },
+                "description": "**Mục đích**: tạo một span nghiệp vụ (đường dẫn không bắt đầu bằng `/health`) để mẫu số ngân sách có dữ liệu thật, không phải health check.\n\n**Input**: `GET {{productsUrl}}/products`, không header tiêm lỗi. Route cần token nên trả 401.\n\n**Output kỳ vọng**: `401`.\n\n**FR (spec 033)**: FR-001, FR-002, SC-001."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"401 — request nghiệp vụ tới service\", function () { pm.response.to.have.status(401); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Orders — đơn không tồn tại (cần token)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{ordersUrl}}/orders/{{unknownGuid}}",
+                  "host": [
+                    "{{ordersUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{unknownGuid}}"
+                  ]
+                },
+                "description": "**Mục đích**: tạo một span nghiệp vụ (đường dẫn không bắt đầu bằng `/health`) để mẫu số ngân sách có dữ liệu thật, không phải health check.\n\n**Input**: `GET {{ordersUrl}}/orders/{{unknownGuid}}`, không header tiêm lỗi. Route cần token nên trả 401.\n\n**Output kỳ vọng**: `401`.\n\n**FR (spec 033)**: FR-001, FR-002, SC-001."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"401 — request nghiệp vụ tới service\", function () { pm.response.to.have.status(401); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "03 Identity — cấu hình OpenID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "noauth"
+                },
+                "url": {
+                  "raw": "{{identityUrl}}/.well-known/openid-configuration",
+                  "host": [
+                    "{{identityUrl}}"
+                  ],
+                  "path": [
+                    ".well-known",
+                    "openid-configuration"
+                  ]
+                },
+                "description": "**Mục đích**: tạo một span nghiệp vụ (đường dẫn không bắt đầu bằng `/health`) để mẫu số ngân sách có dữ liệu thật, không phải health check.\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration`, không header tiêm lỗi. Route công khai.\n\n**Output kỳ vọng**: `200`.\n\n**FR (spec 033)**: FR-001, FR-002, SC-001."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — request nghiệp vụ tới service\", function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "33b - Đối chiếu span health và nghiệp vụ (chạy một lần)",
+          "description": "Truy vấn đọc, không tạo dữ liệu. Đối chiếu số trên dashboard với Elasticsearch.",
+          "item": [
+            {
+              "name": "01 Số span health và nghiệp vụ theo service — 1 giờ qua (FR-001)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= NOW() - 1 hour\\n| EVAL service = resource.attributes.service.name, is_health = COALESCE(attributes.url.path, \\\"\\\") LIKE \\\"/health*\\\"\\n| STATS tong_span = COUNT(*), span_health = SUM(CASE(is_health, 1, 0)), span_nghiep_vu = SUM(CASE(is_health, 0, 1)) BY service\\n| SORT service\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: cho thấy health check chiếm phần lớn span nhưng không còn nằm trong mẫu số ngân sách (`span_nghiep_vu` mới là mẫu số).\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), không tham số.\n\n**Output kỳ vọng**: `200`; mỗi service có cột `tong_span`, `span_health`, `span_nghiep_vu`.\n\n**FR (spec 033)**: FR-001, SC-001."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"có cột span_nghiep_vu\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('span_nghiep_vu');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Health lỗi 5xx theo service — 5 phút qua (FR-006)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= NOW() - 5 minutes AND COALESCE(attributes.url.path, \\\"\\\") LIKE \\\"/health*\\\"\\n| EVAL service = resource.attributes.service.name, is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| STATS health_spans = COUNT(*), health_5xx = SUM(is_5xx) BY service\\n| EVAL health_5xx_pct = ROUND(TO_DOUBLE(health_5xx) / health_spans * 100.0, 2)\\n| SORT service\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: cùng điều kiện với rule `health-failure` và panel \"Health lỗi theo service\" (`health_5xx_pct >= 50` thì rule bắn).\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL).\n\n**Output kỳ vọng**: `200`; có cột `health_5xx_pct` cho service có span health trong 5 phút.\n\n**FR (spec 033)**: FR-006, FR-007."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"có cột health_5xx_pct\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('health_5xx_pct');",
+                      "});"
                     ]
                   }
                 }

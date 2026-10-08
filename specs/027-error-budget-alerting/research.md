@@ -53,7 +53,7 @@ dùng chung dữ liệu traces mà dashboard 021 đã dùng nên số liệu nh�
 Ngưỡng độ trễ theo từng service (CASE theo `resource.attributes.service.name`) phải khớp đúng khối
 `slos.latency` của manifest — được bảo vệ bằng test ở Quyết định 8.
 
-Tập span được đếm giống hệt dashboard 021 (mọi span của service trong index traces, không lọc thêm),
+Tập span được đếm giống hệt dashboard 021 (mọi span của service trong index traces; từ spec 033 loại span có đường dẫn bắt đầu bằng `/health`),
 để con số trên rule và trên dashboard không bao giờ lệch nhau. Đây là cùng một xấp xỉ mà hợp đồng
 `specs/021-declare-service-slos/contracts/continuous-measurement-contract.md` đã chấp nhận.
 

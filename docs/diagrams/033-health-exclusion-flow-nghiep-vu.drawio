@@ -1,0 +1,22 @@
+<mxfile host="65bd71144e">
+    <diagram id="health-exclusion-flow" name="Luồng nghiệp vụ — kiểm tra sức khoẻ không tính vào ngân sách, chỉ yêu cầu thật mới tính">
+        <mxGraphModel dx="1443" dy="468" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1350" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" value="Luồng nghiệp vụ — bộ phận khởi động lại: kiểm tra sức khoẻ chậm lần đầu không làm hao ngân sách; yêu cầu thật xấu mới tính" vertex="1"><mxGeometry height="26" width="1300" x="30" y="10" as="geometry"/></mxCell>
+                <mxCell id="b0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Bộ phận khởi động lại&#xa;lượt kiểm tra sức khoẻ đầu tiên chậm" vertex="1"><mxGeometry height="90" width="300" x="30" y="80" as="geometry"/></mxCell>
+                <mxCell id="b1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="Lượt kiểm tra sức khoẻ&#xa;bị bỏ khỏi công thức ngân sách" vertex="1"><mxGeometry height="90" width="300" x="400" y="80" as="geometry"/></mxCell>
+                <mxCell id="b2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Ngân sách giữ nguyên&#xa;không cảnh báo vì kiểm tra sức khoẻ" vertex="1"><mxGeometry height="90" width="300" x="770" y="80" as="geometry"/></mxCell>
+                <mxCell id="b3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Khách gửi yêu cầu thật&#xa;bị lỗi hoặc chậm" vertex="1"><mxGeometry height="90" width="300" x="30" y="250" as="geometry"/></mxCell>
+                <mxCell id="b4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="Yêu cầu thật tính vào ngân sách&#xa;mốc 50% / 75% / 100% / cạn" vertex="1"><mxGeometry height="90" width="300" x="400" y="250" as="geometry"/></mxCell>
+                <mxCell id="b5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="Bộ phận không sẵn sàng&#xa;≥ 50% lượt kiểm tra sức khoẻ lỗi trong 5 phút" vertex="1"><mxGeometry height="90" width="300" x="30" y="420" as="geometry"/></mxCell>
+                <mxCell id="b6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="Cảnh báo riêng &quot;health lỗi&quot;&#xa;+ ô &quot;Health lỗi theo service&quot; trên màn hình Xử lý sự cố" vertex="1"><mxGeometry height="90" width="300" x="400" y="420" as="geometry"/></mxCell>
+                <mxCell id="e0" parent="1" source="b0" target="b1" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e1" parent="1" source="b1" target="b2" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e2" parent="1" source="b3" target="b4" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e3" parent="1" source="b5" target="b6" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

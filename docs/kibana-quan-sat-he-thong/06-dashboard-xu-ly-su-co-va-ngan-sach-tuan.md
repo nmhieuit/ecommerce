@@ -26,6 +26,9 @@ Hợp đồng đo lường liên tục của spec [`021-declare-service-slos`](.
 Section **Tình trạng SLO**:
 - **Bảng SLO — 7 service** và ô Markdown **Ngưỡng SLO** (Error-rate, p95, p99 thực tế so với ngưỡng đã khai báo; xem mục "Quyết định đã khoá lúc build" bên dưới).
 - **Phát hiện nhanh — service vượt SLO trong khoảng thời gian đã chọn**: alert của rule `incident-fast-detection` (spec 028) trong khoảng thời gian đã chọn; cột `status` phân biệt `active` với `recovered`.
+- **Health lỗi theo service** (spec 033): alert của rule `health-failure` (từ 50% span health của service trả 5xx trong 5 phút), nằm cạnh bảng Phát hiện nhanh. Health là tín hiệu "service có sẵn sàng không", tách khỏi ngân sách.
+
+> **Spec 033**: các panel đọc traces của dashboard này (và mọi panel ES|QL của dashboard Ngân sách lỗi tuần) **không tính span có đường dẫn bắt đầu bằng `/health`** (health check của Docker). Ngân sách chỉ đo request nghiệp vụ. Chi tiết: [`specs/033-exclude-health-spans/`](../../specs/033-exclude-health-spans/spec.md).
 
 Section **Đào sâu lỗi**:
 - **5xx theo phút theo service**, **Latency p95 theo phút theo service**, **Traffic + 401/403 theo phút theo service** (thay panel "Tổng 401 + 403" cũ).

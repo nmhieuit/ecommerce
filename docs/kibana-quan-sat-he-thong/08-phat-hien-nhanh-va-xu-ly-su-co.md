@@ -86,6 +86,8 @@ ngắn (ví dụ 15 phút) để chỉ thấy alert gần đây. Điều kiện 
 
 ## Nhiễu khởi động nguội
 
+> **Spec 033**: rule `incident-fast-detection` đã loại span có đường dẫn bắt đầu bằng `/health` (cùng điều kiện với rule ngân sách). Health check chậm lúc khởi động nguội không còn làm rule bắn; phần nhiễu bên dưới là số đo trước thay đổi này, nay chỉ còn từ request nghiệp vụ. Health lỗi có rule riêng `health-failure`.
+
 `scripts/incident-drill.ps1` tạo lại **cả 7 container** lúc tiêm lỗi, để uptime không lộ service đích.
 Mọi service vừa khởi động lại đều chậm một lúc. Số đo thật của `Orders.Api` (không bị tiêm) sau các lần
 tạo lại lúc 10:28, 10:38 và 10:44 ngày 2026-10-02:

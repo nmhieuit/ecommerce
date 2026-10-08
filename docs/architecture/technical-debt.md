@@ -1,4 +1,4 @@
-# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-032
+# Technical Debt — ghi chú/khám phá/giới hạn của toàn bộ spec 001-033
 
 *Đối tượng đọc: kỹ sư phần mềm / software architect. File này gom lại mọi "lưu ý hay khám phá" (blocker
 giữa chừng, bug thật tìm được khi triển khai/xác thực, giới hạn phạm vi đã biết, amendment đính chính)
@@ -533,3 +533,5 @@ nhau giữa nhiều spec thành 1 mục duy nhất.*
   Disable/Enable mới đặt lại.
 
 - **[030](030_Architect_hai%20dashboard%20xử%20lý%20sự%20cố%20và%20ngân%20sách%20tuần.md)** — Đính chính so với kế hoạch lúc viết: kế hoạch (`plan.md`/`research.md`) giả định bộ chọn tuần lấy danh sách từ dữ liệu, link bằng panel Links và link trace sang Kibana APM; cả ba bị thay lúc triển khai sau khi kiểm chứng V1–V8 trên Kibana thật (xem `specs/030-incident-and-weekly-dashboards/research.md` "Kết quả xác minh"). Lúc `/speckit-plan` còn nói log "không có correlation id" — thực tế `CorrelationIdMiddleware` đã đẩy id vào log và Elasticsearch có `attributes.CorrelationId` (chỉ chưa có log nào nằm trong request lúc đó).
+
+- **[033](033_Architect_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md)** — Giới hạn của việc loại span `/health*` khỏi ngân sách: (1) health **chậm** (không lỗi) không báo ở đâu, `health-failure` chỉ đếm 5xx; (2) tiền tố `/health` loại luôn endpoint nghiệp vụ nào trùng tiền tố (hiện không có); (3) `LIKE` phân biệt hoa thường (`/HEALTH` không bị loại); (4) phụ thuộc trường `attributes.url.path` của span Server (đổi cách đặt tên trường là điều kiện loại thành vô tác dụng, test chỉ canh chuỗi); (5) mẫu số nghiệp vụ nhỏ ở đầu tuần: vài request chậm/lỗi làm phần trăm vọt trên 100% và bắn rule (đo thật ở QA_Debt 033); (6) KQL Lens phải viết `not attributes.url.path : /health*` không dấu nháy, có nháy thì `*` thành chuỗi chữ và không loại gì. Đóng ghi chú 030 về nhiễu health: health không còn vào công thức.

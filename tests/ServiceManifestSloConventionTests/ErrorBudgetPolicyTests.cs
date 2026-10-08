@@ -5,7 +5,7 @@ namespace ServiceManifestSloConventionTests;
 /// <summary>
 /// User Story 1 (spec 027, SCRUM-35; chu kỳ tuần và tỷ lệ 1% theo spec 029): mọi service-manifest.yaml
 /// mang khối `error-budget-policy` định nghĩa ngân sách lỗi bằng con số —
-/// specs/029-error-budget-weekly/contracts/error-budget-policy-manifest-shape.md bất biến 1–7.
+/// specs/029-error-budget-weekly/contracts/error-budget-policy-manifest-shape.md bất biến 1–7, 10 (bất biến 10 thêm bởi spec 033).
 /// </summary>
 public class ErrorBudgetPolicyTests
 {
@@ -21,7 +21,7 @@ public class ErrorBudgetPolicyTests
 
     /// <summary>Khoá cấp 1 của khối chính sách theo contract, đã sắp xếp theo thứ tự ordinal.</summary>
     private static readonly string[] ExpectedPolicyKeys =
-        ["alert-thresholds", "budgets", "exhausted-when", "on-exhausted", "recovery", "timezone", "window"];
+        ["alert-thresholds", "budgets", "excluded-path-prefixes", "exhausted-when", "on-exhausted", "recovery", "timezone", "window"];
 
     /// <summary>Khoá của mỗi ngân sách theo contract, đã sắp xếp theo thứ tự ordinal.</summary>
     private static readonly string[] ExpectedBudgetKeys = ["allowed-bad-ratio", "bad-request"];
@@ -109,6 +109,29 @@ public class ErrorBudgetPolicyTests
         // Assert.Equal(kỳ vọng, thực tế): xanh khi cửa sổ và múi giờ đúng nguyên văn contract.
         Assert.Equal("calendar-week", policy.Window);
         Assert.Equal("UTC+07:00", policy.Timezone);
+    }
+
+    /// <summary>
+    /// Kiểm tra: `excluded-path-prefixes` đúng `[/health]`, giống hệt nhau ở cả 7 manifest.
+    /// Lý do: FR-007 (spec 033) — health check của Docker (`curl` mỗi 5 giây) chiếm toàn bộ mẫu số ngân sách
+    /// nếu không bị loại; rule và panel loại span theo đúng tiền tố này, nên tiền tố phải có một nguồn duy
+    /// nhất và đồng nhất giữa các service (một service khác tiền tố là rule không thể khớp cả 7 manifest).
+    /// Task nguồn: spec 033 (loại span health khỏi ngân sách lỗi) — FR-007, US4 (bất biến 10).
+    /// </summary>
+    [Theory]
+    [InlineData("parties")]
+    [InlineData("products")]
+    [InlineData("baskets")]
+    [InlineData("orders")]
+    [InlineData("identity")]
+    [InlineData("gateway")]
+    [InlineData("bff")]
+    public void EveryService_ExcludesTheHealthPathPrefixFromTheBudget(string serviceDirectoryName)
+    {
+        var policy = RequirePolicy(serviceDirectoryName);
+
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi danh sách tiền tố bị loại đúng nguyên văn contract.
+        Assert.Equal(["/health"], policy.ExcludedPathPrefixes ?? []);
     }
 
     /// <summary>

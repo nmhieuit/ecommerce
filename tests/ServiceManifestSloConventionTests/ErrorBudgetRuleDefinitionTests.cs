@@ -256,6 +256,86 @@ public partial class ErrorBudgetRuleDefinitionTests
         Assert.Contains($"TO_DOUBLE(bad_p99) / spans > {Format(AllowedBadRatios["latency-p99"])}", body, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Kiểm tra: ES|QL của mỗi rule trong 4 rule 027 (`error-budget-50/75/100`, `error-budget-frozen`) có
+    /// **đúng một** điều kiện loại `NOT (COALESCE(attributes.url.path, "") LIKE "<tiền tố>*")` cho mỗi tiền tố
+    /// trong `error-budget-policy.excluded-path-prefixes` của manifest, và điều kiện đó đứng trước mọi `EVAL`.
+    /// Lý do: FR-001/FR-002 (spec 033) — health check của Docker chiếm toàn bộ mẫu số ngân sách và một span
+    /// health chậm lúc khởi động nguội làm ngân sách vọt dù chưa có request nghiệp vụ. `COALESCE` là bắt buộc:
+    /// thiếu nó, `NOT (null LIKE …)` loại luôn các span không có đường dẫn (span Client).
+    /// Task nguồn: spec 033 (loại span health khỏi ngân sách lỗi) — FR-001, FR-002, US1 (bất biến 4, 5).
+    /// </summary>
+    [Theory]
+    [InlineData("error-budget-50")]
+    [InlineData("error-budget-75")]
+    [InlineData("error-budget-100")]
+    [InlineData("error-budget-frozen")]
+    public void BudgetRule_ExcludesTheManifestDeclaredPathPrefixes_BeforeAnyCalculation(string ruleName)
+    {
+        AssertExcludesPathPrefixesBeforeAnyCalculation(RequireRule(ruleName).Esql, ruleName);
+    }
+
+    /// <summary>
+    /// Kiểm tra: rule `error-budget-frozen` vẫn đọc cả index sự kiện `slo-error-budget-events` cùng traces
+    /// (`FROM traces-generic.otel-default*, slo-error-budget-events METADATA _index`).
+    /// Lý do: contract bất biến 6 (spec 033) — điều kiện loại span health chỉ được cắt span; sự kiện "cạn" không có
+    /// `attributes.url.path` nên `COALESCE` giữ nguyên chúng, nhưng nếu ai đó bỏ index sự kiện khỏi `FROM` thì
+    /// trạng thái đóng băng biến mất.
+    /// Task nguồn: spec 033 (loại span health khỏi ngân sách lỗi) — FR-003, US1 (bất biến 6).
+    /// </summary>
+    [Fact]
+    public void FrozenRule_StillReadsTheExhaustionEvents()
+    {
+        var firstLine = RequireRule("error-budget-frozen").Esql.Split(NewLine)[0].Trim();
+
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi dòng FROM vẫn đọc cả traces lẫn index sự kiện.
+        Assert.Equal("FROM traces-generic.otel-default*, slo-error-budget-events METADATA _index", firstLine);
+    }
+
+    private const char NewLine = '\n';
+
+    /// <summary>Danh sách điều kiện loại mong đợi, dựng từ tiền tố khai báo trong manifest (không hard-code).</summary>
+    internal static IReadOnlyList<string> ExpectedExclusionConditions()
+    {
+        var prefixSets = ServiceManifestFixture.DiscoverAll(ServiceManifestFixture.LocateRepositoryRoot()).Values
+            .Select(m => (IReadOnlyList<string>)(m.Document.ErrorBudgetPolicy?.ExcludedPathPrefixes ?? []))
+            .ToList();
+
+        // Assert.NotEmpty(tập hợp): xanh khi có manifest để đọc.
+        Assert.NotEmpty(prefixSets);
+
+        // Assert.All(tập hợp, kiểm tra): xanh khi mọi manifest khai cùng danh sách tiền tố (bất biến 10 của contract manifest).
+        Assert.All(prefixSets, set => Assert.Equal(prefixSets[0], set));
+
+        // Assert.NotEmpty(tập hợp): xanh khi manifest thực sự khai tiền tố.
+        Assert.NotEmpty(prefixSets[0]);
+        return prefixSets[0].Select(p => $"NOT (COALESCE(attributes.url.path, \"\") LIKE \"{p}*\")").ToList();
+    }
+
+    /// <summary>Mỗi điều kiện loại xuất hiện đúng một lần và trước lệnh `EVAL` đầu tiên của truy vấn.</summary>
+    internal static void AssertExcludesPathPrefixesBeforeAnyCalculation(string esql, string ruleName)
+    {
+        var normalized = Regex.Replace(esql, @"\s+", " ");
+        var firstEval = normalized.IndexOf("| EVAL ", StringComparison.Ordinal);
+
+        // Assert.True(điều kiện, thông báo): xanh khi truy vấn có ít nhất một lệnh EVAL (mốc để so thứ tự).
+        Assert.True(firstEval >= 0, $"'{ruleName}': ES|QL has no '| EVAL'.");
+
+        foreach (var condition in ExpectedExclusionConditions())
+        {
+            var first = normalized.IndexOf(condition, StringComparison.Ordinal);
+
+            // Assert.True(điều kiện, thông báo): xanh khi điều kiện loại có mặt; đỏ kèm tên rule và điều kiện thiếu.
+            Assert.True(first >= 0, $"'{ruleName}': missing exclusion condition '{condition}'.");
+
+            // Assert.Equal(kỳ vọng, thực tế): xanh khi điều kiện chỉ xuất hiện một lần.
+            Assert.Equal(first, normalized.LastIndexOf(condition, StringComparison.Ordinal));
+
+            // Assert.True(điều kiện, thông báo): xanh khi điều kiện loại đứng trước mọi phép tính (không cắt sau khi đã đếm).
+            Assert.True(first < firstEval, $"'{ruleName}': exclusion condition must come before the first EVAL.");
+        }
+    }
+
     private static string Format(decimal ratio) => ratio.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>
