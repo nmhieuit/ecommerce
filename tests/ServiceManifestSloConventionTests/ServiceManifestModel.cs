@@ -82,6 +82,13 @@ public sealed class ErrorBudgetPolicySection
     [YamlMember(Alias = "timezone")]
     public string? Timezone { get; set; }
 
+    /// <summary>
+    /// Tiền tố đường dẫn bị loại khỏi ngân sách (spec 033): span có đường dẫn bắt đầu bằng một tiền tố ở đây
+    /// không tính vào mẫu số lẫn span xấu. Đọc nguyên văn để test so với rule và manifest khác.
+    /// </summary>
+    [YamlMember(Alias = "excluded-path-prefixes")]
+    public List<string>? ExcludedPathPrefixes { get; set; }
+
     /// <summary>Keyed by budget name, so an extra or missing budget is visible to the tests.</summary>
     [YamlMember(Alias = "budgets")]
     public Dictionary<string, ErrorBudgetSection>? Budgets { get; set; }

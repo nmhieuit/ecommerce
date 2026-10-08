@@ -78,7 +78,7 @@
 
 - Q: Tên folder Postman 029? → A: `29 - Ngân sách lỗi theo tuần: tiêm 5xx 7 service`.
 - Q: Folder 29 chứa gì? → A: Hai phần:
-  - 7 request 5xx, mỗi service một request `GET {{<service>Url}}/health/live` kèm `X-Chaos-Fault: 5xx`, kỳ vọng `500` khi cờ bật, chạy theo vòng bằng newman;
+  - 7 request 5xx, mỗi service một request `GET {{<service>Url}}<route nghiệp vụ>` (ban đầu `/health/live`; spec 033 đổi vì health không tính vào ngân sách) kèm `X-Chaos-Fault: 5xx`, kỳ vọng `500` khi cờ bật, chạy theo vòng bằng newman;
   - các truy vấn đọc mức tiêu hao tuần này, alert đang hoạt động và service đang cạn cho cả 7 service (kiểu 27c), chạy riêng, không theo vòng.
 
   (Người lập kế hoạch đã đính chính: folder 27 hiện chỉ gọi `Orders.Api`, không phải 7 service như mô tả ở phiên `/speckit-specify`.)

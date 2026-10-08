@@ -13,6 +13,8 @@ trên một Kibana khác (máy mới, môi trường CI, đồng nghiệp khác)
 Hướng dẫn dùng từng dashboard: [`06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md`](../06-dashboard-xu-ly-su-co-va-ngan-sach-tuan.md).
 Hợp đồng bất biến của hai file: [`specs/030-incident-and-weekly-dashboards/contracts/dashboards-contract.md`](../../../specs/030-incident-and-weekly-dashboards/contracts/dashboards-contract.md).
 
+Từ spec 033, truy vấn ES|QL của dashboard Ngân sách lỗi tuần và 6 panel Lens đọc traces của dashboard Xử lý sự cố **không tính span có đường dẫn bắt đầu bằng `/health`**; dashboard Xử lý sự cố có thêm panel `Health lỗi theo service`.
+
 Hai file **độc lập**: import theo thứ tự nào cũng được. Mỗi dashboard có một ô Markdown ở đầu trang chứa link sang dashboard
 kia theo **id cố định ở bảng trên**, nên link chỉ bấm được khi cả hai đã được import (id được giữ nguyên khi import vào Kibana sạch).
 

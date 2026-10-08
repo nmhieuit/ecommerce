@@ -1,5 +1,7 @@
 # Kiến trúc: Diễn tập chaos engineering — tiêm độ trễ để kiểm chứng resilience
 
+> **Cập nhật spec 033**: rule và panel ES|QL/Lens loại span `/health*` bằng `COALESCE(attributes.url.path, "")`; khoá `excluded-path-prefixes` trong manifest. Xem [033 Architect](033_Architect_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md).
+
 > **Cập nhật (spec 031, 2026-10-06)**: kịch bản kill-pod/Kubernetes đã gỡ; việc luyện "service chết" nay do nhóm 8 của [spec 031](../../specs/031-error-group-catalog/spec.md) trên Docker Compose. Tài liệu này chỉ còn phần tiêm độ trễ và bản ghi kết quả.
 
 *Đối tượng đọc: kỹ sư phần mềm / software architect gia nhập dự án, cần hiểu hệ thống hoạt động ra

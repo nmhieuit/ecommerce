@@ -159,6 +159,8 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   khiến cảnh báo bắn cả cho bộ phận không bị lỗi. Hướng dẫn nói rõ từng điểm này để người luyện không kết
   luận sai.
 
+- **[033](033_PO_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md)** — Ngân sách lỗi giờ chỉ tính yêu cầu thật của khách; các lượt kiểm tra sức khoẻ tự động (5 giây một lần) không còn làm hao ngân sách khi vừa khởi động lại. Bộ phận không sẵn sàng có cảnh báo riêng và một ô trên màn hình Xử lý sự cố, đã thử thật bằng cách tắt cơ sở dữ liệu của một bộ phận.
+
 ## 2. Giới hạn hiện tại
 
 - **[001](001_PO_dựng%20khung%204%20dịch%20vụ.md)** — Đây thuần tuý là bước dựng khung — 4 khối chỉ
@@ -330,3 +332,5 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   kiểu làm bộ phận biến mất (đứt mạng, bộ phận chết) không hiện đỏ trên màn hình theo dõi mà chỉ lộ qua
   bộ phận gọi nó. Khi luyện nhiều lần liên tiếp, cảnh báo của lần trước còn bật nên không đo riêng được thời
   gian phát hiện của từng nhóm; muốn đo phải chờ các cảnh báo tắt hẳn giữa hai lần.
+
+- **[033](033_PO_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md)** — Khi mới có ít yêu cầu thật, vài yêu cầu chậm hoặc lỗi đủ làm phần trăm ngân sách vọt cao và bật cảnh báo. Kiểm tra sức khoẻ chỉ chậm (không lỗi) không được báo ở đâu. Bộ phận chưa có yêu cầu thật không hiện dòng trong bảng ngân sách.

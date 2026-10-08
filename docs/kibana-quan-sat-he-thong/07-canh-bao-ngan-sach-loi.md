@@ -35,6 +35,7 @@ Mọi rule mốc và bảng "mức tiêu hao" trên dashboard dùng **cùng mộ
 - `allowed = CASE(budget == "availability", 0.01, ...)`: tỷ lệ request xấu cho phép, không có nhánh
   mặc định.
 - `WHERE consumed_pct >= N`: đúng một lần, `N` là mốc của rule.
+- `WHERE NOT (COALESCE(attributes.url.path, "") LIKE "<tiền tố>*")`: đúng một lần cho mỗi tiền tố trong `error-budget-policy.excluded-path-prefixes` của manifest (hiện `/health`), đứng **trước** lệnh `EVAL` đầu tiên (spec 033). `COALESCE` là bắt buộc: thiếu nó, `NOT (null LIKE …)` loại luôn span không có đường dẫn. `LIKE` phân biệt hoa thường. Rule `error-budget-frozen` vẫn đọc cả index `slo-error-budget-events`.
 - `WHERE @timestamp >= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours`: đúng một lần — đầu tuần giờ Việt
   Nam. ES|QL làm tròn tuần bắt đầu từ thứ Hai; biểu thức đã kiểm chứng với 4 thời điểm quanh ranh giới
   thứ Hai 00:00 giờ Việt Nam (`specs/029-error-budget-weekly/research.md` V1).

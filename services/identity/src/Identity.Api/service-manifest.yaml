@@ -43,6 +43,8 @@ error-budget-policy:
   # (docs/kibana-quan-sat-he-thong/07-canh-bao-ngan-sach-loi.md).
   window: calendar-week
   timezone: UTC+07:00
+  # Spec 033: span health check (đường dẫn bắt đầu bằng /health) không tính vào ngân sách; rule và panel dùng đúng tiền tố này.
+  excluded-path-prefixes: [/health]
   budgets:
     availability:
       bad-request: http-5xx

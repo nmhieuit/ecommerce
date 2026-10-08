@@ -42,7 +42,8 @@ nhóm "Ngân sách lỗi tuần này" ở trên cùng.
 2. Gửi lỗi tổng hợp theo từng đợt — mỗi đợt khoảng 1/4 lượng cần thiết — tới Orders.Api (port 5041):
 
    ```powershell
-   1..$batch | ForEach-Object { curl.exe -s -o NUL -H "X-Chaos-Fault: 5xx" http://localhost:5041/health/live }
+   1..$batch | ForEach-Object { curl.exe -s -o NUL -H "X-Chaos-Fault: 5xx" http://localhost:5041/orders/00000000-0000-4000-8000-000000000000 }
+   # spec 033: tiêm vào route nghiệp vụ; span /health* không tính vào ngân sách nên tiêm vào health không đốt ngân sách
    ```
 
 3. Sau mỗi đợt, chờ tối đa 5 phút và xem dashboard.

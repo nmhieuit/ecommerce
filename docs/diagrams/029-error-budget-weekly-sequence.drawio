@@ -25,7 +25,7 @@
                 <mxCell id="r1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="1. Cờ CHAOS_ALLOW_FAULT_INJECTION đã bật trên 7 container;&#xa;index sự kiện tạo lại sạch (bỏ sự kiện của chế độ tháng)" vertex="1">
                     <mxGeometry height="50" width="460" x="30" y="140" as="geometry"/>
                 </mxCell>
-                <mxCell id="r2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="2. newman chạy 29a theo vòng: mỗi vòng 7× GET /health/live&#xa;+ X-Chaos-Fault: 5xx → 500 (đợt 1: 16 vòng, 112/112)" vertex="1">
+                <mxCell id="r2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="2. newman chạy 29a theo vòng: mỗi vòng 7× GET route nghiệp vụ (spec 033)&#xa;+ X-Chaos-Fault: 5xx → 500 (đợt 1: 16 vòng, 112/112)" vertex="1">
                     <mxGeometry height="50" width="460" x="270" y="210" as="geometry"/>
                 </mxCell>
                 <mxCell id="r3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=6;" value="3. Span 500 tới Elasticsearch; 29b bước 01 đọc mức tiêu hao&#xa;từ thứ Hai 00:00 giờ VN, tỷ lệ 1% — 6 service ≈ 51%" vertex="1">

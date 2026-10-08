@@ -1,4 +1,4 @@
-# QA Debt — phát hiện và giới hạn khi rà soát chất lượng happy-case (001-032)
+# QA Debt — phát hiện và giới hạn khi rà soát chất lượng happy-case (001-033)
 
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử. File này gom mọi phát hiện (tài liệu sai lệch với code thật,
 narrative thiếu bước cho 1 user story, thiếu bằng chứng định lượng cho tiêu chí nghiệm thu...) khi rà
@@ -913,3 +913,24 @@ nó trên Elasticsearch (trình duyệt tích hợp từ chối `localhost:5601`
 - **Elastic đã xoá sạch (2026-10-06, người dùng xác nhận)**: dừng và xoá container `elasticsearch`/`kibana`/`otel-collector`, xoá volume `ecomerce-local_local-es-data`, dựng lại cả ba (healthy); `GET /_cat/indices` chỉ còn 3 data stream mới (44/43/57 document), Kibana 0 dashboard. Mất dashboard/rule đã import cho buổi đo.
 - **Chưa kiểm**: một người thật làm theo hướng dẫn (task mở T052, như T062 của 031); tải đồng thời cao hơn cho loại B; thời gian báo riêng từng nhóm (cần chờ alert recovered giữa hai lần).
 - **Folder Postman 32 chạy bằng newman, từng request (đã chạy 2026-10-06 13:58–14:42)**: 16/16 request đạt (1: A 01 503, 02 200; 2: C 01 500, 02 200, B 03 200; 3: D 01 chậm, 02 nhanh; 4: E 01 503, 02 200; 5: F 01, 02; 6: G 01, 02; 7: H 01, 02; 8: I 01, 02). Hai lần chạy đầu của runner hỏng vì công cụ (không phải vì request) và có một lần chạy hai runner song song làm lẫn trạng thái stack; đã dừng và `-Restore` các lần chạy còn mở (`20261006-134032`, `20261006-135645`) trước khi chạy lại một bản duy nhất.
+
+## 033 — Loại span health khỏi công thức ngân sách lỗi
+
+*Chạy thật ngày 2026-10-08 trên stack `ecomerce-local` (Elasticsearch/Kibana 9.4.4): tạo lại 7 container, dừng `products-db`, newman folder 25/27a/29a/30a/33; test `ServiceManifestSloConventionTests` 129/129, `ServiceDefaults.UnitTests` 21/21, `TroubleshootGuideConventionTests` 38/38 xanh.*
+
+- **Nguyên nhân gốc đã chứng minh (đã đo)**: dữ liệu ban đầu 6804 span đều là health check của Docker (`curl`, 100% `/health*`, ≈15,5 span/phút/service); một span health chậm lúc khởi động nguội trên mẫu số nhỏ làm ngân sách vọt 14–18% dù chưa có request nghiệp vụ.
+- **Mẫu số nghiệp vụ nhỏ làm 5 rule bật (đã đo)**: sau khi loại health, 7 ngày chỉ còn 13–69 span nghiệp vụ/service (gồm 2×`504` ở lần gọi nguội đầu qua gateway và các request thử của tôi). 5 rule (`error-budget-50/75/100`, `error-budget-frozen`, `incident-fast-detection`) bật và ghi 14 sự kiện "cạn" lúc 13:26:17Z; không có sự kiện nào từ health. Sau `29a` ×4 và `30a` ×2: mức tiêu hao error-rate 1594–8889% (9–69 span, 8–14 lỗi), thêm 12 sự kiện "cạn". Đây là tác dụng phụ đúng ý nghĩa ngân sách, nhưng ở đầu tuần vài request đủ làm rule bắn.
+- **Health chậm lúc khởi động nguội không còn làm rule bắn (đã đo)**: sau lần tạo lại 13:24:59Z, `Orders.Api` và `Parties.Api` có span health chậm nhưng 0% trong bảng ngân sách nghiệp vụ.
+- **`COALESCE` bắt buộc (đã đo, F3/V2)**: `NOT (attributes.url.path LIKE "/health*")` không có `COALESCE` làm mất toàn bộ span không có đường dẫn (44 span Client trong 108 span nghiệp vụ của cửa sổ thử), còn `NOT (COALESCE(…, "") LIKE …)` giữ đủ 108.
+- **KQL Lens phải viết không dấu nháy (đã đo, V1)**: `not attributes.url.path : /health*` → 108; có dấu nháy `"/health*"` → 1315 (không loại gì vì `*` thành chữ).
+- **Rule `health-failure` bắn chậm ~7 phút (đã đo, V4)**: dừng `products-db` 13:35:13Z, `/health/ready` 503, 52/52 span health của `Products.Api` là 5xx (6 service khác 0%); alert xuất hiện lúc 13:42:32Z, chỉ `Products.Api`; không sự kiện "cạn" mới từ health. Chậm vì chu kỳ 5 phút cộng cửa sổ 5 phút. Bật lại DB, health 200 sau ≈1 phút.
+- **Cảnh báo `incident-fast-detection` do request nghiệp vụ chậm (đã đo)**: alert `Identity.Api` 13:36:17Z do request `33a` 03 (`/.well-known/openid-configuration`) mất 9,9 giây lần gọi nguội, không do health.
+- **Cờ TẮT mới (đã đo)**: tạo lại `orders-api` với hai cờ tắt (người dùng xác nhận): `25a` 01 = `401` 67 ms, `27a` 01 = `401` 50 ms; trước đó khi cờ bật, `25a` 01 đỏ đúng dự kiến (trễ 2049 ms). Đã bật lại cờ theo `.env`.
+- **`25b` 08 đỏ sẵn từ trước**: chạy riêng folder 25 không có token nên route qua gateway trả `401` thay `404` (request không đổi so với bản cũ).
+- **`30a` vòng đầu có 1 lỗi tạm**: `504` ở luồng hạ lưu ngay sau khi bật lại `products-db`; vòng sau 30/30.
+- **Folder Postman 33 (đã chạy)**: 5 request, 7/7 assertion (`33a` 01 `401`, 02 `401`, 03 `200`; `33b` 01–02 `200`). Lần đầu `33a` 01 kỳ vọng `200` sai (route `/products` cần token), đã sửa thành `401`.
+- **26 request Postman đổi route**: 11 request đổi assertion `200`→`401` (route nghiệp vụ cần token) cùng mô tả; request `27b` 02 (đối chứng không header) cố ý vẫn dùng `/health/live`.
+- **Thao tác**: collection Postman định dạng tay CRLF nên chỉ sửa theo văn bản; lệnh heredoc làm sập `
+` thành xuống dòng thật làm hỏng JSON/C# vài lần (đã khôi phục bằng `git checkout` rồi chèn lại); dashboard/rule trên Kibana sửa bằng `PUT` rồi export lại.
+- **Chưa kiểm**: ranh giới thứ Hai 00:00 với điều kiện loại; tuần có health 5xx nhưng không có span nghiệp vụ (service không hiện dòng ngân sách); một người thật làm theo QA 033.
+- **Elastic đã xoá sạch (2026-10-08, người dùng xác nhận)**: dừng và xoá container `elasticsearch`/`kibana`/`otel-collector`, xoá volume `ecomerce-local_local-es-data`, dựng lại cả ba (healthy); chỉ còn 3 data stream mới, Kibana 0 dashboard và 0 rule; muốn xem lại phải import ndjson và bật 6 rule.

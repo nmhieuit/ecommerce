@@ -1,5 +1,7 @@
 # Ngân sách lỗi tính theo tuần — sự cố trong tuần được nhìn thấy và xử lý ngay trong tuần
 
+> **Cập nhật spec 033**: ngân sách lỗi chỉ tính request nghiệp vụ; health check (`/health…`) không còn tính vào mẫu số hay số request xấu. Service không sẵn sàng có cảnh báo riêng `health-failure`. Xem [033 PO](033_PO_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md).
+
 *Viết cho: người quản lý sản phẩm, stakeholder không trực tiếp code. Không yêu cầu đọc code hay biết
 tên bất kỳ công cụ kỹ thuật nào.*
 

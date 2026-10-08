@@ -1,5 +1,7 @@
 # QA: Diễn tập chaos engineering — tiêm độ trễ để kiểm chứng resilience
 
+> **Cập nhật spec 033**: công thức ngân sách loại span có đường dẫn bắt đầu bằng `/health`; việc tiêm lỗi/độ trễ nay đi vào route nghiệp vụ. Xem [033 QA](033_QA_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md).
+
 > **Cập nhật (spec 031, 2026-10-06)**: phần kill-pod/Kubernetes đã gỡ khỏi tài liệu này; còn lại chỉ phần tiêm độ trễ.
 
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử, cần biết luồng happy-case của spec này có được tài liệu hoá
@@ -25,7 +27,7 @@ Postman: import [`postman/ecommerce.postman_collection.v2.json`](../../postman/e
 
 | Bước | Cấu hình cần chỉnh | Request Postman | Kỳ vọng theo tài liệu | **Đã quan sát (2026-09-27)** |
 |---|---|---|---|---|
-| Bất biến 1 — cờ TẮT thì bỏ qua header | Mặc định (`CHAOS_ALLOW_LATENCY_INJECTION` không khai báo; container in `false`) | `25a` bước 01 (`GET orders /health/live` + `X-Chaos-Latency-Ms: 2000`) | Không trễ | `200` trong **61 ms** |
+| Bất biến 1 — cờ TẮT thì bỏ qua header | Mặc định (`CHAOS_ALLOW_LATENCY_INJECTION` không khai báo; container in `false`) | `25a` bước 01 (`GET orders /orders/{id}` + `X-Chaos-Latency-Ms: 2000`; spec 033 đổi từ `/health/live` vì span health không còn tính vào ngân sách) | Không trễ | nhanh, `401` (route cần token); số đo cũ `200` trong **61 ms** là của `/health/live` |
 | FR-002/US2 — cờ BẬT, trễ đúng giá trị | `CHAOS_ALLOW_LATENCY_INJECTION=true` trong `.env` rồi tạo lại `orders-api` (container in `true`) | `25b` bước 01 (`2000`) | Trễ ~2 giây | `200` sau **2 s** |
 | Bất biến 3 — giá trị sai coi như vắng | (như trên) | `25b` bước 02–05 (`abc`, `0`, `-5`, `1.5`) | Không trễ | Cả 4 `200` trong **5–7 ms** |
 | Bất biến 4 — trần 30 giây | (như trên) | `25b` bước 06 (`40000`) | Kẹp 30 giây | `200` sau **30 s** |

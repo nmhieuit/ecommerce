@@ -1,0 +1,23 @@
+<mxfile host="65bd71144e">
+    <diagram id="health-exclusion-sequence" name="Trình tự — tạo lại container, health chậm, rule không bắn, request nghiệp vụ, dừng DB và rule health-failure bắn">
+        <mxGraphModel dx="1443" dy="468" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1350" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" value="Trình tự thật khi kiểm chứng spec 033: tạo lại 7 container → health chậm → rule không bắn vì health → request nghiệp vụ → dừng DB → health-failure bắn" vertex="1"><mxGeometry height="26" width="1300" x="30" y="10" as="geometry"/></mxCell>
+                <mxCell id="b0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="1. Tạo lại 7 container API (13:24:59Z)&#xa;health check đầu tiên chậm" vertex="1"><mxGeometry height="70" width="380" x="30" y="60" as="geometry"/></mxCell>
+                <mxCell id="b1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="2. Rule 027/028 (chu kỳ 5 phút) chạy với điều kiện loại /health*&#xa;span health chậm không vào mẫu số" vertex="1"><mxGeometry height="70" width="380" x="30" y="170" as="geometry"/></mxCell>
+                <mxCell id="b2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="3. Request nghiệp vụ (33a, 29a, 30a)&#xa;span nghiệp vụ vào ngân sách; mẫu số nhỏ nên % vọt nhanh" vertex="1"><mxGeometry height="70" width="380" x="30" y="280" as="geometry"/></mxCell>
+                <mxCell id="b3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="4. Dashboard khớp ES|QL (30b, 33b)&#xa;giá trị cùng thời điểm" vertex="1"><mxGeometry height="70" width="380" x="460" y="60" as="geometry"/></mxCell>
+                <mxCell id="b4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="5. docker stop products-db (&gt; 5 phút)&#xa;/health/ready → 503" vertex="1"><mxGeometry height="70" width="380" x="460" y="170" as="geometry"/></mxCell>
+                <mxCell id="b5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="6. Rule health-failure bắn cho Products.Api&#xa;panel &quot;Health lỗi theo service&quot; hiện; ngân sách không đổi vì health" vertex="1"><mxGeometry height="70" width="380" x="460" y="280" as="geometry"/></mxCell>
+                <mxCell id="b6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="7. Bật lại products-db → health 200" vertex="1"><mxGeometry height="70" width="380" x="460" y="390" as="geometry"/></mxCell>
+                <mxCell id="e0" parent="1" source="b0" target="b1" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e1" parent="1" source="b1" target="b2" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e2" parent="1" source="b2" target="b3" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e3" parent="1" source="b4" target="b5" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e4" parent="1" source="b5" target="b6" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

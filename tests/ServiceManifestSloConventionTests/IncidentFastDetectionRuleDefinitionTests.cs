@@ -170,6 +170,19 @@ public partial class IncidentFastDetectionRuleDefinitionTests
         Assert.Equal("KEEP service", Regex.Replace(lastCommand, @"\s+", " "));
     }
 
+    /// <summary>
+    /// Kiểm tra: ES|QL của rule có đúng một điều kiện loại `NOT (COALESCE(attributes.url.path, "") LIKE "<tiền tố>*")`
+    /// cho mỗi tiền tố trong `excluded-path-prefixes` của manifest, đứng trước mọi `EVAL`.
+    /// Lý do: FR-002 (spec 033) — rule phát hiện nhanh nhìn cửa sổ 5 phút nên một span health chậm lúc container khởi
+    /// động nguội đủ làm `p99` vượt ngưỡng và bắn cảnh báo giả; health check không phải trải nghiệm người dùng.
+    /// Task nguồn: spec 033 (loại span health khỏi ngân sách lỗi) — FR-002, US1 (bất biến 4, 5).
+    /// </summary>
+    [Fact]
+    public void Rule_ExcludesTheManifestDeclaredPathPrefixes_BeforeAnyCalculation()
+    {
+        ErrorBudgetRuleDefinitionTests.AssertExcludesPathPrefixesBeforeAnyCalculation(RequireRule().Esql, RuleName);
+    }
+
     private static ErrorBudgetRuleDefinitionTests.ExportedRule RequireRule()
     {
         var path = Path.Combine(
