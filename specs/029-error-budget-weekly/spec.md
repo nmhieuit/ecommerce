@@ -19,6 +19,7 @@
   - "cạn" = bất kỳ ngân sách nào đạt 100%;
   - hệ quả khi cạn: dừng merge tính năng mới;
   - hồi phục khi đạt SLO 3 ngày liên tiếp, ngày không có traffic tính là đạt;
+    - *Thay bởi fix/frozen-panel-status (2026-10-09)*: hồi phục theo mức tiêu hao tuần — `active` (≥ 100%) / `recovering` (75–99% hoặc tuần chưa có request Server; vẫn đóng băng) / `recovered` (có ≥ 1 request và dưới 75%; giữ tới lần cạn kế tiếp). Xem FR-005.
   - đặt lại ngân sách đầu kỳ không gỡ trạng thái đóng băng.
 - Giữ cách lưu bằng file export ndjson trong repo. `ErrorBudgetPolicyTests` và `ErrorBudgetRuleDefinitionTests` được sửa theo chu kỳ tuần.
 - Lỗi do diễn tập (025/027/028) tiếp tục tính vào ngân sách như sự cố thật.
@@ -38,6 +39,7 @@
 - Q: Rule đóng băng `error-budget-frozen` đang nhìn lại 62 ngày; với chu kỳ tuần thì bao nhiêu? → A: 14 ngày (2 tuần).
 - Q: Ba rule mốc `error-budget-50/75/100` có cửa sổ rule 31 ngày; với tuần lịch thì đổi thế nào? → A: 7 ngày.
 - Q: Ngưỡng 5xx của rule `incident-fast-detection` (028, đang ≥ 0.1% trong 5 phút) và ngưỡng "ngày đạt SLO" của rule đóng băng có đổi theo SLO mới không? → A: Đổi cả hai theo SLO. `incident-fast-detection` bắn khi 5xx ≥ 1%; rule đóng băng xét một ngày là đạt SLO khi 5xx < 1%. Ngưỡng độ trễ và quy tắc "gateway chỉ xét 5xx" của 028 giữ nguyên.
+  - *Thay bởi fix/frozen-panel-status (2026-10-09)*: rule đóng băng không còn xét theo ngày; dùng mức tiêu hao tuần với cùng tỷ lệ 5xx 1%, p95 5%, p99 1% (xem FR-008).
 - Q: Chu kỳ chạy rule (027 đang 5 phút) giữ hay đổi? → A: Giữ 5 phút, cho cả 4 rule ngân sách.
 - Q: Lưu lượng thấp ở môi trường local (QA_Debt 027: 1–2 lỗi đã vượt mốc) với chu kỳ tuần còn nhạy hơn, có cần xử lý gì không? → A: Chỉ ghi giới hạn, không thêm logic.
 - Q: Tuần chuyển tiếp xử lý thế nào; sự kiện "cạn" cũ trong `slo-error-budget-events` giữ hay bỏ? → A: Bắt đầu tính từ thứ Hai 00:00 (giờ Việt Nam) của tuần chứa ngày triển khai. Bỏ sự kiện cũ: không mang dữ liệu, sự kiện "cạn" hay trạng thái đóng băng của tháng sang. Thực tế dữ liệu này đã mất cùng volume Elastic bị xoá.
@@ -65,6 +67,7 @@
 ### Session 2026-10-05 (phiên `/speckit-plan`)
 
 - Q: Phạm vi test? → A: Sửa giá trị trong test hiện có, và thêm kiểm tra: lọc từ đầu tuần UTC+7 ở 3 rule mốc; cửa sổ rule mốc 7 ngày, rule đóng băng 14 ngày; ngưỡng ngày đạt SLO của rule đóng băng. Không thêm test cho rule 028.
+  - *Thay bởi fix/frozen-panel-status (2026-10-09)*: test ngưỡng ngày (`FrozenRule_DailySloThresholdsMatchTheBudgets`) được thay bằng 4 test `FrozenRule_*` theo mức tiêu hao tuần và `FrozenPanelStatusTests`.
 - Q: Khoảng thời gian của 3 panel ngân sách trên dashboard? → A: Cả 3 là `now-7d`.
 - Q: Kịch bản đốt ngân sách tuần chạy trên service nào? → A: Cả 7 service, qua folder Postman 029.
 - Q: Kiểm chứng ranh giới tuần thế nào? → A: Chạy biểu thức đầu tuần với các thời điểm giả định cố định. Ranh giới thật ghi "chưa quan sát được trong một phiên" như 027.
@@ -148,20 +151,20 @@ Là người đóng vai SRE, tôi muốn các cảnh báo mốc 50%/75%/100% tí
 
 ### User Story 3 - Đóng băng, hồi phục và phát hiện nhanh dùng SLO mới, giữ đúng quy tắc qua ranh giới tuần (Priority: P2)
 
-Là người đóng vai SRE, tôi muốn trạng thái "cạn ngân sách — ưu tiên độ tin cậy" và rule phát hiện nhanh của 028 dùng cùng SLO mới. Cụ thể: một ngày đạt SLO khi 5xx dưới 1%, và rule phát hiện nhanh bắn khi 5xx ≥ 1% trong 5 phút. Việc ngân sách đặt lại mỗi thứ Hai vẫn không gỡ trạng thái đóng băng. Có như vậy thì hệ quả và tín hiệu phát hiện nhất quán với con số đã cam kết.
+Là người đóng vai SRE, tôi muốn trạng thái "cạn ngân sách — ưu tiên độ tin cậy" và rule phát hiện nhanh của 028 dùng cùng SLO mới. Cụ thể: mức tiêu hao tuần dùng tỷ lệ 5xx 1% (hồi phục khi mức tiêu hao cao nhất dưới 75%), và rule phát hiện nhanh bắn khi 5xx ≥ 1% trong 5 phút. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: một ngày đạt SLO khi 5xx dưới 1%.)* Việc ngân sách đặt lại mỗi thứ Hai vẫn không gỡ trạng thái đóng băng. Có như vậy thì hệ quả và tín hiệu phát hiện nhất quán với con số đã cam kết.
 
 **Why this priority**: Đây là phần hệ quả và phần phát hiện sự cố. Nó phụ thuộc vào định nghĩa (US1) và tín hiệu "cạn" từ rule mốc 100% (US2).
 
 **Independent Test**:
 - Làm cạn ngân sách một service, xác nhận service hiện trong bảng "cạn".
-- Ghi sự kiện "cạn" thử với các mốc thời gian khác nhau, xác nhận logic 3 ngày dùng ngưỡng 5xx 1%.
+- Ghi sự kiện "cạn" thử với các mốc thời gian khác nhau, xác nhận logic hồi phục theo mức tiêu hao tuần dùng tỷ lệ 5xx 1%. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: xác nhận logic 3 ngày.)*
 - Tiêm 5xx với tỷ lệ dưới và trên 1% để xác nhận rule phát hiện nhanh chỉ bắn khi ≥ 1%.
 
 **Acceptance Scenarios**:
 
-1. **Given** một service cạn ngân sách vào thứ Bảy, **When** sang thứ Hai và ngân sách tuần đặt lại về đầy đủ nhưng service chưa đạt SLO 3 ngày liên tiếp, **Then** service vẫn ở trạng thái "cạn ngân sách — ưu tiên độ tin cậy".
-2. **Given** một service đang đóng băng, **When** service đạt SLO 3 ngày liên tiếp (5xx dưới 1%, độ trễ trong ngân sách; ngày không traffic tính là đạt), **Then** service được coi là đã hồi phục, kể cả khi tuần chưa kết thúc.
-3. **Given** một ngày service có tỷ lệ 5xx 0.5%, **When** rule đóng băng xét ngày đó, **Then** ngày đó được tính là đạt SLO (theo SLO cũ 0.1% thì là không đạt).
+1. **Given** một service cạn ngân sách vào thứ Bảy, **When** sang thứ Hai và ngân sách tuần đặt lại về đầy đủ nhưng tuần mới chưa có request Server nào, **Then** service vẫn ở trạng thái "cạn ngân sách — ưu tiên độ tin cậy" (`recovering`). *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: chưa đạt SLO 3 ngày liên tiếp.)*
+2. **Given** một service đang đóng băng, **When** tuần hiện tại đã có ít nhất 1 request Server và mức tiêu hao cao nhất trong 4 ngân sách dưới 75%, **Then** service được coi là đã hồi phục (`recovered`), kể cả khi tuần chưa kết thúc, và giữ `recovered` tới lần cạn kế tiếp. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: đạt SLO 3 ngày liên tiếp, ngày không traffic tính là đạt.)*
+3. **Given** tuần hiện tại service có tỷ lệ 5xx 0.5% (độ trễ trong ngân sách), **When** rule đóng băng tính mức tiêu hao, **Then** mức tiêu hao 5xx là 50% (dưới 75%) nên service hồi phục (theo SLO cũ 0.1% thì là 500%). *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: xét một ngày 5xx 0.5% là đạt SLO.)*
 4. **Given** sự cố làm tỷ lệ 5xx của một service trong 5 phút gần nhất là 0.5%, **When** rule phát hiện nhanh chạy, **Then** rule không bắn vì 5xx; khi tỷ lệ ≥ 1% thì rule bắn cho đúng service đó. Ngưỡng độ trễ và quy tắc gateway chỉ xét 5xx không đổi.
 5. **Given** lỗi do một buổi diễn tập (025/027/028), **When** ngân sách tuần được tính, **Then** lỗi đó được tính như lỗi thật, và nếu ngân sách cạn thì chính sách đóng băng áp dụng đầy đủ.
 
@@ -194,9 +197,9 @@ Là người đọc tài liệu dự án (PO, QA, kiến trúc, người vận h
 - **Triển khai giữa tuần**: tuần đầu tiên tính từ thứ Hai 00:00 của tuần chứa ngày triển khai. Nếu stack vừa dựng lại thì tuần đầu thiếu dữ liệu những ngày trước, nên mẫu số nhỏ và mức tiêu hao nhạy hơn.
 - **Lưu lượng thấp**: chu kỳ tuần có ít request hơn tháng khoảng 4 lần nên chỉ vài request xấu đã vượt mốc. Nới 5xx lên 1% giảm một phần độ nhạy, nhưng ngân sách độ trễ (5%/1%) không đổi. Theo lựa chọn của người dùng, chỉ ghi giới hạn này (Edge Case, QA_Debt, technical-debt), không thêm logic.
 - **Đóng băng kéo dài hơn cửa sổ nhìn lại 14 ngày**: nếu service cạn rồi vẫn không đạt SLO liên tục quá 14 ngày, sự kiện "cạn" trôi ra ngoài cửa sổ và trạng thái đóng băng có thể tự biến mất dù chưa hồi phục. Đây là giới hạn đã biết do lựa chọn 14 ngày, phải ghi vào technical-debt.
-- **Đóng băng qua ranh giới tuần**: ngân sách đặt lại thứ Hai nhưng trạng thái đóng băng giữ tới khi đạt 3 ngày (User Story 3, kịch bản 1).
-- **Không có traffic hoặc thiếu dữ liệu trong tuần**: hiển thị "không có dữ liệu", không bắn hay tắt cảnh báo chỉ vì thiếu dữ liệu (giữ FR-012 của 027). Ngày không traffic vẫn tính là đạt cho hồi phục.
-- **Diễn tập đốt ngân sách tuần**: lỗi diễn tập tính như thật nên một buổi diễn tập có thể làm cạn ngân sách tuần và đóng băng service. Điều này được chấp nhận. Khác với tháng, ngân sách sẽ đặt lại sớm hơn (thứ Hai kế tiếp), nhưng đóng băng vẫn theo điều kiện 3 ngày.
+- **Đóng băng qua ranh giới tuần**: ngân sách đặt lại thứ Hai nhưng trạng thái đóng băng giữ tới khi tuần mới có request và mức tiêu hao dưới 75% (User Story 3, kịch bản 1). *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: giữ tới khi đạt 3 ngày.)*
+- **Không có traffic hoặc thiếu dữ liệu trong tuần**: hiển thị "không có dữ liệu", không bắn hay tắt cảnh báo chỉ vì thiếu dữ liệu (giữ FR-012 của 027). Tuần chưa có request Server thì service đang đóng băng vẫn `recovering`, không tự hồi phục. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: ngày không traffic vẫn tính là đạt cho hồi phục.)*
+- **Diễn tập đốt ngân sách tuần**: lỗi diễn tập tính như thật nên một buổi diễn tập có thể làm cạn ngân sách tuần và đóng băng service. Điều này được chấp nhận. Khác với tháng, ngân sách sẽ đặt lại sớm hơn (thứ Hai kế tiếp), nhưng đóng băng vẫn theo điều kiện hồi phục (mức tiêu hao tuần dưới 75%). *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: theo điều kiện 3 ngày.)*
 - **Ngân sách khả dụng và 5xx cùng nguồn dữ liệu**: hai ngân sách vẫn đo cùng tỷ lệ request trả 5xx và giờ có cùng tỷ lệ cho phép 1%, nên luôn bắn cùng lúc. Điều này được chấp nhận như ở 027.
 - **Sửa rule mốc 100% khi có service đang cạn**: QA_Debt 027 ghi rằng sửa rule làm Kibana ghi lại sự kiện "cạn". Việc đổi truy vấn sang tuần cũng là sửa rule. Vì Elastic được dọn sạch sau triển khai và không giữ sự kiện cũ, rủi ro này chỉ ảnh hưởng trong lúc triển khai.
 - **Tác động MAJOR lên hiến chương**: nới mặc định nền tảng áp dụng cho mọi service sau này, không chỉ 7 service hiện có. Báo cáo tác động đồng bộ phải nêu điều này.
@@ -216,11 +219,11 @@ Là người đọc tài liệu dự án (PO, QA, kiến trúc, người vận h
   - các mốc cảnh báo 50%/75%/100% riêng cho từng ngân sách;
   - "cạn" = bất kỳ ngân sách nào đạt 100%;
   - hệ quả khi cạn: người vận hành dừng merge tính năng mới vào service đó và chỉ làm việc nâng độ tin cậy;
-  - hồi phục khi đạt SLO 3 ngày liên tiếp (ngày theo giờ Việt Nam, ngày không traffic tính là đạt);
+  - hồi phục theo mức tiêu hao cao nhất trong 4 ngân sách của tuần hiện tại: `active` khi ≥ 100%; `recovering` khi dưới 100% nhưng ≥ 75%, hoặc tuần chưa có request Server nào; `recovered` khi tuần đã có ≥ 1 request và dưới 75% — đã `recovered` thì giữ tới lần cạn kế tiếp; đóng băng ở `active` và `recovering` *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: đạt SLO 3 ngày liên tiếp, ngày không traffic tính là đạt)*;
   - đặt lại ngân sách đầu tuần không gỡ trạng thái đóng băng.
 - **FR-006**: Cảnh báo mốc PHẢI chỉ tính request từ thứ Hai 00:00 giờ Việt Nam của tuần hiện tại. Phạm vi dữ liệu mà mỗi lần đánh giá xét tới là 7 ngày.
 - **FR-007**: Cả 4 cảnh báo ngân sách PHẢI được đánh giá mỗi 5 phút. Cảnh báo đã bắn giữ ở trạng thái hoạt động liên tục chừng nào mức tiêu hao còn trên mốc.
-- **FR-008**: Trạng thái "cạn ngân sách — ưu tiên độ tin cậy" PHẢI được suy ra từ sự kiện cạn và kết quả SLO theo ngày trong 14 ngày gần nhất. Một ngày được tính là đạt SLO khi 5xx dưới 1% và độ trễ trong ngân sách p95 5% / p99 1%.
+- **FR-008**: Trạng thái "cạn ngân sách — ưu tiên độ tin cậy" PHẢI được suy ra từ sự kiện cạn và sự kiện hồi phục trong 14 ngày gần nhất cùng mức tiêu hao của tuần lịch hiện tại: service đóng băng khi có sự kiện cạn mới hơn sự kiện hồi phục gần nhất và tuần chưa có request Server hoặc mức tiêu hao cao nhất (`GREATEST` của 5xx / 0.01, vượt p95 / 0.05, vượt p99 / 0.01) còn ≥ 75%; khi rule gỡ đóng băng PHẢI ghi sự kiện `recovered`. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: suy ra từ sự kiện cạn và kết quả SLO theo ngày; một ngày đạt SLO khi 5xx dưới 1% và độ trễ trong ngân sách p95 5% / p99 1%.)*
 - **FR-009**: Cảnh báo phát hiện nhanh của 028 PHẢI bắn khi tỷ lệ 5xx của service trong 5 phút gần nhất ≥ 1%, hoặc khi p95/p99 vượt ngưỡng đã khai báo của service. Riêng gateway vẫn chỉ xét 5xx.
 - **FR-010**: Dashboard Ngân sách lỗi tuần PHẢI hiển thị 3 panel ngân sách (mức tiêu hao, cảnh báo đang hoạt động, cạn ngân sách) theo cửa sổ tuần lịch, với tiêu đề "tuần này" và khoảng thời gian khớp cửa sổ mới. Panel text PHẢI nêu cam kết 99%/tuần. Dashboard KHÔNG được tách hay sắp xếp lại trong spec này.
 - **FR-011**: Khi triển khai, ngân sách tuần PHẢI bắt đầu tính từ thứ Hai 00:00 giờ Việt Nam của tuần chứa ngày triển khai. Không mang dữ liệu tiêu hao, sự kiện "cạn" hay trạng thái đóng băng của chu kỳ tháng sang.
@@ -256,7 +259,8 @@ Là người đọc tài liệu dự án (PO, QA, kiến trúc, người vận h
 - **Mức tiêu hao ngân sách tuần**: với mỗi ngân sách của mỗi service, phần trăm ngân sách đã tiêu từ thứ Hai 00:00 giờ Việt Nam của tuần hiện tại.
 - **Cảnh báo ngân sách**: gắn với một service, một ngân sách và một mốc (50/75/100%). Tắt khi sang tuần mới nếu mức tiêu hao không còn trên mốc.
 - **Sự kiện cạn ngân sách**: ghi khi một ngân sách đạt 100%. Được xét trong 14 ngày gần nhất để suy ra trạng thái đóng băng. Sự kiện của chu kỳ tháng không được mang sang.
-- **Trạng thái cạn ngân sách của service**: bắt đầu khi bất kỳ ngân sách nào đạt 100%, kết thúc khi đạt SLO mới 3 ngày liên tiếp. Không bị gỡ bởi việc đặt lại ngân sách thứ Hai.
+- **Sự kiện hồi phục** *(thêm bởi nhánh fix/frozen-panel-status, 2026-10-09)*: ghi khi rule đóng băng gỡ đóng băng một service (`event: recovered`), cùng index với sự kiện cạn; nhờ nó service đã hồi phục giữ `recovered` tới lần cạn kế tiếp.
+- **Trạng thái cạn ngân sách của service**: bắt đầu khi bất kỳ ngân sách nào đạt 100% (`active`); `recovering` khi mức tiêu hao tuần dưới 100% nhưng ≥ 75% hoặc tuần chưa có request; kết thúc (`recovered`) khi tuần có request và mức tiêu hao dưới 75%. Không bị gỡ bởi việc đặt lại ngân sách thứ Hai. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: kết thúc khi đạt SLO mới 3 ngày liên tiếp.)*
 - **Cảnh báo phát hiện nhanh**: gắn với một service, bắn khi 5xx ≥ 1% hoặc độ trễ vượt ngưỡng trong 5 phút gần nhất.
 
 ## Success Criteria *(mandatory)*
@@ -265,7 +269,7 @@ Là người đọc tài liệu dự án (PO, QA, kiến trúc, người vận h
 
 - **SC-001**: Cả 7/7 manifest khai cửa sổ tuần lịch giờ Việt Nam, SLO khả dụng 99% và 5xx dưới 1%, tỷ lệ cho phép 1% / 1% / 5% / 1%. Hiến chương ở phiên bản 2.0.0 với hai dòng mặc định mới.
 - **SC-002**: Khi tạo đủ lỗi tổng hợp để tiêu hết ngân sách 5xx tuần của một service, cảnh báo bắn ở cả ba mốc 50%, 75% và 100%. Mỗi mốc bắn trong vòng một chu kỳ đánh giá (5 phút) kể từ khi mức tiêu hao thực tế vượt mốc.
-- **SC-003**: Sau thứ Hai 00:00 giờ Việt Nam, mức tiêu hao của tuần mới không chứa request của tuần trước, và cảnh báo mốc của tuần cũ (nếu không còn trên mốc) tắt trong vòng một chu kỳ đánh giá. Trạng thái đóng băng vẫn giữ nếu chưa đủ 3 ngày đạt SLO.
+- **SC-003**: Sau thứ Hai 00:00 giờ Việt Nam, mức tiêu hao của tuần mới không chứa request của tuần trước, và cảnh báo mốc của tuần cũ (nếu không còn trên mốc) tắt trong vòng một chu kỳ đánh giá. Trạng thái đóng băng vẫn giữ nếu tuần mới chưa có request hoặc mức tiêu hao còn ≥ 75%. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: nếu chưa đủ 3 ngày đạt SLO.)*
 - **SC-004**: 100% panel ngân sách trên dashboard Ngân sách lỗi tuần hiển thị theo tuần lịch, không còn nhãn "tháng". Con số trên panel khớp với điều kiện làm cảnh báo bắn ở cùng thời điểm.
 - **SC-005**: Rule phát hiện nhanh không bắn vì 5xx khi tỷ lệ 5xx trong 5 phút dưới 1%, và bắn trong vòng một chu kỳ khi tỷ lệ ≥ 1%.
 - **SC-006**: Tìm trên toàn repo không còn tham chiếu nào tới chu kỳ ngân sách tháng hay SLO 99.9% / 0.1% trong hiện vật và tài liệu đang dùng của 021/027/028. Chỉ còn ở phần lịch sử phiên bản của hiến chương và các bản ghi lịch sử đã loại trừ ở FR-016.

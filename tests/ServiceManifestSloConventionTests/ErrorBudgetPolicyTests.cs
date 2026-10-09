@@ -185,10 +185,13 @@ public class ErrorBudgetPolicyTests
     }
 
     /// <summary>
-    /// Kiểm tra: `recovery` là 3 ngày đạt SLO liên tục, ngày không traffic tính là đạt, và việc đặt lại
-    /// ngân sách đầu tháng KHÔNG gỡ trạng thái đóng băng.
-    /// Lý do: FR-010 — điều kiện thoát phải rõ ràng và trùng với logic của rule `error-budget-frozen`.
-    /// Task nguồn: spec 027 (chính sách ngân sách lỗi) — FR-010, US1 (bất biến 6).
+    /// Kiểm tra: `recovery` định nghĩa trạng thái hồi phục theo mức tiêu hao tuần: `recovered` khi mức tiêu hao
+    /// cao nhất của 4 ngân sách dưới `75%` và tuần đã có ít nhất `1` request; trong lúc `recovering` vẫn đóng
+    /// băng; đã `recovered` thì giữ cho tới lần cạn kế tiếp; đặt lại ngân sách đầu tuần KHÔNG gỡ đóng băng.
+    /// Lý do: quy tắc "3 ngày liên tiếp đạt SLO" giữ service đóng băng nhiều ngày dù ngân sách tuần đã tốt, và
+    /// panel "Cạn ngân sách" không cho biết service đang ở bước nào; con số ở đây phải trùng với rule
+    /// `error-budget-frozen` và panel trạng thái.
+    /// Task nguồn: nhánh fix/frozen-panel-status (tech-debt: cột status active/recovering/recovered) — thay FR-010 (027), FR-005 (029).
     /// </summary>
     [Theory]
     [InlineData("parties")]
@@ -198,16 +201,18 @@ public class ErrorBudgetPolicyTests
     [InlineData("identity")]
     [InlineData("gateway")]
     [InlineData("bff")]
-    public void EveryService_DefinesRecoveryAsThreeDaysMeetingSlo(string serviceDirectoryName)
+    public void EveryService_DefinesRecoveryByWeeklyConsumption(string serviceDirectoryName)
     {
         var recovery = RequirePolicy(serviceDirectoryName).Recovery;
 
         // Assert.NotNull(giá trị): xanh khi có khối `recovery:`.
         Assert.NotNull(recovery);
 
-        // Assert.Equal(kỳ vọng, thực tế): xanh khi giá trị khớp nguyên văn contract.
-        Assert.Equal("3", recovery!.ConsecutiveDaysMeetingSlo);
-        Assert.Equal("true", recovery.NoTrafficDayCountsAsMet);
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi giá trị khớp nguyên văn quy tắc hồi phục.
+        Assert.Equal("75%", recovery!.RecoveredBelowConsumption);
+        Assert.Equal("1", recovery.MinRequestsToRecover);
+        Assert.Equal("true", recovery.RecoveringKeepsFreeze);
+        Assert.Equal("true", recovery.RecoveredStaysUntilExhausted);
         Assert.Equal("false", recovery.BudgetResetClearsFreeze);
     }
 

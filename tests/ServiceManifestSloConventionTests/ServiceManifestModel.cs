@@ -132,13 +132,24 @@ public sealed class OnExhaustedSection
     public string? Does { get; set; }
 }
 
+/// <summary>
+/// The <c>recovery</c> block (branch fix/frozen-panel-status): a frozen service moves
+/// active → recovering → recovered on the current calendar week's highest budget consumption, not on a
+/// count of days meeting the SLO.
+/// </summary>
 public sealed class RecoverySection
 {
-    [YamlMember(Alias = "consecutive-days-meeting-slo")]
-    public string? ConsecutiveDaysMeetingSlo { get; set; }
+    [YamlMember(Alias = "recovered-below-consumption")]
+    public string? RecoveredBelowConsumption { get; set; }
 
-    [YamlMember(Alias = "no-traffic-day-counts-as-met")]
-    public string? NoTrafficDayCountsAsMet { get; set; }
+    [YamlMember(Alias = "min-requests-to-recover")]
+    public string? MinRequestsToRecover { get; set; }
+
+    [YamlMember(Alias = "recovering-keeps-freeze")]
+    public string? RecoveringKeepsFreeze { get; set; }
+
+    [YamlMember(Alias = "recovered-stays-until-exhausted")]
+    public string? RecoveredStaysUntilExhausted { get; set; }
 
     [YamlMember(Alias = "budget-reset-clears-freeze")]
     public string? BudgetResetClearsFreeze { get; set; }

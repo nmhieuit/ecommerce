@@ -1,7 +1,8 @@
 # Export saved objects của bộ rule cảnh báo ngân sách lỗi
 
 `error-budget-rules.ndjson` là bản export thật (Kibana Saved Objects Export API) của 4 rule cảnh báo
-ngân sách lỗi (tag `slo-error-budget`) và connector Index mà rule `error-budget-100` dùng — đặc tả tại
+ngân sách lỗi (tag `slo-error-budget`) và connector Index mà rule `error-budget-100` (sự kiện `exhausted`) và
+`error-budget-frozen` (sự kiện `recovered`, từ nhánh fix/frozen-panel-status) dùng — đặc tả tại
 [`specs/027-error-budget-alerting/`](../../../specs/027-error-budget-alerting/spec.md), chu kỳ tuần lịch theo
 [`specs/029-error-budget-weekly/`](../../../specs/029-error-budget-weekly/spec.md), hợp đồng tại
 [`contracts/error-budget-alert-rules-contract.md`](../../../specs/029-error-budget-weekly/contracts/error-budget-alert-rules-contract.md).

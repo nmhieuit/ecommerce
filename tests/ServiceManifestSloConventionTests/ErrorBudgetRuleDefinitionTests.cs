@@ -232,28 +232,101 @@ public partial class ErrorBudgetRuleDefinitionTests
     }
 
     /// <summary>
-    /// Kiểm tra: điều kiện "ngày không đạt SLO" (`day_missed_slo`) của rule `error-budget-frozen` so 5xx
-    /// bằng `>= <tỷ lệ error-rate>`, vượt p95 bằng `> <tỷ lệ latency-p95>`, vượt p99 bằng
-    /// `> <tỷ lệ latency-p99>` — ba hằng số lấy từ `AllowedBadRatios`, không chép tay.
-    /// Lý do: FR-008 (spec 029) — hồi phục cần 3 ngày đạt SLO; ngưỡng ngày phải bằng SLO mới (5xx dưới
-    /// 1%), nếu còn 0.001 thì một ngày 5xx 0.5% vẫn bị tính là xấu và service không bao giờ hồi phục
-    /// đúng hạn.
-    /// Task nguồn: spec 029 (ngân sách lỗi theo tuần lịch) — FR-008, US3 (bất biến 13).
+    /// Kiểm tra: rule `error-budget-frozen` chỉ giữ service đóng băng khi tuần hiện tại (từ thứ Hai 00:00 giờ Việt
+    /// Nam) chưa có đủ `recovery.min-requests-to-recover` request hoặc mức tiêu hao cao nhất còn ở mức
+    /// `recovery.recovered-below-consumption` trở lên — hai con số lấy từ manifest, không chép tay.
+    /// Lý do: quy tắc hồi phục mới — service hết đóng băng (`recovered`) khi mức tiêu hao tuần xuống dưới 75% thay
+    /// vì phải chờ 3 ngày đạt SLO; tuần mới chưa có request thì chưa xét được nên vẫn đóng băng (không gỡ đầu tuần).
+    /// Task nguồn: nhánh fix/frozen-panel-status (tech-debt: cột status active/recovering/recovered).
     /// </summary>
     [Fact]
-    public void FrozenRule_DailySloThresholdsMatchTheBudgets()
+    public void FrozenRule_UnfreezesBelowTheManifestRecoveryThreshold()
+    {
+        var recovery = ServiceManifestFixture.DiscoverAll(ServiceManifestFixture.LocateRepositoryRoot()).Values
+            .Select(m => m.Document.ErrorBudgetPolicy?.Recovery)
+            .ToList();
+        var thresholds = recovery.Select(r => r?.RecoveredBelowConsumption).Distinct().ToList();
+        var minRequests = recovery.Select(r => r?.MinRequestsToRecover).Distinct().ToList();
+
+        // Assert.Single(tập hợp): xanh khi cả 7 manifest khai cùng một ngưỡng hồi phục và cùng một số request tối thiểu.
+        var threshold = Assert.Single(thresholds);
+        var minimum = Assert.Single(minRequests);
+        Assert.NotNull(threshold);
+        Assert.NotNull(minimum);
+
+        var esql = Regex.Replace(RequireRule("error-budget-frozen").Esql, @"\s+", " ");
+
+        // Assert.Contains(chuỗi con, chuỗi): xanh khi mức tiêu hao chỉ tính trên tuần lịch hiện tại giờ Việt Nam.
+        Assert.Contains("EVAL week_start = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours", esql, StringComparison.Ordinal);
+        Assert.Contains("@timestamp >= week_start", esql, StringComparison.Ordinal);
+
+        // Assert.Contains(chuỗi con, chuỗi): xanh khi điều kiện giữ đóng băng dùng đúng hai con số của manifest.
+        Assert.Contains($"WHERE week_spans < {minimum} OR max_consumed_pct >= {threshold!.TrimEnd('%')}", esql, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Kiểm tra: mức tiêu hao cao nhất (`max_consumed_pct`) của rule `error-budget-frozen` là `GREATEST` của ba tỷ lệ
+    /// xấu chia cho đúng tỷ lệ cho phép của `error-rate`, `latency-p95`, `latency-p99` (lấy từ `AllowedBadRatios`).
+    /// Lý do: trạng thái hồi phục phải dựa trên cùng con số mà bảng "Mức tiêu hao ngân sách" và 3 rule mốc tính; chép
+    /// sai một tỷ lệ là rule gỡ đóng băng ở mức tiêu hao khác với con số người vận hành thấy.
+    /// Task nguồn: nhánh fix/frozen-panel-status (tech-debt: cột status active/recovering/recovered).
+    /// </summary>
+    [Fact]
+    public void FrozenRule_ConsumptionUsesTheBudgetRatios()
     {
         var esql = Regex.Replace(RequireRule("error-budget-frozen").Esql, @"\s+", " ");
-        var match = Regex.Match(esql, @"EVAL day_missed_slo = CASE\((?<body>.*?)\) \|");
 
-        // Assert.True(điều kiện, thông báo): xanh khi truy vấn có biểu thức `day_missed_slo`.
-        Assert.True(match.Success, "error-budget-frozen ES|QL has no 'EVAL day_missed_slo = CASE(...)'.");
-        var body = match.Groups["body"].Value;
+        // Assert.Contains(chuỗi con, chuỗi): xanh khi công thức mức tiêu hao cao nhất dùng đúng 3 tỷ lệ cho phép.
+        Assert.Contains(
+            $"GREATEST(TO_DOUBLE(bad_5xx) / week_spans / {Format(AllowedBadRatios["error-rate"])}, "
+            + $"TO_DOUBLE(bad_p95) / week_spans / {Format(AllowedBadRatios["latency-p95"])}, "
+            + $"TO_DOUBLE(bad_p99) / week_spans / {Format(AllowedBadRatios["latency-p99"])})",
+            esql,
+            StringComparison.Ordinal);
+    }
 
-        // Assert.Contains(chuỗi con, chuỗi): xanh khi mỗi ngưỡng ngày bằng đúng tỷ lệ ngân sách tương ứng.
-        Assert.Contains($"TO_DOUBLE(bad_5xx) / spans >= {Format(AllowedBadRatios["error-rate"])}", body, StringComparison.Ordinal);
-        Assert.Contains($"TO_DOUBLE(bad_p95) / spans > {Format(AllowedBadRatios["latency-p95"])}", body, StringComparison.Ordinal);
-        Assert.Contains($"TO_DOUBLE(bad_p99) / spans > {Format(AllowedBadRatios["latency-p99"])}", body, StringComparison.Ordinal);
+    /// <summary>
+    /// Kiểm tra: rule `error-budget-frozen` chỉ xét service có sự kiện "cạn" mới hơn sự kiện "recovered" gần nhất
+    /// (`exhausted_at > recovered_at`).
+    /// Lý do: `recovery.recovered-stays-until-exhausted: true` — đã `recovered` thì giữ nguyên dù mức tiêu hao lên lại
+    /// 75–99%; chỉ một lần cạn mới (sự kiện "exhausted" mới) mới đóng băng lại. Thiếu điều kiện này, service nhấp
+    /// nháy giữa recovered và recovering quanh 75%.
+    /// Task nguồn: nhánh fix/frozen-panel-status (tech-debt: cột status active/recovering/recovered).
+    /// </summary>
+    [Fact]
+    public void FrozenRule_StaysRecoveredUntilTheNextExhaustion()
+    {
+        var esql = Regex.Replace(RequireRule("error-budget-frozen").Esql, @"\s+", " ");
+
+        // Assert.Contains(chuỗi con, chuỗi): xanh khi rule so lần cạn gần nhất với lần hồi phục gần nhất.
+        Assert.Contains("WHERE exhausted_at IS NOT NULL AND (recovered_at IS NULL OR exhausted_at > recovered_at)", esql, StringComparison.Ordinal);
+        Assert.Contains("event == \"recovered\"", esql, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Kiểm tra: rule `error-budget-frozen` có đúng một action loại Index ở nhóm `recovered`, ghi một document
+    /// `event: "recovered"` kèm tên service vào connector `slo-error-budget-events`.
+    /// Lý do: sự kiện "recovered" là thứ duy nhất nhớ rằng service đã hồi phục (rule không giữ trạng thái giữa các
+    /// lần chạy); thiếu action này, rule ở bất biến trên không bao giờ thấy `recovered_at`.
+    /// Task nguồn: nhánh fix/frozen-panel-status (tech-debt: cột status active/recovering/recovered).
+    /// </summary>
+    [Fact]
+    public void FrozenRule_WritesARecoveredEventWhenTheFreezeLifts()
+    {
+        var actions = RequireRule("error-budget-frozen").Attributes.GetProperty("actions").EnumerateArray().ToList();
+
+        // Assert.Single(tập hợp): xanh khi rule frozen có đúng một action.
+        var action = Assert.Single(actions);
+
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi action là connector Index ở nhóm recovered.
+        Assert.Equal(".index", action.GetProperty("actionTypeId").GetString());
+        Assert.Equal("recovered", action.GetProperty("group").GetString());
+
+        var document = Assert.Single(action.GetProperty("params").GetProperty("documents").EnumerateArray().ToList());
+
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi document ghi đúng loại sự kiện và tên service của alert.
+        Assert.Equal("recovered", document.GetProperty("event").GetString());
+        Assert.Equal("{{alert.id}}", document.GetProperty("service").GetString());
     }
 
     /// <summary>
