@@ -24,6 +24,42 @@
       },
       "item": [
         {
+          "name": "00 Xoá access token đã lưu (chạy khi muốn thử lại từ đầu)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{identityUrl}}/.well-known/openid-configuration",
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                ".well-known",
+                "openid-configuration"
+              ]
+            },
+            "description": "**Mục đích**: xoá `accessToken` và `accessTokenNoScope` đang lưu trong environment. Token được lưu bằng `pm.environment.set` nên sống qua các lần chạy trước (hiệu lực 3600 giây) và mọi request kế thừa `Bearer {{accessToken}}` sẽ dùng lại nó, nên một request trả `200` có thể chỉ vì token cũ còn hạn.\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration` (route công khai, không cần token).\n\n**Output kỳ vọng**: `200`; sau đó `accessToken` rỗng, các request cần token trả `401` cho tới khi chạy `01 Lấy access token`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 — identity sống (route công khai)\", function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set('accessToken', '');",
+                  "pm.environment.set('accessTokenNoScope', '');",
+                  "pm.test(\"accessToken đã xoá\", function () { pm.expect(pm.environment.get('accessToken')).to.equal(''); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
           "name": "01 Lấy access token (đủ scope ecommerce-api)",
           "request": {
             "method": "POST",
@@ -158,7 +194,7 @@
           "response": []
         },
         {
-          "name": "04 Có token nhưng thiếu scope thì bị chặn (403)",
+          "name": "04 Có token nhưng thiếu scope thì bị chặn (401, thiếu audience ecommerce-api)",
           "request": {
             "method": "GET",
             "header": [
@@ -186,7 +222,7 @@
               "host": ["{{basketsUrl}}"],
               "path": ["baskets", "current"]
             },
-            "description": "Ghi đè auth cấp request để dùng {{accessTokenNoScope}} thay vì {{accessToken}} mặc định của collection — một token ĐÃ xác thực thành công nhưng thiếu đúng claim scope=ecommerce-api mà chính sách ApiScope yêu cầu (shared/Identity/AuthorizationPolicies.cs; 015-deny-by-default-authz). Khác với 401: đây là đã đăng nhập đúng, chỉ thiếu quyền — client không cần đăng nhập lại. Mirror `AuthorizationPolicyTests.ARequestWithATokenMissingTheApiScopeClaim_IsForbidden`. Header tenant/subject vẫn giữ vì request này đại diện cho một lệnh gọi thật, dù kiểm tra scope chặn trước khi các header đó từng được đọc tới."
+            "description": "Ghi đè auth cấp request để dùng {{accessTokenNoScope}} thay vì {{accessToken}} mặc định của collection — một token ĐÃ xác thực thành công nhưng thiếu đúng claim scope=ecommerce-api mà chính sách ApiScope yêu cầu (shared/Identity/AuthorizationPolicies.cs; 015-deny-by-default-authz). Kỳ vọng thực tế là `401 unauthorized`, KHÔNG phải `403 forbidden_scope`: dịch vụ cấu hình `Audience=ecommerce-api` nên token không xin scope `ecommerce-api` không có `aud` tương ứng và bị JwtBearer từ chối ở bước xác thực, trước khi tới chính sách scope (QA 015, QA_Debt 030). `403 forbidden_scope` chỉ đạt được khi bật toggle ApiScope với token stub (folder 15 bước 11). Test đơn vị tương ứng (token có audience nhưng thiếu scope) mirror `AuthorizationPolicyTests.ARequestWithATokenMissingTheApiScopeClaim_IsForbidden`. Header tenant/subject vẫn giữ vì request này đại diện cho một lệnh gọi thật, dù kiểm tra scope chặn trước khi các header đó từng được đọc tới."
           },
           "event": [
             {
@@ -194,12 +230,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"trả về 403 khi có token nhưng thiếu scope\", function () {",
-                  "    pm.response.to.have.status(403);",
+                  "pm.test(\"trả về 401 khi token thiếu scope ecommerce-api (thiếu audience)\", function () {",
+                  "    pm.response.to.have.status(401);",
                   "});",
                   "",
-                  "pm.test(\"thân lỗi ghi rõ forbidden_scope, không phải 403 rỗng mặc định\", function () {",
-                  "    pm.expect(pm.response.json().error).to.eql('forbidden_scope');",
+                  "pm.test(\"thân lỗi là unauthorized (không phải forbidden_scope)\", function () {",
+                  "    pm.expect(pm.response.json().error).to.eql('unauthorized');",
                   "});"
                 ]
               }
@@ -680,7 +716,7 @@
                 "live"
               ]
             },
-            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-BSK-014]"
+            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-BSK-014]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -712,7 +748,7 @@
                 "ready"
               ]
             },
-            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-BSK-028].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-BSK-029]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-BSK-028].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-BSK-029]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -1107,7 +1143,7 @@
                 "live"
               ]
             },
-            "description": "Route catch-all của gateway không được nuốt mất health probe của chính nó. Readiness của gateway cố ý để rỗng: nếu nó phụ thuộc vào BFF thì một sự cố phía dưới sẽ kéo gateway ra khỏi vòng phục vụ, trong khi việc của gateway lúc đó là vẫn trả lời và báo lỗi rõ ràng. [TC-GTW-025]"
+            "description": "Route catch-all của gateway không được nuốt mất health probe của chính nó. Readiness của gateway cố ý để rỗng: nếu nó phụ thuộc vào BFF thì một sự cố phía dưới sẽ kéo gateway ra khỏi vòng phục vụ, trong khi việc của gateway lúc đó là vẫn trả lời và báo lỗi rõ ràng. [TC-GTW-025]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -1139,7 +1175,7 @@
                 "v1.json"
               ]
             },
-            "description": "Tài liệu này chỉ BFF mới tạo ra được, nên nhận 200 ở đây là bằng chứng mạnh nhất rằng request thật sự đi tới BFF chứ không dừng lại ở gateway. [TC-GTW-023]"
+            "description": "Tài liệu này chỉ BFF mới tạo ra được, nên nhận 200 ở đây là bằng chứng mạnh nhất rằng request thật sự đi tới BFF chứ không dừng lại ở gateway. [TC-GTW-023]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -1349,7 +1385,7 @@
                 "live"
               ]
             },
-            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-ORD-001]"
+            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-ORD-001]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -1381,7 +1417,7 @@
                 "ready"
               ]
             },
-            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-ORD-023].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-ORD-024]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-ORD-023].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-ORD-024]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -1830,7 +1866,7 @@
                 "live"
               ]
             },
-            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PTY-001]"
+            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PTY-001]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -1862,7 +1898,7 @@
                 "ready"
               ]
             },
-            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PTY-004].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PTY-005]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PTY-004].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PTY-005]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2017,7 +2053,7 @@
                 "live"
               ]
             },
-            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PRD-001]"
+            "description": "Tiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PRD-001]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2049,7 +2085,7 @@
                 "ready"
               ]
             },
-            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PRD-007].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PRD-008]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+            "description": "Readiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PRD-007].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PRD-008]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2189,7 +2225,7 @@
                 "live"
               ]
             },
-            "description": "Tiến trình BFF còn sống. Không có test case tự động nào trong docs/test-cases-2026-08-21.xlsx phủ endpoint này: bộ test của BFF không có HealthCheckTests như bốn domain service."
+            "description": "Tiến trình BFF còn sống. Không có test case tự động nào trong docs/test-cases-2026-08-21.xlsx phủ endpoint này: bộ test của BFF không có HealthCheckTests như bốn domain service.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2221,7 +2257,7 @@
                 "ready"
               ]
             },
-            "description": "BFF không sở hữu database nào nên readiness của nó không mở kết nối tới đâu cả — nó luôn 200 kể cả khi bạn tắt hết bốn database. Muốn thấy hậu quả của việc tắt database thì nhìn vào readiness của từng domain service."
+            "description": "BFF không sở hữu database nào nên readiness của nó không mở kết nối tới đâu cả — nó luôn 200 kể cả khi bạn tắt hết bốn database. Muốn thấy hậu quả của việc tắt database thì nhìn vào readiness của từng domain service.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2253,7 +2289,7 @@
                 "v1.json"
               ]
             },
-            "description": "Tài liệu này là hợp đồng sinh ra API client của frontend, nên một tài liệu thiếu sót là lỗi thật chứ không phải chuyện tài liệu cho đẹp. Nó chỉ được publish ở môi trường Development — stack local chạy Development nên gọi được, còn stack mặc định (Production) thì trả 404.\n\n[TC-CMN-031, TC-CMN-032, TC-CMN-033, TC-CMN-034]"
+            "description": "Tài liệu này là hợp đồng sinh ra API client của frontend, nên một tài liệu thiếu sót là lỗi thật chứ không phải chuyện tài liệu cho đẹp. Nó chỉ được publish ở môi trường Development — stack local chạy Development nên gọi được, còn stack mặc định (Production) thì trả 404.\n\n[TC-CMN-031, TC-CMN-032, TC-CMN-033, TC-CMN-034]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2683,7 +2719,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: xác nhận tiến trình Parties còn chạy — tín hiệu \"process alive\" KHÔNG được phụ thuộc vào database hay bất kỳ dependency ngoài nào, để compose/Kubernetes không hiểu lầm \"DB chậm\" thành \"process chết\" rồi khởi động lại không cần thiết.\n\n**Input**: `GET {{partiesUrl}}/health/live`, không cần token (endpoint hạ tầng).\n\n**Output kỳ vọng**: luôn `200`, bất kể database của Parties đang bật hay tắt.\n\n**Vì sao chứng minh đúng FR-003**: nếu endpoint này phụ thuộc DB, tắt `parties-db` sẽ làm cả liveness lẫn readiness cùng đỏ — folder này cố tình yêu cầu chạy lại bước 01-02 sau khi tắt DB để phân biệt 2 khái niệm bằng quan sát thật, chứ không chỉ tin vào tài liệu.\n\n**Liên hệ**: cặp với bước 02 (readiness của cùng service) — cùng 1 service nhưng kiểm 2 khái niệm khác nhau.\n\n---\n\nTiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PTY-001]"
+            "description": "**Mục đích**: xác nhận tiến trình Parties còn chạy — tín hiệu \"process alive\" KHÔNG được phụ thuộc vào database hay bất kỳ dependency ngoài nào, để compose/Kubernetes không hiểu lầm \"DB chậm\" thành \"process chết\" rồi khởi động lại không cần thiết.\n\n**Input**: `GET {{partiesUrl}}/health/live`, không cần token (endpoint hạ tầng).\n\n**Output kỳ vọng**: luôn `200`, bất kể database của Parties đang bật hay tắt.\n\n**Vì sao chứng minh đúng FR-003**: nếu endpoint này phụ thuộc DB, tắt `parties-db` sẽ làm cả liveness lẫn readiness cùng đỏ — folder này cố tình yêu cầu chạy lại bước 01-02 sau khi tắt DB để phân biệt 2 khái niệm bằng quan sát thật, chứ không chỉ tin vào tài liệu.\n\n**Liên hệ**: cặp với bước 02 (readiness của cùng service) — cùng 1 service nhưng kiểm 2 khái niệm khác nhau.\n\n---\n\nTiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PTY-001]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2715,7 +2751,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: xác nhận readiness phản ánh đúng khả năng Parties kết nối tới DATABASE CỦA CHÍNH NÓ — không phải \"process còn sống\" (đó là việc của liveness, bước 01).\n\n**Input**: `GET {{partiesUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200` khi `parties-db` đang chạy (mặc định). Test được viết để chấp nhận CẢ HAI mã (200/503) vì bước này được chạy lại 2 lần trong kịch bản thật: lần DB bật phải `200`, lần tắt DB phải `503` kèm `checks[].name == 'self-database'` có `status == 'Unhealthy'` — tự so sánh 2 lần chạy chứ không hard-code 1 kết quả duy nhất.\n\n**Vì sao chứng minh đúng FR-003/FR-004**: readiness trả về đúng theo tình trạng DB thật, không phải hằng số 200 vô điều kiện; tên check `self-database` ngụ ý đúng \"DB của chính service này\", không phải DB của service khác (FR-004 — mỗi service sở hữu riêng DB).\n\n**Liên hệ**: chạy lại bước này SAU KHI `docker compose stop parties-db` chính là phần kiểm chứng thật của FR-005 (ranh giới DB tách biệt) — nếu lúc đó readiness của Products/Baskets/Orders KHÔNG đổi, đó là bằng chứng 4 service không chia sẻ DB.\n\n---\n\nReadiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PTY-004].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PTY-005]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+            "description": "**Mục đích**: xác nhận readiness phản ánh đúng khả năng Parties kết nối tới DATABASE CỦA CHÍNH NÓ — không phải \"process còn sống\" (đó là việc của liveness, bước 01).\n\n**Input**: `GET {{partiesUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200` khi `parties-db` đang chạy (mặc định). Test được viết để chấp nhận CẢ HAI mã (200/503) vì bước này được chạy lại 2 lần trong kịch bản thật: lần DB bật phải `200`, lần tắt DB phải `503` kèm `checks[].name == 'self-database'` có `status == 'Unhealthy'` — tự so sánh 2 lần chạy chứ không hard-code 1 kết quả duy nhất.\n\n**Vì sao chứng minh đúng FR-003/FR-004**: readiness trả về đúng theo tình trạng DB thật, không phải hằng số 200 vô điều kiện; tên check `self-database` ngụ ý đúng \"DB của chính service này\", không phải DB của service khác (FR-004 — mỗi service sở hữu riêng DB).\n\n**Liên hệ**: chạy lại bước này SAU KHI `docker compose stop parties-db` chính là phần kiểm chứng thật của FR-005 (ranh giới DB tách biệt) — nếu lúc đó readiness của Products/Baskets/Orders KHÔNG đổi, đó là bằng chứng 4 service không chia sẻ DB.\n\n---\n\nReadiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PTY-004].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PTY-005]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2758,7 +2794,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống bước 01 nhưng cho Products — xác nhận liveness không phụ thuộc database.\n\n**Input**: `GET {{productsUrl}}/health/live`.\n\n**Output kỳ vọng**: luôn `200`.\n\n**Vì sao chứng minh đúng FR-003**: cùng lý lẽ bước 01, áp cho service thứ 2 — mỗi service phải tự thoả FR-003 độc lập, không suy luận từ 1 service rồi coi 3 service còn lại \"chắc cũng vậy\".\n\n**Liên hệ**: cặp với bước 04.\n\n---\n\nTiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PRD-001]"
+            "description": "**Mục đích**: giống bước 01 nhưng cho Products — xác nhận liveness không phụ thuộc database.\n\n**Input**: `GET {{productsUrl}}/health/live`.\n\n**Output kỳ vọng**: luôn `200`.\n\n**Vì sao chứng minh đúng FR-003**: cùng lý lẽ bước 01, áp cho service thứ 2 — mỗi service phải tự thoả FR-003 độc lập, không suy luận từ 1 service rồi coi 3 service còn lại \"chắc cũng vậy\".\n\n**Liên hệ**: cặp với bước 04.\n\n---\n\nTiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-PRD-001]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2790,7 +2826,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống bước 02 nhưng cho Products.\n\n**Input**: `GET {{productsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200` (DB bật) hoặc `503` + `self-database: Unhealthy` (DB tắt).\n\n**Vì sao chứng minh đúng FR-003/FR-004**: như bước 02 — readiness của Products chỉ phản ánh `products-db`, không phản ánh tình trạng của baskets-db/orders-db/parties-db.\n\n**Liên hệ**: khi tắt `parties-db` ở bước 02, bước này (Products) phải KHÔNG đổi — đó là phép thử chéo cho FR-005 chạy ngầm giữa các bước, không nằm trong 1 assertion duy nhất.\n\n---\n\nReadiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PRD-007].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PRD-008]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+            "description": "**Mục đích**: giống bước 02 nhưng cho Products.\n\n**Input**: `GET {{productsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200` (DB bật) hoặc `503` + `self-database: Unhealthy` (DB tắt).\n\n**Vì sao chứng minh đúng FR-003/FR-004**: như bước 02 — readiness của Products chỉ phản ánh `products-db`, không phản ánh tình trạng của baskets-db/orders-db/parties-db.\n\n**Liên hệ**: khi tắt `parties-db` ở bước 02, bước này (Products) phải KHÔNG đổi — đó là phép thử chéo cho FR-005 chạy ngầm giữa các bước, không nằm trong 1 assertion duy nhất.\n\n---\n\nReadiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-PRD-007].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-PRD-008]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2833,7 +2869,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống bước 01/03 nhưng cho Baskets.\n\n**Input**: `GET {{basketsUrl}}/health/live`.\n\n**Output kỳ vọng**: luôn `200`.\n\n**Vì sao chứng minh đúng FR-003**: service thứ 3 tự thoả FR-003 độc lập.\n\n**Liên hệ**: cặp với bước 06.\n\n---\n\nTiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-BSK-014]"
+            "description": "**Mục đích**: giống bước 01/03 nhưng cho Baskets.\n\n**Input**: `GET {{basketsUrl}}/health/live`.\n\n**Output kỳ vọng**: luôn `200`.\n\n**Vì sao chứng minh đúng FR-003**: service thứ 3 tự thoả FR-003 độc lập.\n\n**Liên hệ**: cặp với bước 06.\n\n---\n\nTiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-BSK-014]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2865,7 +2901,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống bước 02/04 nhưng cho Baskets.\n\n**Input**: `GET {{basketsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200` (DB bật) hoặc `503` + `self-database: Unhealthy` (DB tắt).\n\n**Vì sao chứng minh đúng FR-003/FR-004**: readiness của Baskets chỉ phản ánh `baskets-db`.\n\n**Liên hệ**: tắt `baskets-db` rồi quan sát Orders/Products/Parties KHÔNG đổi là phép thử chéo khác cho FR-005.\n\n---\n\nReadiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-BSK-028].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-BSK-029]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+            "description": "**Mục đích**: giống bước 02/04 nhưng cho Baskets.\n\n**Input**: `GET {{basketsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200` (DB bật) hoặc `503` + `self-database: Unhealthy` (DB tắt).\n\n**Vì sao chứng minh đúng FR-003/FR-004**: readiness của Baskets chỉ phản ánh `baskets-db`.\n\n**Liên hệ**: tắt `baskets-db` rồi quan sát Orders/Products/Parties KHÔNG đổi là phép thử chéo khác cho FR-005.\n\n---\n\nReadiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-BSK-028].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-BSK-029]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2908,7 +2944,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống 3 bước live trước, cho Orders — service cuối cùng trong 4 service phải tự thoả FR-003.\n\n**Input**: `GET {{ordersUrl}}/health/live`.\n\n**Output kỳ vọng**: luôn `200`.\n\n**Vì sao chứng minh đúng FR-003**: hoàn tất việc xác nhận cả 4/4 service đều tách liveness khỏi dependency ngoài — không chỉ dựa trên 1-2 mẫu rồi suy diễn cho cả hệ thống.\n\n**Liên hệ**: cặp với bước 08.\n\n---\n\nTiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-ORD-001]"
+            "description": "**Mục đích**: giống 3 bước live trước, cho Orders — service cuối cùng trong 4 service phải tự thoả FR-003.\n\n**Input**: `GET {{ordersUrl}}/health/live`.\n\n**Output kỳ vọng**: luôn `200`.\n\n**Vì sao chứng minh đúng FR-003**: hoàn tất việc xác nhận cả 4/4 service đều tách liveness khỏi dependency ngoài — không chỉ dựa trên 1-2 mẫu rồi suy diễn cho cả hệ thống.\n\n**Liên hệ**: cặp với bước 08.\n\n---\n\nTiến trình còn sống. Không cần header nào vì liveness không chạm tới database — đó là khác biệt giữa nó và readiness ngay bên dưới. [TC-ORD-001]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2940,7 +2976,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống 3 bước readiness trước, cho Orders.\n\n**Input**: `GET {{ordersUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200` (DB bật) hoặc `503` + `self-database: Unhealthy` (DB tắt).\n\n**Vì sao chứng minh đúng FR-003/FR-004**: hoàn tất bộ 4/4 — readiness của Orders chỉ phản ánh `orders-db`.\n\n**Vì sao đây là bước chốt của cả folder**: sau khi cả 8 bước này được chạy lại đủ 4 lần (mỗi lần tắt đúng 1 DB), ta có bằng chứng thực nghiệm — không chỉ bằng tài liệu — rằng tắt DB của 1 service chỉ ảnh hưởng readiness của đúng service đó, khớp FR-004/FR-005 và góp phần cho SC-002 (mọi service báo khoẻ độc lập).\n\n---\n\nReadiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-ORD-023].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-ORD-024]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1."
+            "description": "**Mục đích**: giống 3 bước readiness trước, cho Orders.\n\n**Input**: `GET {{ordersUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200` (DB bật) hoặc `503` + `self-database: Unhealthy` (DB tắt).\n\n**Vì sao chứng minh đúng FR-003/FR-004**: hoàn tất bộ 4/4 — readiness của Orders chỉ phản ánh `orders-db`.\n\n**Vì sao đây là bước chốt của cả folder**: sau khi cả 8 bước này được chạy lại đủ 4 lần (mỗi lần tắt đúng 1 DB), ta có bằng chứng thực nghiệm — không chỉ bằng tài liệu — rằng tắt DB của 1 service chỉ ảnh hưởng readiness của đúng service đó, khớp FR-004/FR-005 và góp phần cho SC-002 (mọi service báo khoẻ độc lập).\n\n---\n\nReadiness mở một kết nối thật tới database riêng của service, nên nó phản ánh đúng tình trạng kết nối chứ không chỉ nói tiến trình còn sống. Trả 200 khi database còn chạy [TC-ORD-023].\n\nTắt container database của riêng service này rồi gọi lại: phải trả 503 và trong nội dung phản hồi, check tên 'self-database' phải là Unhealthy [TC-ORD-024]. Hai assertion bên dưới được viết để đúng trong cả hai trường hợp, nên request này chạy được dù bạn đang bật hay tắt database. Xem docs/local-testing.md, kịch bản 1.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -2989,7 +3025,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: xác nhận gateway (tầng ngoài cùng, nơi SPA chạm vào đầu tiên) đang chạy — điều kiện tiên quyết trước khi kiểm định tuyến.\n\n**Input**: `GET {{gatewayUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao cần bước này**: nếu gateway chết, mọi bước sau trong folder (và trong toàn bộ collection, vì mọi request nghiệp vụ đều đi qua gateway) đều vô nghĩa — đặt ở đầu để fail nhanh, dễ chẩn đoán.\n\n---\n\nRoute catch-all của gateway không được nuốt mất health probe của chính nó. Readiness của gateway cố ý để rỗng: nếu nó phụ thuộc vào BFF thì một sự cố phía dưới sẽ kéo gateway ra khỏi vòng phục vụ, trong khi việc của gateway lúc đó là vẫn trả lời và báo lỗi rõ ràng. [TC-GTW-025]"
+            "description": "**Mục đích**: xác nhận gateway (tầng ngoài cùng, nơi SPA chạm vào đầu tiên) đang chạy — điều kiện tiên quyết trước khi kiểm định tuyến.\n\n**Input**: `GET {{gatewayUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao cần bước này**: nếu gateway chết, mọi bước sau trong folder (và trong toàn bộ collection, vì mọi request nghiệp vụ đều đi qua gateway) đều vô nghĩa — đặt ở đầu để fail nhanh, dễ chẩn đoán.\n\n---\n\nRoute catch-all của gateway không được nuốt mất health probe của chính nó. Readiness của gateway cố ý để rỗng: nếu nó phụ thuộc vào BFF thì một sự cố phía dưới sẽ kéo gateway ra khỏi vòng phục vụ, trong khi việc của gateway lúc đó là vẫn trả lời và báo lỗi rõ ràng. [TC-GTW-025]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -3021,7 +3057,7 @@
                 "v1.json"
               ]
             },
-            "description": "**Mục đích**: xác nhận gateway không chỉ chuyển tiếp được request nghiệp vụ mà cả tài liệu mô tả API của BFF cũng đi xuyên qua được — một bằng chứng gián tiếp rằng route `/openapi/*` cũng được định tuyến đúng, không bị chặn hay rơi vào \"chỉ số route được khai báo thủ công\".\n\n**Input**: `GET {{gatewayUrl}}/openapi/v1.json`.\n\n**Output kỳ vọng**: `200`, và nội dung JSON có khoá `paths` chứa `/bff/products` — tức đây đúng là tài liệu của BFF (không phải tài liệu rỗng hay của chính gateway).\n\n**Vì sao chứng minh đúng FR-001**: nếu gateway định tuyến sai hoặc không tới được BFF, response hoặc sẽ lỗi hoặc sẽ trả về tài liệu không có path nào của BFF.\n\n---\n\nTài liệu này chỉ BFF mới tạo ra được, nên nhận 200 ở đây là bằng chứng mạnh nhất rằng request thật sự đi tới BFF chứ không dừng lại ở gateway. [TC-GTW-023]"
+            "description": "**Mục đích**: xác nhận gateway không chỉ chuyển tiếp được request nghiệp vụ mà cả tài liệu mô tả API của BFF cũng đi xuyên qua được — một bằng chứng gián tiếp rằng route `/openapi/*` cũng được định tuyến đúng, không bị chặn hay rơi vào \"chỉ số route được khai báo thủ công\".\n\n**Input**: `GET {{gatewayUrl}}/openapi/v1.json`.\n\n**Output kỳ vọng**: `200`, và nội dung JSON có khoá `paths` chứa `/bff/products` — tức đây đúng là tài liệu của BFF (không phải tài liệu rỗng hay của chính gateway).\n\n**Vì sao chứng minh đúng FR-001**: nếu gateway định tuyến sai hoặc không tới được BFF, response hoặc sẽ lỗi hoặc sẽ trả về tài liệu không có path nào của BFF.\n\n---\n\nTài liệu này chỉ BFF mới tạo ra được, nên nhận 200 ở đây là bằng chứng mạnh nhất rằng request thật sự đi tới BFF chứ không dừng lại ở gateway. [TC-GTW-023]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -3838,7 +3874,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: xác nhận gateway — cửa vào duy nhất của toàn hệ thống — đã thực sự chạy sau khi `up.ps1` báo hoàn tất, trước khi đi tiếp các bước đo bằng tay khác ở docs/QA/005.\n\n**Input**: `GET {{gatewayUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng FR-002**: nếu `up.ps1` báo \"xong\" nhưng gateway chưa sống, bước này đỏ — bắt được đúng tình huống lệnh báo thành công giả (false positive) mà FR-002 cấm.\n\n---\n\nRoute catch-all của gateway không được nuốt mất health probe của chính nó. Readiness của gateway cố ý để rỗng: nếu nó phụ thuộc vào BFF thì một sự cố phía dưới sẽ kéo gateway ra khỏi vòng phục vụ, trong khi việc của gateway lúc đó là vẫn trả lời và báo lỗi rõ ràng. [TC-GTW-025]"
+            "description": "**Mục đích**: xác nhận gateway — cửa vào duy nhất của toàn hệ thống — đã thực sự chạy sau khi `up.ps1` báo hoàn tất, trước khi đi tiếp các bước đo bằng tay khác ở docs/QA/005.\n\n**Input**: `GET {{gatewayUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng FR-002**: nếu `up.ps1` báo \"xong\" nhưng gateway chưa sống, bước này đỏ — bắt được đúng tình huống lệnh báo thành công giả (false positive) mà FR-002 cấm.\n\n---\n\nRoute catch-all của gateway không được nuốt mất health probe của chính nó. Readiness của gateway cố ý để rỗng: nếu nó phụ thuộc vào BFF thì một sự cố phía dưới sẽ kéo gateway ra khỏi vòng phục vụ, trong khi việc của gateway lúc đó là vẫn trả lời và báo lỗi rõ ràng. [TC-GTW-025]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -3870,7 +3906,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống bước 01, cho BFF — thành phần thứ 2 mà storefront cần để chạy được walkthrough đầy đủ (FR-004).\n\n**Input**: `GET {{bffUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng FR-002/FR-004**: cùng lý lẽ bước 01; cả 2 bước cùng xanh là điều kiện tối thiểu để tiếp tục kiểm FR-004 (walkthrough đầy đủ) bằng tay trên trình duyệt.\n\n---\n\nTiến trình BFF còn sống. Không có test case tự động nào trong docs/test-cases-2026-08-21.xlsx phủ endpoint này: bộ test của BFF không có HealthCheckTests như bốn domain service."
+            "description": "**Mục đích**: giống bước 01, cho BFF — thành phần thứ 2 mà storefront cần để chạy được walkthrough đầy đủ (FR-004).\n\n**Input**: `GET {{bffUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng FR-002/FR-004**: cùng lý lẽ bước 01; cả 2 bước cùng xanh là điều kiện tối thiểu để tiếp tục kiểm FR-004 (walkthrough đầy đủ) bằng tay trên trình duyệt.\n\n---\n\nTiến trình BFF còn sống. Không có test case tự động nào trong docs/test-cases-2026-08-21.xlsx phủ endpoint này: bộ test của BFF không có HealthCheckTests như bốn domain service.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -4075,7 +4111,7 @@
                 "v1.json"
               ]
             },
-            "description": "**Mục đích**: xác nhận tài liệu OpenAPI của BFF (nguồn sinh client TypeScript) mô tả đủ và đúng những gì SPA cần: đủ 7 route phía client dùng, mỗi route GET có khai báo các mã lỗi downstream có thể xảy ra (502/504 — khớp FR-006 của spec 002), các route theo id có khai báo 404, và schema `ProductSummary` đủ field `id`/`name`/`price`.\n\n**Input**: `GET {{bffUrl}}/openapi/v1.json`.\n\n**Output kỳ vọng**: `200`; `paths` chứa đủ `/bff/products`, `/bff/basket`, `/bff/basket/items`, `/bff/baskets/{basketId}`, `/bff/checkout`, `/bff/orders/{orderId}`, `/bff/parties/{partyId}`; mỗi route GET có downstream đều khai `502`+`504` trong `responses`; các route theo id khai `404`; `components.schemas.ProductListResponse` có `items`, và `ProductSummary` có `id`/`name`/`price`.\n\n**Vì sao chứng minh đúng FR-001/FR-004**: nếu một route thiếu trong tài liệu, `orval` sẽ không sinh được hàm gọi route đó cho SPA — tài liệu thiếu đồng nghĩa client thiếu; việc khai đủ 502/504/404 ở từng route là điều kiện để FR-004 (\"generated client MUST tolerate...\" / phản hồi lỗi được typed đúng) có nền tảng để đứng vững — thiếu khai báo mã lỗi thì client sinh ra sẽ không biết xử lý case đó.\n\n---\n\nTài liệu này là hợp đồng sinh ra API client của frontend, nên một tài liệu thiếu sót là lỗi thật chứ không phải chuyện tài liệu cho đẹp. Nó chỉ được publish ở môi trường Development — stack local chạy Development nên gọi được, còn stack mặc định (Production) thì trả 404.\n\n[TC-CMN-031, TC-CMN-032, TC-CMN-033, TC-CMN-034]"
+            "description": "**Mục đích**: xác nhận tài liệu OpenAPI của BFF (nguồn sinh client TypeScript) mô tả đủ và đúng những gì SPA cần: đủ 7 route phía client dùng, mỗi route GET có khai báo các mã lỗi downstream có thể xảy ra (502/504 — khớp FR-006 của spec 002), các route theo id có khai báo 404, và schema `ProductSummary` đủ field `id`/`name`/`price`.\n\n**Input**: `GET {{bffUrl}}/openapi/v1.json`.\n\n**Output kỳ vọng**: `200`; `paths` chứa đủ `/bff/products`, `/bff/basket`, `/bff/basket/items`, `/bff/baskets/{basketId}`, `/bff/checkout`, `/bff/orders/{orderId}`, `/bff/parties/{partyId}`; mỗi route GET có downstream đều khai `502`+`504` trong `responses`; các route theo id khai `404`; `components.schemas.ProductListResponse` có `items`, và `ProductSummary` có `id`/`name`/`price`.\n\n**Vì sao chứng minh đúng FR-001/FR-004**: nếu một route thiếu trong tài liệu, `orval` sẽ không sinh được hàm gọi route đó cho SPA — tài liệu thiếu đồng nghĩa client thiếu; việc khai đủ 502/504/404 ở từng route là điều kiện để FR-004 (\"generated client MUST tolerate...\" / phản hồi lỗi được typed đúng) có nền tảng để đứng vững — thiếu khai báo mã lỗi thì client sinh ra sẽ không biết xử lý case đó.\n\n---\n\nTài liệu này là hợp đồng sinh ra API client của frontend, nên một tài liệu thiếu sót là lỗi thật chứ không phải chuyện tài liệu cho đẹp. Nó chỉ được publish ở môi trường Development — stack local chạy Development nên gọi được, còn stack mặc định (Production) thì trả 404.\n\n[TC-CMN-031, TC-CMN-032, TC-CMN-033, TC-CMN-034]\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -6856,7 +6892,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: xác nhận health probe của Products là một MIỄN TRỪ CÓ CHỦ ĐÍCH (`AllowAnonymous`) khỏi yêu cầu phân quyền — đúng với FR-005 (danh sách miễn trừ phải tường minh, không phải suy ra từ thiếu cấu hình).\n\n**Input**: `GET {{productsUrl}}/health/live`, không token.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao cần bước này**: health probe PHẢI không cần token (để orchestrator kiểm tra sức khoẻ được) — nhưng đây phải là một quyết định TƯỜNG MINH ghi trong code, không phải một lỗ hổng tình cờ; bước 02 (cùng service) sẽ chứng minh route nghiệp vụ KHÔNG được hưởng miễn trừ tương tự.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+            "description": "**Mục đích**: xác nhận health probe của Products là một MIỄN TRỪ CÓ CHỦ ĐÍCH (`AllowAnonymous`) khỏi yêu cầu phân quyền — đúng với FR-005 (danh sách miễn trừ phải tường minh, không phải suy ra từ thiếu cấu hình).\n\n**Input**: `GET {{productsUrl}}/health/live`, không token.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao cần bước này**: health probe PHẢI không cần token (để orchestrator kiểm tra sức khoẻ được) — nhưng đây phải là một quyết định TƯỜNG MINH ghi trong code, không phải một lỗ hổng tình cờ; bước 02 (cùng service) sẽ chứng minh route nghiệp vụ KHÔNG được hưởng miễn trừ tương tự.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -6933,7 +6969,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống bước 01, cho Baskets — mỗi service phải tự khai miễn trừ riêng cho health probe của mình.\n\n**Input**: `GET {{basketsUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 04.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+            "description": "**Mục đích**: giống bước 01, cho Baskets — mỗi service phải tự khai miễn trừ riêng cho health probe của mình.\n\n**Input**: `GET {{basketsUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 04.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -7011,7 +7047,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống bước 01/03, cho Orders.\n\n**Input**: `GET {{ordersUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 06.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+            "description": "**Mục đích**: giống bước 01/03, cho Orders.\n\n**Input**: `GET {{ordersUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 06.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -7089,7 +7125,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống các bước health trước, cho Parties.\n\n**Input**: `GET {{partiesUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 08.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+            "description": "**Mục đích**: giống các bước health trước, cho Parties.\n\n**Input**: `GET {{partiesUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 08.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -7167,7 +7203,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống các bước health trước, cho BFF — khác với 4 service domain, BFF là tầng tổng hợp nhưng vẫn phải tự có health probe miễn trừ riêng.\n\n**Input**: `GET {{bffUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 10.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`."
+            "description": "**Mục đích**: giống các bước health trước, cho BFF — khác với 4 service domain, BFF là tầng tổng hợp nhưng vẫn phải tự có health probe miễn trừ riêng.\n\n**Input**: `GET {{bffUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 10.\n\n---\n\nRoute `/health/live` khai `.AllowAnonymous()` để Kubernetes/Docker gọi được không cần token. Kỳ vọng `200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8144,7 +8180,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: xác nhận baseline — ở trạng thái mặc định (secret đầy đủ, có `Password=${MSSQL_SA_PASSWORD}`), Products khởi động và kết nối DB bình thường.\n\n**Input**: `GET {{productsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao cần baseline này**: nếu không có bước baseline, không thể phân biệt \"service fail-fast đúng vì thiếu secret\" (hành vi ĐÚNG theo FR-007) với \"service lúc nào cũng không khởi động được\" (một lỗi khác, không liên quan FR-007) khi thử công tắc mô phỏng.\n\n**Liên hệ**: để thấy hành vi NGƯỢC LẠI (fail-fast khi thiếu secret), đặt `PRODUCTS_DB_CONNECTION` thành chuỗi không có `Password=` trong `.env` rồi `docker compose up -d --force-recreate products-api` — lúc đó container sẽ không lên healthy (và log của nó nêu đích danh khoá thiếu), khác hẳn việc bước Postman này đơn thuần trả lỗi.\n\n---\n\nKhi secret `ConnectionStrings:ProductsDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `PRODUCTS_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+            "description": "**Mục đích**: xác nhận baseline — ở trạng thái mặc định (secret đầy đủ, có `Password=${MSSQL_SA_PASSWORD}`), Products khởi động và kết nối DB bình thường.\n\n**Input**: `GET {{productsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao cần baseline này**: nếu không có bước baseline, không thể phân biệt \"service fail-fast đúng vì thiếu secret\" (hành vi ĐÚNG theo FR-007) với \"service lúc nào cũng không khởi động được\" (một lỗi khác, không liên quan FR-007) khi thử công tắc mô phỏng.\n\n**Liên hệ**: để thấy hành vi NGƯỢC LẠI (fail-fast khi thiếu secret), đặt `PRODUCTS_DB_CONNECTION` thành chuỗi không có `Password=` trong `.env` rồi `docker compose up -d --force-recreate products-api` — lúc đó container sẽ không lên healthy (và log của nó nêu đích danh khoá thiếu), khác hẳn việc bước Postman này đơn thuần trả lỗi.\n\n---\n\nKhi secret `ConnectionStrings:ProductsDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `PRODUCTS_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8178,7 +8214,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống bước 01, cho Baskets — mỗi service có secret RIÊNG (`ConnectionStrings:BasketsDb`), phải tự xác nhận baseline độc lập.\n\n**Input**: `GET {{basketsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: công tắc tương ứng là `BASKETS_DB_CONNECTION`.\n\n---\n\nKhi secret `ConnectionStrings:BasketsDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `BASKETS_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+            "description": "**Mục đích**: giống bước 01, cho Baskets — mỗi service có secret RIÊNG (`ConnectionStrings:BasketsDb`), phải tự xác nhận baseline độc lập.\n\n**Input**: `GET {{basketsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: công tắc tương ứng là `BASKETS_DB_CONNECTION`.\n\n---\n\nKhi secret `ConnectionStrings:BasketsDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `BASKETS_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8212,7 +8248,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống bước 01/02, cho Orders.\n\n**Input**: `GET {{ordersUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: công tắc tương ứng là `ORDERS_DB_CONNECTION`.\n\n---\n\nKhi secret `ConnectionStrings:OrdersDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `ORDERS_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+            "description": "**Mục đích**: giống bước 01/02, cho Orders.\n\n**Input**: `GET {{ordersUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: công tắc tương ứng là `ORDERS_DB_CONNECTION`.\n\n---\n\nKhi secret `ConnectionStrings:OrdersDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `ORDERS_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8246,7 +8282,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống 3 bước trên, cho Parties.\n\n**Input**: `GET {{partiesUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: công tắc tương ứng là `PARTIES_DB_CONNECTION`.\n\n---\n\nKhi secret `ConnectionStrings:PartiesDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `PARTIES_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+            "description": "**Mục đích**: giống 3 bước trên, cho Parties.\n\n**Input**: `GET {{partiesUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: công tắc tương ứng là `PARTIES_DB_CONNECTION`.\n\n---\n\nKhi secret `ConnectionStrings:PartiesDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `PARTIES_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8280,7 +8316,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: hoàn tất bộ 5/5 service có DB riêng — Identity cũng phải tự thoả baseline, không được coi là \"ngoại lệ\" chỉ vì nó là máy chủ định danh.\n\n**Input**: `GET {{identityUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao đây là bước chốt của cả folder**: sau khi cả 5/5 service xác nhận baseline khoẻ, người thực hiện QA mới có cơ sở để tự tay thử công tắc mô phỏng \"thiếu secret\" (`.env.example` dòng 95-98) trên TỪNG service một và tin tưởng rằng nếu service đó không lên healthy nữa, nguyên nhân chắc chắn là do secret bị rút đi — không phải một vấn đề baseline có sẵn từ trước.\n\n---\n\nKhi secret `ConnectionStrings:IdentityDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `IDENTITY_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`."
+            "description": "**Mục đích**: hoàn tất bộ 5/5 service có DB riêng — Identity cũng phải tự thoả baseline, không được coi là \"ngoại lệ\" chỉ vì nó là máy chủ định danh.\n\n**Input**: `GET {{identityUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao đây là bước chốt của cả folder**: sau khi cả 5/5 service xác nhận baseline khoẻ, người thực hiện QA mới có cơ sở để tự tay thử công tắc mô phỏng \"thiếu secret\" (`.env.example` dòng 95-98) trên TỪNG service một và tin tưởng rằng nếu service đó không lên healthy nữa, nguyên nhân chắc chắn là do secret bị rút đi — không phải một vấn đề baseline có sẵn từ trước.\n\n---\n\nKhi secret `ConnectionStrings:IdentityDb` có credential (mặc định: `Password=${MSSQL_SA_PASSWORD}`), service khởi động và readiness `200`. Khi biến `IDENTITY_DB_CONNECTION` trong .env bị đặt thành chuỗi CHỈ có host/database, service phải TỪ CHỐI khởi động (container thoát, không có tiến trình nào lắng nghe cổng) — request này khi đó lỗi kết nối, không phải `503`/`200`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8320,7 +8356,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: xác nhận endpoint liveness của Products tồn tại đúng vị trí và luôn trả `200` bất kể DB — một manifest Kubernetes trỏ probe vào đây sẽ không bao giờ khởi động lại Products chỉ vì DB chậm.\n\n**Input**: `GET {{productsUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng FR-003**: chạy lại bước này SAU KHI tắt `products-db` vẫn phải `200` — nếu nó đổi thành lỗi, nghĩa là liveness đã vô tình phụ thuộc DB, vi phạm FR-003.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+            "description": "**Mục đích**: xác nhận endpoint liveness của Products tồn tại đúng vị trí và luôn trả `200` bất kể DB — một manifest Kubernetes trỏ probe vào đây sẽ không bao giờ khởi động lại Products chỉ vì DB chậm.\n\n**Input**: `GET {{productsUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng FR-003**: chạy lại bước này SAU KHI tắt `products-db` vẫn phải `200` — nếu nó đổi thành lỗi, nghĩa là liveness đã vô tình phụ thuộc DB, vi phạm FR-003.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8354,7 +8390,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: xác nhận readiness của Products phản ánh đúng khả năng kết nối `products-db` — có check tên `self-database` với trạng thái `Healthy` khi DB sống.\n\n**Input**: `GET {{productsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `checks[].name == 'self-database'` có `status == 'Healthy'`.\n\n**Vì sao chứng minh đúng FR-004/FR-005**: tắt `products-db` rồi chạy lại bước này phải thấy `503` với check đó chuyển `Unhealthy` — khi đó FR-005 cũng được xác nhận: pod này phải bị loại khỏi traffic mới (hành vi của orchestrator, không kiểm trực tiếp qua Postman nhưng là hệ quả của readiness đúng).\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+            "description": "**Mục đích**: xác nhận readiness của Products phản ánh đúng khả năng kết nối `products-db` — có check tên `self-database` với trạng thái `Healthy` khi DB sống.\n\n**Input**: `GET {{productsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `checks[].name == 'self-database'` có `status == 'Healthy'`.\n\n**Vì sao chứng minh đúng FR-004/FR-005**: tắt `products-db` rồi chạy lại bước này phải thấy `503` với check đó chuyển `Unhealthy` — khi đó FR-005 cũng được xác nhận: pod này phải bị loại khỏi traffic mới (hành vi của orchestrator, không kiểm trực tiếp qua Postman nhưng là hệ quả của readiness đúng).\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8390,7 +8426,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống bước 01, cho Baskets.\n\n**Input**: `GET {{basketsUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 04.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+            "description": "**Mục đích**: giống bước 01, cho Baskets.\n\n**Input**: `GET {{basketsUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 04.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8424,7 +8460,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống bước 02, cho Baskets.\n\n**Input**: `GET {{basketsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `self-database: Healthy`.\n\n**Vì sao chứng minh đúng FR-004/FR-005**: service thứ 2/5 có DB tự thoả độc lập.\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+            "description": "**Mục đích**: giống bước 02, cho Baskets.\n\n**Input**: `GET {{basketsUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `self-database: Healthy`.\n\n**Vì sao chứng minh đúng FR-004/FR-005**: service thứ 2/5 có DB tự thoả độc lập.\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8460,7 +8496,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống các bước liveness trước, cho Orders.\n\n**Input**: `GET {{ordersUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 06 — đây cũng là service được dùng làm ví dụ chính trong mô tả công tắc hạ tầng của folder (tắt `orders-db`).\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+            "description": "**Mục đích**: giống các bước liveness trước, cho Orders.\n\n**Input**: `GET {{ordersUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 06 — đây cũng là service được dùng làm ví dụ chính trong mô tả công tắc hạ tầng của folder (tắt `orders-db`).\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8494,7 +8530,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống bước 02/04, cho Orders — đây là service được mô tả folder dùng làm ví dụ minh hoạ chính cho công tắc hạ tầng.\n\n**Input**: `GET {{ordersUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `self-database: Healthy`.\n\n**Vì sao chứng minh đúng FR-004/FR-005/SC-004**: tắt `orders-db` rồi chạy lại: bước 05 (liveness) vẫn `200`, bước này chuyển `503` — ĐÚNG lúc đó là bằng chứng sống cho SC-004 (\"khi dependency ngoài gặp sự cố, service không bị khởi động lại — chỉ bị loại khỏi traffic\").\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+            "description": "**Mục đích**: giống bước 02/04, cho Orders — đây là service được mô tả folder dùng làm ví dụ minh hoạ chính cho công tắc hạ tầng.\n\n**Input**: `GET {{ordersUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `self-database: Healthy`.\n\n**Vì sao chứng minh đúng FR-004/FR-005/SC-004**: tắt `orders-db` rồi chạy lại: bước 05 (liveness) vẫn `200`, bước này chuyển `503` — ĐÚNG lúc đó là bằng chứng sống cho SC-004 (\"khi dependency ngoài gặp sự cố, service không bị khởi động lại — chỉ bị loại khỏi traffic\").\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8530,7 +8566,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống các bước liveness trước, cho Parties.\n\n**Input**: `GET {{partiesUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 08.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+            "description": "**Mục đích**: giống các bước liveness trước, cho Parties.\n\n**Input**: `GET {{partiesUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 08.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8564,7 +8600,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống các bước readiness trước, cho Parties — hoàn tất 4/5 service có DB.\n\n**Input**: `GET {{partiesUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `self-database: Healthy`.\n\n**Vì sao chứng minh đúng FR-004/FR-005**: service thứ 4/5.\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+            "description": "**Mục đích**: giống các bước readiness trước, cho Parties — hoàn tất 4/5 service có DB.\n\n**Input**: `GET {{partiesUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `self-database: Healthy`.\n\n**Vì sao chứng minh đúng FR-004/FR-005**: service thứ 4/5.\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8600,7 +8636,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống các bước liveness trước, cho Identity — máy chủ định danh cũng phải tuân thủ cùng nguyên tắc tách liveness khỏi DB như mọi service khác.\n\n**Input**: `GET {{identityUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 10.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+            "description": "**Mục đích**: giống các bước liveness trước, cho Identity — máy chủ định danh cũng phải tuân thủ cùng nguyên tắc tách liveness khỏi DB như mọi service khác.\n\n**Input**: `GET {{identityUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 10.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8634,7 +8670,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống các bước readiness trước, cho Identity — hoàn tất 5/5 service có DB riêng.\n\n**Input**: `GET {{identityUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `self-database: Healthy`.\n\n**Vì sao đây là mốc quan trọng**: sau bước này, cả 5/5 service có DB đã được xác nhận đúng mô hình FR-004 — chuyển sang 2 service KHÔNG có DB (gateway, bff) ở bước 11-14, nơi readiness mang ý nghĩa KHÁC hẳn.\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart."
+            "description": "**Mục đích**: giống các bước readiness trước, cho Identity — hoàn tất 5/5 service có DB riêng.\n\n**Input**: `GET {{identityUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; `self-database: Healthy`.\n\n**Vì sao đây là mốc quan trọng**: sau bước này, cả 5/5 service có DB đã được xác nhận đúng mô hình FR-004 — chuyển sang 2 service KHÔNG có DB (gateway, bff) ở bước 11-14, nơi readiness mang ý nghĩa KHÁC hẳn.\n\n---\n\nNhóm có DB: readiness kiểm chính database của service (check `self-database`). Khi DB tắt: `503` với `self-database = Unhealthy` — pod bị loại khỏi Service nhưng KHÔNG bị restart.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8670,7 +8706,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống các bước liveness trước, cho Gateway — tầng cổng vào duy nhất, không có DB riêng.\n\n**Input**: `GET {{gatewayUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 12 — bước 12 mới là nơi thể hiện sự khác biệt so với 5 service có DB.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+            "description": "**Mục đích**: giống các bước liveness trước, cho Gateway — tầng cổng vào duy nhất, không có DB riêng.\n\n**Input**: `GET {{gatewayUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 12 — bước 12 mới là nơi thể hiện sự khác biệt so với 5 service có DB.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8704,7 +8740,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: đây là phép thử trọng tâm của nửa sau FR-004 (\"readiness của service KHÔNG sở hữu dữ liệu phải phản ánh đúng bản chất sẵn sàng ngay khi tiến trình chấp nhận request, KHÔNG phụ thuộc service khác mà nó gọi tới\") — readiness của Gateway KHÔNG được có check `self-database` (vì nó không sở hữu DB nào), và quan trọng hơn: KHÔNG ĐƯỢC phụ thuộc vào việc BFF/service phía sau có khoẻ hay không.\n\n**Input**: `GET {{gatewayUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; nội dung response (dạng chuỗi JSON) KHÔNG chứa `'self-database'`.\n\n**Vì sao chứng minh đúng FR-004**: nếu readiness của Gateway kiểm tra luôn cả BFF phía sau, tắt `bff-api` sẽ làm readiness của Gateway đỏ theo — SAI với tinh thần FR-004 (Gateway là tầng cổng stateless, sẵn sàng độc lập với downstream). Chạy lại bước này SAU KHI `docker compose stop bff-api` vẫn phải `200` mới đúng — đây chính là phép thử công tắc hạ tầng mô tả ở đầu folder.\n\n---\n\nNhóm stateless (gateway, bff): readiness không kiểm database/downstream, `200` ngay cả khi service phía sau đang tắt."
+            "description": "**Mục đích**: đây là phép thử trọng tâm của nửa sau FR-004 (\"readiness của service KHÔNG sở hữu dữ liệu phải phản ánh đúng bản chất sẵn sàng ngay khi tiến trình chấp nhận request, KHÔNG phụ thuộc service khác mà nó gọi tới\") — readiness của Gateway KHÔNG được có check `self-database` (vì nó không sở hữu DB nào), và quan trọng hơn: KHÔNG ĐƯỢC phụ thuộc vào việc BFF/service phía sau có khoẻ hay không.\n\n**Input**: `GET {{gatewayUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; nội dung response (dạng chuỗi JSON) KHÔNG chứa `'self-database'`.\n\n**Vì sao chứng minh đúng FR-004**: nếu readiness của Gateway kiểm tra luôn cả BFF phía sau, tắt `bff-api` sẽ làm readiness của Gateway đỏ theo — SAI với tinh thần FR-004 (Gateway là tầng cổng stateless, sẵn sàng độc lập với downstream). Chạy lại bước này SAU KHI `docker compose stop bff-api` vẫn phải `200` mới đúng — đây chính là phép thử công tắc hạ tầng mô tả ở đầu folder.\n\n---\n\nNhóm stateless (gateway, bff): readiness không kiểm database/downstream, `200` ngay cả khi service phía sau đang tắt.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8739,7 +8775,7 @@
                 "live"
               ]
             },
-            "description": "**Mục đích**: giống bước 11, cho BFF.\n\n**Input**: `GET {{bffUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 14.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc."
+            "description": "**Mục đích**: giống bước 11, cho BFF.\n\n**Input**: `GET {{bffUrl}}/health/live`.\n\n**Output kỳ vọng**: `200`.\n\n**Liên hệ**: cặp với bước 14.\n\n---\n\n`/health/live` chỉ trả lời 'tiến trình còn phản hồi' — KHÔNG phụ thuộc database hay service khác (FR-003), nên kubelet không restart pod chỉ vì DB tạm mất. Kỳ vọng `200` ở MỌI trạng thái phụ thuộc.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -8773,7 +8809,7 @@
                 "ready"
               ]
             },
-            "description": "**Mục đích**: giống bước 12, cho BFF — tầng tổng hợp cũng không sở hữu DB, readiness của nó chỉ phản ánh \"tiến trình BFF còn nhận request được\", không phụ thuộc 4 service nghiệp vụ nó gọi tới (lỗi downstream được xử lý ở tầng resilience của spec 020, không phải ở readiness).\n\n**Input**: `GET {{bffUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; không chứa `'self-database'`.\n\n**Vì sao đây là bước chốt của cả folder**: hoàn tất cả 7/7 service với đúng 2 mô hình readiness khác nhau (5 service có DB dùng check `self-database`; 2 service stateless không có check đó) — khớp chính xác câu chữ của FR-004, không có service nào rơi vào mô hình sai.\n\n---\n\nNhóm stateless (gateway, bff): readiness không kiểm database/downstream, `200` ngay cả khi service phía sau đang tắt."
+            "description": "**Mục đích**: giống bước 12, cho BFF — tầng tổng hợp cũng không sở hữu DB, readiness của nó chỉ phản ánh \"tiến trình BFF còn nhận request được\", không phụ thuộc 4 service nghiệp vụ nó gọi tới (lỗi downstream được xử lý ở tầng resilience của spec 020, không phải ở readiness).\n\n**Input**: `GET {{bffUrl}}/health/ready`.\n\n**Output kỳ vọng**: `200`; không chứa `'self-database'`.\n\n**Vì sao đây là bước chốt của cả folder**: hoàn tất cả 7/7 service với đúng 2 mô hình readiness khác nhau (5 service có DB dùng check `self-database`; 2 service stateless không có check đó) — khớp chính xác câu chữ của FR-004, không có service nào rơi vào mô hình sai.\n\n---\n\nNhóm stateless (gateway, bff): readiness không kiểm database/downstream, `200` ngay cả khi service phía sau đang tắt.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -9889,6 +9925,10 @@
             "method": "GET",
             "header": [
               {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
                 "key": "X-Tenant-Id",
                 "value": "{{tenantId}}"
               }
@@ -10531,6 +10571,10 @@
             "method": "GET",
             "header": [
               {
+                "key": "X-Subject-Id",
+                "value": "{{subjectId}}"
+              },
+              {
                 "key": "X-Tenant-Id",
                 "value": "{{tenantId}}"
               }
@@ -11107,6 +11151,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "2000"
                   }
@@ -11152,6 +11204,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "2000"
@@ -11202,6 +11262,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "abc"
                   }
@@ -11241,6 +11309,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "0"
@@ -11282,6 +11358,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "-5"
                   }
@@ -11321,6 +11405,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "1.5"
@@ -11362,6 +11454,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "40000"
                   }
@@ -11401,6 +11501,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "2000"
@@ -11489,6 +11597,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "2500"
@@ -11820,6 +11936,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
                   }
@@ -11864,6 +11988,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
@@ -11916,7 +12048,7 @@
                     "live"
                   ]
                 },
-                "description": "**Mục đích**: xác nhận công tắc tiêm lỗi CHỈ ảnh hưởng TỚI request CÓ header — một request BÌNH THƯỜNG (không header) đi qua CÙNG LÚC cờ đang bật vẫn phải thành công, không bị \"lây\" lỗi.\n\n**Input**: `GET {{ordersUrl}}/health/live`, không header `X-Chaos-Fault`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng bất biến 4**: đảm bảo bài diễn tập (27b) không vô tình làm TẤT CẢ traffic thật (không chỉ traffic chủ đích tiêm lỗi) đều thất bại — tách biệt rõ \"request bị chủ đích gây lỗi\" khỏi \"request bình thường đi qua trong lúc diễn tập\".\n\n---\n\nTải nền và health probe không bị ảnh hưởng."
+                "description": "**Mục đích**: xác nhận công tắc tiêm lỗi CHỈ ảnh hưởng TỚI request CÓ header — một request BÌNH THƯỜNG (không header) đi qua CÙNG LÚC cờ đang bật vẫn phải thành công, không bị \"lây\" lỗi.\n\n**Input**: `GET {{ordersUrl}}/health/live`, không header `X-Chaos-Fault`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao chứng minh đúng bất biến 4**: đảm bảo bài diễn tập (27b) không vô tình làm TẤT CẢ traffic thật (không chỉ traffic chủ đích tiêm lỗi) đều thất bại — tách biệt rõ \"request bị chủ đích gây lỗi\" khỏi \"request bình thường đi qua trong lúc diễn tập\".\n\n---\n\nTải nền và health probe không bị ảnh hưởng.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {
@@ -11937,6 +12069,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Fault",
                     "value": "500"
@@ -12254,7 +12394,7 @@
                 "openid-configuration"
               ]
             },
-            "description": "Traffic đều cho identity ngoài lúc lấy token. Không cần token."
+            "description": "Traffic đều cho identity ngoài lúc lấy token. Không cần token.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
           },
           "event": [
             {
@@ -12325,6 +12465,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
                   }
@@ -12364,6 +12512,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
                   }
@@ -12401,6 +12557,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
@@ -12441,6 +12605,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
                   }
@@ -12479,6 +12651,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
@@ -12536,7 +12716,7 @@
                     "openid-configuration"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Identity.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api — mỗi lần gửi đốt thêm ngân sách 5xx (và ngân sách khả dụng) TUẦN NÀY của Identity.Api. Chạy cả folder `29a` nhiều vòng bằng newman/Runner để đốt ngân sách của cả 7 service cùng lúc (quickstart 029 Kịch bản 1).\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200` — header bị bỏ qua, xem folder 27a).\n\n**Vì sao chứng minh đúng FR-012 (spec 029)**: lỗi diễn tập đi qua đúng đường OTel → Elasticsearch như lỗi thật, nên được tính vào ngân sách tuần như sự cố thật.\n\n---\n\nNgân sách 5xx tuần = 1% số span của service từ thứ Hai 00:00 giờ Việt Nam: cạn khi số 5xx ≈ tổng span / 99 — xem `29b` bước 01 để biết cần bao nhiêu vòng.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {
@@ -12741,6 +12921,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
                   }
@@ -12780,6 +12968,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
                   }
@@ -12817,6 +13013,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
@@ -12857,6 +13061,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
                   }
@@ -12895,6 +13107,14 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
@@ -12952,7 +13172,7 @@
                     "openid-configuration"
                   ]
                 },
-                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian."
+                "description": "**Mục đích**: tạo MỘT request lỗi 5xx thật ở Identity.Api để panel \"5xx theo phút theo service\", bảng SLO và panel Phát hiện nhanh của dashboard `Xử lý sự cố — 7 service` có số. Chạy cả folder `30a` nhiều vòng bằng newman/Runner.\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration`, header `X-Chaos-Fault: 5xx`. Cần `CHAOS_ALLOW_FAULT_INJECTION=true` trong `.env` và đã tạo lại container của service.\n\n**Output kỳ vọng**: `500` (cờ TẮT thì `200`, header bị bỏ qua — xem folder 27a).\n\n**Vì sao chứng minh đúng FR-002/FR-003 (spec 030)**: lỗi đi qua đúng đường OTel → Elasticsearch như lỗi thật nên hiện ở các panel đi theo thanh thời gian.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {
@@ -13282,6 +13502,14 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Chaos-Latency-Ms",
                     "value": "2500"
                   }
@@ -13475,6 +13703,10 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Tenant-Id",
                     "value": "{{tenantId}}"
                   },
@@ -13523,6 +13755,10 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Tenant-Id",
                     "value": "{{tenantId}}"
@@ -13587,7 +13823,7 @@
                     "ready"
                   ]
                 },
-                "description": "Khi orders-db dừng: orders-api báo chưa sẵn sàng (503) trong vài giây."
+                "description": "Khi orders-db dừng: orders-api báo chưa sẵn sàng (503) trong vài giây.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {
@@ -13619,7 +13855,7 @@
                     "ready"
                   ]
                 },
-                "description": "Sau `-Restore`: DB healthy và orders-api ready lại (đã đo ≈ 68 s sau khi khởi động DB)."
+                "description": "Sau `-Restore`: DB healthy và orders-api ready lại (đã đo ≈ 68 s sau khi khởi động DB).\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {
@@ -14002,7 +14238,7 @@
                     "ready"
                   ]
                 },
-                "description": "Chạy khi loại A đang bật cho orders-api. Kỳ vọng 503 và `self-database` Unhealthy (không kết nối được SQL Server). Đã đo 2026-10-06: 503 sau ≈ 8,5 s khi service vừa khởi động; container chưa lên `healthy`."
+                "description": "Chạy khi loại A đang bật cho orders-api. Kỳ vọng 503 và `self-database` Unhealthy (không kết nối được SQL Server). Đã đo 2026-10-06: 503 sau ≈ 8,5 s khi service vừa khởi động; container chưa lên `healthy`.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {
@@ -14032,7 +14268,7 @@
                     "ready"
                   ]
                 },
-                "description": "Chạy sau `-Restore` (chờ container healthy). Kỳ vọng 200 và `Healthy`. Mốc giải quyết thật vẫn theo truy vấn 15 phút của file 08."
+                "description": "Chạy sau `-Restore` (chờ container healthy). Kỳ vọng 200 và `Healthy`. Mốc giải quyết thật vẫn theo truy vấn 15 phút của file 08.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {
@@ -14058,6 +14294,10 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Chaos-Fault",
                     "value": "5xx"
@@ -14105,6 +14345,10 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Tenant-Id",
                     "value": "{{tenantId}}"
@@ -14195,6 +14439,10 @@
                 "method": "GET",
                 "header": [
                   {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
+                  {
                     "key": "X-Tenant-Id",
                     "value": "{{tenantId}}"
                   },
@@ -14243,6 +14491,10 @@
               "request": {
                 "method": "GET",
                 "header": [
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  },
                   {
                     "key": "X-Tenant-Id",
                     "value": "{{tenantId}}"
@@ -14307,7 +14559,7 @@
                     "ready"
                   ]
                 },
-                "description": "Khi orders-db dừng: orders-api báo chưa sẵn sàng (503) trong vài giây."
+                "description": "Khi orders-db dừng: orders-api báo chưa sẵn sàng (503) trong vài giây.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {
@@ -14339,7 +14591,7 @@
                     "ready"
                   ]
                 },
-                "description": "Sau `-Restore`: DB healthy và orders-api ready lại (đã đo ≈ 68 s sau khi khởi động DB)."
+                "description": "Sau `-Restore`: DB healthy và orders-api ready lại (đã đo ≈ 68 s sau khi khởi động DB).\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {
@@ -14711,7 +14963,16 @@
               "name": "01 Products — danh sách sản phẩm",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  }
+                ],
                 "auth": {
                   "type": "noauth"
                 },
@@ -14742,7 +15003,16 @@
               "name": "02 Orders — đơn không tồn tại (cần token)",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  }
+                ],
                 "auth": {
                   "type": "noauth"
                 },
@@ -14788,7 +15058,7 @@
                     "openid-configuration"
                   ]
                 },
-                "description": "**Mục đích**: tạo một span nghiệp vụ (đường dẫn không bắt đầu bằng `/health`) để mẫu số ngân sách có dữ liệu thật, không phải health check.\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration`, không header tiêm lỗi. Route công khai.\n\n**Output kỳ vọng**: `200`.\n\n**FR (spec 033)**: FR-001, FR-002, SC-001."
+                "description": "**Mục đích**: tạo một span nghiệp vụ (đường dẫn không bắt đầu bằng `/health`) để mẫu số ngân sách có dữ liệu thật, không phải health check.\n\n**Input**: `GET {{identityUrl}}/.well-known/openid-configuration`, không header tiêm lỗi. Route công khai.\n\n**Output kỳ vọng**: `200`.\n\n**FR (spec 033)**: FR-001, FR-002, SC-001.\n\n**Lưu ý — route công khai**: route này không cần token; `200` ở đây chỉ chứng tỏ service đang sống, không chứng tỏ đã gọi thành công một API nghiệp vụ."
               },
               "event": [
                 {

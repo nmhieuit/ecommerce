@@ -29,9 +29,9 @@ Import đúng **collection v2** nếu chưa làm (`postman/ecommerce.postman_col
 3. **`03 Lấy access token KHÔNG có scope ecommerce-api`** — cùng client, cùng user, chỉ xin scope
    `openid profile` (không xin `ecommerce-api`). **Bạn sẽ thấy** `200` (lấy token vẫn thành công — token
    hợp lệ, chỉ là thiếu quyền), lưu vào biến `accessTokenNoScope`.
-4. **`04 Có token nhưng thiếu scope thì bị chặn (403)`** — cùng `GET .../baskets/current`, lần này có
-   Bearer `{{accessTokenNoScope}}` cùng header `X-Tenant-Id`/`X-Subject-Id`. **Bạn sẽ thấy** `403`, và
-   thân lỗi có `error: "forbidden_scope"` — không phải 1 lỗi 403 rỗng mặc định.
+4. **`04 Có token nhưng thiếu scope thì bị chặn (401, thiếu audience ecommerce-api)`** — cùng `GET .../baskets/current`, lần này có
+   Bearer `{{accessTokenNoScope}}` cùng header `X-Tenant-Id`/`X-Subject-Id`. **Bạn sẽ thấy** `401`, và
+   thân lỗi có `error: "unauthorized"`: token không xin scope `ecommerce-api` nên không có audience `ecommerce-api` và bị từ chối ở bước xác thực, trước chính sách scope (không phải `403 forbidden_scope`).
 
 ## Bước 2 — Tìm đúng request 401 vừa tạo trong Kibana
 
