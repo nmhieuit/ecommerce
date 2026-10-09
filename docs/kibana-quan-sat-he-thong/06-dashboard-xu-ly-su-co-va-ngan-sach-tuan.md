@@ -29,6 +29,8 @@ Section **Tình trạng SLO**:
 - **Health lỗi theo service** (spec 033): alert của rule `health-failure` (từ 50% span health của service trả 5xx trong 5 phút), nằm cạnh bảng Phát hiện nhanh. Health là tín hiệu "service có sẵn sàng không", tách khỏi ngân sách.
 
 > **Spec 033**: các panel đọc traces của dashboard này (và mọi panel ES|QL của dashboard Ngân sách lỗi tuần) **không tính span có đường dẫn bắt đầu bằng `/health`** (health check của Docker). Ngân sách chỉ đo request nghiệp vụ. Chi tiết: [`specs/033-exclude-health-spans/`](../../specs/033-exclude-health-spans/spec.md).
+>
+> **Spec 034**: các panel ngân sách/SLO (Bảng SLO, 5xx/p95/traffic theo phút, phân bố status code, top endpoint chậm nhất và mọi panel ES|QL của dashboard Ngân sách lỗi tuần) **chỉ đếm span `kind = Server`** (request mà chính service nhận), không đếm span Client/Producer. Panel `Lỗi gọi hạ lưu` vẫn đọc span Client. Chi tiết: [`specs/034-error-budget-server-spans/`](../../specs/034-error-budget-server-spans/spec.md).
 
 Section **Đào sâu lỗi**:
 - **5xx theo phút theo service**, **Latency p95 theo phút theo service**, **Traffic + 401/403 theo phút theo service** (thay panel "Tổng 401 + 403" cũ).

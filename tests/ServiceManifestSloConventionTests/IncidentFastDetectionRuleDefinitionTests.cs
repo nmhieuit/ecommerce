@@ -183,6 +183,20 @@ public partial class IncidentFastDetectionRuleDefinitionTests
         ErrorBudgetRuleDefinitionTests.AssertExcludesPathPrefixesBeforeAnyCalculation(RequireRule().Esql, RuleName);
     }
 
+    /// <summary>
+    /// Kiểm tra: ES|QL của rule có đúng một dòng `WHERE kind == "Server"` và dòng đó đứng trước mọi `EVAL`/`STATS`,
+    /// để chỉ span Server (request mà chính service nhận) được tính vào 5xx và độ trễ của cửa sổ 5 phút.
+    /// Lý do: FR-001/FR-002 (spec 034) — span Client (lời gọi hạ lưu) và Producer (publish thông điệp) làm một lỗi bị
+    /// đếm ở nhiều service và đếm hai lần ở BFF, nên rule bắn dù service đó không trả lỗi cho người gọi.
+    /// Task nguồn: spec 034 (ngân sách lỗi chỉ đếm span Server) — FR-001, FR-002, FR-007, US1/US3 (bất biến 1, 4, 5).
+    /// </summary>
+    [Fact]
+    public void Rule_CountsOnlyServerSpans_BeforeAnyCalculation()
+    {
+        ErrorBudgetRuleDefinitionTests.AssertCountsOnlyServerSpansBeforeAnyCalculation(
+            RequireRule().Esql, RuleName, ErrorBudgetRuleDefinitionTests.ServerOnlyCondition);
+    }
+
     private static ErrorBudgetRuleDefinitionTests.ExportedRule RequireRule()
     {
         var path = Path.Combine(

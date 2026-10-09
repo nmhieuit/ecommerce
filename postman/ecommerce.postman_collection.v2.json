@@ -9450,7 +9450,7 @@
                 "_search"
               ]
             },
-            "description": "**Mục đích**: đây là bước phát hiện lỗ hổng QA_Debt quan trọng nhất của folder — Orders KHÔNG nhận request nghiệp vụ nào trong lúc QA (idle thật), nhưng VẪN có traffic health-probe định kỳ (Kubernetes/compose tự gọi `/health/live` liên tục) — nếu dashboard tính % lỗi dựa trên MỌI span (bao gồm cả probe), nó sẽ thấy \"0 lỗi / tổng số request > 0\" và hiển thị \"0% lỗi\" — một con số trông như \"đang đạt ngân sách hoàn hảo\" nhưng thực ra sai về bản chất (FR-006 yêu cầu phải hiện \"không có dữ liệu\" khi không có TRAFFIC THẬT).\n\n**Input**: `POST {{elasticsearchUrl}}/traces-generic.otel-default*/_search`, đếm riêng `a.all` (mọi span Server) và `a.real` (span KHÔNG phải `/health/*`).\n\n**Output kỳ vọng**: `a.all.doc_count > 0` (CÓ span, vì vẫn có probe); `a.real.doc_count == 0` (KHÔNG có request người dùng thật).\n\n**Vì sao đây là phát hiện QA_Debt, không phải hành vi mong muốn**: chính 2 con số này (span > 0 NHƯNG request-thật = 0) là bằng chứng cụ thể cho khoảng trống của FR-006 — dashboard hiện tại (dùng mọi span để tính %lỗi) sẽ hiển thị nhầm \"0% lỗi\" cho Orders trong tình huống này, thay vì đúng ra phải hiện \"không có dữ liệu\".\n\n---\n\nOrders.Api không được gọi ở bước nào của folder này. Truy vấn 1 (mọi span Server, giống công thức dashboard): có span. Truy vấn 2 (bỏ `/health/*`): 0. Nghĩa là dashboard hiện số đo của service idle chỉ từ span probe (0% lỗi, ~1 ms) thay vì 'không có dữ liệu'.\n\n---\n\n**Cập nhật (spec 033)**: từ spec 033, ngân sách lỗi, Bảng SLO và các panel ngân sách không còn tính span `/health*`, nên traffic health-probe nêu ở trên không còn ảnh hưởng ngân sách/Bảng SLO (bước này vẫn đúng với dữ liệu thô trong Elasticsearch).",
+            "description": "**Mục đích**: đây là bước phát hiện lỗ hổng QA_Debt quan trọng nhất của folder — Orders KHÔNG nhận request nghiệp vụ nào trong lúc QA (idle thật), nhưng VẪN có traffic health-probe định kỳ (Kubernetes/compose tự gọi `/health/live` liên tục) — nếu dashboard tính % lỗi dựa trên MỌI span (bao gồm cả probe), nó sẽ thấy \"0 lỗi / tổng số request > 0\" và hiển thị \"0% lỗi\" — một con số trông như \"đang đạt ngân sách hoàn hảo\" nhưng thực ra sai về bản chất (FR-006 yêu cầu phải hiện \"không có dữ liệu\" khi không có TRAFFIC THẬT).\n\n**Input**: `POST {{elasticsearchUrl}}/traces-generic.otel-default*/_search`, đếm riêng `a.all` (mọi span Server) và `a.real` (span KHÔNG phải `/health/*`).\n\n**Output kỳ vọng**: `a.all.doc_count > 0` (CÓ span, vì vẫn có probe); `a.real.doc_count == 0` (KHÔNG có request người dùng thật).\n\n**Vì sao đây là phát hiện QA_Debt, không phải hành vi mong muốn**: chính 2 con số này (span > 0 NHƯNG request-thật = 0) là bằng chứng cụ thể cho khoảng trống của FR-006 — dashboard lúc viết (dùng mọi span để tính %lỗi; từ spec 033/034 công thức đã loại `/health*` và chỉ đếm span Server) sẽ hiển thị nhầm \"0% lỗi\" cho Orders trong tình huống này, thay vì đúng ra phải hiện \"không có dữ liệu\".\n\n---\n\nOrders.Api không được gọi ở bước nào của folder này. Truy vấn 1 (mọi span Server, giống công thức dashboard lúc viết; từ spec 034 chỉ đếm span Server loại `/health*`): có span. Truy vấn 2 (bỏ `/health/*`): 0. Nghĩa là dashboard hiện số đo của service idle chỉ từ span probe (0% lỗi, ~1 ms) thay vì 'không có dữ liệu'.\n\n---\n\n**Cập nhật (spec 033)**: từ spec 033, ngân sách lỗi, Bảng SLO và các panel ngân sách không còn tính span `/health*`, nên traffic health-probe nêu ở trên không còn ảnh hưởng ngân sách/Bảng SLO (bước này vẫn đúng với dữ liệu thô trong Elasticsearch).",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"size\": 0,\n  \"track_total_hits\": true,\n  \"query\": {\n    \"bool\": {\n      \"filter\": [\n        {\n          \"term\": {\n            \"resource.attributes.service.name\": \"Orders.Api\"\n          }\n        },\n        {\n          \"range\": {\n            \"@timestamp\": {\n              \"gte\": \"{{slo021StartMs}}\",\n              \"format\": \"epoch_millis\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"kind\": \"Server\"\n          }\n        }\n      ]\n    }\n  },\n  \"aggs\": {\n    \"all\": {\n      \"filter\": {\n        \"match_all\": {}\n      }\n    },\n    \"real\": {\n      \"filter\": {\n        \"bool\": {\n          \"must_not\": [\n            {\n              \"prefix\": {\n                \"attributes.http.route\": \"/health\"\n              }\n            }\n          ]\n        }\n      }\n    }\n  }\n}",
@@ -15162,6 +15162,194 @@
                       "});",
                       "pm.test(\"có cột health_5xx_pct\", function () {",
                       "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('health_5xx_pct');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "34 - Ngân sách: chỉ đếm span Server",
+      "description": "Spec 034: ngân sách lỗi chỉ đếm span Server (request mà chính service nhận), không đếm span Client/Producer (lời gọi đi ra hạ lưu, publish thông điệp). `34a` tạo một lỗi hạ lưu thật qua Gateway → BFF → Products (cần dừng `products-api`); `34b` là truy vấn đọc đối chiếu số span và lỗi theo loại span, cho thấy span Client không vào ngân sách. Cần stack local đang chạy và token từ folder `00 - Xác thực & phân quyền`.",
+      "item": [
+        {
+          "name": "34a - Lỗi hạ lưu thật qua Gateway → BFF → Products (dừng products-api trước)",
+          "description": "Chỉ chạy khi `products-api` đã dừng. Request đốt ngân sách thật.",
+          "item": [
+            {
+              "name": "01 Gateway — /bff/products khi products-api đang dừng",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Tenant-Id",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-Subject-Id",
+                    "value": "{{subjectId}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{gatewayUrl}}/bff/products",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "bff",
+                    "products"
+                  ]
+                },
+                "description": "**Mục đích**: tạo một lỗi hạ lưu thật đi qua cả ba tầng Gateway → BFF → Products. Với công thức cũ lỗi này bị trừ ở cả 3 service và đếm hai lần ở BFF (span Server nhận request + span Client gọi Products); với công thức mới (spec 034) chỉ span Server của mỗi service được tính.\n\n**Input**: `GET {{gatewayUrl}}/bff/products` với token từ folder `00 - Xác thực & phân quyền`, KHÔNG có header tiêm lỗi (header `X-Chaos-Fault` trả 500 ngay ở service đầu nên không tạo được lỗi hạ lưu). **Bắt buộc** dừng `products-api` trước khi chạy: `docker compose -f docker-compose.local.yml stop products-api`, và bật lại sau bước `34b`: `docker compose -f docker-compose.local.yml start products-api`.\n\n**Output kỳ vọng**: mã 5xx (lỗi hạ lưu lan lên Gateway). Đã quan sát (2026-10-09): Gateway có 1 span Server 5xx và 1 span Client 5xx cho cùng một request (công thức cũ đếm 2, công thức mới đếm 1); BFF có 1 span Server 5xx và 3 span Client gọi Products (kết nối bị từ chối, thử lại, không có mã trạng thái); Products dừng nên không có span.\n\n**Lưu ý**: request này đốt ngân sách thật của Gateway, BFF (và có thể Products khi nó chạy lại); chạy xong cần Disable/Enable `error-budget-100` nếu muốn về sạch trạng thái.\n\n**FR (spec 034)**: FR-001, US1 kịch bản 1.\n"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"5xx — lỗi hạ lưu lan qua BFF lên Gateway\", function () {",
+                      "    pm.expect(pm.response.code).to.be.at.least(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "34b - Đối chiếu số span theo loại (chạy một lần, sau 34a)",
+          "description": "Truy vấn đọc, không tạo dữ liệu. Đối chiếu số trên dashboard với Elasticsearch: chỉ span `Server` được tính vào ngân sách.",
+          "item": [
+            {
+              "name": "01 Span và lỗi 5xx theo service và loại span — 15 phút qua (FR-001)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= NOW() - 15 minutes\\n| WHERE NOT (COALESCE(attributes.url.path, \\\"\\\") LIKE \\\"/health*\\\")\\n| EVAL service = resource.attributes.service.name, is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| STATS spans = COUNT(*), loi_5xx = SUM(is_5xx) BY service, kind\\n| SORT service, kind\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: cho thấy mỗi service có span Server (được tính) và span Client/Producer (bị loại) riêng; sau `34a`, BFF có thêm span Client 5xx do Products không trả lời.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), đã loại `/health*`.\n\n**Output kỳ vọng**: `200`; mỗi (service, loại span) có cột `spans`, `loi_5xx`.\n\n**FR (spec 034)**: FR-001, FR-004."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"có cột spans\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('spans');",
+                      "});",
+                      "pm.test(\"có cột loi_5xx\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('loi_5xx');",
+                      "});",
+                      "pm.test(\"có cột kind\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('kind');",
+                      "});",
+                      "pm.test(\"span Client/Producer chỉ nằm ở hàng riêng, không lẫn vào hàng Server\", function () {",
+                      "    const j = pm.response.json(); const c = j.columns.map(x => x.name);",
+                      "    j.values.forEach(v => pm.expect([\"Server\",\"Client\",\"Producer\"]).to.include(v[c.indexOf(\"kind\")]));",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "02 Span và lỗi được tính (Server) so với bị loại — 15 phút qua (FR-001, FR-004)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"query\": \"FROM traces-generic.otel-default*\\n| WHERE @timestamp >= NOW() - 15 minutes\\n| WHERE NOT (COALESCE(attributes.url.path, \\\"\\\") LIKE \\\"/health*\\\")\\n| EVAL service = resource.attributes.service.name, is_server = kind == \\\"Server\\\", is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)\\n| STATS tong_moi_span = COUNT(*), span_duoc_tinh = SUM(CASE(is_server, 1, 0)), span_bi_loai = SUM(CASE(is_server, 0, 1)), loi_duoc_tinh = SUM(CASE(is_server, is_5xx, 0)), loi_bi_loai = SUM(CASE(is_server, 0, is_5xx)) BY service\\n| SORT service\"\n}"
+                },
+                "url": {
+                  "raw": "{{elasticsearchUrl}}/_query",
+                  "host": [
+                    "{{elasticsearchUrl}}"
+                  ],
+                  "path": [
+                    "_query"
+                  ]
+                },
+                "description": "**Mục đích**: cùng điều kiện với rule `error-budget-*` và `incident-fast-detection` (`kind == \"Server\"`): `span_duoc_tinh` và `loi_duoc_tinh` là mẫu số và tập span xấu của ngân sách; `span_bi_loai` và `loi_bi_loai` là span Client/Producer không còn bị tính.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL).\n\n**Output kỳ vọng**: `200`; `tong_moi_span = span_duoc_tinh + span_bi_loai` ở mọi service.\n\n**FR (spec 034)**: FR-001, FR-004, SC-001."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"200 — truy vấn chạy được\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test(\"có cột tong_moi_span\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('tong_moi_span');",
+                      "});",
+                      "pm.test(\"có cột span_duoc_tinh\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('span_duoc_tinh');",
+                      "});",
+                      "pm.test(\"có cột span_bi_loai\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('span_bi_loai');",
+                      "});",
+                      "pm.test(\"có cột loi_duoc_tinh\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('loi_duoc_tinh');",
+                      "});",
+                      "pm.test(\"có cột loi_bi_loai\", function () {",
+                      "    pm.expect(pm.response.json().columns.map(c => c.name)).to.include('loi_bi_loai');",
+                      "});",
+                      "pm.test(\"mỗi service: tổng = được tính + bị loại\", function () {",
+                      "    const j = pm.response.json(); const c = j.columns.map(x => x.name);",
+                      "    j.values.forEach(v => pm.expect(v[c.indexOf(\"tong_moi_span\")]).to.eql(v[c.indexOf(\"span_duoc_tinh\")] + v[c.indexOf(\"span_bi_loai\")]));",
+                      "});",
+                      "pm.test(\"ngay sau 34a: Gateway có lỗi Server được tính và lỗi Client bị loại\", function () {",
+                      "    const j = pm.response.json(); const c = j.columns.map(x => x.name);",
+                      "    const g = j.values.find(v => v[c.indexOf(\"service\")] === \"Gateway.Api\");",
+                      "    pm.expect(g, \"Gateway.Api có span trong 15 phút qua (chạy 34b ngay sau 34a)\").to.exist;",
+                      "    pm.expect(g[c.indexOf(\"loi_duoc_tinh\")]).to.be.at.least(1);",
+                      "    pm.expect(g[c.indexOf(\"loi_bi_loai\")]).to.be.at.least(1);",
+                      "});",
+                      "pm.test(\"ngay sau 34a: BFF có lỗi Server được tính; span Client của BFF bị loại\", function () {",
+                      "    const j = pm.response.json(); const c = j.columns.map(x => x.name);",
+                      "    const b = j.values.find(v => v[c.indexOf(\"service\")] === \"Bff.Api\");",
+                      "    pm.expect(b, \"Bff.Api có span trong 15 phút qua (chạy 34b ngay sau 34a)\").to.exist;",
+                      "    pm.expect(b[c.indexOf(\"loi_duoc_tinh\")]).to.be.at.least(1);",
+                      "    pm.expect(b[c.indexOf(\"span_bi_loai\")]).to.be.at.least(1);",
                       "});"
                     ]
                   }

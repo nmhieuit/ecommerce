@@ -72,6 +72,8 @@ do thiết kế ở [`../08-phat-hien-nhanh-va-xu-ly-su-co.md`](../08-phat-hien-
 
 `health-failure-rule.ndjson` là bản export của rule báo service không sẵn sàng: từ 50% span health (`/health*`) của một service trả 5xx trong 5 phút gần nhất, tag `health-failure`, chu kỳ 5 phút, không có action. Rule này **không** thuộc ngân sách; các rule ngân sách và `incident-fast-detection` loại span health. Cách import/export giống hai rule trên. Đặc tả: [`specs/033-exclude-health-spans/`](../../../specs/033-exclude-health-spans/spec.md).
 
+Từ spec 034, 4 rule ngân sách và `incident-fast-detection` **chỉ đếm span Server** (`kind == "Server"`); `error-budget-frozen` dùng `kind == "Server" OR _index LIKE "*slo-error-budget-events*"` để giữ sự kiện cạn. Rule `health-failure` không đổi. Đặc tả: [`specs/034-error-budget-server-spans/`](../../../specs/034-error-budget-server-spans/spec.md).
+
 Rule nằm ở **file riêng**, không gộp vào `error-budget-rules.ndjson`: `ErrorBudgetRuleDefinitionTests`
 của 027 đếm đúng 4 rule trong file đó. Không có test nào canh ngưỡng của rule này (sai lệch Nguyên tắc
 III của spec 028), nên sửa `slos` trong manifest thì phải sửa rule bằng tay rồi export lại.

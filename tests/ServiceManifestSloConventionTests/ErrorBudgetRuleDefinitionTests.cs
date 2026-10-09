@@ -292,7 +292,69 @@ public partial class ErrorBudgetRuleDefinitionTests
         Assert.Equal("FROM traces-generic.otel-default*, slo-error-budget-events METADATA _index", firstLine);
     }
 
+    /// <summary>
+    /// Kiểm tra: ES|QL của `error-budget-50/75/100` có **đúng một** dòng `WHERE kind == "Server"` và dòng đó đứng
+    /// trước mọi `EVAL`/`STATS`, để chỉ span Server (request mà chính service nhận) vào mẫu số và tập span xấu.
+    /// Lý do: FR-001/FR-002 (spec 034) — tuần 05–11/10 `Bff.Api` có 201/319 span Client và 12/21 lỗi 5xx là span
+    /// Client; một lỗi qua Gateway → BFF → Products bị trừ ở cả 3 service và đếm hai lần ở BFF.
+    /// Task nguồn: spec 034 (ngân sách lỗi chỉ đếm span Server) — FR-001, FR-002, FR-007, US1/US3 (bất biến 1, 4, 5).
+    /// </summary>
+    [Theory]
+    [InlineData("error-budget-50")]
+    [InlineData("error-budget-75")]
+    [InlineData("error-budget-100")]
+    public void BudgetRule_CountsOnlyServerSpans_BeforeAnyCalculation(string ruleName)
+    {
+        AssertCountsOnlyServerSpansBeforeAnyCalculation(RequireRule(ruleName).Esql, ruleName, ServerOnlyCondition);
+    }
+
+    /// <summary>
+    /// Kiểm tra: ES|QL của `error-budget-frozen` có **đúng một** điều kiện
+    /// `WHERE (kind == "Server" OR _index LIKE "*slo-error-budget-events*")` đứng trước mọi `EVAL`/`STATS`, và
+    /// không có dòng `WHERE kind == "Server"` trần.
+    /// Lý do: contract bất biến 2 (spec 034) — sự kiện "cạn" trong `slo-error-budget-events` không có cột `kind`;
+    /// `WHERE kind == "Server"` trần loại toàn bộ sự kiện nên rule không bao giờ bắn (research F4: 0/20 sự kiện còn lại).
+    /// Task nguồn: spec 034 (ngân sách lỗi chỉ đếm span Server) — FR-001, FR-003, FR-007, US1/US3 (bất biến 2, 3, 5).
+    /// </summary>
+    [Fact]
+    public void FrozenRule_CountsOnlyServerSpans_ButKeepsTheExhaustionEvents()
+    {
+        var esql = RequireRule("error-budget-frozen").Esql;
+
+        AssertCountsOnlyServerSpansBeforeAnyCalculation(esql, "error-budget-frozen", ServerOrEventCondition);
+
+        // Assert.DoesNotContain(chuỗi cấm, văn bản): xanh khi không có điều kiện Server trần làm mất sự kiện cạn.
+        Assert.DoesNotContain(ServerOnlyCondition, Regex.Replace(esql, @"\s+", " "), StringComparison.Ordinal);
+    }
+
     private const char NewLine = '\n';
+
+    /// <summary>Điều kiện chỉ-Server cho rule chỉ đọc traces (contract spec 034, bất biến 1).</summary>
+    internal const string ServerOnlyCondition = "WHERE kind == \"Server\"";
+
+    /// <summary>Điều kiện chỉ-Server của rule frozen, giữ sự kiện cạn (contract spec 034, bất biến 2).</summary>
+    internal const string ServerOrEventCondition = "WHERE (kind == \"Server\" OR _index LIKE \"*slo-error-budget-events*\")";
+
+    /// <summary>Điều kiện chỉ-Server xuất hiện đúng một lần và trước lệnh `EVAL` đầu tiên của truy vấn.</summary>
+    internal static void AssertCountsOnlyServerSpansBeforeAnyCalculation(string esql, string ruleName, string condition)
+    {
+        var normalized = Regex.Replace(esql, @"\s+", " ");
+        var firstEval = normalized.IndexOf("| EVAL ", StringComparison.Ordinal);
+
+        // Assert.True(điều kiện, thông báo): xanh khi truy vấn có ít nhất một lệnh EVAL (mốc để so thứ tự).
+        Assert.True(firstEval >= 0, $"'{ruleName}': ES|QL has no '| EVAL'.");
+
+        var first = normalized.IndexOf(condition, StringComparison.Ordinal);
+
+        // Assert.True(điều kiện, thông báo): xanh khi điều kiện Server có mặt; đỏ kèm tên rule và điều kiện thiếu.
+        Assert.True(first >= 0, $"'{ruleName}': missing Server-only condition '{condition}'.");
+
+        // Assert.Equal(kỳ vọng, thực tế): xanh khi điều kiện chỉ xuất hiện một lần.
+        Assert.Equal(first, normalized.LastIndexOf(condition, StringComparison.Ordinal));
+
+        // Assert.True(điều kiện, thông báo): xanh khi điều kiện đứng trước mọi phép tính (không đếm span Client rồi mới cắt).
+        Assert.True(first < firstEval, $"'{ruleName}': Server-only condition must come before the first EVAL.");
+    }
 
     /// <summary>Danh sách điều kiện loại mong đợi, dựng từ tiền tố khai báo trong manifest (không hard-code).</summary>
     internal static IReadOnlyList<string> ExpectedExclusionConditions()

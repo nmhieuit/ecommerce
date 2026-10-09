@@ -36,6 +36,7 @@ Mọi rule mốc và bảng "mức tiêu hao" trên dashboard dùng **cùng mộ
   mặc định.
 - `WHERE consumed_pct >= N`: đúng một lần, `N` là mốc của rule.
 - `WHERE NOT (COALESCE(attributes.url.path, "") LIKE "<tiền tố>*")`: đúng một lần cho mỗi tiền tố trong `error-budget-policy.excluded-path-prefixes` của manifest (hiện `/health`), đứng **trước** lệnh `EVAL` đầu tiên (spec 033). `COALESCE` là bắt buộc: thiếu nó, `NOT (null LIKE …)` loại luôn span không có đường dẫn. `LIKE` phân biệt hoa thường. Rule `error-budget-frozen` vẫn đọc cả index `slo-error-budget-events`.
+- `WHERE kind == "Server"`: đúng một lần, ngay sau điều kiện loại `/health*` và trước lệnh `EVAL` đầu tiên (spec 034): chỉ span Server (request mà chính service nhận) vào mẫu số và tập span xấu; span Client/Producer không tính. Riêng `error-budget-frozen` dùng `WHERE (kind == "Server" OR _index LIKE "*slo-error-budget-events*")` vì sự kiện cạn không có cột `kind` (thiếu vế `_index` thì rule mất toàn bộ sự kiện). Test: `BudgetRule_CountsOnlyServerSpans_BeforeAnyCalculation` và `FrozenRule_CountsOnlyServerSpans_ButKeepsTheExhaustionEvents`.
 - `WHERE @timestamp >= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours`: đúng một lần — đầu tuần giờ Việt
   Nam. ES|QL làm tròn tuần bắt đầu từ thứ Hai; biểu thức đã kiểm chứng với 4 thời điểm quanh ranh giới
   thứ Hai 00:00 giờ Việt Nam (`specs/029-error-budget-weekly/research.md` V1).
@@ -45,6 +46,8 @@ Phần chung (dùng nguyên văn cho bảng mức tiêu hao trên dashboard, th�
 ```esql
 FROM traces-generic.otel-default*
 | WHERE @timestamp >= DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours
+| WHERE NOT (COALESCE(attributes.url.path, "") LIKE "/health*")
+| WHERE kind == "Server"
 | EVAL service = resource.attributes.service.name
 | EVAL p95_ns = CASE(service == "Bff.Api", 700000000, service == "Gateway.Api", 800000000, 500000000)
 | EVAL p99_ns = CASE(service == "Bff.Api", 1000000000, service == "Gateway.Api", 1100000000, 700000000)
@@ -136,6 +139,8 @@ Id `a16eed47-01ed-40ce-a8be-c264bde1b771`, cùng loại với rule mốc, chu k�
 
 ```esql
 FROM traces-generic.otel-default*, slo-error-budget-events METADATA _index
+| WHERE NOT (COALESCE(attributes.url.path, "") LIKE "/health*")
+| WHERE (kind == "Server" OR _index LIKE "*slo-error-budget-events*")
 | EVAL is_event = CASE(_index LIKE "*slo-error-budget-events*", 1, 0)
 | EVAL is_span = 1 - is_event
 | EVAL service = COALESCE(resource.attributes.service.name, service)

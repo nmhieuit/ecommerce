@@ -1,4 +1,4 @@
-# QA Debt — phát hiện và giới hạn khi rà soát chất lượng happy-case (001-033)
+# QA Debt — phát hiện và giới hạn khi rà soát chất lượng happy-case (001-034)
 
 *Đối tượng đọc: QA Lead / kỹ sư kiểm thử. File này gom mọi phát hiện (tài liệu sai lệch với code thật,
 narrative thiếu bước cho 1 user story, thiếu bằng chứng định lượng cho tiêu chí nghiệm thu...) khi rà
@@ -934,6 +934,22 @@ nó trên Elasticsearch (trình duyệt tích hợp từ chối `localhost:5601`
 ` thành xuống dòng thật làm hỏng JSON/C# vài lần (đã khôi phục bằng `git checkout` rồi chèn lại); dashboard/rule trên Kibana sửa bằng `PUT` rồi export lại.
 - **Chưa kiểm**: ranh giới thứ Hai 00:00 với điều kiện loại; tuần có health 5xx nhưng không có span nghiệp vụ (service không hiện dòng ngân sách); một người thật làm theo QA 033.
 - **Elastic đã xoá sạch (2026-10-08, người dùng xác nhận)**: dừng và xoá container `elasticsearch`/`kibana`/`otel-collector`, xoá volume `ecomerce-local_local-es-data`, dựng lại cả ba (healthy); chỉ còn 3 data stream mới, Kibana 0 dashboard và 0 rule; muốn xem lại phải import ndjson và bật 6 rule.
+
+## 034 — Ngân sách lỗi chỉ đếm span Server
+
+*Chạy thật ngày 2026-10-09 trên stack `ecomerce-local` (Elasticsearch/Kibana 9.4.4): đo `kind` của span, sửa 5 rule và 2 dashboard, dừng `products-api` rồi newman folder 34, dọn sự kiện cạn; test `ServiceManifestSloConventionTests` 134/134 xanh (129 + 5 test mới, 5 test mới chạy ĐỎ trước khi sửa rule).*
+
+- **Nguyên nhân gốc đã chứng minh (đã đo)**: tuần 05–11/10 (đã loại `/health*`) `Bff.Api` có 118 span Server / 9 lỗi 5xx và 201 span Client / 12 lỗi; tổng 7 service 869 span được tính, chỉ Server là 527. `kind` toàn index: `Server` 16316, `Client` 321, `Producer` 21, không span nào thiếu `kind`.
+- **`kind == "Server"` trần làm rule frozen mất sự kiện (đã đo, F4/V3)**: `slo-error-budget-events` không có cột `kind`; điều kiện trần loại cả 20 sự kiện, `WHERE (kind == "Server" OR _index LIKE "*slo-error-budget-events*")` giữ đủ 20 (kết quả cuối giữ nguyên 7 service). Test `FrozenRule_CountsOnlyServerSpans_ButKeepsTheExhaustionEvents` canh điều này.
+- **Lens khớp ES|QL từng dòng (đã đo, V1)**: dashboard thử, KQL `kind : Server and not attributes.url.path : /health*` → `Bff.Api` 118/9, `Gateway.Api` 115/5, tổng 527; KQL cũ → 319/21 và 225/6.
+- **Mức tiêu hao của rule khớp phép tính độc lập (đã đo, V2)**: 28/28 (service, ngân sách) của `error-budget-50` khớp (ví dụ `Bff.Api` error-rate 762,71%, p95 33,9%, p99 84,75%); truy vấn tiêu hao của dashboard khớp rule, không dòng nào lệch quá 2 điểm %. Dashboard Ngân sách hiển thị 28 dòng.
+- **Header tiêm lỗi không tạo được lỗi qua 3 tầng (đã đo)**: `ChaosFaultInjectionMiddleware` trả 500 ngay ở service đầu nên Postman 34a dùng lỗi hạ lưu thật bằng cách dừng `products-api` (người dùng chọn): Gateway có 1 span Server 5xx và 1 span Client 5xx cho cùng một request (cũ đếm 2, mới 1); BFF có 1 span Server 5xx và 3 span Client gọi Products (kết nối bị từ chối, thử lại, không có mã trạng thái nên không vào 5xx nhưng nằm trong mẫu số cũ).
+- **Folder Postman 34 (đã chạy)**: 34a 1 request trả 5xx; 34b 2 truy vấn, 14/14 assertion. Lần chạy đầu 34b rỗng vì chạy ngay trước khi span được ingest (khoảng vài chục giây); chạy lại sau ≈45 giây xanh. 34b phải chạy ngay sau 34a (trong 15 phút) vì assertion cho Gateway/BFF phụ thuộc cửa sổ.
+- **Dọn trạng thái (đã làm, người dùng xác nhận 03:27Z)**: `_delete_by_query` xoá 21 tài liệu (20 cũ + 1 sự kiện rule 100 vừa ghi), giữ index và mapping; Disable/Enable `error-budget-100`. Rule chạy lại tạo 21 alert và ghi lại 22 sự kiện cạn: với chỉ span Server vẫn có mẫu số rất nhỏ (ví dụ `Parties.Api` 11 span / 4 lỗi) nên mọi service vượt 100%; đây là kết quả đúng của công thức mới, không phải trạng thái đóng băng giả. `incident-fast-detection` có 2 alert (Gateway, BFF) từ lỗi 34a trong cửa sổ 5 phút.
+- **Lệch với task ban đầu**: spec ghi `incident-fast-detection` "chưa có test"; thực tế đã có `IncidentFastDetectionRuleDefinitionTests` (8 test), nên thêm test Server vào lớp đó (9 test).
+- **Thao tác**: dashboard sửa bằng chèn dòng vào file ndjson (9 chỗ lồng nhiều lớp escape; công cụ shell làm sập `\` nên dựng regex bằng `chr(92)`) rồi import `overwrite=true`; export lại bằng API cho kết quả trùng file trong repo. `PUT` rule có action `.index` (rule 100) phải bỏ `connector_type_id` khỏi body. Compose trong worktree thiếu `.env` nên dừng/bật container bằng `docker stop/start`.
+- **Chưa kiểm**: span thiếu `kind` hoặc loại `Internal`/`Consumer` (hiện 0 span); một người thật làm theo QA 034; ranh giới thứ Hai 00:00 với điều kiện Server.
+- **Elastic đã xoá sạch (2026-10-09, người dùng xác nhận)**: dừng và xoá container `elasticsearch`/`kibana`/`otel-collector`, xoá volume `ecomerce-local_local-es-data`, dựng lại cả ba (Kibana available); chỉ còn 3 data stream mới, Kibana 0 dashboard và 0 rule; muốn xem lại phải import ndjson (2 dashboard, 2 file rule) và bật rule.
 
 ## Debug Postman — header X-Tenant-Id/X-Subject-Id và request 200 ngoài dự kiến (2026-10-09)
 

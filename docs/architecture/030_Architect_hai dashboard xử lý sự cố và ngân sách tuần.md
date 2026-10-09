@@ -1,6 +1,7 @@
 # Kiến trúc: Tách dashboard SLO thành "Xử lý sự cố" và "Ngân sách lỗi tuần"
 
 > **Cập nhật spec 033**: rule và panel ES|QL/Lens loại span `/health*` bằng `COALESCE(attributes.url.path, "")`; khoá `excluded-path-prefixes` trong manifest. Xem [033 Architect](033_Architect_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md).
+> **Cập nhật spec 034**: rule và panel ngân sách chỉ đếm span `kind = Server` (request mà chính service nhận), không đếm span Client/Producer; rule frozen giữ sự kiện cạn bằng `_index`. Xem [034 Architect](034_Architect_ngân%20sách%20lỗi%20chỉ%20đếm%20span%20Server.md).
 
 *Đối tượng đọc: kỹ sư/kiến trúc sư cần hiểu tại sao hai dashboard được dựng như vậy và những ràng buộc của
 Kibana 9.4.4 đã quyết định thiết kế. Spec: [`specs/030-incident-and-weekly-dashboards/`](../../specs/030-incident-and-weekly-dashboards/spec.md).*

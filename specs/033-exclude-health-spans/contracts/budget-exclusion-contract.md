@@ -2,7 +2,7 @@
 
 **Spec**: [../spec.md](../spec.md) | **Research**: [../research.md](../research.md) | **Mở rộng**: `specs/029-error-budget-weekly/contracts/error-budget-policy-manifest-shape.md` (khoá `excluded-path-prefixes`)
 
-Hợp đồng bất biến cho manifest, rule và dashboard. **Viết trước** khi sửa manifest, rule, dashboard và test (Nguyên tắc II).
+Hợp đồng bất biến cho manifest, rule và dashboard. **Nối tiếp (spec 034)**: từ 034, ngoài loại `/health*`, mọi rule và panel ngân sách còn chỉ đếm span `kind = Server`; xem [`specs/034-error-budget-server-spans/contracts/server-span-only-contract.md`](../../034-error-budget-server-spans/contracts/server-span-only-contract.md). **Viết trước** khi sửa manifest, rule, dashboard và test (Nguyên tắc II).
 
 ## Manifest (người tiêu thụ: `ErrorBudgetPolicyTests`)
 

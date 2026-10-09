@@ -37,9 +37,13 @@ request của gateway đều đi qua BFF, nên ở mức nền gateway đã vư�
 nâng SLO, ngưỡng gateway (800/1100 ms) cao hơn BFF (700/1000 ms) nên lý do đó không còn; test
 `Rule_GatewayLatencyIsJudgedLikeEveryOtherService` khoá hành vi mới.
 
+Rule chỉ đếm span Server (`kind == "Server"`, spec 034) và không tính `/health*` (spec 033): lời gọi đi ra hạ lưu (span Client) và publish thông điệp (span Producer) không làm rule bắn.
+
 ```esql
 FROM traces-generic.otel-default*
 | WHERE @timestamp > NOW() - 5 minutes
+| WHERE NOT (COALESCE(attributes.url.path, "") LIKE "/health*")
+| WHERE kind == "Server"
 | EVAL service = resource.attributes.service.name
 | EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)
 | STATS total = COUNT(*), bad_5xx = SUM(is_5xx), p95_ns = PERCENTILE(duration, 95), p99_ns = PERCENTILE(duration, 99) BY service
@@ -112,6 +116,8 @@ bằng service đang xử lý (`Bff.Api`: 700000000/1000000000, `Gateway.Api`: 8
 ```esql
 FROM traces-generic.otel-default*
 | WHERE @timestamp > NOW() - 30 minutes AND resource.attributes.service.name == "Orders.Api"
+| WHERE NOT (COALESCE(attributes.url.path, "") LIKE "/health*")
+| WHERE kind == "Server"
 | EVAL is_5xx = CASE(attributes.http.response.status_code >= 500, 1, 0)
 | STATS total = COUNT(*), bad_5xx = SUM(is_5xx), p95_ns = PERCENTILE(duration, 95), p99_ns = PERCENTILE(duration, 99) BY minute = BUCKET(@timestamp, 1 minute)
 | EVAL err_pct = ROUND(TO_DOUBLE(bad_5xx) / total * 100.0, 2), p95_ms = ROUND(p95_ns / 1000000.0), p99_ms = ROUND(p99_ns / 1000000.0)

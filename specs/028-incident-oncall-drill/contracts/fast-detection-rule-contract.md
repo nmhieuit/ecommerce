@@ -15,3 +15,4 @@
 | 6 | Service không có span nào trong 5 phút → không có hàng → không có alert. |
 | 7 | Rule không có action/connector; 4 rule `slo-error-budget` của 027 và file `error-budget-rules.ndjson` không bị sửa. |
 | 8 | Dashboard `Xử lý sự cố — 7 service` có thêm bảng "Phát hiện nhanh — service vượt SLO trong khoảng thời gian đã chọn", đọc alert active có tag `incident-fast-detection` từ `.alerts-stack.alerts-default`, hiện service, trạng thái alert và thời điểm bắt đầu. Từ spec 030 bảng đi theo thanh thời gian (không còn lọc 15 phút) và có test canh gác rule `IncidentFastDetectionRuleDefinitionTests`. |
+| 9 | Từ spec 034, ES|QL của rule chỉ đếm span `kind = Server`: đúng một dòng `WHERE kind == "Server"` ngay sau điều kiện loại `/health*` (spec 033) và trước mọi `EVAL`. Span Client/Producer không làm rule bắn. Test: `Rule_CountsOnlyServerSpans_BeforeAnyCalculation`. Chi tiết: `specs/034-error-budget-server-spans/contracts/server-span-only-contract.md`. |
