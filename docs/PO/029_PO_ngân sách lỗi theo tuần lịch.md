@@ -25,8 +25,8 @@ lượt ngân sách đặt lại. Nhịp làm việc của đội lại theo **t
   (trước là 99.9% mỗi tháng và dưới 0.1%). Cam kết về độ chậm giữ nguyên. Đây là thay đổi "luật chơi" của
   cả nền tảng nên được ghi vào văn bản quy tắc chung của dự án (phiên bản 2.0.0).
 - **Mọi quy tắc khác giữ nguyên**: cảnh báo ở 3 mốc 50% / 75% / 100%; chạm 100% là bộ phận dừng nhận
-  tính năng mới, chỉ làm việc nâng độ ổn định; được làm tiếp sau **3 ngày liên tiếp** đạt cam kết; sang
-  tuần mới không tự động "xoá án".
+  tính năng mới, chỉ làm việc nâng độ ổn định; được làm tiếp khi phần ngân sách đã tiêu trong tuần
+  **xuống dưới 75%** *(đổi 2026-10-09; trước đây: 3 ngày liên tiếp đạt cam kết)*; sang tuần mới không tự động "xoá án".
 - **Diễn tập vẫn tính như sự cố thật** — lỗi do chủ động gây ra để luyện tập cũng tiêu ngân sách.
 
 ## Trải nghiệm thực tế diễn ra như thế nào
@@ -36,8 +36,8 @@ lượt ngân sách đặt lại. Nhịp làm việc của đội lại theo **t
    báo, đội biết sớm ngay trong tuần thay vì cuối tháng.
 3. **Chạm 100%** — bộ phận vào danh sách "cạn ngân sách — ưu tiên độ tin cậy", đội dừng đưa tính năng
    mới vào bộ phận đó.
-4. **Sang tuần mới mà chưa ổn** — ngân sách đầy lại nhưng bộ phận vẫn ở trạng thái "cạn" cho tới khi đủ
-   3 ngày liên tiếp đạt cam kết.
+4. **Sang tuần mới mà chưa ổn** — ngân sách đầy lại nhưng bộ phận vẫn ở trạng thái "cạn" (đang hồi phục) cho
+   tới khi tuần mới có yêu cầu thật và phần đã tiêu dưới 75%.
 5. **Muốn chắc cảnh báo hoạt động thật** — đội đã diễn tập gây lỗi có kiểm soát cho cả 7 bộ phận cùng
    lúc: cảnh báo hiện sau khoảng 2–5 phút ở từng mốc, màn hình và cảnh báo khớp con số.
 

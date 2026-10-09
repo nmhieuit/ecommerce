@@ -12,7 +12,7 @@ biến 1–4, đọc file export), [`../quickstart.md`](../quickstart.md) (bất
 | `error-budget-50` | Elasticsearch query (ES|QL) | 5 phút | (service, budget) | — |
 | `error-budget-75` | Elasticsearch query (ES|QL) | 5 phút | (service, budget) | — |
 | `error-budget-100` | Elasticsearch query (ES|QL) | 5 phút | (service, budget) | Index → `slo-error-budget-events`, khi đổi trạng thái sang active |
-| `error-budget-frozen` | Elasticsearch query (ES|QL) | 5 phút | service | — |
+| `error-budget-frozen` | Elasticsearch query (ES|QL) | 5 phút | service | Index → `slo-error-budget-events`, khi đổi trạng thái sang recovered (`event: recovered`; từ nhánh fix/frozen-panel-status) |
 
 Mọi rule mang tag `slo-error-budget`.
 
@@ -28,7 +28,7 @@ Mọi rule mang tag `slo-error-budget`.
 | 5 | Cửa sổ tính bắt đầu đúng thứ Hai 00:00 của tuần hiện tại giờ Việt Nam. | FR-003 |
 | 6 | Alert kích hoạt trong vòng 1 chu kỳ (≤ 5 phút) kể từ khi mức tiêu hao thật vượt mốc, và giữ active chừng nào còn vượt. | FR-006, FR-007, SC-002 |
 | 7 | Service không có span nào trong tuần không sinh alert nào; thiếu dữ liệu không bật hay tắt alert. | FR-012, SC-005 |
-| 8 | Dashboard Ngân sách lỗi tuần có nhóm panel "Ngân sách lỗi tuần này" ở trên cùng: bảng mức tiêu hao 7 × 4 (%), bảng alert đang active (service, ngân sách, mốc) đặt cạnh bảng mức tiêu hao, bảng service đang "cạn — ưu tiên độ tin cậy". | FR-008, FR-011, SC-003 |
-| 9 | `error-budget-frozen` giữ active sau khi sang tuần mới cho tới khi đủ 3 ngày đạt SLO; được gỡ trong tuần nếu đủ 3 ngày đạt SLO dù ngân sách tuần vẫn 100%. | FR-010 |
+| 8 | Dashboard Ngân sách lỗi tuần có nhóm panel "Ngân sách lỗi tuần này" ở trên cùng: bảng mức tiêu hao 7 × 4 (%), bảng alert đang active (service, ngân sách, mốc) đặt cạnh bảng mức tiêu hao, bảng service đang "cạn — ưu tiên độ tin cậy" (từ nhánh fix/frozen-panel-status có cột `status` active/recovering/recovered, `consumed_max_pct`, `frozen_since`, `recovered_at` — chi tiết ở bất biến 16 của contract 029). | FR-008, FR-011, SC-003 |
+| 9 | `error-budget-frozen` giữ active sau khi sang tuần mới (tuần chưa có request Server thì vẫn đóng băng); được gỡ khi tuần đã có ≥ 1 request và mức tiêu hao cao nhất của 4 ngân sách dưới 75%; đã gỡ thì giữ tới sự kiện `exhausted` mới. *(Sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây "đủ 3 ngày đạt SLO" — xem bất biến 9, 13, 15 của contract 029.)* | FR-010 |
 | 10 | 5 bất biến của `specs/021-declare-service-slos/contracts/continuous-measurement-contract.md` vẫn thỏa sau khi sửa dashboard. | FR-015 (không phá cái đã có) |
 | 11 | Từ spec 034, ES|QL của 4 rule chỉ đếm span `kind = Server` (một dòng `WHERE kind == "Server"` ngay sau điều kiện loại `/health*`, trước mọi `EVAL`); riêng `error-budget-frozen` dùng `WHERE (kind == "Server" OR _index LIKE "*slo-error-budget-events*")` để giữ sự kiện cạn. Chi tiết: `specs/034-error-budget-server-spans/contracts/server-span-only-contract.md`. | spec 034 FR-001, FR-002 |

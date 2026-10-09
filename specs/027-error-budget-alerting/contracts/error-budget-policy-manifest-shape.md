@@ -28,9 +28,12 @@ error-budget-policy:
     who: Người vận hành (vai SRE/Dev) của service này
     stops: Merge tính năng mới vào service này
     does: Chỉ làm công việc nâng độ tin cậy cho service này
+  # Nhánh fix/frozen-panel-status (2026-10-09): thay "3 ngày liên tiếp đạt SLO" bằng trạng thái theo mức tiêu hao tuần.
   recovery:
-    consecutive-days-meeting-slo: 3
-    no-traffic-day-counts-as-met: true
+    recovered-below-consumption: 75%      # recovered khi mức tiêu hao CAO NHẤT trong 4 ngân sách của tuần < 75%
+    min-requests-to-recover: 1            # tuần chưa có request Server nào → vẫn recovering (thứ Hai không tự gỡ)
+    recovering-keeps-freeze: true         # recovering (75–99% hoặc chưa có request) vẫn đóng băng
+    recovered-stays-until-exhausted: true # đã recovered thì giữ tới sự kiện "exhausted" mới
     budget-reset-clears-freeze: false
 ```
 
@@ -43,5 +46,5 @@ error-budget-policy:
 | 3 | `window = calendar-week`, `timezone = UTC+07:00`. | FR-003 |
 | 4 | `alert-thresholds` đúng `[50%, 75%, 100%]`; `exhausted-when = any-budget-at-100%`. | FR-004, FR-006 |
 | 5 | `on-exhausted.who`, `.stops`, `.does` không rỗng. | FR-009, SC-004 |
-| 6 | `recovery.consecutive-days-meeting-slo = 3`, `no-traffic-day-counts-as-met = true`, `budget-reset-clears-freeze = false`. | FR-010 |
+| 6 | `recovery.recovered-below-consumption = 75%`, `min-requests-to-recover = 1`, `recovering-keeps-freeze = true`, `recovered-stays-until-exhausted = true`, `budget-reset-clears-freeze = false`. *(Sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây `consecutive-days-meeting-slo = 3`, `no-traffic-day-counts-as-met = true`.)* | FR-010 |
 | 7 | Khối này không khai báo ngưỡng độ trễ; ngưỡng luôn lấy từ `slos.latency`. | FR-013 |

@@ -22,6 +22,7 @@
 - Q: Với độ trễ, request nào bị tính là "xấu"? → A: Hai ngân sách độ trễ riêng: tối đa 5% request được phép vượt ngưỡng p95, và tối đa 1% request được phép vượt ngưỡng p99.
 - Q: Khi ngân sách cạn, ai dừng cái gì và khi nào là hồi phục? → A: Người vận hành (vai SRE/Dev) dừng merge tính năng mới vào service đó, chỉ làm việc nâng độ tin cậy, cho tới khi service đạt SLO liên tục N ngày — không phụ thuộc việc ngân sách đặt lại đầu tháng.
 - Q: N bằng bao nhiêu? → A: 3 ngày.
+  - *Thay bởi fix/frozen-panel-status (2026-10-09)*: hồi phục theo mức tiêu hao tuần, không còn đếm ngày. Sau một lần cạn: `active` (mức tiêu hao cao nhất trong 4 ngân sách ≥ 100%) → `recovering` (dưới 100% nhưng ≥ 75%, hoặc tuần chưa có request Server) → `recovered` (tuần có ≥ 1 request và dưới 75%; giữ tới lần cạn kế tiếp). Đóng băng ở `active` và `recovering`.
 - Q: Phạm vi service? → A: Cả 7 service đã khai báo SLO trong manifest (bao gồm gateway và BFF).
 - Q: Độ khả dụng 99.9% được đo bằng gì? → A: Tỷ lệ request thành công (không trả 5xx) trên tổng số request, lấy từ telemetry hiện có.
   - *Thay bởi spec 029 (2026-10-05).*
@@ -31,6 +32,7 @@
 - Q (phiên `/speckit-plan`): Ranh giới "tháng lịch" và "ngày" tính theo múi giờ nào? → A: Giờ Việt Nam (UTC+7) — tháng/ngày bắt đầu lúc 00:00 giờ Việt Nam.
   - *Thay bởi spec 029 (2026-10-05).*
 - Q (phiên `/speckit-plan`): Khi đếm 3 ngày đạt SLO liên tục, một ngày service không có request nào được tính thế nào? → A: Tính là đạt.
+  - *Thay bởi fix/frozen-panel-status (2026-10-09)*: không còn đếm ngày; tuần chưa có request Server nào thì service vẫn `recovering` (vẫn đóng băng).
 - Q (phiên `/speckit-implement`): Mã alert của Kibana ghép từ mọi cột kết quả, nên giữ cột % tiêu hao trong alert sẽ làm alert bị tạo lại mỗi lần chạy. Xử lý thế nào? → A: Alert chỉ mang service + ngân sách; mức tiêu hao (%) hiển thị ở bảng mức tiêu hao đặt cạnh bảng alert.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -71,17 +73,17 @@ Là người đóng vai SRE, tôi muốn một cảnh báo tự động kích ho
 
 ### User Story 3 - Hệ quả khi ngân sách cạn: ưu tiên độ tin cậy hơn tính năng mới cho tới khi hồi phục (Priority: P2)
 
-Là người đóng vai SRE, tôi muốn chính sách nêu rõ: khi bất kỳ ngân sách nào của một service cạn, người vận hành dừng merge tính năng mới vào service đó và chỉ làm việc nâng độ tin cậy, cho tới khi service đạt đủ SLO liên tục 3 ngày — để vi phạm kéo dài có hệ quả thật và có điều kiện thoát rõ ràng.
+Là người đóng vai SRE, tôi muốn chính sách nêu rõ: khi bất kỳ ngân sách nào của một service cạn, người vận hành dừng merge tính năng mới vào service đó và chỉ làm việc nâng độ tin cậy, cho tới khi service hồi phục (`recovered`: tuần đã có request và mức tiêu hao cao nhất trong 4 ngân sách dưới 75%) — để vi phạm kéo dài có hệ quả thật và có điều kiện thoát rõ ràng. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: "đạt đủ SLO liên tục 3 ngày".)*
 
 **Why this priority**: Đây là phần "hệ quả" trong Nguyên tắc VIII. Nó phụ thuộc vào việc đã có định nghĩa (User Story 1) và tín hiệu cảnh báo (User Story 2); bản thân việc dừng tính năng là quy trình con người, không cần thêm cơ chế kỹ thuật để có giá trị.
 
-**Independent Test**: Đọc chính sách trong manifest của một service, xác nhận nó nêu rõ ai dừng (người vận hành vai SRE/Dev), dừng cái gì (merge tính năng mới vào service đó), được làm gì (công việc nâng độ tin cậy), và điều kiện hồi phục (đạt mọi chỉ tiêu SLO liên tục 3 ngày).
+**Independent Test**: Đọc chính sách trong manifest của một service, xác nhận nó nêu rõ ai dừng (người vận hành vai SRE/Dev), dừng cái gì (merge tính năng mới vào service đó), được làm gì (công việc nâng độ tin cậy), và điều kiện hồi phục (ba trạng thái `active` / `recovering` / `recovered` theo mức tiêu hao tuần, ngưỡng hồi phục 75%). *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: "đạt mọi chỉ tiêu SLO liên tục 3 ngày".)*
 
 **Acceptance Scenarios**:
 
 1. **Given** ngân sách của một service đã cạn, **When** tôi đọc chính sách của service đó, **Then** chính sách nêu rằng công việc nâng độ tin cậy được ưu tiên hơn tính năng mới cho service đó cho tới khi hồi phục, và nêu rõ ai dừng cái gì.
-2. **Given** một service đang ở trạng thái cạn ngân sách, **When** service đạt đủ mọi chỉ tiêu SLO liên tục 3 ngày, **Then** service được coi là đã hồi phục và được phép merge tính năng mới trở lại — kể cả khi tuần lịch chưa kết thúc.
-3. **Given** một service cạn ngân sách vào cuối tuần, **When** sang tuần mới và ngân sách đặt lại về đầy đủ nhưng service chưa đạt SLO liên tục 3 ngày, **Then** service vẫn chưa được coi là hồi phục — việc đặt lại ngân sách đầu tuần không tự động gỡ trạng thái đóng băng.
+2. **Given** một service đang ở trạng thái cạn ngân sách, **When** tuần hiện tại đã có request và mức tiêu hao cao nhất trong 4 ngân sách xuống dưới 75%, **Then** service chuyển `recovered` và được phép merge tính năng mới trở lại — kể cả khi tuần lịch chưa kết thúc; mức tiêu hao từ 75% tới dưới 100% là `recovering`, vẫn đóng băng. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: đạt đủ mọi chỉ tiêu SLO liên tục 3 ngày.)*
+3. **Given** một service cạn ngân sách vào cuối tuần, **When** sang tuần mới và ngân sách đặt lại về đầy đủ nhưng tuần mới chưa có request Server nào, **Then** service vẫn `recovering` (chưa hồi phục) — việc đặt lại ngân sách đầu tuần không tự động gỡ trạng thái đóng băng. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: chưa đạt SLO liên tục 3 ngày.)*
 4. **Given** một service đang ở trạng thái cạn ngân sách, **When** người vận hành mở dashboard Ngân sách lỗi tuần, **Then** dashboard thể hiện rõ service đó đang trong trạng thái "cạn ngân sách — ưu tiên độ tin cậy".
 
 ---
@@ -91,7 +93,7 @@ Là người đóng vai SRE, tôi muốn chính sách nêu rõ: khi bất kỳ n
 - Service không có traffic (hoặc rất ít) trong tuần: ngân sách tính theo tỷ lệ request nên không có request thì không có tiêu hao; hệ thống phải thể hiện "không có dữ liệu" thay vì "0% tiêu hao" (thống nhất với FR-006 của đặc tả 021), và không phát cảnh báo sai.
 - Lưu lượng rất thấp khiến chỉ một vài request lỗi đã vượt các mốc: chính sách vẫn áp dụng đúng con số đã định nghĩa; trường hợp này cần được ghi nhận là giới hạn đã biết của môi trường thực hành lưu lượng thấp.
 - Telemetry bị gián đoạn tạm thời: không được hiểu nhầm khoảng thiếu dữ liệu thành request thành công hay request lỗi; cảnh báo không được kích hoạt hay tắt chỉ vì thiếu dữ liệu.
-- Chuyển tuần lịch: ngân sách đặt lại về đầy đủ, cảnh báo mốc của tuần cũ tắt; nhưng trạng thái đóng băng của service (nếu có) vẫn giữ cho tới khi đạt điều kiện hồi phục 3 ngày (xem User Story 3, kịch bản 3).
+- Chuyển tuần lịch: ngân sách đặt lại về đầy đủ, cảnh báo mốc của tuần cũ tắt; nhưng trạng thái đóng băng của service (nếu có) vẫn giữ cho tới khi đạt điều kiện hồi phục (tuần mới có request và mức tiêu hao dưới 75%; xem User Story 3, kịch bản 3). *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: điều kiện hồi phục 3 ngày.)*
 - Service có ngoại lệ SLO đã ghi trong manifest (ví dụ BFF với ngưỡng độ trễ nới hơn): ngân sách độ trễ phải tính theo ngưỡng của chính service đó, không theo ngưỡng mặc định.
 - Ngân sách khả dụng và ngân sách 5xx đều được tính từ tỷ lệ request trả 5xx nên có thể tiêu hao gần như đồng thời; hai cảnh báo này có thể kích hoạt cùng lúc và điều đó được chấp nhận.
 
@@ -108,7 +110,7 @@ Là người đóng vai SRE, tôi muốn chính sách nêu rõ: khi bất kỳ n
 - **FR-007**: Cảnh báo đã kích hoạt PHẢI giữ ở trạng thái hoạt động liên tục chừng nào mức tiêu hao còn ở trên mốc tương ứng.
 - **FR-008**: Cảnh báo PHẢI được quản lý trong Kibana và trạng thái của chúng (service, ngân sách, mốc, mức tiêu hao hiện tại) PHẢI được hiển thị trên dashboard Ngân sách lỗi tuần hiện có; không yêu cầu đẩy cảnh báo ra kênh bên ngoài (email, Slack).
 - **FR-009**: Chính sách PHẢI nêu rõ hệ quả khi service cạn ngân sách: người vận hành (vai SRE/Dev) dừng merge tính năng mới vào service đó và chỉ làm công việc nâng độ tin cậy cho service đó.
-- **FR-010**: Chính sách PHẢI nêu rõ điều kiện hồi phục: service được coi là hồi phục khi đạt đủ mọi chỉ tiêu SLO đã khai báo liên tục 3 ngày (ngày theo giờ Việt Nam; một ngày không có request nào được tính là đạt); việc ngân sách đặt lại đầu tuần KHÔNG tự động gỡ trạng thái cạn ngân sách.
+- **FR-010**: Chính sách PHẢI nêu rõ điều kiện hồi phục theo **mức tiêu hao cao nhất trong 4 ngân sách của tuần lịch hiện tại** (giờ Việt Nam). Sau một lần cạn, service ở một trong ba trạng thái: `active` khi mức tiêu hao ≥ 100%; `recovering` khi dưới 100% nhưng ≥ 75%, hoặc tuần chưa có request Server nào; `recovered` khi tuần đã có ít nhất 1 request và mức tiêu hao dưới 75%. Đã `recovered` thì giữ nguyên dù mức tiêu hao lên lại 75–99%, chỉ quay lại `active` khi chạm 100% (sự kiện cạn mới). Dừng merge tính năng mới ở cả `active` và `recovering`. Việc ngân sách đặt lại đầu tuần KHÔNG tự động gỡ trạng thái cạn ngân sách. *(Sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: hồi phục khi đạt đủ mọi chỉ tiêu SLO liên tục 3 ngày, ngày không có request tính là đạt.)*
 - **FR-011**: Dashboard Ngân sách lỗi tuần PHẢI thể hiện service nào đang ở trạng thái "cạn ngân sách — ưu tiên độ tin cậy".
 - **FR-012**: Khi một service không có request nào trong tuần (hoặc thiếu dữ liệu do gián đoạn telemetry), hệ thống PHẢI thể hiện "không có dữ liệu" và KHÔNG được kích hoạt hay tắt cảnh báo chỉ vì thiếu dữ liệu.
 - **FR-013**: Ngân sách độ trễ PHẢI dùng ngưỡng p95/p99 đã khai báo của chính service đó (kể cả ngoại lệ có lý do), không dùng ngưỡng mặc định thay thế.
@@ -121,13 +123,13 @@ Là người đóng vai SRE, tôi muốn chính sách nêu rõ: khi bất kỳ n
 - **Ngân sách**: một trong bốn loại (khả dụng, 5xx, độ trễ p95, độ trễ p99) của một service; có quy tắc xác định request "xấu" và tỷ lệ request xấu được phép trong tuần.
 - **Mức tiêu hao ngân sách**: với mỗi ngân sách của mỗi service, tỷ lệ phần trăm ngân sách đã tiêu trong tuần lịch hiện tại, tính tự động từ telemetry.
 - **Cảnh báo ngân sách**: gắn với một service, một ngân sách và một mốc (50%/75%/100%); có trạng thái hoạt động hoặc không hoạt động.
-- **Trạng thái cạn ngân sách của service**: bắt đầu khi bất kỳ ngân sách nào của service đạt 100%; kết thúc khi service đạt đủ SLO liên tục 3 ngày.
+- **Trạng thái cạn ngân sách của service**: bắt đầu khi bất kỳ ngân sách nào của service đạt 100% (`active`); qua `recovering` khi mức tiêu hao tuần dưới 100% nhưng còn ≥ 75% hoặc tuần chưa có request; kết thúc (`recovered`) khi tuần có request và mức tiêu hao dưới 75%, giữ tới lần cạn kế tiếp. *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: kết thúc khi service đạt đủ SLO liên tục 3 ngày.)*
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: 100% trong 7 service có phần chính sách ngân sách lỗi trong manifest, ghi đủ bốn ngân sách với tỷ lệ cho phép bằng con số, cửa sổ tuần lịch, các mốc 50%/75%/100%, định nghĩa "cạn", hệ quả và điều kiện hồi phục 3 ngày.
+- **SC-001**: 100% trong 7 service có phần chính sách ngân sách lỗi trong manifest, ghi đủ bốn ngân sách với tỷ lệ cho phép bằng con số, cửa sổ tuần lịch, các mốc 50%/75%/100%, định nghĩa "cạn", hệ quả và điều kiện hồi phục theo mức tiêu hao tuần (ngưỡng 75%, tối thiểu 1 request). *(sửa bởi nhánh fix/frozen-panel-status, 2026-10-09; trước đây: điều kiện hồi phục 3 ngày.)*
 - **SC-002**: Khi tạo đủ lỗi tổng hợp để tiêu hết ngân sách tuần của một service, cảnh báo kích hoạt ở cả ba mốc 50%, 75% và 100%, mỗi mốc kích hoạt trong vòng một chu kỳ làm mới dữ liệu kể từ khi mức tiêu hao thực tế vượt mốc.
 - **SC-003**: 100% cảnh báo đang hoạt động hiển thị trên dashboard Ngân sách lỗi tuần với đủ thông tin service, ngân sách và mốc, đặt cạnh bảng mức tiêu hao hiện tại (%) của cùng service và ngân sách; người vận hành biết có cảnh báo mà không cần mở màn hình nào khác.
 - **SC-004**: Người đọc chính sách trả lời được ba câu hỏi "ai dừng", "dừng cái gì" và "khi nào được tiếp tục" chỉ từ manifest của service, không cần tra tài liệu khác.

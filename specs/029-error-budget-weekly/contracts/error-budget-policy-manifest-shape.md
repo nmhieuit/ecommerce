@@ -44,9 +44,12 @@ error-budget-policy:
     who: Người vận hành (vai SRE/Dev) của service này
     stops: Merge tính năng mới vào service này
     does: Chỉ làm công việc nâng độ tin cậy cho service này
+  # Nhánh fix/frozen-panel-status (2026-10-09): thay "3 ngày liên tiếp đạt SLO" bằng trạng thái theo mức tiêu hao tuần.
   recovery:
-    consecutive-days-meeting-slo: 3
-    no-traffic-day-counts-as-met: true
+    recovered-below-consumption: 75%      # recovered khi mức tiêu hao CAO NHẤT trong 4 ngân sách của tuần < 75%
+    min-requests-to-recover: 1            # tuần chưa có request Server nào → vẫn recovering (thứ Hai không tự gỡ)
+    recovering-keeps-freeze: true         # recovering (75–99% hoặc chưa có request) vẫn đóng băng
+    recovered-stays-until-exhausted: true # đã recovered thì giữ tới sự kiện "exhausted" mới
     budget-reset-clears-freeze: false
 ```
 
@@ -59,7 +62,7 @@ error-budget-policy:
 | 3 | `window = calendar-week`, `timezone = UTC+07:00`. | FR-001 | `calendar-month` → `calendar-week` |
 | 4 | `alert-thresholds` đúng `[50%, 75%, 100%]`; `exhausted-when = any-budget-at-100%`. | FR-005 | — |
 | 5 | `on-exhausted.who`, `.stops`, `.does` không rỗng. | FR-005 | — |
-| 6 | `recovery` = `3` / `true` / `false`. | FR-005 | — |
+| 6 | `recovery`: `recovered-below-consumption = 75%`, `min-requests-to-recover = 1`, `recovering-keeps-freeze = true`, `recovered-stays-until-exhausted = true`, `budget-reset-clears-freeze = false`; không còn `consecutive-days-meeting-slo`, `no-traffic-day-counts-as-met`. Rule `error-budget-frozen` dùng đúng `75` và `1` (test `FrozenRule_UnfreezesBelowTheManifestRecoveryThreshold`). | FR-005 | *Sửa bởi nhánh fix/frozen-panel-status (2026-10-09)*: trước đây `3` / `true` / `false` |
 | 7 | Khối này không khai báo ngưỡng độ trễ. | FR-013 (027) | — |
 | 8 | `slos.availability = 99%` và `slos.error-rate.max-5xx-ratio = 1%` với cả hai loại service, khớp `PlatformSloDefaults`. Không manifest nào cần `slos.justification` vì lý do này. | FR-002, FR-004 | `99.9%`/`0.1%` → `99%`/`1%` |
 | 9 | Với khả dụng và 5xx, `allowed-bad-ratio` = 100% − `slos.availability` = `slos.error-rate.max-5xx-ratio`. | FR-003 | mới (nêu rõ quan hệ 1 − SLO) |

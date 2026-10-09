@@ -71,9 +71,20 @@ error-budget-policy:
     who: Người vận hành (vai SRE/Dev) của service này
     stops: Merge tính năng mới vào service này
     does: Chỉ làm công việc nâng độ tin cậy cho service này
+  # Nhánh fix/frozen-panel-status (thay quy tắc "3 ngày liên tiếp đạt SLO" của spec 027 FR-010 / 029 FR-005).
+  # Sau một lần cạn (sự kiện "exhausted" của rule error-budget-100), service ở một trong ba trạng thái, xét
+  # theo mức tiêu hao CAO NHẤT trong 4 ngân sách của tuần lịch hiện tại:
+  #   active     — mức tiêu hao >= 100%: đóng băng.
+  #   recovering — dưới 100% nhưng >= 75%, hoặc tuần chưa có request Server nào (thứ Hai 00:00 không tự gỡ): vẫn đóng băng.
+  #   recovered  — tuần đã có >= 1 request và mức tiêu hao < 75%: hết đóng băng; giữ recovered dù mức tiêu hao lên
+  #                lại 75–99%, chỉ đóng băng lại khi chạm 100% (sự kiện "exhausted" mới).
+  # Rule error-budget-frozen và panel "Cạn ngân sách" dùng đúng các con số này
+  # (docs/kibana-quan-sat-he-thong/07-canh-bao-ngan-sach-loi.md).
   recovery:
-    consecutive-days-meeting-slo: 3
-    no-traffic-day-counts-as-met: true
+    recovered-below-consumption: 75%
+    min-requests-to-recover: 1
+    recovering-keeps-freeze: true
+    recovered-stays-until-exhausted: true
     budget-reset-clears-freeze: false
 
 endpoints:

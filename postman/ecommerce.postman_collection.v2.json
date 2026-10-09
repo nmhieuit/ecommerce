@@ -12299,7 +12299,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"query\": \"FROM .alerts-stack.alerts-default\\n| WHERE kibana.alert.rule.name == \\\"error-budget-frozen\\\" AND kibana.alert.status == \\\"active\\\" AND @timestamp >= NOW() - 15 minutes\\n| EVAL service = kibana.alert.grouping.service\\n| KEEP service, kibana.alert.start\"\n}"
+                  "raw": "{\n  \"query\": \"FROM .alerts-stack.alerts-default, traces-generic.otel-default* METADATA _index\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL is_alert = CASE(_index LIKE \\\"*alerts-stack*\\\", 1, 0)\\n| WHERE @timestamp >= t0\\n| WHERE (is_alert == 1 AND kibana.alert.rule.name == \\\"error-budget-frozen\\\") OR (is_alert == 0 AND kind == \\\"Server\\\" AND NOT (COALESCE(attributes.url.path, \\\"\\\") LIKE \\\"/health*\\\"))\\n| EVAL service = COALESCE(kibana.alert.grouping.service, resource.attributes.service.name)\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 700000000, service == \\\"Gateway.Api\\\", 800000000, 500000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 1000000000, service == \\\"Gateway.Api\\\", 1100000000, 700000000)\\n| EVAL is_span = 1 - is_alert\\n| EVAL is_5xx = CASE(is_span == 1 AND attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(is_span == 1 AND duration > p95_ns, 1, 0), over_p99 = CASE(is_span == 1 AND duration > p99_ns, 1, 0)\\n| EVAL active_start = CASE(is_alert == 1 AND kibana.alert.status == \\\"active\\\", kibana.alert.start, NULL), recovered_end = CASE(is_alert == 1 AND kibana.alert.status == \\\"recovered\\\", kibana.alert.end, NULL)\\n| STATS alerts = SUM(is_alert), spans = SUM(is_span), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99), frozen_since = MAX(active_start), recovered_at = MAX(recovered_end) BY service\\n| WHERE alerts > 0\\n| EVAL consumed_max_pct = CASE(spans > 0, ROUND(GREATEST(TO_DOUBLE(bad_5xx) / spans / 0.01, TO_DOUBLE(bad_p95) / spans / 0.05, TO_DOUBLE(bad_p99) / spans / 0.01) * 100.0, 2), NULL)\\n| EVAL status = CASE(frozen_since IS NOT NULL AND consumed_max_pct >= 100, \\\"active\\\", frozen_since IS NOT NULL, \\\"recovering\\\", \\\"recovered\\\")\\n| KEEP service, status, consumed_max_pct, frozen_since, recovered_at\\n| SORT status, service\"\n}"
                 },
                 "url": {
                   "raw": "{{elasticsearchUrl}}/_query",
@@ -12310,7 +12310,7 @@
                     "_query"
                   ]
                 },
-                "description": "**Mục đích**: đây là bước CHỐT của cả folder — xác nhận khi ngân sách đã cạn (100%), hệ thống thể hiện RÕ RÀNG trạng thái CHÍNH SÁCH (không chỉ số liệu %) rằng Orders.Api đang \"cạn ngân sách — ưu tiên độ tin cậy\" — trạng thái mà theo FR-009, PHẢI khiến đội vận hành DỪNG MERGE tính năng mới vào service này.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL), lọc alert có `kibana.alert.rule.name == 'error-budget-frozen'` và `status == 'active'`.\n\n**Output kỳ vọng**: `200`.\n\n**Vì sao đây là bước chốt của cả folder/spec 027**: đây là MỤC ĐÍCH CUỐI CÙNG của toàn bộ ngân sách lỗi — không chỉ \"biết % tiêu hao\" (bước 02) hay \"có cảnh báo kỹ thuật\" (bước 03), mà là một TÍN HIỆU NGHIỆP VỤ RÕ RÀNG, hiển thị ngay trên dashboard Ngân sách lỗi tuần (FR-011), trả lời được câu hỏi SC-004 \"ai dừng, dừng cái gì, khi nào được tiếp tục\" chỉ bằng cách đọc đúng trạng thái này, không cần tra thêm tài liệu nào khác.\n\n---\n\nSau khi alert 100 bật, Orders.Api xuất hiện ở đây trong lượt rule error-budget-frozen kế tiếp."
+                "description": "**Mục đích**: đây là bước CHỐT của cả folder — xác nhận khi ngân sách đã cạn (100%), hệ thống thể hiện RÕ RÀNG trạng thái CHÍNH SÁCH (không chỉ số liệu %) rằng Orders.Api đang \"cạn ngân sách — ưu tiên độ tin cậy\" — trạng thái mà theo FR-009, PHẢI khiến đội vận hành DỪNG MERGE tính năng mới vào service này.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` (ES|QL) — đúng truy vấn của panel thứ 3 (`slo-error-budget-frozen`): alert của rule `error-budget-frozen` từ đầu tuần hiện tại ghép với span Server của tuần, ra cột `service, status, consumed_max_pct, frozen_since, recovered_at` (nhánh fix/frozen-panel-status).\n\n**Output kỳ vọng**: `200`; hàng `Orders.Api` có `status = active` (mức tiêu hao cao nhất ≥ 100%). `recovering` (75–99% hoặc tuần chưa có request) vẫn đóng băng; `recovered` là đã gỡ.\n\n**Vì sao đây là bước chốt của cả folder/spec 027**: đây là MỤC ĐÍCH CUỐI CÙNG của toàn bộ ngân sách lỗi — không chỉ \"biết % tiêu hao\" (bước 02) hay \"có cảnh báo kỹ thuật\" (bước 03), mà là một TÍN HIỆU NGHIỆP VỤ RÕ RÀNG, hiển thị ngay trên dashboard Ngân sách lỗi tuần (FR-011), trả lời được câu hỏi SC-004 \"ai dừng, dừng cái gì, khi nào được tiếp tục\" chỉ bằng cách đọc đúng trạng thái này, không cần tra thêm tài liệu nào khác.\n\n---\n\nSau khi alert 100 bật, Orders.Api xuất hiện ở đây trong lượt rule error-budget-frozen kế tiếp."
               },
               "event": [
                 {
@@ -12320,6 +12320,14 @@
                     "exec": [
                       "pm.test(\"200\", function () {",
                       "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Orders.Api có trong bảng cạn với status active\", function () {",
+                      "    const body = pm.response.json();",
+                      "    const cols = body.columns.map(c => c.name);",
+                      "    const row = body.values.find(v => v[cols.indexOf(\"service\")] === \"Orders.Api\");",
+                      "    pm.expect(row, \"Orders.Api không có trong bảng cạn\").to.exist;",
+                      "    pm.expect(row[cols.indexOf(\"status\")]).to.eql(\"active\");",
                       "});"
                     ]
                   }
@@ -12837,7 +12845,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"query\": \"FROM .alerts-stack.alerts-default\\n| WHERE kibana.alert.rule.name == \\\"error-budget-frozen\\\" AND kibana.alert.status == \\\"active\\\" AND @timestamp >= NOW() - 15 minutes\\n| EVAL service = kibana.alert.grouping.service\\n| KEEP service, kibana.alert.start\\n| SORT service\"\n}"
+                  "raw": "{\n  \"query\": \"FROM .alerts-stack.alerts-default, traces-generic.otel-default* METADATA _index\\n| EVAL t0 = DATE_TRUNC(1 week, NOW() + 7 hours) - 7 hours\\n| EVAL is_alert = CASE(_index LIKE \\\"*alerts-stack*\\\", 1, 0)\\n| WHERE @timestamp >= t0\\n| WHERE (is_alert == 1 AND kibana.alert.rule.name == \\\"error-budget-frozen\\\") OR (is_alert == 0 AND kind == \\\"Server\\\" AND NOT (COALESCE(attributes.url.path, \\\"\\\") LIKE \\\"/health*\\\"))\\n| EVAL service = COALESCE(kibana.alert.grouping.service, resource.attributes.service.name)\\n| EVAL p95_ns = CASE(service == \\\"Bff.Api\\\", 700000000, service == \\\"Gateway.Api\\\", 800000000, 500000000)\\n| EVAL p99_ns = CASE(service == \\\"Bff.Api\\\", 1000000000, service == \\\"Gateway.Api\\\", 1100000000, 700000000)\\n| EVAL is_span = 1 - is_alert\\n| EVAL is_5xx = CASE(is_span == 1 AND attributes.http.response.status_code >= 500, 1, 0)\\n| EVAL over_p95 = CASE(is_span == 1 AND duration > p95_ns, 1, 0), over_p99 = CASE(is_span == 1 AND duration > p99_ns, 1, 0)\\n| EVAL active_start = CASE(is_alert == 1 AND kibana.alert.status == \\\"active\\\", kibana.alert.start, NULL), recovered_end = CASE(is_alert == 1 AND kibana.alert.status == \\\"recovered\\\", kibana.alert.end, NULL)\\n| STATS alerts = SUM(is_alert), spans = SUM(is_span), bad_5xx = SUM(is_5xx), bad_p95 = SUM(over_p95), bad_p99 = SUM(over_p99), frozen_since = MAX(active_start), recovered_at = MAX(recovered_end) BY service\\n| WHERE alerts > 0\\n| EVAL consumed_max_pct = CASE(spans > 0, ROUND(GREATEST(TO_DOUBLE(bad_5xx) / spans / 0.01, TO_DOUBLE(bad_p95) / spans / 0.05, TO_DOUBLE(bad_p99) / spans / 0.01) * 100.0, 2), NULL)\\n| EVAL status = CASE(frozen_since IS NOT NULL AND consumed_max_pct >= 100, \\\"active\\\", frozen_since IS NOT NULL, \\\"recovering\\\", \\\"recovered\\\")\\n| KEEP service, status, consumed_max_pct, frozen_since, recovered_at\\n| SORT status, service\"\n}"
                 },
                 "url": {
                   "raw": "{{elasticsearchUrl}}/_query",
@@ -12848,7 +12856,7 @@
                     "_query"
                   ]
                 },
-                "description": "**Mục đích**: liệt kê service đang ở trạng thái \"cạn ngân sách — ưu tiên độ tin cậy\" (alert active của rule `error-budget-frozen`) — cùng truy vấn với panel thứ 3 trên dashboard.\n\n**Input**: `POST {{elasticsearchUrl}}/_query` trên `.alerts-stack.alerts-default`.\n\n**Output kỳ vọng**: `200`; service có ngân sách đã chạm 100% có mặt (sau tối đa 2 chu kỳ: rule 100 ghi sự kiện, rule frozen đọc sự kiện).\n\n**Vì sao chứng minh đúng FR-005/FR-008 (spec 029)**: trạng thái suy ra từ sự kiện cạn trong 14 ngày gần nhất và ngày đạt SLO theo ngưỡng mới (5xx < 1%); ngân sách đặt lại thứ Hai không gỡ trạng thái này."
+                "description": "**Mục đích**: liệt kê service đang ở trạng thái \"cạn ngân sách — ưu tiên độ tin cậy\" (alert của rule `error-budget-frozen` trong tuần hiện tại) kèm trạng thái — cùng truy vấn với panel thứ 3 trên dashboard (nhánh fix/frozen-panel-status).\n\n**Input**: `POST {{elasticsearchUrl}}/_query` trên `.alerts-stack.alerts-default` và `traces-generic.otel-default*`.\n\n**Output kỳ vọng**: `200`; cột `service, status, consumed_max_pct, frozen_since, recovered_at`; mỗi hàng có `status` là `active` (≥ 100%), `recovering` (75–99% hoặc tuần chưa có request — vẫn đóng băng) hoặc `recovered` (dưới 75%, đã gỡ). Service có ngân sách đã chạm 100% có mặt (sau tối đa 2 chu kỳ: rule 100 ghi sự kiện, rule frozen đọc sự kiện).\n\n**Vì sao chứng minh đúng FR-005/FR-008 (spec 029)**: trạng thái suy ra từ sự kiện cạn/hồi phục trong 14 ngày gần nhất và mức tiêu hao tuần (5xx 1%, p95 5%, p99 1%; hồi phục dưới 75%); ngân sách đặt lại thứ Hai không gỡ trạng thái này."
               },
               "event": [
                 {
@@ -12858,6 +12866,13 @@
                     "exec": [
                       "pm.test(\"200 — truy vấn chạy được\", function () {",
                       "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"mỗi hàng có status active / recovering / recovered\", function () {",
+                      "    const body = pm.response.json();",
+                      "    const i = body.columns.map(c => c.name).indexOf(\"status\");",
+                      "    pm.expect(i, \"thiếu cột status\").to.be.at.least(0);",
+                      "    body.values.forEach(v => pm.expect([\"active\", \"recovering\", \"recovered\"]).to.include(v[i]));",
                       "});"
                     ]
                   }
