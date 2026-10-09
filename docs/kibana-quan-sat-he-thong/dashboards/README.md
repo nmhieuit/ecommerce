@@ -15,6 +15,8 @@ Hợp đồng bất biến của hai file: [`specs/030-incident-and-weekly-dashb
 
 Từ spec 033, truy vấn ES|QL của dashboard Ngân sách lỗi tuần và 6 panel Lens đọc traces của dashboard Xử lý sự cố **không tính span có đường dẫn bắt đầu bằng `/health`**; dashboard Xử lý sự cố có thêm panel `Health lỗi theo service`.
 
+Từ spec 034, các truy vấn ES|QL của dashboard Ngân sách lỗi tuần (5 truy vấn) và 6 panel Lens ngân sách/SLO của dashboard Xử lý sự cố **chỉ đếm span `kind = Server`** (không đếm span Client/Producer); panel `Lỗi gọi hạ lưu` vẫn đọc span Client.
+
 Hai file **độc lập**: import theo thứ tự nào cũng được. Mỗi dashboard có một ô Markdown ở đầu trang chứa link sang dashboard
 kia theo **id cố định ở bảng trên**, nên link chỉ bấm được khi cả hai đã được import (id được giữ nguyên khi import vào Kibana sạch).
 

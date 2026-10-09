@@ -2,6 +2,8 @@
 
 *Đối tượng đọc: kỹ sư/kiến trúc sư cần hiểu tại sao và cách loại span health khỏi ngân sách. Spec: [`specs/033-exclude-health-spans/`](../../specs/033-exclude-health-spans/spec.md).*
 
+> **Cập nhật spec 034**: ngoài loại span health, rule và panel ngân sách nay chỉ đếm span `kind = Server` (không đếm Client/Producer). Xem [034 Architect](034_Architect_ngân%20sách%20lỗi%20chỉ%20đếm%20span%20Server.md).
+
 Không đổi SLO, tỷ lệ cho phép, ngưỡng, mốc, cửa sổ hay chu kỳ ngân sách. Chỉ đổi **tập span được đo**: span có `attributes.url.path` bắt đầu bằng `/health` không tính.
 
 ## 1. Bằng chứng (F1–F10, đo thật 2026-10-08)

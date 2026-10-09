@@ -1,0 +1,21 @@
+<mxfile host="65bd71144e">
+    <diagram id="server-span-only-sequence" name="Trình tự — lỗi hạ lưu thật qua 3 tầng, đối chiếu theo loại span, dọn sự kiện cạn và đặt lại rule 100">
+        <mxGraphModel dx="1443" dy="468" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1350" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" value="Trình tự thật khi kiểm chứng spec 034: số đối chiếu → rule sửa → dashboard khớp → dừng products-api → Postman 34 → dọn sự kiện → rule 100" vertex="1"><mxGeometry height="26" width="1300" x="30" y="10" as="geometry"/></mxCell>
+                <mxCell id="b0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="1. Đo số theo (service, kind) trước khi sửa&#10;Bff.Api Server 118 / 9 lỗi, Client 201 / 12; tổng chỉ-Server 527" vertex="1"><mxGeometry height="70" width="400" x="30" y="60" as="geometry"/></mxCell>
+                <mxCell id="b1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value="2. Test Server viết trước: 5 test ĐỎ&#10;sửa 5 rule trên Kibana, export, 134 test XANH" vertex="1"><mxGeometry height="70" width="400" x="30" y="170" as="geometry"/></mxCell>
+                <mxCell id="b2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="3. Import 2 dashboard (5 truy vấn + 6 Lens)&#10;mức tiêu hao khớp rule: 28/28, Bff error-rate 762,71%" vertex="1"><mxGeometry height="70" width="400" x="30" y="280" as="geometry"/></mxCell>
+                <mxCell id="b3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value="4. Dừng products-api; Postman 34a /bff/products → 5xx&#10;Gateway: 1 Server + 1 Client 5xx; BFF: 1 Server 5xx + 3 Client" vertex="1"><mxGeometry height="70" width="420" x="480" y="60" as="geometry"/></mxCell>
+                <mxCell id="b4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value='5. Bật lại products-api; Postman 34b 14/14 xanh&#10;span Client nằm ở "bị loại", lỗi Server được tính' vertex="1"><mxGeometry height="70" width="420" x="480" y="170" as="geometry"/></mxCell>
+                <mxCell id="b5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="6. Xoá sự kiện cạn (delete-by-query, giữ index)&#10;Disable/Enable error-budget-100 → 21 alert, 22 sự kiện theo công thức mới" vertex="1"><mxGeometry height="70" width="420" x="480" y="280" as="geometry"/></mxCell>
+                <mxCell id="e0" parent="1" source="b0" target="b1" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e1" parent="1" source="b1" target="b2" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e2" parent="1" source="b3" target="b4" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e3" parent="1" source="b4" target="b5" style="endArrow=classic;html=1;fontSize=9;" value="" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

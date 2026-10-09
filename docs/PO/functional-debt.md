@@ -160,6 +160,7 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   luận sai.
 
 - **[033](033_PO_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md)** — Ngân sách lỗi giờ chỉ tính yêu cầu thật của khách; các lượt kiểm tra sức khoẻ tự động (5 giây một lần) không còn làm hao ngân sách khi vừa khởi động lại. Bộ phận không sẵn sàng có cảnh báo riêng và một ô trên màn hình Xử lý sự cố, đã thử thật bằng cách tắt cơ sở dữ liệu của một bộ phận.
+- **[034](034_PO_ngân%20sách%20lỗi%20chỉ%20đếm%20span%20Server.md)** — Ngân sách lỗi giờ chỉ tính các lượt mà chính bộ phận nhận yêu cầu; lời gọi đi tiếp sang bộ phận sau và việc gửi thông điệp không còn bị tính, nên một lỗi ở bộ phận cuối không làm hao ngân sách của cả ba bộ phận và không bị đếm hai lần ở bộ phận ghép dữ liệu. Đã thử thật bằng cách tắt tạm bộ phận sản phẩm.
 
 ## 2. Giới hạn hiện tại
 
@@ -334,3 +335,4 @@ nhiều tính năng đã được gộp thành 1 dòng duy nhất.
   gian phát hiện của từng nhóm; muốn đo phải chờ các cảnh báo tắt hẳn giữa hai lần.
 
 - **[033](033_PO_loại%20span%20health%20khỏi%20ngân%20sách%20lỗi.md)** — Khi mới có ít yêu cầu thật, vài yêu cầu chậm hoặc lỗi đủ làm phần trăm ngân sách vọt cao và bật cảnh báo. Kiểm tra sức khoẻ chỉ chậm (không lỗi) không được báo ở đâu. Bộ phận chưa có yêu cầu thật không hiện dòng trong bảng ngân sách.
+- **[034](034_PO_ngân%20sách%20lỗi%20chỉ%20đếm%20span%20Server.md)** — Mẫu số nhỏ vẫn làm phần trăm vọt cao (không có ngưỡng số yêu cầu tối thiểu, người dùng đã bỏ). Lỗi chỉ ở lời gọi đi tiếp mà bộ phận gọi tự xử lý không còn trừ ngân sách bộ phận gọi (vẫn thấy ở ô lỗi gọi hạ lưu). Bộ phận chưa nhận yêu cầu nào không hiện dòng. Việc đồng bộ hiến chương với ngưỡng độ trễ mới (PR #75) để việc riêng.

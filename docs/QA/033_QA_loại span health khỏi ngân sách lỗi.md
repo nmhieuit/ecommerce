@@ -4,6 +4,8 @@
 đúng và nhất quán hay không, trước khi tin tưởng dùng tài liệu để viết test case.
 Spec: [`specs/033-exclude-health-spans/`](../../specs/033-exclude-health-spans/spec.md).*
 
+> **Cập nhật spec 034**: ngoài loại span health, rule và panel ngân sách nay chỉ đếm span `kind = Server` (không đếm Client/Producer). Xem [034 Architect](../architecture/034_Architect_ngân%20sách%20lỗi%20chỉ%20đếm%20span%20Server.md).
+
 ## Luồng happy-case đã rà soát
 
 1. **US1 — ngân sách chỉ tính request nghiệp vụ**: 4 rule 027 (`error-budget-50/75/100`, `error-budget-frozen`) và rule 028 loại span có đường dẫn bắt đầu bằng `/health` (điều kiện `NOT (COALESCE(attributes.url.path, "") LIKE "/health*")`).

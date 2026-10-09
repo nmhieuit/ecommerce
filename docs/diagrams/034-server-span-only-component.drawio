@@ -1,0 +1,22 @@
+<mxfile host="65bd71144e">
+    <diagram id="server-span-only-component" name="Kiến trúc thành phần — chỉ span Server vào ngân sách; Client/Producer bị loại, Client vẫn dùng cho panel lỗi gọi hạ lưu">
+        <mxGraphModel dx="1443" dy="468" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1350" pageHeight="700" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" parent="1" style="text;html=1;fontStyle=1;fontSize=14;fontColor=#333333;" value="Kiến trúc thành phần — ngân sách lỗi chỉ đếm span kind = Server; span Client/Producer không tính (spec 034)" vertex="1"><mxGeometry height="26" width="1300" x="30" y="10" as="geometry"/></mxCell>
+                <mxCell id="b0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=6;" value="Request qua Gateway → BFF → Products&#10;mỗi service ghi span Server (nhận request)&#10;và span Client (gọi hạ lưu); Orders ghi span Producer" vertex="1"><mxGeometry height="110" width="400" x="30" y="60" as="geometry"/></mxCell>
+                <mxCell id="b1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;spacingLeft=6;" value='Elasticsearch: traces-generic.otel-default*&#10;điều kiện: loại /health* (033) và kind == "Server" (034)&#10;rule frozen: kind == "Server" OR _index LIKE sự kiện cạn' vertex="1"><mxGeometry height="110" width="420" x="480" y="60" as="geometry"/></mxCell>
+                <mxCell id="b2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;spacingLeft=6;" value="Ngân sách lỗi: 5 rule (027 ×4 + 028)&#10;+ 5 truy vấn của dashboard Ngân sách lỗi tuần&#10;+ 6 panel Lens ngân sách/SLO của Xử lý sự cố" vertex="1"><mxGeometry height="110" width="400" x="30" y="230" as="geometry"/></mxCell>
+                <mxCell id="b3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="slo-error-budget-events&#10;sự kiện cạn không có cột kind&#10;rule frozen đọc cùng traces" vertex="1"><mxGeometry height="110" width="420" x="480" y="230" as="geometry"/></mxCell>
+                <mxCell id="b4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=6;" value='Panel "Lỗi gọi hạ lưu — cặp service gọi → đích"&#10;vẫn đọc span Client (không đổi)' vertex="1"><mxGeometry height="90" width="400" x="30" y="400" as="geometry"/></mxCell>
+                <mxCell id="b5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="Test canh gác&#10;ErrorBudgetRuleDefinitionTests · IncidentFastDetectionRuleDefinitionTests&#10;5 test Server (3 + 1 + 1)" vertex="1"><mxGeometry height="90" width="420" x="480" y="400" as="geometry"/></mxCell>
+                <mxCell id="e0" parent="1" source="b0" target="b1" style="endArrow=classic;html=1;fontSize=9;" value="mọi span" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e1" parent="1" source="b1" target="b2" style="endArrow=classic;html=1;fontSize=9;" value="chỉ Server" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e2" parent="1" source="b1" target="b4" style="endArrow=classic;html=1;fontSize=9;" value="span Client" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e3" parent="1" source="b3" target="b1" style="endArrow=classic;html=1;fontSize=9;" value="đọc cùng" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+                <mxCell id="e4" parent="1" source="b5" target="b2" style="endArrow=classic;html=1;fontSize=9;" value="canh điều kiện Server" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
